@@ -1,0 +1,330 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Tbot.Common.Settings;
+using Tbot.Helpers;
+using Tbot.Includes;
+using Tbot.Services;
+using TBot.Common.Logging;
+using TBot.Model;
+using TBot.Ogame.Infrastructure;
+using TBot.Ogame.Infrastructure.Enums;
+using TBot.Ogame.Infrastructure.Models;
+using static Microsoft.AspNetCore.Razor.Language.TagHelperMetadata;
+
+namespace Tbot.Workers.Brain {
+	public class AutoMineWorker : WorkerBase {
+
+		private readonly ICalculationService _calculationService;
+		private readonly IFleetScheduler _fleetScheduler;
+		private readonly IOgameService _ogameService;
+		private readonly ITBotOgamedBridge _tbotOgameBridge;
+		public AutoMineWorker(ITBotMain parentInstance,
+			IOgameService ogameService,
+			IFleetScheduler fleetScheduler,
+			ICalculationService calculationService,
+			ITBotOgamedBridge tbotOgameBridge,
+			IWorkerFactory workerFactory) :
+			base(parentInstance) {
+			_calculationService = calculationService;
+			_fleetScheduler = fleetScheduler;
+			_ogameService = ogameService;
+			_tbotOgameBridge = tbotOgameBridge;
+			_workerFactory = workerFactory;
+		}
+
+		// Caps je Planet: HomeWorld (Brain.AutoMine.HomeWorld) -> Colony (Fallback fuer alle uebrigen) -> global,
+		// falls die Gruppe nicht konfiguriert ist. Einzelne Planeten ueberschreiben feldweise per
+		// Brain.AutoMine.ColonyOverrides (siehe AutoMineOverrideHelper).
+		private Buildings GetMaxBuildingsForCelestial(Celestial cel) {
+			bool isHomeWorld =
+				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
+				cel.Coordinate.System == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.System &&
+				cel.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Position &&
+				cel.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Type);
+
+			bool colonyConfigured = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "Colony");
+
+			int maxMetalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxMetalMine;
+			int maxCrystalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxCrystalMine;
+			int maxDeuteriumSynthetizer = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxDeuteriumSynthetizer;
+			int maxSolarPlant = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxSolarPlant;
+			int maxFusionReactor = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxFusionReactor;
+			int maxMetalStorage = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxMetalStorage;
+			int maxCrystalStorage = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxCrystalStorage;
+			int maxDeuteriumTank = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxDeuteriumTank;
+
+			if (!isHomeWorld && colonyConfigured) {
+				maxMetalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxMetalMine;
+				maxCrystalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxCrystalMine;
+				maxDeuteriumSynthetizer = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxDeuteriumSynthetizer;
+				maxSolarPlant = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxSolarPlant;
+				maxFusionReactor = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxFusionReactor;
+				maxMetalStorage = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxMetalStorage;
+				maxCrystalStorage = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxCrystalStorage;
+				maxDeuteriumTank = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxDeuteriumTank;
+			}
+
+			// PATCH ColonyOverrides: Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
+			if (!isHomeWorld) {
+				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
+				if (colonyOverride != null) {
+					maxMetalMine = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxMetalMine", maxMetalMine);
+					maxCrystalMine = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxCrystalMine", maxCrystalMine);
+					maxDeuteriumSynthetizer = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxDeuteriumSynthetizer", maxDeuteriumSynthetizer);
+					maxSolarPlant = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxSolarPlant", maxSolarPlant);
+					maxFusionReactor = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxFusionReactor", maxFusionReactor);
+					maxMetalStorage = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxMetalStorage", maxMetalStorage);
+					maxCrystalStorage = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxCrystalStorage", maxCrystalStorage);
+					maxDeuteriumTank = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxDeuteriumTank", maxDeuteriumTank);
+					DoLog(LogLevel.Information, $"ColonyOverride applied for {cel}: MetalMine={maxMetalMine}, CrystalMine={maxCrystalMine}, DeuteriumSynthesizer={maxDeuteriumSynthetizer}, SolarPlant={maxSolarPlant}, FusionReactor={maxFusionReactor}, MetalStorage={maxMetalStorage}, CrystalStorage={maxCrystalStorage}, DeuteriumTank={maxDeuteriumTank}");
+				}
+			}
+
+			return new() {
+				MetalMine = maxMetalMine,
+				CrystalMine = maxCrystalMine,
+				DeuteriumSynthesizer = maxDeuteriumSynthetizer,
+				SolarPlant = maxSolarPlant,
+				FusionReactor = maxFusionReactor,
+				MetalStorage = maxMetalStorage,
+				CrystalStorage = maxCrystalStorage,
+				DeuteriumTank = maxDeuteriumTank
+			};
+		}
+
+		// PATCH 31/34: analog zu GetMaxBuildingsForCelestial, aber fuer RoboticsFactory/Shipyard/
+		// ResearchLab/MissileSilo/NaniteFactory/Terraformer/SpaceDock.
+		private Facilities GetMaxFacilitiesForCelestial(Celestial cel) {
+			bool isHomeWorld =
+				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
+				cel.Coordinate.System == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.System &&
+				cel.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Position &&
+				cel.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Type);
+
+			bool colonyConfigured = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "Colony");
+
+			int maxRoboticsFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxRoboticsFactory;
+			int maxShipyard = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxShipyard;
+			int maxResearchLab = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxResearchLab;
+			int maxMissileSilo = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxMissileSilo;
+			int maxNaniteFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxNaniteFactory;
+			int maxTerraformer = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxTerraformer;
+			int maxSpaceDock = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxSpaceDock;
+
+			if (!isHomeWorld && colonyConfigured) {
+				maxRoboticsFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxRoboticsFactory;
+				maxShipyard = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxShipyard;
+				maxNaniteFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxNaniteFactory;
+				maxResearchLab = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxResearchLab;
+				maxMissileSilo = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxMissileSilo;
+				maxTerraformer = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxTerraformer;
+				maxSpaceDock = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxSpaceDock;
+			}
+
+			// PATCH ColonyOverrides: Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
+			if (!isHomeWorld) {
+				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
+				if (colonyOverride != null) {
+					maxRoboticsFactory = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxRoboticsFactory", maxRoboticsFactory);
+					maxShipyard = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxShipyard", maxShipyard);
+					maxResearchLab = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxResearchLab", maxResearchLab);
+					maxMissileSilo = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxMissileSilo", maxMissileSilo);
+					maxNaniteFactory = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxNaniteFactory", maxNaniteFactory);
+					maxTerraformer = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxTerraformer", maxTerraformer);
+					maxSpaceDock = AutoMineOverrideHelper.Resolve(colonyOverride, _tbotInstance.InstanceSettings.Brain.AutoMine, "MaxSpaceDock", maxSpaceDock);
+					DoLog(LogLevel.Information, $"ColonyOverride applied for {cel}: RoboticsFactory={maxRoboticsFactory}, Shipyard={maxShipyard}, ResearchLab={maxResearchLab}, MissileSilo={maxMissileSilo}, NaniteFactory={maxNaniteFactory}, Terraformer={maxTerraformer}, SpaceDock={maxSpaceDock}");
+				}
+			}
+
+			return new() {
+				RoboticsFactory = maxRoboticsFactory,
+				Shipyard = maxShipyard,
+				ResearchLab = maxResearchLab,
+				MissileSilo = maxMissileSilo,
+				NaniteFactory = maxNaniteFactory,
+				Terraformer = maxTerraformer,
+				SpaceDock = maxSpaceDock
+			};
+		}
+
+		// PATCH 33: fixer Crawler-Zielwert statt ROI-Berechnung, falls Brain.AutoMine.FixedCrawlerTarget > 0
+		// gesetzt ist. Dann wird einfach bis min(FixedCrawlerTarget, CalcMaxCrawlers) hochgebaut, ohne
+		// DOIR-Vergleich gegen die nächste Mine. Ist FixedCrawlerTarget nicht gesetzt oder 0, unverändertes
+		// bisheriges Verhalten (CalcOptimalCrawlers/ROI-basiert).
+		private int GetCrawlerAmountToBuild(Planet planet) {
+			bool fixedTargetSet = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "FixedCrawlerTarget") && (int) _tbotInstance.InstanceSettings.Brain.AutoMine.FixedCrawlerTarget > 0;
+			if (fixedTargetSet) {
+				int fixedTarget = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.FixedCrawlerTarget;
+				int maxCrawlers = _calculationService.CalcMaxCrawlers(planet, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist);
+				int target = Math.Min(fixedTarget, maxCrawlers);
+				return Math.Max(0, target - (int) planet.Ships.Crawler);
+			}
+			return _calculationService.CalcOptimalCrawlers(planet, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData);
+		}
+
+		public override bool IsWorkerEnabledBySettings() {
+			try {
+				return ((bool) _tbotInstance.InstanceSettings.Brain.Active && (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.Active);
+			} catch (Exception) {
+				return false;
+			}
+		}
+
+		public override string GetWorkerName() {
+			return "AutoMine";
+		}
+		public override Feature GetFeature() {
+			return Feature.BrainAutoMine;
+		}
+
+		public override LogSender GetLogSender() {
+			return LogSender.AutoMine;
+		}
+
+		protected override async Task Execute() {
+			try {
+				DoLog(LogLevel.Information, "Running automine...");
+
+				Facilities maxLunarFacilities = new() {
+					LunarBase = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxLunarBase,
+					RoboticsFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxLunarRoboticsFactory,
+					SensorPhalanx = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxSensorPhalanx,
+					JumpGate = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxJumpGate,
+					Shipyard = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxLunarShipyard
+				};
+				AutoMinerSettings autoMinerSettings = new() {
+					OptimizeForStart = (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.OptimizeForStart,
+					PrioritizeRobotsAndNanites = (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.PrioritizeRobotsAndNanites,
+					MaxDaysOfInvestmentReturn = (float) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxDaysOfInvestmentReturn,
+					DepositHours = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.DepositHours,
+					BuildDepositIfFull = (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.BuildDepositIfFull,
+					DeutToLeaveOnMoons = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.DeutToLeaveOnMoons,
+					BuildSolarSatellites = (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.BuildSolarSatellites
+				};
+				Fields fieldsSettings = new() {
+					Total = (int) _tbotInstance.InstanceSettings.AutoColonize.Abandon.MinFields
+				};
+				Temperature temperaturesSettings = new() {
+					Min = (int) _tbotInstance.InstanceSettings.AutoColonize.Abandon.MinTemperatureAcceptable,
+					Max = (int) _tbotInstance.InstanceSettings.AutoColonize.Abandon.MaxTemperatureAcceptable
+				};
+
+				_tbotInstance.UserData.researches = await _ogameService.GetResearches();
+				List<Celestial> celestialsToExclude = _calculationService.ParseCelestialsList(_tbotInstance.InstanceSettings.Brain.AutoMine.Exclude, _tbotInstance.UserData.celestials);
+				List<Celestial> celestialsToMine = new();
+				List<ConstructionCandidate> constructionCandidates = new();
+				foreach (Celestial celestial in _tbotInstance.UserData.celestials.Where(p => p is Planet)) {
+					// PATCH 18: celestialsToExclude was only applied later (right before spawning the
+					// per-celestial AutoMine worker), so every excluded planet still got its Buildings/
+					// LFBuildings/LFBonuses/Fast data refreshed here for the account-wide "next mine to
+					// build" ranking - switching the in-game context into it and triggering OGame's
+					// "recent activity" indicator, even though the celestial is excluded from AutoMine
+					// entirely. Skip excluded celestials before any data is fetched.
+					if (celestialsToExclude.Has(celestial)) {
+						DoLog(LogLevel.Debug, $"Skipping {celestial.ToString()} in planning phase: celestial in exclude list.");
+						continue;
+					}
+					var cel = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Buildings);
+					cel = await _tbotOgameBridge.UpdatePlanet(cel, UpdateTypes.LFBuildings);
+					cel = await _tbotOgameBridge.UpdatePlanet(cel, UpdateTypes.LFBonuses);
+					Buildings maxBuildings = GetMaxBuildingsForCelestial(cel);
+					Facilities maxFacilities = GetMaxFacilitiesForCelestial(cel);
+
+					Planet abaCelestial = await _tbotOgameBridge.UpdatePlanet(cel, UpdateTypes.Fast) as Planet;
+					var nextMine = _calculationService.GetNextMineToBuild(cel as Planet, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData.Speed, maxBuildings.MetalMine, maxBuildings.CrystalMine, maxBuildings.DeuteriumSynthesizer, 1, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull, true, int.MaxValue);
+					if (nextMine != Buildables.Null) {
+						var lv = _calculationService.GetNextLevel(cel, nextMine);
+						var DOIR = _calculationService.CalcNextDaysOfInvestmentReturn(cel as Planet, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData.Speed, 1, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull);
+						DoLog(LogLevel.Debug, $"Celestial {cel.ToString()}: Next Mine: {nextMine.ToString()} lv {lv.ToString()}; DOIR: {DOIR.ToString()}.");
+						if (DOIR < _tbotInstance.UserData.nextDOIR || _tbotInstance.UserData.nextDOIR == 0) {
+							_tbotInstance.UserData.nextDOIR = DOIR;
+						}
+					}
+					bool includeCelestial = true;
+					if (cel.Coordinate.Type == Celestials.Planet && cel.Fields.Built == 0 && (bool) _tbotInstance.InstanceSettings.AutoColonize.Abandon.Active) {
+						if (_calculationService.ShouldAbandon(cel as Planet, cel.Fields.Total, abaCelestial.Temperature.Max, fieldsSettings, temperaturesSettings)) {
+							DoLog(LogLevel.Debug, $"Skipping {cel.ToString()}: planet should be abandoned.");
+							includeCelestial = false;
+						} else {
+							//DoLog(LogLevel.Debug, $"Confirm AutoMine on {celestial.ToString()}.");
+						}
+						//DoLog(LogLevel.Debug, $"Because: cases -> {abaCelestial.Fields.Total.ToString()}/{fieldsSettings.Total.ToString()}, MinimumTemp -> {abaCelestial.Temperature.Max.ToString()}>={temperaturesSettings.Min.ToString()}, MaximumTemp -> {abaCelestial.Temperature.Max.ToString()}<={temperaturesSettings.Max.ToString()}");
+					}
+					if (includeCelestial) {
+						celestialsToMine.Add(cel);
+						var shouldBuildCrawlers =
+								(!SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "BuildCrawlers") || (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.BuildCrawlers) &&
+								cel.Coordinate.Type == Celestials.Planet &&
+								cel.Facilities != null &&
+								cel.Productions != null &&
+								cel.Ships != null &&
+								cel.Constructions != null &&
+								cel.Resources != null &&
+								cel.ResourcesProduction != null &&
+								cel.Resources.Energy >= 0 &&
+								_tbotInstance.UserData.userInfo.Class == CharacterClass.Collector &&
+								cel.Facilities.Shipyard >= 5 &&
+								_tbotInstance.UserData.researches.CombustionDrive >= 4 &&
+								_tbotInstance.UserData.researches.ArmourTechnology >= 4 &&
+								_tbotInstance.UserData.researches.LaserTechnology >= 4 &&
+								!cel.Productions.Any(production => production.ID == (int) Buildables.Crawler) &&
+								cel.Constructions.BuildingID != (int) Buildables.Shipyard &&
+								cel.Constructions.BuildingID != (int) Buildables.NaniteFactory &&
+								cel.Ships.Crawler < _calculationService.CalcMaxCrawlers(cel as Planet, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist) &&
+								GetCrawlerAmountToBuild(cel as Planet) > 0;
+						var planningDataAvailable = cel.Fields != null && cel.Constructions != null && cel.Facilities != null && cel.Resources != null && cel.ResourcesProduction != null && cel.Productions != null;
+						if (shouldBuildCrawlers || (planningDataAvailable && cel.Fields.Free > 0 && cel.Constructions.BuildingID == 0)) {
+							var nextConstruction = shouldBuildCrawlers ? Buildables.Crawler : _calculationService.GetNextBuildingToBuild(cel as Planet, _tbotInstance.UserData.researches, maxBuildings, maxFacilities, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.serverData, autoMinerSettings);
+							if (nextConstruction != Buildables.Null) {
+								var nextConstructionLevel = shouldBuildCrawlers
+									? GetCrawlerAmountToBuild(cel as Planet)
+									: _calculationService.GetNextLevel(cel, nextConstruction, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
+								var isMine = nextConstruction == Buildables.MetalMine || nextConstruction == Buildables.CrystalMine || nextConstruction == Buildables.DeuteriumSynthesizer;
+								var score = isMine
+									? _calculationService.CalcDaysOfInvestmentReturn(cel as Planet, nextConstruction, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData.Speed, 1, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull)
+									: _calculationService.CalcPrice(nextConstruction, nextConstructionLevel, cel.LFBonuses).ConvertedDeuterium;
+								var priority = AccountConstructionPlanner.GetAutoMinePriority(nextConstruction);
+								constructionCandidates.Add(new ConstructionCandidate {
+									CelestialId = cel.ID,
+									Priority = priority,
+									Score = score
+								});
+								DoLog(LogLevel.Debug, $"{cel}: Planned construction: {nextConstruction} level {nextConstructionLevel}; priority {priority}; score {score}.");
+							}
+						}
+					}
+				}
+				celestialsToMine = AccountConstructionPlanner.OrderCelestials(celestialsToMine, constructionCandidates).ToList();
+				celestialsToMine.AddRange(_tbotInstance.UserData.celestials.Where(c => c is Moon));
+
+				var dueTime = TimeSpan.Zero;
+				Task previousExecution = Task.CompletedTask;
+				foreach (Celestial celestial in (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.RandomOrder ? celestialsToMine.Shuffle().ToList() : celestialsToMine) {
+					if (celestialsToExclude.Has(celestial)) {
+						DoLog(LogLevel.Information, $"Skipping {celestial.ToString()}: celestial in exclude list.");
+						continue;
+					}
+
+					var celestialWorker = _workerFactory.InitializeCelestialWorker(this, Feature.BrainCelestialAutoMine, _tbotInstance, _tbotOgameBridge, celestial);
+					celestialWorker.StartAfter(previousExecution);
+					dueTime = OrderedWorkerSchedule.NextDueTime(dueTime, TimeSpan.FromMilliseconds(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds)));
+					await celestialWorker.StartWorker(new CancellationTokenSource().Token, dueTime);
+					previousExecution = celestialWorker.FirstExecutionCompleted;
+
+				}
+			} catch (Exception e) {
+				DoLog(LogLevel.Error, $"AutoMine Exception: {e.Message}");
+				DoLog(LogLevel.Warning, $"Stacktrace: {e.StackTrace}");
+			} finally {
+				if (!_tbotInstance.UserData.isSleeping) {
+					await _tbotOgameBridge.CheckCelestials();
+				}
+			}
+		}
+	}
+}

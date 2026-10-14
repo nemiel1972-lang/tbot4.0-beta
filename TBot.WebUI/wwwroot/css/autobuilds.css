@@ -1,0 +1,155 @@
+/* Zusatz-Styles fuer die Seite "Autobuilds". Basis (Panels, Tabellen, Status) kommt aus autofarm.css. */
+
+.ab-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-left: auto;
+}
+
+.ab-toolbar-right label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    cursor: pointer;
+    color: #333;
+}
+
+.ab-toolbar-right select {
+    min-height: 28px;
+    padding: 2px 6px;
+    border: 1px solid #999;
+    border-radius: 2px;
+    background: #fff;
+    font: inherit;
+}
+
+/* Celestial-Kopfzeile (Planet) und Mond direkt darunter eingerueckt */
+.autofarm-page tr.ab-cel td {
+    padding: 10px 12px;
+    border-top: 2px solid #cfcfcf;
+    background: #f2f6fa;
+    font-weight: 600;
+}
+
+.autofarm-page tr.ab-cel.ab-moon td {
+    padding-left: 34px;
+    border-top: 1px solid #e2e2e2;
+    background: #f8fafc;
+}
+
+.ab-cel .ab-coord {
+    margin-left: 8px;
+    color: #666;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.ab-badge {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 6px;
+    border: 1px solid #aebfce;
+    border-radius: 2px;
+    color: #345;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.autofarm-page tr.ab-wk td:first-child {
+    padding-left: 34px;
+    color: #444;
+}
+
+.autofarm-page tr.ab-wk.ab-wk-moon td:first-child {
+    padding-left: 58px;
+}
+
+.ab-label {
+    font-weight: 600;
+}
+
+.ab-sub {
+    display: block;
+    margin-top: 3px;
+    color: #666;
+    font-size: 12px;
+}
+
+.ab-none {
+    color: #999;
+}
+
+.ab-missing {
+    white-space: nowrap;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+}
+
+/* Status-Farben */
+.status-wartet-auf-lieferung {
+    border-color: #d7bd69;
+    background: #fff9df;
+}
+
+.status-lieferung-unterwegs {
+    border-color: #a9c6df;
+    background: #eef6fc;
+}
+
+.status-bestand-gedeckt {
+    border-color: #b9c99f;
+    background: #f1f7e9;
+}
+
+.status-gebaut {
+    border-color: #b9c99f;
+    background: #f1f7e9;
+}
+
+.status-abgeloest {
+    border-color: #c5c5c5;
+    background: #f2f2f2;
+}
+
+.ab-masked {
+    letter-spacing: 1px;
+    color: #888;
+}
+
+@media (max-width: 720px) {
+    .ab-toolbar-right {
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+}
+
+/* ROI-Felder oben: drei Kacheln statt fuenf Spalten */
+.ab-roi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid #e2e2e2;
+}
+
+@media (max-width: 720px) {
+    .ab-roi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sortier-Buttons */
+.ab-sortlabel {
+    color: #555;
+}
+
+.ab-sortbtn.ab-active {
+    border-color: #527da3;
+    color: #fff;
+    background: #527da3;
+}
+
+.ab-sortbtn.ab-active:hover {
+    background: #46708f;
+}

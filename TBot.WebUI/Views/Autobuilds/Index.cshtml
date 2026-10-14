@@ -1,0 +1,367 @@
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@model TBot.WebUI.Models.AutobuildsModel
+
+@{
+    var jsonOptions = new JsonSerializerOptions {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = JavaScriptEncoder.Default
+    };
+    var initialSnapshot = JsonSerializer.Serialize(Model, jsonOptions);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/autofarm.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/autobuilds.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
+}
+
+<div class="autofarm-page tbot-dark" id="ab-dashboard" data-instance="@Model.SelectedInstance">
+    <div class="autofarm-shell">
+        <header class="autofarm-header">
+            <div>
+                <h1>Autobuilds</h1>
+                <p class="intro">What the Brain workers (AutoMine, AutoResearch, LF-AutoMine, LF-AutoResearch) want to build per celestial and what they started last. Read only.</p>
+            </div>
+            <form method="get" class="instance-picker">
+                <label for="instance">Instance</label>
+                <div class="instance-controls">
+                    <select id="instance" name="instance">
+                        @foreach (var instance in Model.Instances)
+                        {
+                            if (string.Equals(instance, Model.SelectedInstance, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@instance" selected>@instance</option>
+                            }
+                            else
+                            {
+                                <option value="@instance">@instance</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="refresh-button">Open</button>
+                </div>
+            </form>
+        </header>
+
+        <div class="dashboard-toolbar" role="status" aria-live="polite">
+            <span id="poll-status">Loading data...</span>
+            <span id="last-updated"></span>
+            <div class="ab-toolbar-right">
+                <span class="ab-sortlabel">Sort:</span>
+                <button type="button" class="plain-button ab-sortbtn" id="ab-sort-name" title="By name, A-Z / 1-9">By name</button>
+                <button type="button" class="plain-button ab-sortbtn" id="ab-sort-coords" title="By coordinates, smallest first">By coordinates</button>
+                <select id="ab-filter" title="Filter by status">
+                    <option value="">All requests</option>
+                    <option value="Waiting for delivery">Waiting for delivery</option>
+                    <option value="Delivery in transit">Delivery in transit</option>
+                    <option value="Stock covered">Stock covered</option>
+                </select>
+                <label><input type="checkbox" id="ab-mask" checked /> Hide data</label>
+            </div>
+        </div>
+
+        <div id="ab-notice"></div>
+        <div id="ab-content"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const root = document.getElementById("ab-dashboard");
+        const content = document.getElementById("ab-content");
+        const notice = document.getElementById("ab-notice");
+        const pollStatus = document.getElementById("poll-status");
+        const lastUpdated = document.getElementById("last-updated");
+        const maskBox = document.getElementById("ab-mask");
+        const filterBox = document.getElementById("ab-filter");
+        const sortNameBtn = document.getElementById("ab-sort-name");
+        const sortCoordsBtn = document.getElementById("ab-sort-coords");
+        // Sortierung: "coords" (Standard, kleinste Koordinate zuerst) oder "name" (A-Z, Zahlen aufsteigend); wird im Browser gemerkt.
+        let sortMode = "coords";
+        try {
+            const savedSort = localStorage.getItem("autobuilds.sort");
+            if (savedSort === "name" || savedSort === "coords") sortMode = savedSort;
+        } catch { }
+        const instance = root.dataset.instance;
+        const snapshotUrl = '@Url.Action("Snapshot", "Autobuilds")';
+        const MASK = "*****";
+        let snapshot = @Html.Raw(initialSnapshot);
+        let renderedKey = "";
+        let requestInProgress = false;
+
+        // "Hide data" is ON by default; the choice is remembered in the browser.
+        try {
+            const saved = localStorage.getItem("autobuilds.mask");
+            if (saved !== null) maskBox.checked = saved === "1";
+        } catch { }
+
+        function esc(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+        }
+
+        // Namen / Koordinaten werden bei aktivem Schalter durch ***** ersetzt.
+        function sens(value) {
+            return maskBox.checked ? `<span class="ab-masked">${MASK}</span>` : esc(value);
+        }
+
+        function num(value) { return Number(value || 0).toLocaleString("en-US"); }
+
+        // Short notation for large numbers: 1.2 M / 3.4 B
+        function short(value) {
+            const v = Number(value || 0);
+            const a = Math.abs(v);
+            if (a >= 1e9) return (v / 1e9).toLocaleString("en-US", { maximumFractionDigits: 2 }) + " B";
+            if (a >= 1e6) return (v / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + " M";
+            if (a >= 1e3) return (v / 1e3).toLocaleString("en-US", { maximumFractionDigits: 1 }) + " k";
+            return String(v);
+        }
+
+        function slug(value) {
+            return String(value || "unknown").toLowerCase()
+                .replaceAll("ä", "a").replaceAll("ö", "o").replaceAll("ü", "u")
+                .replace(/[^a-z0-9]+/g, "-");
+        }
+
+        function ago(value) {
+            if (!value) return "unbekannt";
+            const t = new Date(value).getTime();
+            if (Number.isNaN(t)) return "unbekannt";
+            let s = Math.max(0, Math.round((Date.now() - t) / 1000));
+            const d = Math.floor(s / 86400); s -= d * 86400;
+            const h = Math.floor(s / 3600); s -= h * 3600;
+            const m = Math.floor(s / 60);
+            if (d > 0) return `${d} d ${h} h ago`;
+            if (h > 0) return `${h} h ${m} min ago`;
+            if (m > 0) return `${m} min ago`;
+            return "just now";
+        }
+
+        function fmtDate(value) {
+            if (!value) return "-";
+            const d = new Date(value);
+            return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString("en-US");
+        }
+
+        function ownerName(owner) {
+            switch (owner) {
+                case "AutoMine": return "AutoMine";
+                case "AutoResearch": return "AutoResearch";
+                case "LifeformsAutoMine": return "LF-AutoMine";
+                case "LifeformsAutoResearch": return "LF-AutoResearch";
+                default: return owner;
+            }
+        }
+
+        function missingText(n) {
+            const parts = [];
+            if (n.missingM > 0) parts.push(`M ${short(n.missingM)}`);
+            if (n.missingC > 0) parts.push(`C ${short(n.missingC)}`);
+            if (n.missingD > 0) parts.push(`D ${short(n.missingD)}`);
+            return parts.length ? parts.join(" · ") : "-";
+        }
+
+        function roiBox(title, info, hint) {
+            if (!info) return `<div class="metric"><span>${title}</span><strong>-</strong><span class="ab-sub">no ROI known yet</span></div>`;
+            const days = Number(info.roiDays).toLocaleString("en-US", { maximumFractionDigits: 1 });
+            return `<div class="metric"><span>${title}</span><strong>${days} days</strong>
+                <span class="ab-sub"><b>${esc(info.label)}</b> (${esc(ownerName(info.owner))})</span>
+                <span class="ab-sub">${sens(info.celestial)} ${sens("[" + info.coordinate + "]")}</span>
+                <span class="ab-sub">${esc(hint)}</span></div>`;
+        }
+
+        function renderSummary(s) {
+            return `<section class="panel panel-primary">
+                <div class="panel-heading"><h2>Overview</h2><span class="panel-count">${num(s.open)} open requests</span></div>
+                <div class="metric-grid">
+                    <div class="metric"><span>Offen</span><strong>${num(s.open)}</strong></div>
+                    <div class="metric"><span>Waiting for delivery</span><strong>${num(s.waiting)}</strong></div>
+                    <div class="metric"><span>Delivery in transit</span><strong>${num(s.inFlight)}</strong></div>
+                    <div class="metric"><span>Stock covered</span><strong>${num(s.funded)}</strong></div>
+                    <div class="metric"><span>Built (24 h)</span><strong>${num(s.builtLast24h)}</strong></div>
+                </div>
+                <div class="metric-grid ab-roi-grid">
+                    ${roiBox("Best ROI (fewest days)", s.bestRoi, "Pays back fastest")}
+                    ${roiBox("Worst ROI (most days)", s.worstRoi, "Pays back slowest")}
+                    <div class="metric"><span>Requests with ROI</span><strong>${num(s.roiCount)} of ${num(s.open)}</strong><span class="ab-sub">ROI exists only for mines (AutoMine)</span></div>
+                </div>
+                <p class="panel-note">ROI = days until the build pays for itself through the extra production (bot calculation, including geologist and server speed). Smaller is better.</p>
+            </section>`;
+        }
+
+        function buildingCell(b) {
+            if (!b) return `<span class="ab-none">-</span>`;
+            return `<span class="ab-label">${esc(b.label)}</span><span class="ab-sub">started ${esc(ago(b.startedUtc))}</span>`;
+        }
+
+        function nextCell(n) {
+            if (!n) return `<span class="ab-none">-</span>`;
+            return `<span class="ab-label">${esc(n.label)}</span><span class="ab-sub">seit ${esc(ago(n.firstRequestedUtc))}</span>`;
+        }
+
+        function statusCell(n) {
+            if (!n) return "";
+            const fleet = n.fleetId > 0 ? `<span class="ab-sub">Fleet ${sens(n.fleetId)}</span>` : "";
+            return `<span class="status status-${slug(n.status)}">${esc(n.status)}</span>${fleet}`;
+        }
+
+        // "1:100:8" -> Zahlen fuer den Vergleich (Galaxie, System, Position)
+        function coordParts(c) {
+            const p = String(c || "").split(":").map(x => parseInt(x, 10));
+            return [p[0] || 0, p[1] || 0, p[2] || 0];
+        }
+
+        function cmpCoords(a, b) {
+            const x = coordParts(a), y = coordParts(b);
+            return (x[0] - y[0]) || (x[1] - y[1]) || (x[2] - y[2]);
+        }
+
+        // Sortiert nach ECHTEN Werten (auch wenn die Anzeige verborgen ist). Planet und Mond bleiben zusammen:
+        // der Mond steht immer direkt unter seinem Planeten, sortiert wird nach dem Planeten.
+        function sortBodies(bodies) {
+            const groups = new Map();
+            for (const b of bodies) {
+                const k = b.groupKey || ("id" + b.celestialId);
+                if (!groups.has(k)) groups.set(k, []);
+                groups.get(k).push(b);
+            }
+            const list = Array.from(groups.values()).map(g => {
+                g.sort((a, b) => (a.isMoon ? 1 : 0) - (b.isMoon ? 1 : 0));
+                return g;
+            });
+            list.sort((ga, gb) => {
+                const a = ga[0], b = gb[0];
+                if (sortMode === "name") {
+                    const n = String(a.name || "").localeCompare(String(b.name || ""), "de", { numeric: true, sensitivity: "base" });
+                    return n || cmpCoords(a.coordinate, b.coordinate);
+                }
+                return cmpCoords(a.coordinate, b.coordinate);
+            });
+            return list.flat();
+        }
+
+        function updateSortButtons() {
+            sortNameBtn.classList.toggle("ab-active", sortMode === "name");
+            sortCoordsBtn.classList.toggle("ab-active", sortMode === "coords");
+        }
+
+        function renderBodies(bodies, filter) {
+            bodies = sortBodies(bodies);
+            const rows = [];
+            let shown = 0;
+            for (const b of bodies) {
+                const workers = b.workers.filter(w => !filter || (w.next && w.next.status === filter));
+                if (!workers.length) continue;
+                shown++;
+                const moon = b.isMoon;
+                rows.push(`<tr class="ab-cel${moon ? " ab-moon" : ""}"><td colspan="5">
+                    <span class="ab-badge">${moon ? "Moon" : "Planet"}</span>${sens(b.name || "Celestial")}
+                    <span class="ab-coord">${sens("[" + b.coordinate + "]")}</span></td></tr>`);
+                for (const w of workers) {
+                    rows.push(`<tr class="ab-wk${moon ? " ab-wk-moon" : ""}">
+                        <td>${esc(ownerName(w.owner))}</td>
+                        <td>${buildingCell(w.building)}</td>
+                        <td>${nextCell(w.next)}</td>
+                        <td>${statusCell(w.next)}</td>
+                        <td class="ab-missing">${w.next ? esc(missingText(w.next)) : "-"}${w.next && w.next.lastDelivery ? `<span class="ab-sub">${esc(w.next.lastDelivery)}</span>` : ""}</td>
+                    </tr>`);
+                }
+            }
+            const body = shown ? rows.join("") : `<tr><td colspan="5" class="empty-cell">No entries.</td></tr>`;
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Celestials</h2><span class="panel-count">${num(shown)}</span></div>
+                <p class="panel-note">"In progress" shows the worker's most recently started build. "Next build" is the current build request. A prediction will follow later.</p>
+                <div class="table-wrap"><table>
+                    <thead><tr><th>Celestial / Worker</th><th>In progress</th><th>Next build</th><th>Status</th><th>Missing / last delivery</th></tr></thead>
+                    <tbody>${body}</tbody>
+                </table></div>
+            </section>`;
+        }
+
+        function renderHistory(history) {
+            const rows = history.length ? history.map(h => `<tr>
+                <td>${esc(fmtDate(h.closedUtc))}</td>
+                <td>${esc(ownerName(h.owner))}</td>
+                <td>${sens(h.celestial)}</td>
+                <td>${esc(h.label)}</td>
+                <td><span class="status status-${slug(h.status)}">${esc(h.status)}</span></td>
+            </tr>`).join("") : `<tr><td colspan="5" class="empty-cell">No completed entries yet.</td></tr>`;
+            return `<section class="panel">
+                <details class="logs-details" id="ab-history">
+                    <summary>Verlauf (letzte ${num(history.length)})</summary>
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>When</th><th>Worker</th><th>Celestial</th><th>Build</th><th>Result</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table></div>
+                </details>
+            </section>`;
+        }
+
+        function render(data, force) {
+            snapshot = data;
+            const key = JSON.stringify(data) + "|" + maskBox.checked + "|" + filterBox.value + "|" + sortMode;
+            if (!force && key === renderedKey) return;
+
+            if (data.error) {
+                notice.innerHTML = `<div class="notice">Error while reading: ${esc(data.error)}</div>`;
+            } else if (!data.dataAvailable) {
+                notice.innerHTML = `<div class="notice">No build_requests_*.json file in the data folder yet. It is created as soon as a worker wants to build something.</div>`;
+            } else {
+                const src = maskBox.checked ? MASK : esc(data.sourceFile);
+                notice.innerHTML = `<p class="panel-count" style="margin:8px 0">Source: ${src} · File updated: ${esc(fmtDate(data.updatedUtc))}</p>`;
+            }
+
+            // geöffnete Verlauf-Ansicht und Scrollposition beim Neuzeichnen behalten
+            const prev = document.getElementById("ab-history");
+            const histOpen = prev ? prev.open : false;
+            const scroll = window.scrollY;
+
+            content.innerHTML = data.dataAvailable
+                ? [renderSummary(data.summary), renderBodies(data.bodies, filterBox.value), renderHistory(data.history)].join("")
+                : "";
+
+            const hist = document.getElementById("ab-history");
+            if (hist) hist.open = histOpen;
+            window.scrollTo(0, scroll);
+            renderedKey = key;
+        }
+
+        maskBox.addEventListener("change", () => {
+            try { localStorage.setItem("autobuilds.mask", maskBox.checked ? "1" : "0"); } catch { }
+            render(snapshot, true);
+        });
+        filterBox.addEventListener("change", () => render(snapshot, true));
+        function setSort(mode) {
+            sortMode = mode;
+            try { localStorage.setItem("autobuilds.sort", mode); } catch { }
+            updateSortButtons();
+            render(snapshot, true);
+        }
+        sortNameBtn.addEventListener("click", () => setSort("name"));
+        sortCoordsBtn.addEventListener("click", () => setSort("coords"));
+        updateSortButtons();
+
+        async function refresh() {
+            if (requestInProgress || document.hidden) return;
+            requestInProgress = true;
+            try {
+                const response = await fetch(`${snapshotUrl}?instance=${encodeURIComponent(instance)}`, { cache: "no-store" });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                render(await response.json());
+                pollStatus.textContent = "Automatic refresh active (30 s)";
+                lastUpdated.textContent = `Last updated ${new Date().toLocaleTimeString("en-US")}`;
+            } catch (error) {
+                pollStatus.textContent = "Refresh failed, last data stays visible.";
+                lastUpdated.textContent = error.message;
+            } finally {
+                requestInProgress = false;
+            }
+        }
+
+        render(snapshot, true);
+        refresh();
+        window.setInterval(refresh, 30000);
+    })();
+</script>

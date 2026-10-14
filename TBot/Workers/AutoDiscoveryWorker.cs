@@ -1,0 +1,492 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Timers;
+using Microsoft.Extensions.Logging;
+using Tbot.Common.Settings;
+using Tbot.Helpers;
+using Tbot.Includes;
+using Tbot.Services;
+using TBot.Common.Logging;
+using TBot.Model;
+using TBot.Ogame.Infrastructure;
+using TBot.Ogame.Infrastructure.Enums;
+using TBot.Ogame.Infrastructure.Models;
+
+namespace Tbot.Workers {
+	public class AutoDiscoveryWorker : WorkerBase {
+		private readonly IOgameService _ogameService;
+		private readonly IFleetScheduler _fleetScheduler;
+		private readonly ICalculationService _calculationService;
+		private readonly ITBotOgamedBridge _tbotOgameBridge;
+		private readonly AutoDiscoveryCursorStore _cursorStore;
+
+		private readonly Dictionary<string, DiscoveryCursorState> _originCursors = new();
+
+		private sealed class DiscoveryRunContext {
+			public int FleetsToSend;
+			public bool Stop;
+			public int Skips;
+			public int GlobalAttempts;
+			public int MaxGlobalAttempts;
+		}
+
+		public AutoDiscoveryWorker(ITBotMain parentInstance,
+			IOgameService ogameService,
+			IFleetScheduler fleetScheduler,
+			ICalculationService calculationService,
+			ITBotOgamedBridge tbotOgameBridge) :
+			base(parentInstance) {
+			_ogameService = ogameService;
+			_fleetScheduler = fleetScheduler;
+			_calculationService = calculationService;
+			_tbotOgameBridge = tbotOgameBridge;
+			_cursorStore = new AutoDiscoveryCursorStore(
+				$"autodiscovery_cursors_{_tbotInstance.InstanceAlias}.json");
+		}
+
+		private sealed class CoordinateComparer : IEqualityComparer<Coordinate> {
+			public bool Equals(Coordinate x, Coordinate y) {
+				if (ReferenceEquals(x, y)) return true;
+				if (x is null || y is null) return false;
+				return x.Galaxy == y.Galaxy && x.System == y.System && x.Position == y.Position && x.Type == y.Type;
+			}
+
+			public int GetHashCode(Coordinate obj) {
+				if (obj is null) return 0;
+				unchecked {
+					int hash = 17;
+					hash = hash * 31 + obj.Galaxy.GetHashCode();
+					hash = hash * 31 + obj.System.GetHashCode();
+					hash = hash * 31 + obj.Position.GetHashCode();
+					hash = hash * 31 + obj.Type.GetHashCode();
+					return hash;
+				}
+			}
+		}
+
+		private static readonly IEqualityComparer<Coordinate> _coordinateComparer = new CoordinateComparer();
+
+		private void EnsureBlacklistInitialized() {
+			if (_tbotInstance?.UserData == null) return;
+
+			if (_tbotInstance.UserData.discoveryBlackList == null) {
+				_tbotInstance.UserData.discoveryBlackList = new Dictionary<Coordinate, DateTime>(_coordinateComparer);
+				return;
+			}
+
+			if (!ReferenceEquals(_tbotInstance.UserData.discoveryBlackList.Comparer, _coordinateComparer)) {
+				var old = _tbotInstance.UserData.discoveryBlackList;
+				var fresh = new Dictionary<Coordinate, DateTime>(_coordinateComparer);
+				foreach (var kv in old) {
+
+					if (fresh.TryGetValue(kv.Key, out var existing)) {
+						if (kv.Value > existing) fresh[kv.Key] = kv.Value;
+					} else {
+						fresh[kv.Key] = kv.Value;
+					}
+				}
+				_tbotInstance.UserData.discoveryBlackList = fresh;
+			}
+		}
+
+		private void CleanupExpiredBlacklistAll(DateTime now) {
+			if (_tbotInstance?.UserData?.discoveryBlackList == null) return;
+			var toRemove = _tbotInstance.UserData.discoveryBlackList
+				.Where(kv => kv.Value <= now)
+				.Select(kv => kv.Key)
+				.ToList();
+			foreach (var k in toRemove)
+				_tbotInstance.UserData.discoveryBlackList.Remove(k);
+		}
+
+		private bool IsBlacklistedAndActive(Coordinate c, DateTime now) {
+			if (_tbotInstance?.UserData?.discoveryBlackList == null) return false;
+			return _tbotInstance.UserData.discoveryBlackList.TryGetValue(c, out var until) && until > now;
+		}
+
+		private void UpsertBlacklist(Coordinate c, DateTime until) {
+			if (_tbotInstance?.UserData?.discoveryBlackList == null) return;
+			_tbotInstance.UserData.discoveryBlackList[c] = until;
+		}
+
+		private List<Celestial> GetConfiguredOrigins(List<Celestial> celestials) {
+			var result = new List<Celestial>();
+			if (celestials == null || celestials.Count == 0) return result;
+
+			var originsCfg = _tbotInstance?.InstanceSettings?.AutoDiscovery?.Origin;
+			if (originsCfg == null) return result;
+
+			foreach (var o in originsCfg) {
+				int galaxy = Convert.ToInt32(o.Galaxy);
+				int system = Convert.ToInt32(o.System);
+				int position = Convert.ToInt32(o.Position);
+				string typeStr = Convert.ToString(o.Type) ?? "Planet";
+
+				Celestials wantedType = Celestials.Planet;
+				if (Enum.TryParse(typeStr, true, out Celestials parsed))
+					wantedType = parsed;
+
+				var found = celestials.FirstOrDefault(c =>
+					c?.Coordinate != null &&
+					c.Coordinate.Galaxy == galaxy &&
+					c.Coordinate.System == system &&
+					c.Coordinate.Position == position &&
+					c.Coordinate.Type == wantedType
+				);
+
+				if (found != null)
+					result.Add(found);
+				else
+					_tbotInstance.log(LogLevel.Warning, LogSender.AutoDiscovery,
+						$"AutoDiscovery origin not found in user celestials: {galaxy}:{system}:{position} ({typeStr})");
+			}
+
+			return result;
+		}
+
+		private string OriginKey(Celestial origin) {
+
+			return $"{origin.Coordinate.Galaxy}:{origin.Coordinate.System}:{origin.Coordinate.Position}:{origin.Coordinate.Type}";
+		}
+
+		private DiscoveryCursorState GetOrInitCursor(Celestial origin) {
+			var key = OriginKey(origin);
+			if (!_originCursors.TryGetValue(key, out var cursor) || cursor == null) {
+				cursor = _cursorStore.Load(key, origin.Coordinate.System);
+				_originCursors[key] = cursor;
+			}
+
+			int maxSystem = _tbotInstance.UserData.serverData.Systems;
+			cursor.Normalize(origin.Coordinate.System, maxSystem);
+
+			return cursor;
+		}
+
+		private async Task<int> ProcessOneSystemForOrigin(
+			Celestial origin,
+			DiscoveryCursorState cursor,
+			int discoveries,
+			DiscoveryRunContext ctx) {
+
+			if (origin?.Coordinate == null) return discoveries;
+			if (discoveries <= 0 || ctx.FleetsToSend <= 0 || ctx.Stop) return discoveries;
+
+			DateTime now = await _tbotOgameBridge.GetDateTime();
+			int systemToDo = cursor.System;
+			int maxSystem = _tbotInstance.UserData.serverData.Systems;
+			List<Coordinate> availableCoordinates;
+			try {
+				availableCoordinates = await _ogameService.GetPositionsAvailableForDiscoveryFleet(origin, new Coordinate {
+					Galaxy = origin.Coordinate.Galaxy,
+					System = systemToDo,
+					Position = 0,
+					Type = Celestials.Planet
+				});
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning,
+					$"System view failed for {origin.Coordinate.Galaxy}:{systemToDo}; no discovery positions will be probed this cycle: {e.Message}");
+				return discoveries;
+			}
+
+			var availablePositions = new HashSet<int>(
+				(availableCoordinates ?? new List<Coordinate>())
+					.Where(c => c != null && c.Galaxy == origin.Coordinate.Galaxy && c.System == systemToDo && c.Position >= 1 && c.Position <= 15)
+					.Select(c => c.Position));
+			var blacklistedPositions = new HashSet<int>();
+			for (int position = cursor.NextPosition; position <= 15; position++) {
+				var positionCoordinate = new Coordinate {
+					Galaxy = origin.Coordinate.Galaxy,
+					System = systemToDo,
+					Position = position,
+					Type = Celestials.Planet
+				};
+				if (IsBlacklistedAndActive(positionCoordinate, now))
+					blacklistedPositions.Add(position);
+			}
+
+			var plannedPositions = DiscoverySystemPlanner.SelectAvailablePositions(
+				availablePositions,
+				cursor.NextPosition,
+				blacklistedPositions,
+				Math.Min(discoveries, ctx.FleetsToSend));
+
+			DoLog(LogLevel.Debug,
+				$"System {origin.Coordinate.Galaxy}:{systemToDo} reports {availablePositions.Count} available discovery positions; planned {plannedPositions.Count}.");
+
+			if (plannedPositions.Count == 0) {
+				cursor.SkipSystem(systemToDo, maxSystem);
+				_cursorStore.Save(OriginKey(origin), cursor);
+				return discoveries;
+			}
+
+			foreach (int pos in plannedPositions) {
+				if (discoveries <= 0 || ctx.FleetsToSend <= 0 || ctx.Stop) break;
+				if (_tbotInstance.UserData.slots.Free <= (int)_tbotInstance.InstanceSettings.General.SlotsToLeaveFree) { ctx.Stop = true; break; }
+
+				if (++ctx.GlobalAttempts > ctx.MaxGlobalAttempts) { ctx.Stop = true; break; }
+
+				var dest = new Coordinate {
+					Galaxy = origin.Coordinate.Galaxy,
+					System = systemToDo,
+					Position = pos,
+					Type = Celestials.Planet
+				};
+
+				// Commit before sending so a failed request cannot retry the same position
+				// repeatedly. The system view already filtered unavailable positions.
+				cursor.CommitPosition(systemToDo, pos, maxSystem);
+				_cursorStore.Save(OriginKey(origin), cursor);
+
+				if (IsBlacklistedAndActive(dest, now)) {
+					ctx.Skips++;
+					continue;
+				}
+
+				// PATCH 37 (supersedes PATCH 28/35): the manual randomized delay before every SendDiscovery
+				// call is no longer needed. Rapid-fire consecutive sends (Patch 26's burst-until-slots-
+				// exhausted behaviour) triggered an empty "400 BadRequest" from OGame/ogamed - confirmed via
+				// server log correlation to be genuine server-side rate limiting. Ported from TBot
+				// v3.5.1-beta1: dispatch now goes through _fleetScheduler.SendDiscovery(), which serializes
+				// all discovery sends behind a dedicated semaphore (see FleetScheduler.cs) instead of hoping
+				// a fixed wait is wide enough. AutoDiscovery.MinDelayBetweenSendsMs/MaxDelayBetweenSendsMs
+				// (Patch 35) are no longer read here; safe to remove from instance_settings.json.
+				var ok = await _fleetScheduler.SendDiscovery(origin, dest);
+				if (ok) {
+					DoLog(LogLevel.Information, $"Discovery fleet sent to {dest} from {origin}.");
+					discoveries--;
+					ctx.FleetsToSend--;
+				} else {
+					DoLog(LogLevel.Warning, $"Failed to send discovery fleet to {dest} from {origin}.");
+				}
+
+				// Keep a failed or sent position out of the next planning pass.
+				UpsertBlacklist(dest, now.AddDays(7));
+				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
+			}
+
+			return discoveries;
+		}
+
+
+		private long CalcFallbackIntervalMs() {
+			return RandomizeHelper.CalcRandomInterval(
+				(int)_tbotInstance.InstanceSettings.AutoDiscovery.CheckIntervalMin,
+				(int)_tbotInstance.InstanceSettings.AutoDiscovery.CheckIntervalMax
+			);
+		}
+
+		private long CalcNextIntervalFromDiscoveryFleetsOrFallback() {
+			var discFleet = _tbotInstance.UserData.fleets
+				.Where(f => f.Mission == Missions.Discovery && f.BackIn.HasValue)
+				.OrderBy(f => f.BackIn.Value)
+				.FirstOrDefault();
+
+			if (discFleet == null) return CalcFallbackIntervalMs();
+
+			long backInSec = discFleet.BackIn ?? 0;
+			long interval = backInSec * 1000 + RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
+			if (interval <= 0) interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
+			return interval;
+		}
+
+		protected override async Task Execute() {
+			bool delay = false;
+			bool stop = false;
+			int skips = 0;
+
+			try {
+				DoLog(LogLevel.Information, $"Starting AutoDiscovery...");
+
+				EnsureBlacklistInitialized();
+
+				if (_tbotInstance.UserData.isSleeping) {
+					stop = true;
+					return;
+				}
+
+				if ((bool)_tbotInstance.InstanceSettings.SleepMode.Active) {
+					DateTime.TryParse((string)_tbotInstance.InstanceSettings.SleepMode.GoToSleep, out DateTime goToSleep);
+					DateTime.TryParse((string)_tbotInstance.InstanceSettings.SleepMode.WakeUp, out DateTime wakeUp);
+					DateTime timeSleep = await _tbotOgameBridge.GetDateTime();
+					if (GeneralHelper.ShouldSleep(timeSleep, goToSleep, wakeUp)) {
+						DoLog(LogLevel.Warning, "Unable to send discovery fleet: bed time has passed");
+						stop = true;
+						return;
+					}
+				}
+
+				DateTime now = await _tbotOgameBridge.GetDateTime();
+				CleanupExpiredBlacklistAll(now);
+
+				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
+				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
+
+				List<RankSlotsPriority> rankSlotsPriority = new() {
+					new RankSlotsPriority(Feature.BrainAutoMine, (int)_tbotInstance.InstanceSettings.General.SlotPriorityLevel.Brain,
+						((bool)_tbotInstance.InstanceSettings.Brain.Active && (bool)_tbotInstance.InstanceSettings.Brain.Transports.Active &&
+						((bool)_tbotInstance.InstanceSettings.Brain.AutoMine.Active || (bool)_tbotInstance.InstanceSettings.Brain.AutoResearch.Active ||
+						 (bool)_tbotInstance.InstanceSettings.Brain.LifeformAutoMine.Active || (bool)_tbotInstance.InstanceSettings.Brain.LifeformAutoResearch.Active)),
+						(int)_tbotInstance.InstanceSettings.Brain.Transports.MaxSlots,
+						(int)_tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Transport)
+					),
+					new RankSlotsPriority(Feature.Expeditions, (int)_tbotInstance.InstanceSettings.General.SlotPriorityLevel.Expeditions,
+						(bool)_tbotInstance.InstanceSettings.Expeditions.Active,
+						(int)_tbotInstance.UserData.slots.ExpTotal,
+						(int)_tbotInstance.UserData.slots.ExpInUse
+					),
+					new RankSlotsPriority(Feature.AutoFarm, (int)_tbotInstance.InstanceSettings.General.SlotPriorityLevel.AutoFarm,
+						(bool)_tbotInstance.InstanceSettings.AutoFarm.Active,
+						(int)_tbotInstance.InstanceSettings.AutoFarm.MaxSlots,
+						(int)_tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Attack)
+					),
+					new RankSlotsPriority(Feature.Colonize, (int)_tbotInstance.InstanceSettings.General.SlotPriorityLevel.Colonize,
+						(bool)_tbotInstance.InstanceSettings.AutoColonize.Active,
+						(bool)_tbotInstance.InstanceSettings.AutoColonize.IntensiveResearch.Active ? (int)_tbotInstance.InstanceSettings.AutoColonize.IntensiveResearch.MaxSlots : 1,
+						(int)_tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Colonize)
+					),
+					new RankSlotsPriority(Feature.AutoDiscovery, (int)_tbotInstance.InstanceSettings.General.SlotPriorityLevel.AutoDiscovery,
+						(bool)_tbotInstance.InstanceSettings.AutoDiscovery.Active,
+						(int)_tbotInstance.InstanceSettings.AutoDiscovery.MaxSlots,
+						(int)_tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Discovery)
+					),
+					new RankSlotsPriority(Feature.Harvest, (int)_tbotInstance.InstanceSettings.General.SlotPriorityLevel.AutoHarvest,
+						(bool)_tbotInstance.InstanceSettings.AutoHarvest.Active,
+						(int)_tbotInstance.InstanceSettings.AutoHarvest.MaxSlots,
+						(int)_tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Harvest)
+					)
+				};
+
+				int fleetsToSend = _calculationService.CalcSlotsPriority(
+					Feature.AutoDiscovery, rankSlotsPriority,
+					_tbotInstance.UserData.slots, _tbotInstance.UserData.fleets,
+					(int)_tbotInstance.InstanceSettings.General.SlotsToLeaveFree
+				);
+
+				if (fleetsToSend <= 0) {
+					delay = true;
+					return;
+				}
+
+				var celestials = await _ogameService.GetCelestials();
+				var origins = GetConfiguredOrigins(celestials);
+
+				if (origins == null || origins.Count == 0) {
+					stop = true;
+					DoLog(LogLevel.Warning, "Unable to parse AutoDiscovery origin.");
+					return;
+				}
+
+				// OGame exposes discovery availability through the planet-scoped endpoint.
+				// The returned count is account-wide, so query it once instead of asking
+				// every configured origin and creating unnecessary activity.
+				var availabilityOrigin = origins.FirstOrDefault(origin =>
+					origin?.Coordinate?.Type == Celestials.Planet) ?? origins[0];
+				int discoveries = await _ogameService.GetAvailableDiscoveries(availabilityOrigin);
+				if (discoveries <= 0) {
+					delay = true;
+					DoLog(LogLevel.Information, "No discoveries available right now.");
+					return;
+				}
+
+				var ctx = new DiscoveryRunContext {
+					FleetsToSend = Math.Min(fleetsToSend, discoveries),
+					Stop = false,
+					Skips = 0,
+					GlobalAttempts = 0,
+					MaxGlobalAttempts = 600
+				};
+
+				foreach (var origin in origins) {
+					if (ctx.Stop) break;
+					if (ctx.FleetsToSend <= 0) break;
+					if (origin?.Coordinate == null) continue;
+
+					var cursor = GetOrInitCursor(origin);
+
+					// PATCH 26: this used to call ProcessOneSystemForOrigin exactly once per
+					// origin per Execute() cycle, i.e. at most one system's worth of positions
+					// (<=15) per run - regardless of how many fleet slots (ctx.FleetsToSend)
+					// were actually still free. With few configured origins (often just one)
+					// and systems that frequently have zero or only one genuinely available
+					// position, this left most of MaxSlots unused every single cycle instead
+					// of moving on to try further systems in the same run. Keep processing
+					// successive systems for this origin until slots/discoveries run out, a
+					// stop condition is hit, or a per-cycle safety cap is reached (bounds
+					// worst-case API calls per Execute() when scanning through many already
+					// fully-colonized systems in a row).
+					int systemsTriedThisOrigin = 0;
+					const int maxSystemsPerOriginPerCycle = 30;
+					while (ctx.FleetsToSend > 0 && !ctx.Stop && discoveries > 0
+						&& systemsTriedThisOrigin < maxSystemsPerOriginPerCycle) {
+						DoLog(LogLevel.Information, $"Origin {origin} cursor system={cursor.System}, nextPos={cursor.NextPosition} (discoveries={discoveries})");
+
+						discoveries = await ProcessOneSystemForOrigin(origin, cursor, discoveries, ctx);
+						systemsTriedThisOrigin++;
+					}
+
+					fleetsToSend = ctx.FleetsToSend;
+					stop = ctx.Stop;
+					skips = ctx.Skips;
+				}
+
+				if (skips > 0)
+					DoLog(LogLevel.Information, $"{skips} positions skipped (blacklisted)");
+
+				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
+
+				long interval = CalcNextIntervalFromDiscoveryFleetsOrFallback();
+				DateTime time = await _tbotOgameBridge.GetDateTime();
+				var nextTime = time.AddMilliseconds(interval);
+
+				ChangeWorkerPeriod(interval);
+				DoLog(LogLevel.Information, $"Next AutoDiscovery check at {nextTime.ToString()}");
+				await _tbotOgameBridge.CheckCelestials();
+		    	} catch (Exception e) {
+				DoLog(LogLevel.Error, $"An error occured: {e.Message}");
+				DoLog(LogLevel.Debug, e.StackTrace);
+		    	} finally {
+				if (stop) {
+					DoLog(LogLevel.Information, $"Stopping feature.");
+					await EndExecution();
+				}
+
+				if (delay) {
+					DoLog(LogLevel.Information, $"Delaying...");
+					var timeDelay = await _tbotOgameBridge.GetDateTime();
+					_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
+
+					long intervalDelay = CalcNextIntervalFromDiscoveryFleetsOrFallback();
+					var newTimeDelay = timeDelay.AddMilliseconds(intervalDelay);
+
+					ChangeWorkerPeriod(intervalDelay);
+					DoLog(LogLevel.Information, $"Next AutoDiscovery check at {newTimeDelay.ToString()}");
+				}
+
+				await _tbotOgameBridge.CheckCelestials();
+			}
+		}
+
+		public override bool IsWorkerEnabledBySettings() {
+			try {
+				return (bool)_tbotInstance.InstanceSettings.AutoDiscovery.Active;
+			} catch (Exception) {
+				return false;
+			}
+		}
+
+		public override string GetWorkerName() {
+			return "AutoDiscovery";
+		}
+		public override Feature GetFeature() {
+			return Feature.AutoDiscovery;
+		}
+
+		public override LogSender GetLogSender() {
+			return LogSender.AutoDiscovery;
+		}
+	}
+}

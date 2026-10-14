@@ -1,0 +1,69 @@
+@model TBot.WebUI.Models.ConfigPageModel
+@section Styles {
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/config-forms.css" asp-append-version="true" />
+}
+
+<div class="cfg-page">
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="cfg-card cfg-error">Config could not be read: @Model.Error</div>
+    }
+    else
+    {
+        <div class="cfg-grid">
+            <aside class="cfg-card cfg-side">
+                <form method="get" class="cfg-instance">
+                    <input type="hidden" name="block" value="@Model.Selected" />
+                    <select name="instance" onchange="this.form.submit()">
+                        @foreach (var alias in Model.Instances)
+                        {
+                            <option value="@alias" selected="@(alias == Model.Instance)">@alias</option>
+                        }
+                    </select>
+                </form>
+                <div class="cfg-search"><input type="search" id="cfg-search" placeholder="Search blocks…" /></div>
+                <ul class="cfg-blocks" id="cfg-blocks">
+                    @foreach (var b in Model.Blocks)
+                    {
+                        var cls = "cfg-block" + (b.Name == Model.Selected ? " sel" : "") + " mode-" + b.Mode;
+                        <li class="@cls" data-name="@b.Name">
+                            <a asp-action="Index" asp-route-instance="@Model.Instance" asp-route-block="@b.Name">
+                                <span class="nm">@b.Name</span>
+                                @if (b.Mode == "secret") { <span class="lock" title="Credentials: JSON editor only">🔒</span> }
+                                else if (b.Mode == "placeholder") { <span class="ph" title="Placeholder - enable in settings.json">soon</span> }
+                                @if (b.Active.HasValue) { <span class="sw @(b.Active.Value ? "on" : "")"></span> }
+                            </a>
+                        </li>
+                    }
+                </ul>
+                <div class="cfg-hint">Enable more form pages in <code>settings.json</code>:<br /><code>"WebUI": { "FormPages": ["Expeditions", "AutoFarm"] }</code> or <code>"*"</code> for all. Other blocks stay in the <a asp-controller="Settings" asp-action="Index">JSON editor</a>.</div>
+            </aside>
+            <main class="cfg-card cfg-main" id="cfg-main" data-instance="@Model.Instance" data-block="@Model.Selected" data-mode="@Model.SelectedMode"
+                  data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-save="@Url.Action("SaveBlock", "Config")">
+                @if (Model.SelectedMode == "placeholder")
+                {
+                    <div class="cfg-placeholder">
+                        <h1>@Model.Selected</h1>
+                        <p>The form view for this block is a placeholder and not enabled yet.</p>
+                        <p>Enable it in <code>settings.json</code>:</p>
+                        <pre>"WebUI": { "FormPages": ["@Model.Selected"] }</pre>
+                        <p>Until then, edit it in the <a asp-controller="Settings" asp-action="Index">JSON editor</a>.</p>
+                    </div>
+                }
+                else if (Model.SelectedMode == "secret")
+                {
+                    <div class="cfg-placeholder">
+                        <h1>@Model.Selected</h1>
+                        <p>🔒 This block contains credentials and is only available (masked) in the <a asp-controller="Settings" asp-action="Index">JSON editor</a>.</p>
+                    </div>
+                }
+                else
+                {
+                    <div id="cfg-root"><div class="cfg-loading">Loading…</div></div>
+                }
+            </main>
+        </div>
+        <script src="~/js/config-forms.js" asp-append-version="true"></script>
+    }
+</div>

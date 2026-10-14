@@ -1,0 +1,214 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using TBot.Common.Logging;
+
+namespace Tbot.Includes {
+	public delegate Task AsyncTimerCallback(CancellationToken ct);
+	internal class AsyncTimer : IAsyncDisposable {
+		private readonly AsyncTimerCallback _callback;
+		private readonly string _name;
+		private readonly object _changeLock = new();
+		private SemaphoreSlim _startStopSemaphore = new SemaphoreSlim(1, 1);
+
+
+		private bool _canSetBiggerPeriod = true;
+
+		private TimeSpan _dueTime;
+		private TimeSpan _period;
+
+		public TimeSpan Period {
+			get {
+				lock (_changeLock) {
+					return _period;
+				}
+			}
+			private set {
+				lock (_changeLock) {
+					_period = value;
+				}
+			}
+		}
+
+		public TimeSpan DueTime {
+			get {
+				lock (_changeLock) {
+					return _dueTime;
+				}
+			}
+			private set {
+				lock (_changeLock) {
+					_dueTime = value;
+				}
+			}
+		}
+
+		public bool _IsRunning { get; private set; }
+		public bool IsRunning {
+			get {
+				return _IsRunning;
+			}
+			private set {
+				_IsRunning = value;
+			}
+		}
+
+		private Task _scheduledAction = null;
+		private CancellationTokenSource _cts = null;
+
+		public AsyncTimer(AsyncTimerCallback callback, string name) {
+			_callback = callback;
+			_name = name;
+		}
+
+		public async Task StartAsync(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
+
+			await StopAsync();
+
+			
+
+			if (dueTime < TimeSpan.Zero)
+				throw new ArgumentOutOfRangeException(nameof(dueTime), "due time must be equal or greater than zero");
+			DueTime = EnsureMaximumTimeSpan(dueTime, TimeSpan.FromDays(1));
+
+			if ((period < TimeSpan.Zero) && (period != Timeout.InfiniteTimeSpan))
+				throw new ArgumentOutOfRangeException(nameof(period), "period must be equal or greater than zero");
+			Period = EnsureMaximumTimeSpan(period, TimeSpan.FromDays(1));
+
+			await _startStopSemaphore.WaitAsync();
+			_canSetBiggerPeriod = true;
+			try {
+				_cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+				_scheduledAction = Task.Run(async () => {
+					// Change thread name so TaskManager will show it
+					Thread.CurrentThread.Name = $"AT_{_name}";
+					IsRunning = true;
+
+					try {
+						// PATCH (Stop-Hang-Fix): pruefte vorher ct (das urspruengliche, nie von StopAsync()
+						// abgebrochene Token) statt _cts.Token (das linked Token, das StopAsync() tatsaechlich
+						// cancelt). Meist folgenlos, weil Task.Delay(..., _cts.Token) sauber eine
+						// OperationCanceledException wirft und die Schleife per catch verlaesst - aber die
+						// Bedingung selbst war falsch und sollte das tatsaechlich gecancelte Token pruefen.
+						while (_cts.Token.IsCancellationRequested == false) {
+
+							await Task.Delay(DueTime, _cts.Token);
+
+							// USER CALLBACK START HERE
+							await _callback(_cts.Token);
+							// USER CALLBACK END HERE
+
+							lock (_changeLock) {
+								_canSetBiggerPeriod = true;
+							}
+
+							if (Period == Timeout.InfiniteTimeSpan) {
+								// Exit
+								break;
+							}
+
+							await Task.Delay(Period, _cts.Token);
+						}
+					} catch (OperationCanceledException) {
+						// OK!
+					} finally {
+						IsRunning = false;
+					}
+
+				}, _cts.Token);
+			} finally {
+				_startStopSemaphore.Release();
+			}
+		}
+
+		// PATCH (Stop-Hang-Fix, 17.09.2026): Cancel() bricht nur die Task.Delay-Wartezeiten zwischen
+		// den Zyklen ab. Laeuft der Worker gerade mitten in "await _callback(_cts.Token)" - also mitten
+		// in einem HTTP-Call an ogamed - passiert nichts, weil OgameService das Token nicht auswertet.
+		// Beobachtet 17.09.2026: nach systemctl stop liefen AutoMine-Zyklen noch >30s unbeirrt weiter
+		// ("bot is logged out"-Fehlerschleife nach einem ogamed-Neustart), bis systemd nach
+		// TimeoutStopSec mit SIGKILL nachhelfen musste ("state 'stop-sigterm' timed out. Killing.").
+		// Echtes Cancellation-Propagation durch die komplette OgameService-HTTP-Kette waere der saubere
+		// Fix, aber ein sehr viel groesserer Umbau. Pragmatischer Fix hier: StopAsync() wartet nur noch
+		// bis zu "timeout" auf den Callback, statt unbegrenzt - damit DisposeAsync()/Task.WhenAll in
+		// TBotMain nie unbegrenzt haengt und der Prozess innerhalb von systemds TimeoutStopSec sauber
+		// runterfaehrt. Der haengende Callback laeuft im Hintergrund weiter, wird aber beim
+		// Prozessende ohnehin verworfen.
+		public async Task StopAsync(TimeSpan? timeout = null) {
+			await _startStopSemaphore.WaitAsync();
+			try {
+				if (_scheduledAction != null) {
+					if (_cts != null) {
+						_cts.Cancel();
+					}
+					var stopTimeout = timeout ?? TimeSpan.FromSeconds(10);
+					var completed = await Task.WhenAny(_scheduledAction, Task.Delay(stopTimeout));
+					if (completed != _scheduledAction) {
+						Console.Error.WriteLine($"[AsyncTimer] \"{_name}\": callback did not stop within {stopTimeout.TotalSeconds}s after cancellation - abandoning wait.");
+					}
+					_cts = null;
+					_scheduledAction = null;
+				}
+			} finally {
+				_startStopSemaphore.Release();
+			}
+		}
+
+		public async Task RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
+			await StopAsync();
+			await StartAsync(ct, period, dueTime);
+		}
+
+		public void ChangeTimings(TimeSpan period, TimeSpan dueTime) {
+			lock (_changeLock) {
+				_dueTime = EnsureMaximumTimeSpan(dueTime, TimeSpan.FromDays(1));
+				_period = EnsureMaximumTimeSpan(period, TimeSpan.FromDays(1));
+			}
+		}
+
+		private bool IsLessThan(TimeSpan period, TimeSpan period2) {
+			if (period2 == Timeout.InfiniteTimeSpan)
+				return true;
+			if (period == Timeout.InfiniteTimeSpan)
+				return false;
+			return period.TotalMilliseconds < period2.TotalMilliseconds;
+		}
+
+		private TimeSpan EnsureMaximumTimeSpan(TimeSpan timeSpan, TimeSpan maximum) {
+			if (timeSpan == Timeout.InfiniteTimeSpan)
+				return timeSpan;
+			if (timeSpan.TotalMilliseconds < 0)
+				return TimeSpan.FromMilliseconds(1);
+			if (timeSpan > maximum)
+				return maximum;
+			return timeSpan;
+		}
+
+		public bool ChangePeriod(TimeSpan period) {
+			lock (_changeLock) {
+				period = EnsureMaximumTimeSpan(period, TimeSpan.FromDays(1));
+				if (IsLessThan(period, _period) || _canSetBiggerPeriod) {
+					if (period != Timeout.InfiniteTimeSpan && period.TotalMilliseconds < 0)
+						period = TimeSpan.FromMilliseconds(1000);
+					_period = period;
+					_canSetBiggerPeriod = false;
+					return true;
+				}
+				return false;
+			}
+		}
+
+		public void ChangeDueTime(TimeSpan dueTime) {
+			lock (_changeLock) {
+				_dueTime = EnsureMaximumTimeSpan(dueTime, TimeSpan.FromDays(1));
+			}
+		}
+
+		public async ValueTask DisposeAsync() {
+			await StopAsync();
+		}
+	}
+}

@@ -1,0 +1,77 @@
+/* Dunkles TBot-Farbschema (gleiche Farben wie die Config-Seite). Wird per Klasse "tbot-dark" auf .autofarm-page aktiviert. */
+:root {
+    --tb-gold: #F5B70E;
+    --tb-bg: #0b1020;
+    --tb-panel: #12182b;
+    --tb-panel2: #171f36;
+    --tb-line: #273050;
+    --tb-txt: #e8ecf5;
+    --tb-mut: #8d98b8;
+    --tb-ok: #3ecf8e;
+    --tb-warn: #f5b70e;
+    --tb-bad: #ff6b6b;
+    --tb-input: #0c1224;
+}
+
+.autofarm-page.tbot-dark {
+    color: var(--tb-txt);
+    background: transparent;
+}
+
+.tbot-dark .autofarm-header { border-bottom-color: var(--tb-line); }
+.tbot-dark .intro, .tbot-dark .summary-label, .tbot-dark .instance-picker label { color: var(--tb-mut); }
+
+.tbot-dark .instance-picker select,
+.tbot-dark .ab-toolbar-right select {
+    color: #fff; background: var(--tb-input); border-color: var(--tb-line); border-radius: 7px;
+}
+.tbot-dark .refresh-button, .tbot-dark .plain-button {
+    color: #ddd; background: #1a2342; border: 1px solid var(--tb-line); border-radius: 8px;
+}
+.tbot-dark .refresh-button:hover, .tbot-dark .plain-button:hover { background: #24305a; }
+.tbot-dark .refresh-button { color: #222; background: var(--tb-gold); border-color: var(--tb-gold); font-weight: 700; }
+.tbot-dark .refresh-button:hover { background: #fbe29e; }
+
+.tbot-dark .dashboard-toolbar { color: var(--tb-mut); }
+.tbot-dark .dashboard-toolbar #last-updated { color: var(--tb-mut); }
+.tbot-dark .ab-toolbar-right label { color: #cfd6ea; }
+
+.tbot-dark .notice { color: #f5d98a; background: #3b2f0a; border-color: #6b5517; border-radius: 8px; }
+
+.tbot-dark .panel { border: 1px solid var(--tb-line); border-radius: 10px; background: var(--tb-panel); overflow: hidden; }
+.tbot-dark .panel-primary { border-color: #34427a; }
+.tbot-dark .panel-heading { border-bottom-color: var(--tb-line); background: var(--tb-panel2); }
+.tbot-dark .panel-heading h2 { color: var(--tb-gold); font-size: 15px; letter-spacing: 1px; text-transform: uppercase; }
+.tbot-dark .panel-count, .tbot-dark .panel-note { color: var(--tb-mut); }
+
+.tbot-dark .metric { border-right-color: var(--tb-line); }
+.tbot-dark .metric span { color: var(--tb-mut); }
+.tbot-dark .metric strong { color: #fff; }
+.tbot-dark .progress-line progress { accent-color: var(--tb-gold); }
+
+.tbot-dark table { color: var(--tb-txt); }
+.tbot-dark th, .tbot-dark td { border-bottom-color: #1c2543; }
+.tbot-dark th { color: var(--tb-mut); background: var(--tb-panel2); }
+.tbot-dark tbody tr:hover { background: #1a2342; }
+.tbot-dark .coordinate, .tbot-dark .muted, .tbot-dark .reason-detail, .tbot-dark .empty-cell { color: var(--tb-mut); }
+.tbot-dark .logs-details summary { color: var(--tb-txt); }
+.tbot-dark .logs-details pre { color: #cdd5ee; background: var(--tb-input); }
+
+/* Status-Marken */
+.tbot-dark .status, .tbot-dark .reason-label { color: #cfd6ea; background: #1a2342; border-color: var(--tb-line); border-radius: 8px; }
+.tbot-dark .status-active, .tbot-dark .status-attackpending, .tbot-dark .reason-attack-pending { color: #8be9b0; background: #10231f; border-color: #3a5f4a; }
+.tbot-dark .status-attacksent, .tbot-dark .reason-attack-sent { color: #9ec5ff; background: #14213f; border-color: #34427a; }
+.tbot-dark .status-probessent, .tbot-dark .status-probesrequired, .tbot-dark .status-failedprobesrequired,
+.tbot-dark .reason-waiting-for-report, .tbot-dark .reason-more-probes-required { color: var(--tb-gold); background: #3b2f0a; border-color: #6b5517; }
+.tbot-dark .status-error, .tbot-dark .status-notsuitable, .tbot-dark .reason-not-suitable,
+.tbot-dark .reason-label[class*="reason-blocked"], .tbot-dark .reason-attack-dispatch-failed { color: #ff9aa5; background: #2a1318; border-color: #a8404b; }
+.tbot-dark .status-disabled, .tbot-dark .status-stale, .tbot-dark .status-unknown, .tbot-dark .status-cached-empty,
+.tbot-dark .status-cached-no-targets, .tbot-dark .reason-report-already-processed, .tbot-dark .reason-no-suitable-origin { color: var(--tb-mut); background: #151c33; border-color: var(--tb-line); }
+
+/* Autobuilds-Zusatzstyles */
+.tbot-dark tr.ab-cel td { border-top: 2px solid var(--tb-line); background: #1a2342; color: #fff; }
+.tbot-dark tr.ab-cel.ab-moon td { border-top: 1px solid var(--tb-line); background: #151d38; }
+.tbot-dark .ab-cel .ab-coord, .tbot-dark .ab-sub { color: var(--tb-mut); }
+.tbot-dark .ab-badge { color: #b7c3ee; background: #26305a; border-color: #34427a; border-radius: 8px; }
+.tbot-dark tr.ab-wk td:first-child { color: #cfd6ea; }
+.tbot-dark .ab-none { color: #56608a; }

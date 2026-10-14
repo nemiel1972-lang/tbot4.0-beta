@@ -1,0 +1,765 @@
+{
+  "_Comment": [
+    "Target values for LifeformAutoMine. Place this file next to instance_settings.json (working directory). It is NOT part of the publish output.",
+    "Activation: set \"TargetSlot\": 18 under Brain.LifeformAutoMine in instance_settings.json. 0 or missing = fallback only.",
+    "The race is detected per planet automatically (LFtype).",
+    "Fallback: max levels per building position 1..12; used for buildings not listed in the chosen slot.",
+    "Positions: table column -> building position 1..12. FoodBonusLevels is added to position 2 when a slot is applied.",
+    "Slot tables come from a third party (RiV), not yet verified against the game.",
+    "Optional: \"ResearchBoost\": { \"Active\": true, \"T2Slot\": 12, \"BoostLevel\": 15 } (staged build order T2 -> research -> T3)."
+  ],
+  "Fallback": {
+    "MaxBasePopulationBuilding": 72,
+    "MaxBaseFoodBuilding": 83,
+    "MaxBaseTechBuilding": 20,
+    "MaxT2Building": 14,
+    "MaxT3Building": 9,
+    "MaxBuilding6": 15,
+    "MaxBuilding7": 10,
+    "MaxBuilding8": 30,
+    "MaxBuilding9": 22,
+    "MaxBuilding10": 10,
+    "MaxBuilding11": 30,
+    "MaxBuilding12": 10
+  },
+  "Races": {
+    "Human": {
+      "FoodBonusLevels": 2,
+      "Positions": {
+        "Quarters": 1,
+        "Farm": 2,
+        "School": 3,
+        "Highschool": 4,
+        "Foodsilo": 7,
+        "Skyscraper": 9,
+        "Biotechlab": 10
+      },
+      "Slots": {
+        "1": {
+          "Target": 200000,
+          "Quarters": 22,
+          "Farm": 20,
+          "School": 0,
+          "Highschool": 0,
+          "Foodsilo": 0,
+          "Skyscraper": 0,
+          "Biotechlab": 0
+        },
+        "2": {
+          "Target": 300000,
+          "Quarters": 23,
+          "Farm": 22,
+          "School": 0,
+          "Highschool": 0,
+          "Foodsilo": 0,
+          "Skyscraper": 0,
+          "Biotechlab": 0
+        },
+        "3": {
+          "Target": 400000,
+          "Quarters": 23,
+          "Farm": 24,
+          "School": 0,
+          "Highschool": 0,
+          "Foodsilo": 0,
+          "Skyscraper": 0,
+          "Biotechlab": 0
+        },
+        "4": {
+          "Target": 500000,
+          "Quarters": 24,
+          "Farm": 25,
+          "School": 0,
+          "Highschool": 0,
+          "Foodsilo": 0,
+          "Skyscraper": 0,
+          "Biotechlab": 0
+        },
+        "5": {
+          "Target": 750000,
+          "Quarters": 27,
+          "Farm": 26,
+          "School": 0,
+          "Highschool": 0,
+          "Foodsilo": 0,
+          "Skyscraper": 0,
+          "Biotechlab": 0
+        },
+        "6": {
+          "Target": 1000000,
+          "Quarters": 27,
+          "Farm": 28,
+          "School": 0,
+          "Highschool": 0,
+          "Foodsilo": 0,
+          "Skyscraper": 0,
+          "Biotechlab": 0
+        },
+        "7": {
+          "Target": 1200000,
+          "Quarters": 43,
+          "Farm": 43,
+          "School": 4,
+          "Highschool": 0,
+          "Foodsilo": 2,
+          "Skyscraper": 0,
+          "Biotechlab": 3
+        },
+        "8": {
+          "Target": 3000000,
+          "Quarters": 46,
+          "Farm": 44,
+          "School": 7,
+          "Highschool": 0,
+          "Foodsilo": 4,
+          "Skyscraper": 2,
+          "Biotechlab": 3
+        },
+        "9": {
+          "Target": 5000000,
+          "Quarters": 46,
+          "Farm": 46,
+          "School": 8,
+          "Highschool": 0,
+          "Foodsilo": 4,
+          "Skyscraper": 4,
+          "Biotechlab": 4
+        },
+        "10": {
+          "Target": 7000000,
+          "Quarters": 48,
+          "Farm": 47,
+          "School": 8,
+          "Highschool": 0,
+          "Foodsilo": 8,
+          "Skyscraper": 4,
+          "Biotechlab": 5
+        },
+        "11": {
+          "Target": 9000000,
+          "Quarters": 49,
+          "Farm": 48,
+          "School": 8,
+          "Highschool": 0,
+          "Foodsilo": 9,
+          "Skyscraper": 4,
+          "Biotechlab": 6
+        },
+        "12": {
+          "Target": 11000000,
+          "Quarters": 50,
+          "Farm": 49,
+          "School": 8,
+          "Highschool": 0,
+          "Foodsilo": 9,
+          "Skyscraper": 4,
+          "Biotechlab": 6
+        },
+        "13": {
+          "Target": 13000000,
+          "Quarters": 61,
+          "Farm": 59,
+          "School": 11,
+          "Highschool": 7,
+          "Foodsilo": 17,
+          "Skyscraper": 11,
+          "Biotechlab": 14
+        },
+        "14": {
+          "Target": 26000000,
+          "Quarters": 63,
+          "Farm": 60,
+          "School": 12,
+          "Highschool": 8,
+          "Foodsilo": 25,
+          "Skyscraper": 16,
+          "Biotechlab": 16
+        },
+        "15": {
+          "Target": 56000000,
+          "Quarters": 66,
+          "Farm": 63,
+          "School": 12,
+          "Highschool": 9,
+          "Foodsilo": 26,
+          "Skyscraper": 18,
+          "Biotechlab": 17
+        },
+        "16": {
+          "Target": 112000000,
+          "Quarters": 69,
+          "Farm": 65,
+          "School": 13,
+          "Highschool": 9,
+          "Foodsilo": 31,
+          "Skyscraper": 19,
+          "Biotechlab": 20
+        },
+        "17": {
+          "Target": 224000000,
+          "Quarters": 71,
+          "Farm": 66,
+          "School": 14,
+          "Highschool": 10,
+          "Foodsilo": 38,
+          "Skyscraper": 27,
+          "Biotechlab": 23
+        },
+        "18": {
+          "Target": 448000000,
+          "Quarters": 74,
+          "Farm": 68,
+          "School": 15,
+          "Highschool": 10,
+          "Foodsilo": 42,
+          "Skyscraper": 29,
+          "Biotechlab": 27
+        }
+      }
+    },
+    "Kaelesh": {
+      "FoodBonusLevels": 0,
+      "Positions": {
+        "Quarters": 1,
+        "Farm": 2,
+        "School": 3,
+        "Highschool": 4,
+        "Antimatter": 6,
+        "Chrysalis": 8,
+        "Psionic": 10
+      },
+      "Slots": {
+        "1": {
+          "Target": 200000,
+          "Quarters": 20,
+          "Farm": 20,
+          "School": 0,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 0,
+          "Psionic": 0
+        },
+        "2": {
+          "Target": 300000,
+          "Quarters": 21,
+          "Farm": 22,
+          "School": 0,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 0,
+          "Psionic": 0
+        },
+        "3": {
+          "Target": 400000,
+          "Quarters": 23,
+          "Farm": 23,
+          "School": 0,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 0,
+          "Psionic": 0
+        },
+        "4": {
+          "Target": 500000,
+          "Quarters": 24,
+          "Farm": 24,
+          "School": 0,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 0,
+          "Psionic": 0
+        },
+        "5": {
+          "Target": 750000,
+          "Quarters": 25,
+          "Farm": 26,
+          "School": 0,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 0,
+          "Psionic": 0
+        },
+        "6": {
+          "Target": 1000000,
+          "Quarters": 27,
+          "Farm": 27,
+          "School": 0,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 0,
+          "Psionic": 0
+        },
+        "7": {
+          "Target": 1200000,
+          "Quarters": 43,
+          "Farm": 45,
+          "School": 3,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 1,
+          "Psionic": 0
+        },
+        "8": {
+          "Target": 3000000,
+          "Quarters": 44,
+          "Farm": 46,
+          "School": 6,
+          "Highschool": 0,
+          "Antimatter": 0,
+          "Chrysalis": 1,
+          "Psionic": 0
+        },
+        "9": {
+          "Target": 5000000,
+          "Quarters": 46,
+          "Farm": 48,
+          "School": 6,
+          "Highschool": 0,
+          "Antimatter": 2,
+          "Chrysalis": 3,
+          "Psionic": 2
+        },
+        "10": {
+          "Target": 7000000,
+          "Quarters": 47,
+          "Farm": 49,
+          "School": 7,
+          "Highschool": 0,
+          "Antimatter": 2,
+          "Chrysalis": 3,
+          "Psionic": 2
+        },
+        "11": {
+          "Target": 9000000,
+          "Quarters": 48,
+          "Farm": 50,
+          "School": 7,
+          "Highschool": 0,
+          "Antimatter": 3,
+          "Chrysalis": 4,
+          "Psionic": 2
+        },
+        "12": {
+          "Target": 11000000,
+          "Quarters": 49,
+          "Farm": 51,
+          "School": 7,
+          "Highschool": 0,
+          "Antimatter": 3,
+          "Chrysalis": 4,
+          "Psionic": 2
+        },
+        "13": {
+          "Target": 13000000,
+          "Quarters": 60,
+          "Farm": 62,
+          "School": 10,
+          "Highschool": 6,
+          "Antimatter": 13,
+          "Chrysalis": 18,
+          "Psionic": 6
+        },
+        "14": {
+          "Target": 26000000,
+          "Quarters": 62,
+          "Farm": 64,
+          "School": 11,
+          "Highschool": 7,
+          "Antimatter": 15,
+          "Chrysalis": 18,
+          "Psionic": 7
+        },
+        "15": {
+          "Target": 56000000,
+          "Quarters": 65,
+          "Farm": 67,
+          "School": 11,
+          "Highschool": 8,
+          "Antimatter": 15,
+          "Chrysalis": 21,
+          "Psionic": 7
+        },
+        "16": {
+          "Target": 112000000,
+          "Quarters": 67,
+          "Farm": 69,
+          "School": 12,
+          "Highschool": 8,
+          "Antimatter": 19,
+          "Chrysalis": 30,
+          "Psionic": 9
+        },
+        "17": {
+          "Target": 224000000,
+          "Quarters": 69,
+          "Farm": 71,
+          "School": 13,
+          "Highschool": 9,
+          "Antimatter": 19,
+          "Chrysalis": 34,
+          "Psionic": 11
+        },
+        "18": {
+          "Target": 448000000,
+          "Quarters": 72,
+          "Farm": 74,
+          "School": 13,
+          "Highschool": 9,
+          "Antimatter": 22,
+          "Chrysalis": 40,
+          "Psionic": 11
+        }
+      }
+    },
+    "Mecha": {
+      "FoodBonusLevels": 0,
+      "Positions": {
+        "Quarters": 1,
+        "Farm": 2,
+        "School": 3,
+        "Highschool": 4,
+        "Micro": 8,
+        "Prod": 9
+      },
+      "Slots": {
+        "1": {
+          "Target": 200000,
+          "Quarters": 17,
+          "Farm": 20,
+          "School": 0,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 0
+        },
+        "2": {
+          "Target": 300000,
+          "Quarters": 19,
+          "Farm": 21,
+          "School": 0,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 0
+        },
+        "3": {
+          "Target": 400000,
+          "Quarters": 20,
+          "Farm": 23,
+          "School": 0,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 0
+        },
+        "4": {
+          "Target": 500000,
+          "Quarters": 21,
+          "Farm": 24,
+          "School": 0,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 0
+        },
+        "5": {
+          "Target": 750000,
+          "Quarters": 23,
+          "Farm": 26,
+          "School": 0,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 0
+        },
+        "6": {
+          "Target": 1000000,
+          "Quarters": 24,
+          "Farm": 28,
+          "School": 0,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 0
+        },
+        "7": {
+          "Target": 1200000,
+          "Quarters": 42,
+          "Farm": 49,
+          "School": 3,
+          "Highschool": 0,
+          "Micro": 0,
+          "Prod": 1
+        },
+        "8": {
+          "Target": 3000000,
+          "Quarters": 43,
+          "Farm": 50,
+          "School": 5,
+          "Highschool": 0,
+          "Micro": 1,
+          "Prod": 2
+        },
+        "9": {
+          "Target": 5000000,
+          "Quarters": 44,
+          "Farm": 52,
+          "School": 6,
+          "Highschool": 0,
+          "Micro": 2,
+          "Prod": 2
+        },
+        "10": {
+          "Target": 7000000,
+          "Quarters": 45,
+          "Farm": 53,
+          "School": 7,
+          "Highschool": 0,
+          "Micro": 2,
+          "Prod": 2
+        },
+        "11": {
+          "Target": 9000000,
+          "Quarters": 46,
+          "Farm": 54,
+          "School": 7,
+          "Highschool": 0,
+          "Micro": 4,
+          "Prod": 4
+        },
+        "12": {
+          "Target": 11000000,
+          "Quarters": 47,
+          "Farm": 55,
+          "School": 7,
+          "Highschool": 0,
+          "Micro": 4,
+          "Prod": 5
+        },
+        "13": {
+          "Target": 13000000,
+          "Quarters": 59,
+          "Farm": 69,
+          "School": 10,
+          "Highschool": 6,
+          "Micro": 12,
+          "Prod": 11
+        },
+        "14": {
+          "Target": 26000000,
+          "Quarters": 61,
+          "Farm": 71,
+          "School": 11,
+          "Highschool": 7,
+          "Micro": 16,
+          "Prod": 13
+        },
+        "15": {
+          "Target": 56000000,
+          "Quarters": 64,
+          "Farm": 74,
+          "School": 11,
+          "Highschool": 8,
+          "Micro": 21,
+          "Prod": 16
+        },
+        "16": {
+          "Target": 112000000,
+          "Quarters": 67,
+          "Farm": 77,
+          "School": 12,
+          "Highschool": 8,
+          "Micro": 25,
+          "Prod": 18
+        },
+        "17": {
+          "Target": 224000000,
+          "Quarters": 69,
+          "Farm": 80,
+          "School": 13,
+          "Highschool": 9,
+          "Micro": 25,
+          "Prod": 21
+        },
+        "18": {
+          "Target": 448000000,
+          "Quarters": 72,
+          "Farm": 83,
+          "School": 14,
+          "Highschool": 9,
+          "Micro": 30,
+          "Prod": 22
+        }
+      }
+    },
+    "Rocktal": {
+      "FoodBonusLevels": 2,
+      "Positions": {
+        "Quarters": 1,
+        "Farm": 2,
+        "School": 3,
+        "Highschool": 4,
+        "Megalith": 8,
+        "MRC": 11
+      },
+      "Slots": {
+        "1": {
+          "Target": 200000,
+          "Quarters": 21,
+          "Farm": 21,
+          "School": 0,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "2": {
+          "Target": 300000,
+          "Quarters": 23,
+          "Farm": 23,
+          "School": 0,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "3": {
+          "Target": 400000,
+          "Quarters": 24,
+          "Farm": 25,
+          "School": 0,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "4": {
+          "Target": 500000,
+          "Quarters": 25,
+          "Farm": 26,
+          "School": 0,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "5": {
+          "Target": 750000,
+          "Quarters": 27,
+          "Farm": 27,
+          "School": 0,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "6": {
+          "Target": 1000000,
+          "Quarters": 28,
+          "Farm": 29,
+          "School": 0,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "7": {
+          "Target": 1200000,
+          "Quarters": 43,
+          "Farm": 44,
+          "School": 5,
+          "Highschool": 0,
+          "Megalith": 0,
+          "MRC": 0
+        },
+        "8": {
+          "Target": 3000000,
+          "Quarters": 45,
+          "Farm": 46,
+          "School": 7,
+          "Highschool": 0,
+          "Megalith": 1,
+          "MRC": 0
+        },
+        "9": {
+          "Target": 5000000,
+          "Quarters": 47,
+          "Farm": 48,
+          "School": 8,
+          "Highschool": 0,
+          "Megalith": 1,
+          "MRC": 0
+        },
+        "10": {
+          "Target": 7000000,
+          "Quarters": 48,
+          "Farm": 50,
+          "School": 8,
+          "Highschool": 0,
+          "Megalith": 2,
+          "MRC": 0
+        },
+        "11": {
+          "Target": 9000000,
+          "Quarters": 50,
+          "Farm": 51,
+          "School": 8,
+          "Highschool": 0,
+          "Megalith": 2,
+          "MRC": 0
+        },
+        "12": {
+          "Target": 11000000,
+          "Quarters": 51,
+          "Farm": 52,
+          "School": 8,
+          "Highschool": 0,
+          "Megalith": 2,
+          "MRC": 0
+        },
+        "13": {
+          "Target": 13000000,
+          "Quarters": 62,
+          "Farm": 64,
+          "School": 10,
+          "Highschool": 8,
+          "Megalith": 6,
+          "MRC": 2
+        },
+        "14": {
+          "Target": 26000000,
+          "Quarters": 64,
+          "Farm": 66,
+          "School": 12,
+          "Highschool": 9,
+          "Megalith": 7,
+          "MRC": 2
+        },
+        "15": {
+          "Target": 56000000,
+          "Quarters": 67,
+          "Farm": 69,
+          "School": 14,
+          "Highschool": 9,
+          "Megalith": 8,
+          "MRC": 3
+        },
+        "16": {
+          "Target": 112000000,
+          "Quarters": 70,
+          "Farm": 72,
+          "School": 14,
+          "Highschool": 10,
+          "Megalith": 9,
+          "MRC": 3
+        },
+        "17": {
+          "Target": 224000000,
+          "Quarters": 72,
+          "Farm": 75,
+          "School": 15,
+          "Highschool": 11,
+          "Megalith": 10,
+          "MRC": 4
+        },
+        "18": {
+          "Target": 448000000,
+          "Quarters": 75,
+          "Farm": 78,
+          "School": 16,
+          "Highschool": 11,
+          "Megalith": 11,
+          "MRC": 5
+        }
+      }
+    }
+  }
+}

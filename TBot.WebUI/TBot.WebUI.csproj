@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<OutputType>Library</OutputType>
+		<GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="wwwroot\**\*" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Remove="wwwroot\css\logging.css" />
+	  <Content Remove="wwwroot\css\Settings.css" />
+	  <Content Remove="wwwroot\img\TBot logo 128.png" />
+	  <Content Remove="wwwroot\img\TBot logo 144.png" />
+	  <Content Remove="wwwroot\img\TBot logo 152.png" />
+	  <Content Remove="wwwroot\img\TBot logo 192.png" />
+	  <Content Remove="wwwroot\img\TBot logo 384.png" />
+	  <Content Remove="wwwroot\img\TBot logo 512.png" />
+	  <Content Remove="wwwroot\img\TBot logo 72.png" />
+	  <Content Remove="wwwroot\img\TBot logo 96.png" />
+	  <Content Remove="wwwroot\img\tbot-logo.jpg" />
+	  <Content Remove="wwwroot\js\jquery.json-editor.min.js" />
+	  <Content Remove="wwwroot\js\JSONedtr-dark.css" />
+	  <Content Remove="wwwroot\js\JSONedtr.css" />
+	  <Content Remove="wwwroot\js\JSONedtr.js" />
+	  <Content Remove="wwwroot\js\logging.js" />
+	  <Content Remove="wwwroot\js\settings.js" />
+	  <Content Remove="wwwroot\manifest.json" />
+	  <Content Remove="wwwroot\serviceWorker.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CsvHelper" Version="33.1.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.8" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TBot.Common\TBot.Common.csproj" />
+		<ProjectReference Include="..\TBot.Ogame.Infrastructure\TBot.Ogame.Infrastructure.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,32 @@
+# Build-Ausgaben
+bin/
+obj/
+publish/
+*.dll
+*.pdb
+*.exe
+
+# Laufzeitdaten
+data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Konfiguration mit Zugangsdaten (nie committen)
+*settings*.json
+.env
+
+# Go-Binaries
+ogamed/ogamed
+ogamed/ogamed.exe
+ogamed/**/*.exe
+ogamed/cmd/ogamed-tbot/ogamed
+
+# Ausgelagerte Config (Worker-Dateien, Geheimnisse) und Sicherungen
+conf.d/
+secrets/
+backups/
+
+# Windows-Paket
+dist/
