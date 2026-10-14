@@ -12,6 +12,9 @@ Local changes (extra endpoints, fixes) are in `ogamed/cmd/ogamed-tbot/` and `oga
 The C# bot is a derivative of the original TBot (ogame-tbot/TBot) and of the fork by ronnie32 ("classic runtime with OGame v13 fixes").
 The original authors keep their copyright. Their repositories do not state a license; permission to publish has been requested.
 
+## Config UI
+The Config web UI (files listed in `LICENSE-UI.md`) is original work and is **All Rights Reserved** - view only, no copying or modification without permission.
+
 ## Third-party data
 `config/lifeform_targets.json` contains slot tables from a third-party source (not verified against the game). Check the rights before publishing.
 
