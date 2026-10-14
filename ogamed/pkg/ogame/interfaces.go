@@ -14,7 +14,6 @@ type Celestial interface {
 	GetType() CelestialType
 }
 
-// BaseOgameObj base interface for all ogame objects (buildings, technologies, ships, defenses)
 type BaseOgameObj interface {
 	ConstructionTime(nbr, universeSpeed int64, acc BuildAccelerators, lfBonuses LfBonuses, class CharacterClass, hasTechnocrat bool) time.Duration
 	GetID() ID
@@ -24,7 +23,6 @@ type BaseOgameObj interface {
 	IsAvailable(CelestialType, IResourcesBuildings, ILfBuildings, ILfResearches, IFacilities, IResearches, int64, CharacterClass) bool
 }
 
-// DefenderObj base interface for all defensive units (ships, defenses)
 type DefenderObj interface {
 	BaseOgameObj
 	DefenderConstructionTime(nbr, universeSpeed int64, acc DefenseAccelerators, lfBonuses LfBonuses) time.Duration
@@ -35,7 +33,6 @@ type DefenderObj interface {
 	GetWeaponPower(IResearches) int64
 }
 
-// Ship interface implemented by all ships units
 type Ship interface {
 	DefenderObj
 	GetCargoCapacity(techs IResearches, bonus LfBonuses, characterClass CharacterClass, multiplier float64, probeRaids bool) int64
@@ -43,49 +40,41 @@ type Ship interface {
 	GetSpeed(techs IResearches, bonus LfBonuses, characterClass CharacterClass, allianceClass AllianceClass) int64
 }
 
-// Defense interface implemented by all defenses units
 type Defense interface {
 	DefenderObj
 }
 
-// Levelable base interface for all levelable ogame objects (buildings, technologies)
 type Levelable interface {
 	BaseOgameObj
 	GetLevel(IResourcesBuildings, IFacilities, IResearches) int64
 }
 
-// Technology interface that all technologies implement
 type Technology interface {
 	Levelable
 	TechnologyConstructionTime(nbr, universeSpeed int64, acc TechAccelerators, lfBonuses LfBonuses, class CharacterClass, hasTechnocrat bool) time.Duration
 }
 
-// Building interface that all buildings implement
 type Building interface {
 	Levelable
 	BuildingConstructionTime(nbr, universeSpeed int64, acc BuildingAccelerators, lfBonuses LfBonuses) time.Duration
 	DeconstructionPrice(lvl int64, techs IResearches) Resources
 }
 
-// BuildAccelerators levels of things we need to calculate construction time of anything
 type BuildAccelerators interface {
 	TechAccelerators
 	BuildingAccelerators
 	DefenseAccelerators
 }
 
-// TechAccelerators to calculate techs construction time, we need research lab level
 type TechAccelerators interface {
 	GetResearchLab() int64
 }
 
-// DefenseAccelerators to calculate defense construction time (ships / defenses), we need nanite and shipyard levels
 type DefenseAccelerators interface {
 	GetNaniteFactory() int64
 	GetShipyard() int64
 }
 
-// BuildingAccelerators to calculate building construction time, we need nanite and robotic levels
 type BuildingAccelerators interface {
 	GetNaniteFactory() int64
 	GetRoboticsFactory() int64

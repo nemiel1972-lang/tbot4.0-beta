@@ -7,32 +7,24 @@ import (
 
 type MessagesTabID int64
 
-// CelestialID represent either a PlanetID or a MoonID
 type CelestialID int64
 
-// MoonID represent a moon id
 type MoonID CelestialID
 
-// Celestial convert a MoonID to a CelestialID
 func (m MoonID) Celestial() CelestialID {
 	return CelestialID(m)
 }
 
-// Speed represent a fleet speed
 type Speed float64
 
-// Float64 returns a float64 value of the speed
 func (s Speed) Float64() float64 {
 	return float64(s)
 }
 
-// Int64 returns an integer value of the speed
 func (s Speed) Int64() int64 {
 	return int64(s)
 }
 
-// Int returns an integer value of the speed
-// Deprecated: backward compatibility
 func (s Speed) Int() int64 {
 	return int64(s)
 }
@@ -148,13 +140,10 @@ type planetResource struct {
 	IsMoon        bool
 	ImageFileName string
 	Name          string
-	// OtherPlanet   string // can be null or apparently number (cannot unmarshal number into Go struct field planetResource.OtherPlanet of type string)
 }
 
-// PlanetResources ...
 type PlanetResources map[CelestialID]planetResource
 
-// Multiplier ...
 type Multiplier struct {
 	Metal     float64
 	Crystal   float64
@@ -162,16 +151,12 @@ type Multiplier struct {
 	Honor     float64
 }
 
-// EspionageReportType type of espionage report (action or report)
 type EspionageReportType int
 
-// Action message received when an enemy is seen near your planet
 const Action EspionageReportType = 0
 
-// Report message received when you spied on someone
 const Report EspionageReportType = 1
 
-// CombatReportSummary summary of combat report
 type CombatReportSummary struct {
 	ID           int64
 	APIKey       string
@@ -188,16 +173,14 @@ type CombatReportSummary struct {
 	CreatedAt    time.Time
 }
 
-// EspionageReportSummary summary of espionage report
 type EspionageReportSummary struct {
 	ID             int64
 	Type           EspionageReportType
-	From           string // Fleet Command | Space Monitoring
+	From           string
 	Target         Coordinate
 	LootPercentage float64
 }
 
-// ExpeditionMessage ...
 type ExpeditionMessage struct {
 	ID         int64
 	Coordinate Coordinate
@@ -207,46 +190,43 @@ type ExpeditionMessage struct {
 	CreatedAt  time.Time
 }
 
-// MarketplaceMessage ...
 type MarketplaceMessage struct {
 	ID                  int64
-	Type                int64 // 26: purchases, 27: sales
+	Type                int64
 	CreatedAt           time.Time
 	Token               string
 	MarketTransactionID int64
 }
 
-// Preferences ...
 type Preferences struct {
 	SpioAnz                            int64
 	SpySystemAutomaticQuantity         int64
 	SpySystemTargetPlanetTypes         int64
 	SpySystemTargetPlayerTypes         int64
 	SpySystemIgnoreSpiedInLastXMinutes int64
-	DisableChatBar                     bool // no-mobile
+	DisableChatBar                     bool
 	DisableOutlawWarning               bool
 	MobileVersion                      bool
 	ShowOldDropDowns                   bool
 	ActivateAutofocus                  bool
 	Language                           string
-	EventsShow                         int64 // Hide: 1, Above the content: 2, Below the content: 3
-	SortSetting                        int64 // Order of emergence: 0, Coordinates: 1, Alphabet: 2, Size: 3, Used fields: 4
-	SortOrder                          int64 // Up: 0, Down: 1
+	EventsShow                         int64
+	SortSetting                        int64
+	SortOrder                          int64
 	ShowDetailOverlay                  bool
-	AnimatedSliders                    bool // no-mobile
-	AnimatedOverview                   bool // no-mobile
-	PopupsNotices                      bool // no-mobile
-	PopopsCombatreport                 bool // no-mobile
+	AnimatedSliders                    bool
+	AnimatedOverview                   bool
+	PopupsNotices                      bool
+	PopopsCombatreport                 bool
 	SpioReportPictures                 bool
-	MsgResultsPerPage                  int64 // 10, 25, 50
+	MsgResultsPerPage                  int64
 	AuctioneerNotifications            bool
 	EconomyNotifications               bool
 	ShowActivityMinutes                bool
 	PreserveSystemOnPlanetChange       bool
 	DiscoveryWarningEnabled            bool
-	UrlaubsModus                       bool // Vacation mode
+	UrlaubsModus                       bool
 
-	// Mobile only
 	Notifications struct {
 		BuildList               bool
 		FriendlyFleetActivities bool
@@ -265,7 +245,7 @@ type ACSValues struct {
 	Position      int64
 	CelestialType CelestialType
 	Name          string
-	ACSValues     string // Raw string is used to send fleet. eg: `1#2#3#3#name#123456`
+	ACSValues     string
 	Union         int64
 }
 
@@ -279,10 +259,10 @@ type Relocation struct {
 
 type MinifleetResponse struct {
 	Response struct {
-		Message     string `json:"message"` // `Send espionage probe to:`
+		Message     string `json:"message"`
 		Type        int    `json:"type"`
-		Slots       int    `json:"slots"`  // slots used by the minifleet call
-		Probes      int    `json:"probes"` // probes remaining on the celestial
+		Slots       int    `json:"slots"`
+		Probes      int    `json:"probes"`
 		Recyclers   int    `json:"recyclers"`
 		Explorers   int    `json:"explorers"`
 		Missiles    int    `json:"missiles"`
@@ -292,7 +272,7 @@ type MinifleetResponse struct {
 			System   int `json:"system"`
 			Position int `json:"position"`
 		} `json:"coordinates"`
-		PlanetType int  `json:"planetType"` // 1/3 = planet/moon
+		PlanetType int  `json:"planetType"`
 		Success    bool `json:"success"`
 	} `json:"response"`
 	NewAjaxToken string `json:"newAjaxToken"`

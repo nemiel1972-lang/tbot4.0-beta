@@ -4,7 +4,6 @@ import (
 	"math"
 )
 
-// BaseShip base struct for ships
 type BaseShip struct {
 	BaseDefender
 	BaseCargoCapacity int64
@@ -12,7 +11,6 @@ type BaseShip struct {
 	FuelConsumption   int64
 }
 
-// GetCargoCapacity returns ship cargo capacity
 func (b BaseShip) GetCargoCapacity(techs IResearches, lfBonuses LfBonuses, characterClass CharacterClass, hyperspaceBonusMultiplier float64, probeRaids bool) int64 {
 	id := b.GetID()
 	if id == EspionageProbeID && !probeRaids {
@@ -32,7 +30,6 @@ func (b BaseShip) GetCargoCapacity(techs IResearches, lfBonuses LfBonuses, chara
 	return cargo
 }
 
-// GetFuelConsumption returns ship fuel consumption
 func (b BaseShip) GetFuelConsumption(techs IResearches, lfBonuses LfBonuses, characterClass CharacterClass, fleetDeutSaveFactor float64) int64 {
 	fuelConsumption := b.FuelConsumption
 	if b.ID == SmallCargoID && techs.GetImpulseDrive() >= 5 {
@@ -50,7 +47,6 @@ func (b BaseShip) GetFuelConsumption(techs IResearches, lfBonuses LfBonuses, cha
 	return max(int64(fuelConsumption1+lfBonus), 1)
 }
 
-// GetSpeed returns speed of the ship
 func (b BaseShip) GetSpeed(techs IResearches, lfBonuses LfBonuses, characterClass CharacterClass, allianceClass AllianceClass) int64 {
 	var techDriveLvl int64
 	driveFactor := 0.2

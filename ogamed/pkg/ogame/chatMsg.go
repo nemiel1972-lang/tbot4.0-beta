@@ -2,13 +2,11 @@ package ogame
 
 import "github.com/alaingilbert/ogame/pkg/utils"
 
-// ChatPayload ...
 type ChatPayload struct {
 	Name string    `json:"name"`
 	Args []ChatMsg `json:"args"`
 }
 
-// ChatMsg ...
 type ChatMsg struct {
 	SenderID      int64  `json:"senderId"`
 	SenderName    string `json:"senderName"`

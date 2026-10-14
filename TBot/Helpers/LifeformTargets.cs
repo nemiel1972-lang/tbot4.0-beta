@@ -13,28 +13,9 @@ using TBot.Ogame.Infrastructure.Models;
 using TBot.Ogame.Infrastructure;
 
 namespace Tbot.Helpers {
-	/// <summary>
-	/// reads the lifeform target levels (race x slot) from a separate JSON file
-	/// (default: lifeform_targets.json in the process working directory, i.e. next to instance_settings.json)
-	/// instead of the race-independent position caps in the config.
-	///
-	/// Flow per celestial:
-	///  1. Take the fallback values (positions 1..12) from the "Fallback" section of the JSON.
-	///  2. If Brain.LifeformAutoMine.TargetSlot > 0: the values of the race (cel.LFtype) for that slot
-	///     override the fallback values of the buildings listed there.
-	///  3. Food override: position 2 (food building) additionally gets the race's "FoodBonusLevels".
-	///  4. Optional config limits MaxBasePopulationBuilding / MaxBaseFoodBuilding / MaxBaseTechBuilding
-	///     (pos. 1 / 2 / 3) cap the result, e.g. for small accounts. Missing field: no limit.
-	///  5. Optional staged build order "ResearchBoost" (T2 -> research -> T3), see ApplyResearchBoost.
-	///
-	/// Returns false if the file is missing/broken or the race is unknown. The caller then keeps
-	/// using the old Max... values from instance_settings.json (safety net).
-	/// The file is re-read automatically whenever it changes (timestamp), no restart needed.
-	/// </summary>
 	public static class LifeformTargets {
 		private const string DefaultFileName = "lifeform_targets.json";
 
-		// Order = building position 1..12 (index 0 = position 1)
 		private static readonly string[] FallbackKeys = {
 			"MaxBasePopulationBuilding", "MaxBaseFoodBuilding", "MaxBaseTechBuilding", "MaxT2Building", "MaxT3Building",
 			"MaxBuilding6", "MaxBuilding7", "MaxBuilding8", "MaxBuilding9", "MaxBuilding10", "MaxBuilding11", "MaxBuilding12"
@@ -102,7 +83,6 @@ namespace Tbot.Helpers {
 							levels[position] = (int) prop.Value;
 						}
 
-						// Food override for races with weak food: position 2 = food building
 						int foodBonus = raceObj["FoodBonusLevels"] != null ? (int) raceObj["FoodBonusLevels"] : 0;
 						if (foodBonus != 0) {
 							levels[2] += foodBonus;
@@ -111,9 +91,6 @@ namespace Tbot.Helpers {
 					}
 				}
 
-				// Optional config limits (e.g. for small accounts): MaxBasePopulationBuilding (pos. 1),
-				// MaxBaseFoodBuilding (pos. 2) and MaxBaseTechBuilding (pos. 3) additionally cap the targets.
-				// If the field is missing in the config, there is no limit.
 				string limits = "";
 				for (int pos = 1; pos <= 3; pos++) {
 					int? cap = ReadCap(lfSettings, pos);
@@ -126,7 +103,6 @@ namespace Tbot.Helpers {
 					source += " |" + limits;
 				}
 
-				// staged build order T2 -> research -> T3 (see ApplyResearchBoost).
 				string boost = ApplyResearchBoost(root, race, celestial, levels, baseLevels, ReadCap(lfSettings, 3));
 				if (boost != "") {
 					source += " |" + boost;
@@ -161,7 +137,6 @@ namespace Tbot.Helpers {
 					return _cache;
 				}
 				if (writeUtc == _failedWriteUtc) {
-					// this file version has already been reported as broken, keep using the last good one if any
 					return _cache;
 				}
 
@@ -192,7 +167,6 @@ namespace Tbot.Helpers {
 			return File.Exists(inBase) ? inBase : null;
 		}
 
-		// Optional config field Brain.LifeformAutoMine.TargetSlot (if missing: 0 = fallback only)
 		private static int ReadTargetSlot(object settings) {
 			try {
 				dynamic s = settings;
@@ -203,7 +177,6 @@ namespace Tbot.Helpers {
 			}
 		}
 
-		// Optional config field Brain.LifeformAutoMine.TargetsFile (if missing: lifeform_targets.json)
 		private static string ReadTargetsFile(object settings) {
 			try {
 				dynamic s = settings;
@@ -215,8 +188,6 @@ namespace Tbot.Helpers {
 			}
 		}
 
-		// Optional config limit per position (1 = MaxBasePopulationBuilding, 2 = MaxBaseFoodBuilding,
-		// 3 = MaxBaseTechBuilding). null = field missing = no limit.
 		private static int? ReadCap(object settings, int position) {
 			try {
 				dynamic s = settings;
@@ -232,14 +203,6 @@ namespace Tbot.Helpers {
 			}
 		}
 
-		// Optional JSON block "ResearchBoost": { "Active": true, "T2Slot": 12, "BoostLevel": 15 }
-		// Staged build order per planet:
-		//  1. T2 phase: until every building has reached its level from slot T2Slot of the race table (food bonus included),
-		//     the targets are limited to that slot (instead of the final TargetSlot).
-		//  2. Research phase: once T2 is complete and the research building (pos. 3) is below BoostLevel, only the research
-		//     building (target BoostLevel) is raised; all other buildings stay at their current level.
-		//  3. T3 phase: afterwards the normal targets (TargetSlot, e.g. 18) apply.
-		// Returns a short note for the log, or "" if nothing changed.
 		private static string ApplyResearchBoost(JObject root, string race, Celestial celestial, int[] levels, int[] baseLevels, int? techCap) {
 			try {
 				JObject cfg = root["ResearchBoost"] as JObject;
@@ -278,9 +241,7 @@ namespace Tbot.Helpers {
 			}
 		}
 
-		// Pure logic (tested without game access). All arrays are indexed by position 1..12; levels = final targets (modified).
 		internal static string ApplyBoostStages(int[] levels, int[] stage1, int[] current, int boostLevel, int? techCap, int t2Slot) {
-			// T2 phase: some building is still below its T2 target (and the final target wants more than it has)
 			bool t2Done = true;
 			for (int pos = 1; pos <= 12; pos++) {
 				int want = Math.Min(stage1[pos], levels[pos]);
@@ -295,7 +256,6 @@ namespace Tbot.Helpers {
 				}
 				return $" T2 phase (targets limited to slot {t2Slot})";
 			}
-			// Research phase
 			int goal = techCap.HasValue ? Math.Min(boostLevel, techCap.Value) : boostLevel;
 			if (current[3] >= goal) {
 				return "";
@@ -389,7 +349,6 @@ namespace Tbot.Helpers {
 			}
 		}
 
-		// Same position mapping as the former switch blocks in the LifeformAutoMine workers
 		private static void SetByPosition(LFBuildings b, LFTypes type, int pos, int v) {
 			switch (type) {
 				case LFTypes.Humans:

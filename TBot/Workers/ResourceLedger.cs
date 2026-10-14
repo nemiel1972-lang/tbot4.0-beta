@@ -3,15 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Tbot.Workers {
-	// RESOURCE-LEDGER (10.10.2026): Konto pro Worker und Celestial.
-	// Problem vorher: AutoMine, LifeformsAutoMine, LifeformsAutoResearch, AutoResearch und AutoCargo rechnen alle gegen den
-	// Live-Bestand des Planeten. Keiner kennt die Ansprueche der anderen - der erste Worker nach der Lieferung nimmt sie weg,
-	// und ein fremder Transport "unterwegs" blockiert alle anderen (siehe Patch-Notiz im Projekt).
-	// Loesung: Jeder Worker hat pro Celestial einen Anspruch (Claim) mit den vollen Kosten seines Ziels, dem bereits
-	// gehaltenen Bestand (Held) und den ihm zugewiesenen Lieferflotten (Flights). Andere Worker sehen nur noch
-	// "Live-Bestand minus fremder gehaltener Bestand". Reine Logik, keine TBot-Typen (Anbindung in LedgerTBot.cs).
 
-	// Betrag in Metall/Kristall/Deuterium (nur diese drei werden transportiert).
 	public struct LedgerAmt {
 		public long M { get; set; }
 		public long C { get; set; }
@@ -64,7 +56,6 @@ namespace Tbot.Workers {
 		}
 	}
 
-	// Zustand einer Flotte laut aktueller Flottenliste (wird vom Adapter geliefert).
 	public struct LedgerFleetInfo {
 		public bool Exists;
 		public bool ReturnFlight;
@@ -102,7 +93,6 @@ namespace Tbot.Workers {
 		public int OwnFleetId;
 		public bool HasOwnFlights;
 		public bool Funded;
-		// Rang des Anspruchs auf diesem Celestial (1 = billigster, kommt zuerst) und Anzahl aller Ansprueche dort.
 		public int Rank;
 		public int Total;
 	}
@@ -116,17 +106,11 @@ namespace Tbot.Workers {
 		private static readonly object Lock = new object();
 		private static readonly Dictionary<string, State> States = new Dictionary<string, State>();
 
-		// Persistenz wird vom Adapter eingehaengt (Datei + JSON); ohne Hooks laeuft das Konto nur im Speicher (Tests).
 		public static Func<string, List<LedgerClaim>> LoadHook = null;
 		public static Action<string, List<LedgerClaim>> SaveHook = null;
 
-		// Ein Anspruch ohne Flotte und ohne vollstaendige Deckung schuetzt seinen Bestand nur kurz nach dem Anlegen
-		// (Zeit zum Absenden). Danach gilt er nicht mehr als reserviert - sonst koennte ein nicht finanzierbarer
-		// Grossbau dauerhaft den Bestand fuer alle anderen blockieren.
 		public static TimeSpan ProtectWindow = TimeSpan.FromMinutes(3);
-		// Anspruch, den sein Worker seit dieser Zeit nicht mehr angefasst hat (Ziel gewechselt, Feature aus), verfaellt.
 		public static TimeSpan MaxIdle = TimeSpan.FromHours(12);
-		// Toleranzen bei der Zuordnung von Flotten.
 		public static TimeSpan EarlyTolerance = TimeSpan.FromSeconds(10);
 		public static TimeSpan StuckAfter = TimeSpan.FromMinutes(30);
 
@@ -190,11 +174,6 @@ namespace Tbot.Workers {
 			return s;
 		}
 
-		// RANG NACH KOSTEN (10.10.2026): Pro Celestial kommt der billigste Bauwunsch zuerst (Rang 1, dann 2, 3, ...).
-		// Ein Anspruch, der noch NICHT voll gedeckt ist, gibt seinen gehaltenen Bestand an billigere Ansprueche ab -
-		// sonst haelt ein teurer Grossbau den Bestand fest und kleine Bauten verhungern. Voll gedeckte Ansprueche
-		// (sie bauen gleich) bleiben fuer alle tabu. Ausschalten: Brain.ResourceLedger.PriorityByCost = false
-		// (dann gilt wieder "wer zuerst da ist, haelt den Bestand").
 		public static bool PriorityByCost = true;
 
 		private static long Weight(LedgerAmt cost) {
@@ -205,7 +184,6 @@ namespace Tbot.Workers {
 			return !c.Reserved.IsZero() && c.Held.Covers(c.Reserved);
 		}
 
-		// true: Anspruch a (Kosten wa) ist vor Anspruch b (Kosten wb) dran. Gleiche Kosten: der aeltere zuerst.
 		private static bool RanksBefore(long wa, DateTime createdA, string ownerA, long wb, DateTime createdB, string ownerB) {
 			if (wa != wb)
 				return wa < wb;
@@ -214,8 +192,6 @@ namespace Tbot.Workers {
 			return string.CompareOrdinal(ownerA, ownerB) < 0;
 		}
 
-		// Gehaltener Bestand fremder Ansprueche, der den Worker "owner" blockiert. myWeight/myCreated = Rang des Workers
-		// (Kosten seines Ziels); ohne bekanntes Ziel long.MaxValue = "ganz hinten" (so war es vorher: alles Fremde blockiert).
 		private static LedgerAmt HeldByOthers(List<LedgerClaim> list, string owner, DateTime now, long myWeight, DateTime myCreated) {
 			LedgerAmt s = new LedgerAmt();
 			foreach (LedgerClaim c in list) {
@@ -237,9 +213,6 @@ namespace Tbot.Workers {
 				log(msg);
 		}
 
-		// Gleicht die Ansprueche eines Celestials mit der Wirklichkeit ab: Gutschrift angekommener Flotten, Verlust
-		// zurueckgerufener Flotten, Freigabe nicht geschuetzten Bestands, Kuerzen auf den echten Bestand, Leerlauf-Ablauf.
-		// Rueckgabe: true, wenn sich etwas geaendert hat (dann speichern).
 		private static bool Reconcile(State st, long cel, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log) {
 			List<LedgerClaim> list;
 			if (!st.Claims.TryGetValue(cel, out list) || list.Count == 0)
@@ -260,42 +233,31 @@ namespace Tbot.Workers {
 					LedgerFlight f = c.Flights[j];
 					LedgerFleetInfo info = probe != null ? probe(f.FleetId) : new LedgerFleetInfo(false, false, false);
 					if (info.Exists && !info.ReturnFlight) {
-						// noch auf dem Hinflug
 						if (now > f.ArriveUtc + StuckAfter) {
 							Log(log, "Fleet " + f.FleetId + " (" + c.Owner + ") is past its arrival time - assignment discarded.");
 							c.Flights.RemoveAt(j);
 							changed = true;
 						}
 					} else if (info.Exists && info.ReturnFlight && info.HasCargo) {
-						// Rueckflug mit Ladung = zurueckgerufen, die Fracht kommt nie an
 						Log(log, "Fleet " + f.FleetId + " (" + c.Owner + ") was recalled - delivery " + f.Amount.ToString() + " discarded.");
 						c.Flights.RemoveAt(j);
 						changed = true;
 					} else if (now >= f.ArriveUtc - EarlyTolerance) {
-						// nicht mehr auf dem Hinflug und leer = zugestellt (oder Flottenliste enthaelt sie nicht mehr)
 						c.Held = c.Held + f.Amount;
 						Log(log, "Delivery " + f.Amount.ToString() + " for " + c.Owner + " (" + c.Label + ") arrived and was credited.");
 						c.Flights.RemoveAt(j);
 						changed = true;
 					}
-					// sonst: Flottenliste evtl. veraltet, vor der Ankunftszeit -> behalten
 				}
 
-				// Gehaltener Bestand ueber den Kosten hinaus ist frei (z.B. Sammel-Lieferung fuer mehrere Gebaeude).
 				LedgerAmt capped = LedgerAmt.Min(c.Held, c.Reserved).Clamp0();
 				if (!capped.SameAs(c.Held)) {
 					c.Held = capped;
 					changed = true;
 				}
 
-				// Nicht geschuetzter Anspruch (keine Flotte, keine volle Deckung, Schutzfenster abgelaufen): sein gehaltener Bestand
-				// zaehlt fuer andere WORKER nicht mehr (siehe IsProtected/HeldByOthers) - so kann kein Anspruch den Bestand ewig
-				// blockieren. Fuer Nicht-Worker (Rueckholung, Sammeln) bleibt er aber bis zum Leerlauf-Ablauf (MaxIdle) geschuetzt,
-				// sonst raeumt z.B. AutoRepatriate den Planeten leer, waehrend ein Worker auf die letzte Lieferung wartet.
 			}
 
-			// Der echte Bestand muss die gehaltenen Mengen decken. Fehlt etwas (Fracht verloren, manuell ausgegeben,
-			// von einem unbekannten Verbraucher genommen), werden die juengsten Ansprueche zuerst gekuerzt.
 			bool liveKnown = !(live.M <= 0 && live.C <= 0 && live.D <= 0);
 			if (liveKnown) {
 				for (int k = 0; k < 3; k++) {
@@ -305,8 +267,6 @@ namespace Tbot.Workers {
 					long excess = total - live.Get(k);
 					if (excess <= 0)
 						continue;
-					// Reihenfolge: zuerst nicht voll gedeckte, teuerste Ansprueche (sie haben die niedrigste Prioritaet),
-					// bei ausgeschaltetem Rang wie vorher die juengsten zuerst.
 					IEnumerable<LedgerClaim> cutOrder = PriorityByCost
 						? list.OrderBy(x => IsFunded(x) ? 1 : 0).ThenByDescending(x => Weight(x.Reserved)).ThenByDescending(x => x.CreatedUtc).ToList()
 						: list.OrderByDescending(x => x.CreatedUtc).ToList();
@@ -328,12 +288,10 @@ namespace Tbot.Workers {
 			return changed;
 		}
 
-		// Was der Worker "owner" auf dem Celestial ausgeben darf: Live-Bestand minus fremder gehaltener Bestand.
 		public static LedgerAmt Available(string key, long cel, string owner, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log) {
 			return Available(key, cel, owner, live, now, probe, log, null);
 		}
 
-		// myCost = Kosten des Ziels, fuer das der Worker fragt (bestimmt seinen Rang); null = Rang unbekannt (ganz hinten).
 		public static LedgerAmt Available(string key, long cel, string owner, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log, LedgerAmt? myCost) {
 			lock (Lock) {
 				State st = GetState(key);
@@ -349,9 +307,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Legt den Anspruch des Workers an bzw. aktualisiert ihn, nimmt freien Bestand in Beschlag und liefert,
-		// was noch per Transport angefordert werden muss (volle Kosten - gehalten - unterwegs).
-		// useExistingTarget: bestehendes Ziel (Label/Kosten) nicht ueberschreiben (Aufruf aus HandleMinerTransport).
 		public static LedgerPlan Plan(string key, long cel, string owner, string label, LedgerAmt cost, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log, bool useExistingTarget) {
 			lock (Lock) {
 				State st = GetState(key);
@@ -407,7 +362,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Weist eine soeben gestartete Lieferflotte dem Anspruch des Workers zu.
 		public static bool RegisterFlight(string key, long cel, string owner, int fleetId, LedgerAmt amount, DateTime arriveUtc, DateTime now, Action<string> log) {
 			lock (Lock) {
 				State st = GetState(key);
@@ -426,8 +380,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Der Worker hat gebaut: passt das Label, ist der Anspruch erledigt (Rest wird frei), sonst werden nur die
-		// verbrauchten Kosten vom gehaltenen Bestand abgezogen.
 		public static void OnBuilt(string key, long cel, string owner, string label, LedgerAmt cost, DateTime now, Action<string> log) {
 			lock (Lock) {
 				State st = GetState(key);
@@ -471,7 +423,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Fuer Nicht-Worker-Versender (Rueckholung, Sammeln): ALLE gehaltenen Mengen sind tabu, auch von Anspruechen im Wartezustand.
 		public static LedgerAmt AvailableExternal(string key, long cel, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log) {
 			lock (Lock) {
 				State st = GetState(key);
@@ -504,7 +455,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Kurzbeschreibung der fremden, geschuetzten Ansprueche (fuer Logzeilen).
 		public static string DescribeForeign(string key, long cel, string owner, DateTime now) {
 			lock (Lock) {
 				State st = GetState(key);

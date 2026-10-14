@@ -37,9 +37,6 @@ namespace Tbot.Workers.Brain {
 			_workerFactory = workerFactory;
 		}
 
-		// Caps je Planet: HomeWorld (Brain.AutoMine.HomeWorld) -> Colony (Fallback fuer alle uebrigen) -> global,
-		// falls die Gruppe nicht konfiguriert ist. Einzelne Planeten ueberschreiben feldweise per
-		// Brain.AutoMine.ColonyOverrides (siehe AutoMineOverrideHelper).
 		private Buildings GetMaxBuildingsForCelestial(Celestial cel) {
 			bool isHomeWorld =
 				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
@@ -69,7 +66,6 @@ namespace Tbot.Workers.Brain {
 				maxDeuteriumTank = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxDeuteriumTank;
 			}
 
-			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -97,8 +93,6 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// analog zu GetMaxBuildingsForCelestial, aber fuer RoboticsFactory/Shipyard/
-		// ResearchLab/MissileSilo/NaniteFactory/Terraformer/SpaceDock.
 		private Facilities GetMaxFacilitiesForCelestial(Celestial cel) {
 			bool isHomeWorld =
 				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
@@ -126,7 +120,6 @@ namespace Tbot.Workers.Brain {
 				maxSpaceDock = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxSpaceDock;
 			}
 
-			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -152,10 +145,6 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// fixer Crawler-Zielwert statt ROI-Berechnung, falls Brain.AutoMine.FixedCrawlerTarget > 0
-		// gesetzt ist. Dann wird einfach bis min(FixedCrawlerTarget, CalcMaxCrawlers) hochgebaut, ohne
-		// DOIR-Vergleich gegen die nächste Mine. Ist FixedCrawlerTarget nicht gesetzt oder 0, unverändertes
-		// bisheriges Verhalten (CalcOptimalCrawlers/ROI-basiert).
 		private int GetCrawlerAmountToBuild(Planet planet) {
 			bool fixedTargetSet = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "FixedCrawlerTarget") && (int) _tbotInstance.InstanceSettings.Brain.AutoMine.FixedCrawlerTarget > 0;
 			if (fixedTargetSet) {
@@ -219,12 +208,6 @@ namespace Tbot.Workers.Brain {
 				List<Celestial> celestialsToMine = new();
 				List<ConstructionCandidate> constructionCandidates = new();
 				foreach (Celestial celestial in _tbotInstance.UserData.celestials.Where(p => p is Planet)) {
-					// celestialsToExclude was only applied later (right before spawning the
-					// per-celestial AutoMine worker), so every excluded planet still got its Buildings/
-					// LFBuildings/LFBonuses/Fast data refreshed here for the account-wide "next mine to
-					// build" ranking - switching the in-game context into it and triggering OGame's
-					// "recent activity" indicator, even though the celestial is excluded from AutoMine
-					// entirely. Skip excluded celestials before any data is fetched.
 					if (celestialsToExclude.Has(celestial)) {
 						DoLog(LogLevel.Debug, $"Skipping {celestial.ToString()} in planning phase: celestial in exclude list.");
 						continue;
@@ -251,9 +234,7 @@ namespace Tbot.Workers.Brain {
 							DoLog(LogLevel.Debug, $"Skipping {cel.ToString()}: planet should be abandoned.");
 							includeCelestial = false;
 						} else {
-							//DoLog(LogLevel.Debug, $"Confirm AutoMine on {celestial.ToString()}.");
 						}
-						//DoLog(LogLevel.Debug, $"Because: cases -> {abaCelestial.Fields.Total.ToString()}/{fieldsSettings.Total.ToString()}, MinimumTemp -> {abaCelestial.Temperature.Max.ToString()}>={temperaturesSettings.Min.ToString()}, MaximumTemp -> {abaCelestial.Temperature.Max.ToString()}<={temperaturesSettings.Max.ToString()}");
 					}
 					if (includeCelestial) {
 						celestialsToMine.Add(cel);

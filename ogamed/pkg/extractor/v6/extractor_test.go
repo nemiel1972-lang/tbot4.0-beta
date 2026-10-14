@@ -1065,7 +1065,7 @@ func TestExtractPreferences(t *testing.T) {
 	prefs, _ = NewExtractor().ExtractPreferences(pageHTMLBytes)
 	assert.Equal(t, int64(3), prefs.SpioAnz)
 	assert.False(t, prefs.UrlaubsModus)
-	assert.False(t, prefs.DisableChatBar) // no mobile
+	assert.False(t, prefs.DisableChatBar)
 	assert.False(t, prefs.DisableOutlawWarning)
 	assert.True(t, prefs.MobileVersion)
 	assert.False(t, prefs.ShowOldDropDowns)
@@ -1074,10 +1074,10 @@ func TestExtractPreferences(t *testing.T) {
 	assert.Equal(t, int64(0), prefs.SortSetting)
 	assert.Equal(t, int64(0), prefs.SortOrder)
 	assert.True(t, prefs.ShowDetailOverlay)
-	assert.False(t, prefs.AnimatedSliders)    // no mobile
-	assert.False(t, prefs.AnimatedOverview)   // no mobile
-	assert.False(t, prefs.PopupsNotices)      // no mobile
-	assert.False(t, prefs.PopopsCombatreport) // no mobile
+	assert.False(t, prefs.AnimatedSliders)
+	assert.False(t, prefs.AnimatedOverview)
+	assert.False(t, prefs.PopupsNotices)
+	assert.False(t, prefs.PopopsCombatreport)
 	assert.False(t, prefs.SpioReportPictures)
 	assert.Equal(t, int64(10), prefs.MsgResultsPerPage)
 	assert.True(t, prefs.AuctioneerNotifications)
@@ -1085,20 +1085,12 @@ func TestExtractPreferences(t *testing.T) {
 	assert.True(t, prefs.ShowActivityMinutes)
 	assert.False(t, prefs.PreserveSystemOnPlanetChange)
 
-	//assert.True(t, prefs.Notifications.BuildList)
-	//assert.True(t, prefs.Notifications.FriendlyFleetActivities)
-	//assert.True(t, prefs.Notifications.HostileFleetActivities)
-	//assert.True(t, prefs.Notifications.ForeignEspionage)
-	//assert.True(t, prefs.Notifications.AllianceBroadcasts)
-	//assert.True(t, prefs.Notifications.AllianceMessages)
-	//assert.True(t, prefs.Notifications.Auctions)
-	//assert.True(t, prefs.Notifications.Account)
 
 	pageHTMLBytes, _ = os.ReadFile("../../../samples/unversioned/preferences_reverse_mobile.html")
 	prefs, _ = NewExtractor().ExtractPreferences(pageHTMLBytes)
 	assert.Equal(t, int64(2), prefs.SpioAnz)
 	assert.False(t, prefs.UrlaubsModus)
-	assert.False(t, prefs.DisableChatBar) // no mobile
+	assert.False(t, prefs.DisableChatBar)
 	assert.True(t, prefs.DisableOutlawWarning)
 	assert.True(t, prefs.MobileVersion)
 	assert.True(t, prefs.ShowOldDropDowns)
@@ -1107,10 +1099,10 @@ func TestExtractPreferences(t *testing.T) {
 	assert.Equal(t, int64(3), prefs.SortSetting)
 	assert.Equal(t, int64(1), prefs.SortOrder)
 	assert.False(t, prefs.ShowDetailOverlay)
-	assert.False(t, prefs.AnimatedSliders)    // no mobile
-	assert.False(t, prefs.AnimatedOverview)   // no mobile
-	assert.False(t, prefs.PopupsNotices)      // no mobile
-	assert.False(t, prefs.PopopsCombatreport) // no mobile
+	assert.False(t, prefs.AnimatedSliders)
+	assert.False(t, prefs.AnimatedOverview)
+	assert.False(t, prefs.PopupsNotices)
+	assert.False(t, prefs.PopopsCombatreport)
 	assert.True(t, prefs.SpioReportPictures)
 	assert.Equal(t, int64(50), prefs.MsgResultsPerPage)
 	assert.False(t, prefs.AuctioneerNotifications)
@@ -1118,53 +1110,8 @@ func TestExtractPreferences(t *testing.T) {
 	assert.False(t, prefs.ShowActivityMinutes)
 	assert.True(t, prefs.PreserveSystemOnPlanetChange)
 
-	//assert.False(t, prefs.Notifications.BuildList)
-	//assert.False(t, prefs.Notifications.FriendlyFleetActivities)
-	//assert.False(t, prefs.Notifications.HostileFleetActivities)
-	//assert.False(t, prefs.Notifications.ForeignEspionage)
-	//assert.False(t, prefs.Notifications.AllianceBroadcasts)
-	//assert.False(t, prefs.Notifications.AllianceMessages)
-	//assert.False(t, prefs.Notifications.Auctions)
-	//assert.False(t, prefs.Notifications.Account)
 }
 
-//func TestCalcResources(t *testing.T) {
-//	pageHTMLBytes, _ := os.ReadFile("../../../samples/traderOverview.html")
-//	price, _, planetResources, multiplier, _ := NewExtractor().ExtractOfferOfTheDay(pageHTMLBytes)
-//	actual := calcResources(price, planetResources, multiplier)
-//	expected := url.Values{
-//		"bid[planets][33711028][crystal]":   []string{"0"},
-//		"bid[planets][33711028][deuterium]": []string{"0"},
-//		"bid[planets][33711028][metal]":     []string{"54243"},
-//		"bid[planets][33738397][crystal]":   []string{"0"},
-//		"bid[planets][33738397][deuterium]": []string{"0"},
-//		"bid[planets][33738397][metal]":     []string{"0"},
-//		"bid[planets][33738457][crystal]":   []string{"0"},
-//		"bid[planets][33738457][deuterium]": []string{"0"},
-//		"bid[planets][33738457][metal]":     []string{"0"},
-//		"bid[planets][33739506][crystal]":   []string{"0"},
-//		"bid[planets][33739506][deuterium]": []string{"0"},
-//		"bid[planets][33739506][metal]":     []string{"0"},
-//		"bid[planets][33760932][crystal]":   []string{"0"},
-//		"bid[planets][33760932][deuterium]": []string{"0"},
-//		"bid[planets][33760932][metal]":     []string{"0"},
-//		"bid[planets][33760935][crystal]":   []string{"0"},
-//		"bid[planets][33760935][deuterium]": []string{"0"},
-//		"bid[planets][33760935][metal]":     []string{"0"},
-//		"bid[planets][33760958][crystal]":   []string{"0"},
-//		"bid[planets][33760958][deuterium]": []string{"0"},
-//		"bid[planets][33760958][metal]":     []string{"0"},
-//		"bid[planets][33762073][crystal]":   []string{"0"},
-//		"bid[planets][33762073][deuterium]": []string{"0"},
-//		"bid[planets][33762073][metal]":     []string{"0"},
-//		"bid[planets][33765791][crystal]":   []string{"0"},
-//		"bid[planets][33765791][deuterium]": []string{"0"},
-//		"bid[planets][33765791][metal]":     []string{"0"},
-//		"bid[planets][33792134][crystal]":   []string{"0"},
-//		"bid[planets][33792134][deuterium]": []string{"0"},
-//		"bid[planets][33792134][metal]":     []string{"0"}}
-//	assert.Equal(t, expected, actual)
-//}
 
 func TestExtractOfferOfTheDayPrice(t *testing.T) {
 	pageHTMLBytes, _ := os.ReadFile("../../../samples/unversioned/traderOverview.html")

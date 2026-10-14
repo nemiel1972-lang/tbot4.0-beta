@@ -5,18 +5,16 @@ import (
 	"strconv"
 )
 
-// DMCost ...
 type DMCost struct {
 	Cost                int64
-	CanBuy              bool  // Either or not we have enough DM
-	Complete            bool  // false means we will halve the time, true will complete
-	OGameID             ID    // What we are going to build
-	Nbr                 int64 // Either the amount of ships/defences or the building/research level
+	CanBuy              bool
+	Complete            bool
+	OGameID             ID
+	Nbr                 int64
 	BuyAndActivateToken string
 	Token               string
 }
 
-// String ...
 func (d DMCost) String() string {
 	return "\n" +
 		"               Cost: " + utils.FI64(d.Cost) + "\n" +
@@ -28,14 +26,12 @@ func (d DMCost) String() string {
 		"              Token: " + d.Token
 }
 
-// DMCosts ...
 type DMCosts struct {
 	Buildings DMCost
 	Research  DMCost
 	Shipyard  DMCost
 }
 
-// String ...
 func (d DMCosts) String() string {
 	return "\n" +
 		"Buildings:" + d.Buildings.String() + "\n" +

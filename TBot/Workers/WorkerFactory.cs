@@ -28,7 +28,6 @@ namespace Tbot.Workers {
 		}
 
 
-		// This is going to be replaced with ServiceProvider
 		private ConcurrentDictionary<Feature, ITBotWorker> _workers = new();
 		private ConcurrentDictionary<Dictionary<Feature, Celestial>, ITBotCelestialWorker> _celestialWorkers = new();
 

@@ -40,7 +40,6 @@ func PostToggleManualModeHandler(c echo.Context) error {
 	}
 }
 
-// GetAllianceClassHandler ...
 func GetAllianceClassHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	allianceClass, err := bot.GetCachedAllianceClass()
@@ -51,7 +50,6 @@ func GetAllianceClassHandler(c echo.Context) error {
 
 }
 
-// GetExpeditionMessagesHandler ...
 func GetExpeditionMessagesHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	messages, err := bot.GetExpeditionMessages(-1)
@@ -62,7 +60,6 @@ func GetExpeditionMessagesHandler(c echo.Context) error {
 
 }
 
-// GetFromGameHandler ...
 func GetFromGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	botMap := c.Get("botMap").(map[string]wrapper.Prioritizable)
@@ -82,16 +79,13 @@ func GetFromGameHandler(c echo.Context) error {
 	} else {
 		pageHTML, _ = bot.GetPageContent(vals)
 	}
-	//pageHTML = replaceHostname(bot, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
 	pageHTML = ingameUi(pageHTML, state, locked)
-	//pageHTML = injectJS(pageHTML)
 
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
-// PostToGameHandler ...
 func PostToGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	botMap := c.Get("botMap").(map[string]wrapper.Prioritizable)
@@ -112,19 +106,16 @@ func PostToGameHandler(c echo.Context) error {
 	} else {
 		pageHTML, _ = bot.PostPageContent(vals, payload)
 	}
-	//pageHTML = replaceHostname(bot, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
 	pageHTML = ingameUi(pageHTML, state, locked)
-	//pageHTML = injectJS(pageHTML)
 
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
-// GetStaticHEADHandler ...
 func GetStaticHEADHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
-	newURL := "/api/" + strings.Join(c.ParamValues(), "") // + "?" + c.QueryString()
+	newURL := "/api/" + strings.Join(c.ParamValues(), "")
 	if len(c.QueryString()) > 0 {
 		newURL = newURL + "?" + c.QueryString()
 	}
@@ -135,8 +126,7 @@ func GetStaticHEADHandler(c echo.Context) error {
 	if len(headers) < 1 {
 		return c.NoContent(http.StatusFailedDependency)
 	}
-	// Copy the original HTTP HEAD headers to our client
-	for k, vv := range headers { // duplicate headers are acceptable in HTTP spec, so add all of them individually: https://stackoverflow.com/questions/4371328/are-duplicate-http-response-headers-acceptable
+	for k, vv := range headers {
 		k = http.CanonicalHeaderKey(k)
 		for _, v := range vv {
 			c.Response().Header().Add(k, v)
@@ -145,7 +135,6 @@ func GetStaticHEADHandler(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-// GetStaticHandler ...
 func GetStaticHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 
@@ -165,10 +154,9 @@ func GetStaticHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, wrapper.ErrorResp(500, err.Error()))
 	}
 
-	// Copy the original HTTP headers to our client
-	for k, vv := range resp.Header { // duplicate headers are acceptable in HTTP spec, so add all of them individually: https://stackoverflow.com/questions/4371328/are-duplicate-http-response-headers-acceptable
+	for k, vv := range resp.Header {
 		k = http.CanonicalHeaderKey(k)
-		if k != "Content-Length" && k != "Content-Encoding" { // https://github.com/alaingilbert/ogame/pull/80#issuecomment-674559853
+		if k != "Content-Length" && k != "Content-Encoding" {
 			for _, v := range vv {
 				c.Response().Header().Add(k, v)
 			}
@@ -176,7 +164,6 @@ func GetStaticHandler(c echo.Context) error {
 	}
 
 	if strings.Contains(c.Request().URL.String(), ".xml") {
-		//body = replaceHostname(bot, body)
 		body = replaceHostnameWithRegxp(bot, body, c.Request())
 		return c.Blob(http.StatusOK, "application/xml", body)
 	}
@@ -205,9 +192,6 @@ func replaceHostnameWithRegxp(bot *wrapper.OGame, pageHTML []byte, r *http.Reque
 	}
 	for idx, regex := range regexes {
 		replaceStr := requestHostname
-		// if bot.apiNewHostname != "" {
-		// 	replaceStr = bot.apiNewHostname
-		// }
 
 		if idx > 0 {
 			replaceStr = strings.ReplaceAll(replaceStr, `/`, `\/`)
@@ -225,9 +209,6 @@ func removeCookiesBanner(pageHTML []byte) []byte {
 	pageHTMLstr := string(pageHTML)
 	pageHTMLstr = strings.ReplaceAll(pageHTMLstr, "https://consent.gameforge.com/cookiebanner.js", "")
 	pageHTMLstr = strings.ReplaceAll(pageHTMLstr, "https://consent-sandbox.gameforge.com/cookiebanner.js", "")
-	// regex := `<script[^>]*id="cookiebanner"[^>]*>[\s\S]*?</script>`
-	// re := regexp.MustCompile(regex)
-	// return re.ReplaceAll(pageHTML, []byte(""))
 	return []byte(pageHTMLstr)
 }
 
@@ -556,7 +537,6 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
 	return []byte(tmpHTML)
 }
 
-// GetLfBonusesHandler ...
 func GetLfBonusesTbotHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -604,11 +584,9 @@ func ManualTimerTx(botMap map[string]wrapper.Prioritizable, txTimer *time.Timer)
 	case <-txTimer.C:
 		tx.Done()
 		log.Println("Manual Mode Expired!")
-		// do something for timeout, like change state
 	}
 }
 
-// GetLfBonusesHandler ...
 func GetLfBonusesHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	lfBonuses, err := bot.GetLfBonuses()
@@ -618,8 +596,6 @@ func GetLfBonusesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, wrapper.SuccessResp(lfBonuses))
 }
 
-// GetPositionsAvailableForDiscoveryFleet...
-// curl 127.0.0.1:1234/bot/planets/:planetID/get-system-available-discovery -d 'galaxy=6&system=473'
 func GetPositionsAvailableForDiscoveryFleet(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -665,8 +641,6 @@ func GetPositionsAvailableForDiscoveryFleet(c echo.Context) error {
 	return c.JSON(http.StatusOK, wrapper.SuccessResp(coords))
 }
 
-// GetAvailableDiscoveries...
-// curl 127.0.0.1:1234/bot/planets/:planetID/get-available-discoveries
 func GetAvailableDiscoveries(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	bot.GetAvailableDiscoveries()
@@ -714,8 +688,6 @@ func GetAvailableDiscoveries(c echo.Context) error {
 	return c.JSON(http.StatusOK, wrapper.SuccessResp(count))
 }
 
-// SleepStatusHandler liefert die von TBot geschriebene sleepstatus.json (Kachel unter dem Manual-mode-Button).
-// Datei liegt neben der ogamed-Binary (/home/tbot/tbot/sleepstatus.json). Fehlt sie, kommt "kein Sleep" zurueck.
 func SleepStatusHandler(c echo.Context) error {
 	path := "/home/tbot/tbot/sleepstatus.json"
 	if exe, err := os.Executable(); err == nil {
@@ -729,9 +701,6 @@ func SleepStatusHandler(c echo.Context) error {
 	return c.JSONBlob(http.StatusOK, data)
 }
 
-// PostSlotLimitHandler nimmt ein Slot-Limit von der Slot-Kachel entgegen und legt es als Befehlsdatei
-// slotcmd_<zeit>.json neben die ogamed-Binary (/home/tbot/tbot). TBot liest sie alle 3 s und setzt den Wert live.
-// Nur Schluessel aus der Whitelist, Wert 0..40 (w_* = Worker-Schalter, 0=aus, 1=an).
 func PostSlotLimitHandler(c echo.Context) error {
 	key := c.FormValue("key")
 	switch key {

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 namespace TBot.Ogame.Infrastructure.Enums {
 	public enum LFBuildables {
 		None = 0,
-		//Humans
 		ResidentialSector = 11101,
 		BiosphereFarm = 11102,
 		ResearchCentre = 11103,
@@ -21,7 +20,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		Metropolis = 11111,
 		PlanetaryShield = 11112,
 
-		//Rocktal
 		MeditationEnclave = 12101,
 		CrystalFarm = 12102,
 		RuneTechnologium = 12103,
@@ -35,7 +33,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		MineralResearchCentre = 12111,
 		AdvancedRecyclingPlant = 12112,
 
-		//Mechas
 		AssemblyLine = 13101,
 		FusionCellFactory = 13102,
 		RoboticsResearchCentre = 13103,
@@ -49,7 +46,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		ChipMassProduction = 13111,
 		NanoRepairBots = 13112,
 
-		//Kaelesh
 		Sanctuary = 14101,
 		AntimatterCondenser = 14102,
 		VortexChamber = 14103,

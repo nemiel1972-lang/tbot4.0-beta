@@ -1,8 +1,7 @@
 package ogame
 
-// All ogame objects
 var (
-	AllianceDepot                     = register[*allianceDepot](newAllianceDepot) // Buildings
+	AllianceDepot                     = register[*allianceDepot](newAllianceDepot)
 	CrystalMine                       = register[*crystalMine](newCrystalMine)
 	CrystalStorage                    = register[*crystalStorage](newCrystalStorage)
 	DeuteriumSynthesizer              = register[*deuteriumSynthesizer](newDeuteriumSynthesizer)
@@ -25,7 +24,7 @@ var (
 	Terraformer                       = register[*terraformer](newTerraformer)
 	UndergroundCrystalDen             = register[*undergroundCrystalDen](newUndergroundCrystalDen)
 	SolarSatellite                    = register[*solarSatellite](newSolarSatellite)
-	AntiBallisticMissiles             = register[*antiBallisticMissiles](newAntiBallisticMissiles) // Defense
+	AntiBallisticMissiles             = register[*antiBallisticMissiles](newAntiBallisticMissiles)
 	GaussCannon                       = register[*gaussCannon](newGaussCannon)
 	HeavyLaser                        = register[*heavyLaser](newHeavyLaser)
 	InterplanetaryMissiles            = register[*interplanetaryMissiles](newInterplanetaryMissiles)
@@ -35,7 +34,7 @@ var (
 	PlasmaTurret                      = register[*plasmaTurret](newPlasmaTurret)
 	RocketLauncher                    = register[*rocketLauncher](newRocketLauncher)
 	SmallShieldDome                   = register[*smallShieldDome](newSmallShieldDome)
-	Battlecruiser                     = register[*battlecruiser](newBattlecruiser) // Ships
+	Battlecruiser                     = register[*battlecruiser](newBattlecruiser)
 	Battleship                        = register[*battleship](newBattleship)
 	Bomber                            = register[*bomber](newBomber)
 	ColonyShip                        = register[*colonyShip](newColonyShip)
@@ -51,7 +50,7 @@ var (
 	Crawler                           = register[*crawler](newCrawler)
 	Reaper                            = register[*reaper](newReaper)
 	Pathfinder                        = register[*pathfinder](newPathfinder)
-	ArmourTechnology                  = register[*armourTechnology](newArmourTechnology) // Technologies
+	ArmourTechnology                  = register[*armourTechnology](newArmourTechnology)
 	Astrophysics                      = register[*astrophysics](newAstrophysics)
 	CombustionDrive                   = register[*combustionDrive](newCombustionDrive)
 	ComputerTechnology                = register[*computerTechnology](newComputerTechnology)
@@ -67,7 +66,7 @@ var (
 	PlasmaTechnology                  = register[*plasmaTechnology](newPlasmaTechnology)
 	ShieldingTechnology               = register[*shieldingTechnology](newShieldingTechnology)
 	WeaponsTechnology                 = register[*weaponsTechnology](newWeaponsTechnology)
-	ResidentialSector                 = register[*residentialSector](newResidentialSector) // Humans
+	ResidentialSector                 = register[*residentialSector](newResidentialSector)
 	BiosphereFarm                     = register[*biosphereFarm](newBiosphereFarm)
 	ResearchCentre                    = register[*researchCentre](newResearchCentre)
 	AcademyOfSciences                 = register[*academyOfSciences](newAcademyOfSciences)
@@ -79,7 +78,7 @@ var (
 	BiotechLab                        = register[*biotechLab](newBiotechLab)
 	Metropolis                        = register[*metropolis](newMetropolis)
 	PlanetaryShield                   = register[*planetaryShield](newPlanetaryShield)
-	MeditationEnclave                 = register[*meditationEnclave](newMeditationEnclave) //Rocktal
+	MeditationEnclave                 = register[*meditationEnclave](newMeditationEnclave)
 	CrystalFarm                       = register[*crystalFarm](newCrystalFarm)
 	RuneTechnologium                  = register[*runeTechnologium](newRuneTechnologium)
 	RuneForge                         = register[*runeForge](newRuneForge)
@@ -91,7 +90,7 @@ var (
 	DeuteriumSynthesiser              = register[*deuteriumSynthesiser](newDeuteriumSynthesiser)
 	MineralResearchCentre             = register[*mineralResearchCentre](newMineralResearchCentre)
 	AdvancedRecyclingPlant            = register[*advancedRecyclingPlant](newAdvancedRecyclingPlant)
-	AssemblyLine                      = register[*assemblyLine](newAssemblyLine) //Mechas
+	AssemblyLine                      = register[*assemblyLine](newAssemblyLine)
 	FusionCellFactory                 = register[*fusionCellFactory](newFusionCellFactory)
 	RoboticsResearchCentre            = register[*roboticsResearchCentre](newRoboticsResearchCentre)
 	UpdateNetwork                     = register[*updateNetwork](newUpdateNetwork)
@@ -103,7 +102,7 @@ var (
 	HighPerformanceSynthesiser        = register[*highPerformanceSynthesiser](newHighPerformanceSynthesiser)
 	ChipMassProduction                = register[*chipMassProduction](newChipMassProduction)
 	NanoRepairBots                    = register[*nanoRepairBots](newNanoRepairBots)
-	Sanctuary                         = register[*sanctuary](newSanctuary) //Kaelesh
+	Sanctuary                         = register[*sanctuary](newSanctuary)
 	AntimatterCondenser               = register[*antimatterCondenser](newAntimatterCondenser)
 	VortexChamber                     = register[*vortexChamber](newVortexChamber)
 	HallsOfRealisation                = register[*hallsOfRealisation](newHallsOfRealisation)
@@ -115,7 +114,7 @@ var (
 	PsionicModulator                  = register[*psionicModulator](newPsionicModulator)
 	ShipManufacturingHall             = register[*shipManufacturingHall](newShipManufacturingHall)
 	SupraRefractor                    = register[*supraRefractor](newSupraRefractor)
-	IntergalacticEnvoys               = register[*intergalacticEnvoys](newIntergalacticEnvoys) // Humans tech
+	IntergalacticEnvoys               = register[*intergalacticEnvoys](newIntergalacticEnvoys)
 	HighPerformanceExtractors         = register[*highPerformanceExtractors](newHighPerformanceExtractors)
 	FusionDrives                      = register[*fusionDrives](newFusionDrives)
 	StealthFieldGenerator             = register[*stealthFieldGenerator](newStealthFieldGenerator)
@@ -133,7 +132,7 @@ var (
 	BattlecruiserMkII                 = register[*battlecruiserMkII](newBattlecruiserMkII)
 	RobotAssistants                   = register[*robotAssistants](newRobotAssistants)
 	Supercomputer                     = register[*supercomputer](newSupercomputer)
-	VolcanicBatteries                 = register[*volcanicBatteries](newVolcanicBatteries) //Rocktal techs
+	VolcanicBatteries                 = register[*volcanicBatteries](newVolcanicBatteries)
 	AcousticScanning                  = register[*acousticScanning](newAcousticScanning)
 	HighEnergyPumpSystems             = register[*highEnergyPumpSystems](newHighEnergyPumpSystems)
 	CargoHoldExpansionCivilianShips   = register[*cargoHoldExpansionCivilianShips](newCargoHoldExpansionCivilianShips)
@@ -151,7 +150,7 @@ var (
 	ObsidianShieldReinforcement       = register[*obsidianShieldReinforcement](newObsidianShieldReinforcement)
 	RuneShields                       = register[*runeShields](newRuneShields)
 	RocktalCollectorEnhancement       = register[*rocktalCollectorEnhancement](newRocktalCollectorEnhancement)
-	CatalyserTechnology               = register[*catalyserTechnology](newCatalyserTechnology) //Mechas techs
+	CatalyserTechnology               = register[*catalyserTechnology](newCatalyserTechnology)
 	PlasmaDrive                       = register[*plasmaDrive](newPlasmaDrive)
 	EfficiencyModule                  = register[*efficiencyModule](newEfficiencyModule)
 	DepotAI                           = register[*depotAI](newDepotAI)
@@ -169,7 +168,7 @@ var (
 	GeneralOverhaulDestroyer          = register[*generalOverhaulDestroyer](newGeneralOverhaulDestroyer)
 	ExperimentalWeaponsTechnology     = register[*experimentalWeaponsTechnology](newExperimentalWeaponsTechnology)
 	MechanGeneralEnhancement          = register[*mechanGeneralEnhancement](newMechanGeneralEnhancement)
-	HeatRecovery                      = register[*heatRecovery](newHeatRecovery) //Kaelesh techs
+	HeatRecovery                      = register[*heatRecovery](newHeatRecovery)
 	SulphideProcess                   = register[*sulphideProcess](newSulphideProcess)
 	PsionicNetwork                    = register[*psionicNetwork](newPsionicNetwork)
 	TelekineticTractorBeam            = register[*telekineticTractorBeam](newTelekineticTractorBeam)
@@ -191,12 +190,10 @@ var (
 
 type ObjsStruct struct{ m map[ID]BaseOgameObj }
 
-// ByID ...
 func (o ObjsStruct) ByID(id ID) BaseOgameObj {
 	return o.m[id]
 }
 
-// GetShip ...
 func (o ObjsStruct) GetShip(id ID) Ship {
 	if ship, ok := o.m[id].(Ship); ok {
 		return ship
@@ -212,7 +209,6 @@ func register[T BaseOgameObj](constructorFn func() T) T {
 	return inst
 }
 
-// Defenses array of all defenses objects
 var Defenses = []Defense{
 	RocketLauncher,
 	LightLaser,
@@ -226,7 +222,6 @@ var Defenses = []Defense{
 	InterplanetaryMissiles,
 }
 
-// Ships array of all ships objects
 var Ships = []Ship{
 	LightFighter,
 	HeavyFighter,
@@ -247,7 +242,6 @@ var Ships = []Ship{
 	Pathfinder,
 }
 
-// Buildings array of all buildings/facilities objects
 var Buildings = []Building{
 	MetalMine,
 	CrystalMine,
@@ -274,7 +268,6 @@ var Buildings = []Building{
 	JumpGate,
 }
 
-// PlanetBuildings arrays of planet specific buildings
 var PlanetBuildings = []Building{
 	MetalMine,
 	CrystalMine,
@@ -298,7 +291,6 @@ var PlanetBuildings = []Building{
 	SpaceDock,
 }
 
-// MoonBuildings arrays of moon specific buildings
 var MoonBuildings = []Building{
 	SolarSatellite,
 	MetalStorage,
@@ -311,7 +303,6 @@ var MoonBuildings = []Building{
 	JumpGate,
 }
 
-// Technologies array of all technologies objects
 var Technologies = []Technology{
 	EnergyTechnology,
 	LaserTechnology,

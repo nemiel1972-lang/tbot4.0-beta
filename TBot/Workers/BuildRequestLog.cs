@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Tbot.Workers {
-	// BAUWUNSCH-PROTOKOLL (10.10.2026): haelt dauerhaft fest, WAS die Worker bauen/forschen wollen, was dafuer noch fehlt und
-	// wie der Stand ist (wartet / Lieferung unterwegs / Bestand gedeckt / gebaut / abgeloest). Reine Logik ohne TBot-Typen;
-	// die Datei-Anbindung (Laden/Speichern) kommt ueber LoadHook/SaveHook aus LedgerTBot.
 	public class BuildRequestEntry {
 		public string Owner;
 		public long CelestialId;
@@ -21,7 +18,6 @@ namespace Tbot.Workers {
 		public int FleetId;
 		public string LastDelivery;
 		public int TimesSeen;
-		// Amortisationszeit in Tagen (ROI) laut Bot-Rechnung; 0 = unbekannt (nur Minen haben einen ROI). Kleiner = besser.
 		public float RoiDays;
 		public DateTime FirstRequestedUtc;
 		public DateTime LastSeenUtc;
@@ -30,9 +26,7 @@ namespace Tbot.Workers {
 
 	public class BuildRequestFile {
 		public DateTime UpdatedUtc;
-		// Aktuelle Wuensche: genau einer pro Worker und Celestial.
 		public List<BuildRequestEntry> Open = new List<BuildRequestEntry>();
-		// Abgeschlossene Wuensche (gebaut oder abgeloest), neueste zuerst.
 		public List<BuildRequestEntry> History = new List<BuildRequestEntry>();
 	}
 
@@ -46,7 +40,6 @@ namespace Tbot.Workers {
 		public static Func<string, BuildRequestFile> LoadHook = null;
 		public static Action<string, BuildRequestFile> SaveHook = null;
 		public static int MaxHistory = 500;
-		// Unveraenderte Wuensche werden hoechstens so oft neu gespeichert (schont die Platte).
 		public static TimeSpan SaveEvery = TimeSpan.FromMinutes(5);
 
 		private static readonly object Lock = new object();
@@ -91,8 +84,6 @@ namespace Tbot.Workers {
 				f.History.RemoveRange(MaxHistory, f.History.Count - MaxHistory);
 		}
 
-		// Ein Worker meldet (erneut), dass er label auf dem Celestial haben will. Aendert sich das Ziel des Workers,
-		// wird der alte Wunsch als "abgeloest" ins Archiv verschoben.
 		public static void Request(string path, string owner, long celestialId, string celestialName, string label,
 			long costM, long costC, long costD, long missM, long missC, long missD, string status, int fleetId, DateTime now, float roiDays = 0f) {
 			lock (Lock) {
@@ -139,7 +130,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Eine Lieferflotte wurde fuer den Wunsch des Workers gestartet.
 		public static void Delivery(string path, string owner, long celestialId, int fleetId, string amountText, DateTime now) {
 			lock (Lock) {
 				BuildRequestFile f = Get(path);
@@ -154,8 +144,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Der Bau/die Forschung wurde gestartet. Gab es vorher keinen offenen Wunsch (sofort bezahlbar), wird trotzdem ein
-		// Archiv-Eintrag angelegt - so steht jeder Bau der Worker im Protokoll.
 		public static void Built(string path, string owner, long celestialId, string celestialName, string label,
 			long costM, long costC, long costD, DateTime now) {
 			lock (Lock) {

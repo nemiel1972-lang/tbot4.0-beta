@@ -3,11 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Tbot.Workers {
-	/// <summary>
-	/// Pure planning primitives used by the fleet workers. They deliberately do not
-	/// perform network calls or mutate bot state, which keeps the send phase small
-	/// and makes the edge cases deterministic.
-	/// </summary>
 	public static class ExpeditionOriginPlanner {
 		public static bool ShouldRetryUnavailableOrigins(
 			int remaining,
@@ -58,10 +53,6 @@ namespace Tbot.Workers {
 		}
 	}
 
-	/// <summary>
-	/// Selects discovery positions reported as available by the system view.
-	/// Positions not returned by that view must never be sent blindly.
-	/// </summary>
 	public static class DiscoverySystemPlanner {
 		public static IReadOnlyList<int> SelectAvailablePositions(
 			IEnumerable<int> availablePositions,
@@ -82,11 +73,6 @@ namespace Tbot.Workers {
 		}
 	}
 
-	/// <summary>
-	/// Cursor for one discovery origin. Every examined position must be committed,
-	/// including blacklisted and rejected positions; otherwise the worker can loop
-	/// forever on the last position of a system.
-	/// </summary>
 	public sealed class DiscoveryCursorState {
 		public int System { get; private set; }
 		public int NextPosition { get; private set; }

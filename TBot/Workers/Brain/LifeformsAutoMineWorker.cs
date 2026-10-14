@@ -74,10 +74,6 @@ namespace Tbot.Workers.Brain {
 					List<ConstructionCandidate> constructionCandidates = new();
 					LFBuildings maxLFBuildings = new();
 					foreach (Celestial celestial in _tbotInstance.UserData.celestials.Where(p => p is Planet)) {
-						// same fix as Patch 18 (AutoMineWorker) - Exclude was only applied much
-						// later, so every excluded planet still got touched here for the account-wide
-						// planning phase, triggering OGame's "recent activity" indicator regardless of
-						// LifeformAutoMine.Exclude. Skip excluded celestials before any data is fetched.
 						if (celestialsToExclude.Has(celestial)) {
 							DoLog(LogLevel.Debug, $"Skipping {celestial.ToString()} in planning phase: celestial in exclude list.");
 							continue;
@@ -94,9 +90,6 @@ namespace Tbot.Workers.Brain {
 						cel = await _tbotOgameBridge.UpdatePlanet(cel, UpdateTypes.Resources);
 						cel = await _tbotOgameBridge.UpdatePlanet(cel, UpdateTypes.ResourcesProduction);
 						maxLFBuildings = new();
-						// Zielwerte (Rasse x Slot) kommen ausschliesslich aus lifeform_targets.json.
-						// Die alten Max...-Felder der Config werden nicht mehr gelesen. Fehlt die Datei oder ist sie kaputt,
-						// wird der LF-Bau fuer diesen Planeten uebersprungen (statt mit falschen Caps zu bauen).
 						if (!LifeformTargets.TryApplyMaxLevels((object) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine, cel, maxLFBuildings, (lvl, msg) => DoLog(lvl, msg))) {
 							DoLog(LogLevel.Warning, $"Skipping {cel.ToString()}: LF target values not available (lifeform_targets.json missing/invalid or race unknown).");
 							continue;

@@ -5,10 +5,6 @@ using TBot.Ogame.Infrastructure.Enums;
 using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Includes {
-	/// <summary>
-	/// A single construction decision produced while observing one celestial.
-	/// Lower priority and score values are preferred.
-	/// </summary>
 	public sealed class ConstructionCandidate {
 		public int CelestialId { get; init; }
 		public int Priority { get; init; }
@@ -16,10 +12,6 @@ namespace Tbot.Includes {
 		public bool Eligible { get; init; } = true;
 	}
 
-	/// <summary>
-	/// Keeps construction ordering deterministic. Workers still own the OGame
-	/// action; this class only decides which observed candidates go first.
-	/// </summary>
 	public static class AccountConstructionPlanner {
 		public static int GetAutoMinePriority(Buildables buildable) {
 			return buildable switch {
@@ -64,10 +56,6 @@ namespace Tbot.Includes {
 		}
 	}
 
-	/// <summary>
-	/// Keeps an ordered batch of celestial workers ordered while retaining the
-	/// small randomized delay used by the workers for natural-looking activity.
-	/// </summary>
 	public static class OrderedWorkerSchedule {
 		public static TimeSpan NextDueTime(TimeSpan previousDueTime, TimeSpan randomizedGap) {
 			return previousDueTime + (randomizedGap < TimeSpan.Zero ? TimeSpan.Zero : randomizedGap);
@@ -127,12 +115,6 @@ namespace Tbot.Includes {
 		public bool IsComplete => UnfulfilledDemands.Count == 0;
 	}
 
-	/// <summary>
-	/// Allocates account resources once for a batch of construction demands.
-	/// Demands for the same destination are merged before source selection.
-	/// A demand is committed only when its complete cost can be funded, so the
-	/// planner never sends a partial fleet that cannot unlock the construction.
-	/// </summary>
 	public static class ResourceShipmentPlanner {
 		public static ResourceShipmentPlan Plan(
 			IEnumerable<ResourceDemand> demands,

@@ -6,33 +6,30 @@ import (
 	"math"
 )
 
-// ShipsInfos represent a planet ships information
 type ShipsInfos struct {
-	LightFighter   int64 // 204
-	HeavyFighter   int64 // 205
-	Cruiser        int64 // 206
-	Battleship     int64 // 207
-	Battlecruiser  int64 // 215
-	Bomber         int64 // 211
-	Destroyer      int64 // 213
-	Deathstar      int64 // 214
-	SmallCargo     int64 // 202
-	LargeCargo     int64 // 203
-	ColonyShip     int64 // 208
-	Recycler       int64 // 209
-	EspionageProbe int64 // 210
-	SolarSatellite int64 // 212
-	Crawler        int64 // 217
-	Reaper         int64 // 218
-	Pathfinder     int64 // 219
+	LightFighter   int64
+	HeavyFighter   int64
+	Cruiser        int64
+	Battleship     int64
+	Battlecruiser  int64
+	Bomber         int64
+	Destroyer      int64
+	Deathstar      int64
+	SmallCargo     int64
+	LargeCargo     int64
+	ColonyShip     int64
+	Recycler       int64
+	EspionageProbe int64
+	SolarSatellite int64
+	Crawler        int64
+	Reaper         int64
+	Pathfinder     int64
 }
 
-// ToPtr returns a pointer to self
 func (s ShipsInfos) ToPtr() *ShipsInfos {
 	return &s
 }
 
-// Equal either or not two ShipsInfos are equal
 func (s ShipsInfos) Equal(other ShipsInfos) bool {
 	for _, ship := range Ships {
 		shipID := ship.GetID()
@@ -43,37 +40,30 @@ func (s ShipsInfos) Equal(other ShipsInfos) bool {
 	return true
 }
 
-// HasShips returns either or not at least one ship is present
 func (s ShipsInfos) HasShips() bool {
 	return utils.Count2(s.Iter()) > 0
 }
 
-// IsEmpty returns true if no ships are set
 func (s ShipsInfos) IsEmpty() bool {
 	return !s.HasShips()
 }
 
-// HasFlyableShips returns either or not at least one flyable ship is present
 func (s ShipsInfos) HasFlyableShips() bool {
 	return utils.Any2(s.Iter(), func(shipID ID, i int64) bool { return shipID.IsFlyableShip() })
 }
 
-// HasCombatShips returns either or not at least one combat ship is present
 func (s ShipsInfos) HasCombatShips() bool {
 	return utils.Any2(s.Iter(), func(shipID ID, i int64) bool { return shipID.IsCombatShip() })
 }
 
-// HasCivilShips returns either or not at least one civil ship is present
 func (s ShipsInfos) HasCivilShips() bool {
 	return utils.Any2(s.Iter(), func(shipID ID, i int64) bool { return shipID.IsCivilShip() })
 }
 
-// Speed returns the speed of the slowest ship
 func (s ShipsInfos) Speed(techs IResearches, lfBonuses LfBonuses, characterClass CharacterClass, allianceClass AllianceClass) int64 {
 	return utils.Second(s.SlowestShip(techs, lfBonuses, characterClass, allianceClass))
 }
 
-// SlowestShip returns the slowest ship and its speed
 func (s ShipsInfos) SlowestShip(techs IResearches, lfBonuses LfBonuses, characterClass CharacterClass, allianceClass AllianceClass) (ID, int64) {
 	var slowestShipID ID
 	var minSpeed int64 = math.MaxInt64
@@ -87,7 +77,6 @@ func (s ShipsInfos) SlowestShip(techs IResearches, lfBonuses LfBonuses, characte
 	return slowestShipID, minSpeed
 }
 
-// ToQuantifiables convert a ShipsInfos to an array of Quantifiable
 func (s ShipsInfos) ToQuantifiables() []Quantifiable {
 	out := make([]Quantifiable, 0)
 	for shipID, nb := range s.IterFlyable() {
@@ -96,7 +85,6 @@ func (s ShipsInfos) ToQuantifiables() []Quantifiable {
 	return out
 }
 
-// FromQuantifiables convert an array of Quantifiable to a ShipsInfos
 func (s ShipsInfos) FromQuantifiables(in []Quantifiable) (out ShipsInfos) {
 	for _, item := range in {
 		out.Set(item.ID, item.Nbr)
@@ -104,7 +92,6 @@ func (s ShipsInfos) FromQuantifiables(in []Quantifiable) (out ShipsInfos) {
 	return
 }
 
-// Cargo returns the total cargo of the ships
 func (s ShipsInfos) Cargo(techs IResearches, lfBonuses LfBonuses, characterClass CharacterClass, multiplier float64, probeRaids bool) (out int64) {
 	for shipID, nb := range s.Iter() {
 		out += Objs.GetShip(shipID).GetCargoCapacity(techs, lfBonuses, characterClass, multiplier, probeRaids) * nb
@@ -112,7 +99,6 @@ func (s ShipsInfos) Cargo(techs IResearches, lfBonuses LfBonuses, characterClass
 	return
 }
 
-// Has returns true if v is contained by s
 func (s ShipsInfos) Has(v ShipsInfos) bool {
 	for _, ship := range Ships {
 		needed := v.ByID(ship.GetID())
@@ -124,7 +110,6 @@ func (s ShipsInfos) Has(v ShipsInfos) bool {
 	return true
 }
 
-// FleetValue returns the value of the fleet
 func (s ShipsInfos) FleetValue(lfBonuses LfBonuses) (out int64) {
 	for shipID, nb := range s.Iter() {
 		out += Objs.GetShip(shipID).GetPrice(nb, lfBonuses).Total()
@@ -132,7 +117,6 @@ func (s ShipsInfos) FleetValue(lfBonuses LfBonuses) (out int64) {
 	return
 }
 
-// FleetCost returns the cost of the fleet
 func (s ShipsInfos) FleetCost(lfBonuses LfBonuses) (out Resources) {
 	for shipID, nb := range s.Iter() {
 		out = out.Add(Objs.GetShip(shipID).GetPrice(nb, lfBonuses))
@@ -140,7 +124,6 @@ func (s ShipsInfos) FleetCost(lfBonuses LfBonuses) (out Resources) {
 	return
 }
 
-// CountShips returns the count of ships
 func (s ShipsInfos) CountShips() (out int64) {
 	for _, nb := range s.Iter() {
 		out += nb
@@ -148,7 +131,6 @@ func (s ShipsInfos) CountShips() (out int64) {
 	return
 }
 
-// Add adds two ShipsInfos together
 func (s *ShipsInfos) Add(v ShipsInfos) {
 	for _, ship := range Ships {
 		shipID := ship.GetID()
@@ -159,7 +141,6 @@ func (s *ShipsInfos) Add(v ShipsInfos) {
 	}
 }
 
-// Sub subtracts v from s
 func (s *ShipsInfos) Sub(v ShipsInfos) {
 	for _, ship := range Ships {
 		shipID := ship.GetID()
@@ -167,12 +148,10 @@ func (s *ShipsInfos) Sub(v ShipsInfos) {
 	}
 }
 
-// AddShips adds some ships
 func (s *ShipsInfos) AddShips(shipID ID, nb int64) {
 	s.Set(shipID, max(s.ByID(shipID)+nb, 0))
 }
 
-// SubShips subtracts some ships
 func (s *ShipsInfos) SubShips(shipID ID, nb int64) {
 	s.AddShips(shipID, -1*nb)
 }
@@ -199,7 +178,6 @@ func (s ShipsInfos) eachFlyable(clb func(shipID ID, nb int64) bool) {
 	}
 }
 
-// Each calls clb callback for every ships that has a value higher than zero
 func (s ShipsInfos) Each(clb func(shipID ID, nb int64)) {
 	s.each(func(shipID ID, nb int64) bool {
 		clb(shipID, nb)
@@ -207,7 +185,6 @@ func (s ShipsInfos) Each(clb func(shipID ID, nb int64)) {
 	})
 }
 
-// EachFlyable calls clb callback for every ships that has a value higher than zero and is flyable
 func (s ShipsInfos) EachFlyable(clb func(shipID ID, nb int64)) {
 	s.eachFlyable(func(shipID ID, nb int64) bool {
 		clb(shipID, nb)
@@ -215,21 +192,18 @@ func (s ShipsInfos) EachFlyable(clb func(shipID ID, nb int64)) {
 	})
 }
 
-// Iter implements iterator so that we can use in a for loop and avoid having to deal with closure
 func (s ShipsInfos) Iter() iter.Seq2[ID, int64] {
 	return func(yield func(shipID ID, nb int64) bool) {
 		s.each(yield)
 	}
 }
 
-// IterFlyable implements iterator so that we can use in a for loop and avoid having to deal with closure
 func (s ShipsInfos) IterFlyable() iter.Seq2[ID, int64] {
 	return func(yield func(shipID ID, nb int64) bool) {
 		s.eachFlyable(yield)
 	}
 }
 
-// GetWeaponPower returns weapon power of a ShipsInfos
 func (s ShipsInfos) GetWeaponPower(researches IResearches) (out int64) {
 	for _, ship := range Ships {
 		out += s.ByShip(ship) * ship.GetWeaponPower(researches)
@@ -237,7 +211,6 @@ func (s ShipsInfos) GetWeaponPower(researches IResearches) (out int64) {
 	return
 }
 
-// GetShieldPower returns shield power of a ShipsInfos
 func (s ShipsInfos) GetShieldPower(researches IResearches) (out int64) {
 	for _, ship := range Ships {
 		out += s.ByShip(ship) * ship.GetShieldPower(researches)
@@ -245,7 +218,6 @@ func (s ShipsInfos) GetShieldPower(researches IResearches) (out int64) {
 	return
 }
 
-// GetStructuralIntegrity returns structural integrity of a ShipsInfos
 func (s ShipsInfos) GetStructuralIntegrity(researches IResearches) (out int64) {
 	for _, ship := range Ships {
 		out += s.ByShip(ship) * ship.GetStructuralIntegrity(researches)
@@ -253,7 +225,6 @@ func (s ShipsInfos) GetStructuralIntegrity(researches IResearches) (out int64) {
 	return
 }
 
-// ByID get number of ships by ship id
 func (s ShipsInfos) ByID(id ID) int64 {
 	switch id {
 	case LightFighterID:
@@ -295,12 +266,10 @@ func (s ShipsInfos) ByID(id ID) int64 {
 	}
 }
 
-// ByShip get number of ships given a "Ship"
 func (s ShipsInfos) ByShip(ship Ship) int64 {
 	return s.ByID(ship.GetID())
 }
 
-// Get gets number of ships
 func (s ShipsInfos) Get(v any) int64 {
 	switch vv := v.(type) {
 	case ID:
@@ -312,7 +281,6 @@ func (s ShipsInfos) Get(v any) int64 {
 	}
 }
 
-// Set sets the ships value using the ship id
 func (s *ShipsInfos) Set(id ID, val int64) {
 	switch id {
 	case LightFighterID:
@@ -352,7 +320,6 @@ func (s *ShipsInfos) Set(id ID, val int64) {
 	}
 }
 
-// SetShip sets the ships value using the "Ship" id
 func (s *ShipsInfos) SetShip(ship Ship, val int64) {
 	s.Set(ship.GetID(), val)
 }

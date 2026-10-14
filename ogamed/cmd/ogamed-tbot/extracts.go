@@ -34,13 +34,11 @@ func extractCategories(g *goquery.Selection, category string) (string, string) {
 	return c, strings.Replace(s, v, "", 1)
 }
 
-// ExtractLfBonuses ...
 func ExtractLfBonuses(pageHTML []byte) (ogame.LfBonuses, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	return ExtractLfBonusesFromDoc(doc)
 }
 
-// ExtractLfBonusesFromDoc ...
 func ExtractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error) {
 	return extractLfBonusesFromDoc(doc)
 }
@@ -55,7 +53,6 @@ func assignBonusValue(s *goquery.Selection, b *ogame.LfBonuses, category string,
 	}
 }
 
-// Extracts ships stats fixed
 func extractShipStatBonus(s *goquery.Selection, b *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -83,7 +80,6 @@ func extractShipStatBonus(s *goquery.Selection, b *ogame.LfBonuses, subcategory 
 	return
 }
 
-// Extracts cost reduction
 func extractCostReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -97,7 +93,6 @@ func extractCostReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcate
 	})
 }
 
-// Extracts time reduction
 func extractTimeReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -111,13 +106,11 @@ func extractTimeReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcate
 	})
 }
 
-// Extract bonus value from a string with percentage sign [ex: 1.056% -> 0.01056]
 func extractBonusFromStringPercentage(s string) float64 {
 	v := strings.Replace(s, "%", "", 1)
 	return extractBonusFromString(v) / 100.0
 }
 
-// Extract bonus value from a string [ex: 1.056]
 func extractBonusFromString(s string) float64 {
 	v := strings.TrimSpace(s)
 	v = strings.Replace(v, ",", ".", 1)

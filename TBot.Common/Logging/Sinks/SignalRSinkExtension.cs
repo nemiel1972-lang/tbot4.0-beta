@@ -12,21 +12,6 @@ using Serilog;
 namespace TBot.Common.Logging.Sinks {
 	public static class SignalRSinkExtension {
 
-		/// <summary>
-		/// The SignalRSink Extension, which you need to add to the sinks collection.
-		/// </summary>
-		/// <param name="loggerConfiguration">The logger sink configuration.</param>
-		/// <param name="logEventLevel">The minimum logLevel.</param>
-		/// <param name="serviceProvider">The current serviceProvider.</param>
-		/// <param name="formatProvider">The format provider to use.</param>
-		/// <param name="groups">The groups to which the log events are sent.</param>
-		/// <param name="userIds">The users to which the log events are sent.</param>
-		/// <param name="excludedConnectionIds">The excluded ids from the dispatch.</param>
-		/// <param name="sendAsString">A bool to decide as what the log should be send.</param>
-		/// <typeparam name="THub">The type of the SignalR Hub.</typeparam>
-		/// <typeparam name="T">The type of the SignalR typed interface.</typeparam>
-		/// <returns>The instance of LoggerConfiguration.</returns>
-		/// <exception cref="ArgumentNullException"></exception>
 		public static LoggerConfiguration SignalRTBotSink<THub, T>(
 			this LoggerSinkConfiguration loggerConfiguration,
 			LogEventLevel logEventLevel,

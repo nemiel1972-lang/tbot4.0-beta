@@ -5,12 +5,10 @@ import (
 	"time"
 )
 
-// BaseBuilding base struct for buildings
 type BaseBuilding struct {
 	BaseLevelable
 }
 
-// DeconstructionPrice returns the price to tear down to given level
 func (b BaseBuilding) DeconstructionPrice(level int64, techs IResearches) Resources {
 	tmp := func(baseCost int64, increaseFactor float64, level int64) int64 {
 		return int64(math.Floor(float64(baseCost)*math.Pow(increaseFactor, float64(level-1))) * (1 - 0.04*float64(techs.GetIonTechnology())))
@@ -41,12 +39,10 @@ func (b BaseBuilding) BuildingConstructionTime(level, universeSpeed int64, acc B
 	return time.Duration(float64(dur) - float64(dur)*bonus)
 }
 
-// ConstructionTime returns the duration it takes to build given level. Deconstruction time is the same function.
 func (b BaseBuilding) ConstructionTime(level, universeSpeed int64, facilities BuildAccelerators, lfBonuses LfBonuses, _ CharacterClass, _ bool) time.Duration {
 	return b.BuildingConstructionTime(level, universeSpeed, facilities, lfBonuses)
 }
 
-// GetLevel returns current level of a building
 func (b BaseBuilding) GetLevel(resourcesBuildings IResourcesBuildings, facilities IFacilities, _ IResearches) int64 {
 	if b.ID.IsResourceBuilding() {
 		return resourcesBuildings.ByID(b.ID)

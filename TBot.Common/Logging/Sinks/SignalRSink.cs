@@ -21,15 +21,6 @@ namespace TBot.Common.Logging.Sinks {
 		private readonly string[] _excludedConnectionIds;
 		private readonly bool _sendAsString;
 
-		/// <summary>
-		/// Sink constructor.
-		/// </summary>
-		/// <param name="formatProvider">The format provider with which the events are formatted.</param>
-		/// <param name="sendAsString">A bool to decide as what the log should be send.</param>
-		/// <param name="serviceProvider">The current serviceProvider.</param>
-		/// <param name="groups">The groups where the events are sent.</param>
-		/// <param name="userIds">The users to where the events are sent.</param>
-		/// <param name="excludedConnectionIds">The client ids to exclude.</param>
 		public SignalRTbotSink(IFormatProvider formatProvider,
 			bool sendAsString,
 			IServiceProvider serviceProvider = null,
@@ -45,10 +36,6 @@ namespace TBot.Common.Logging.Sinks {
 
 		}
 
-		/// <summary>
-		/// Emit a log event to the registered clients
-		/// </summary>
-		/// <param name="logEvent">The event to emit</param>
 		public void Emit(LogEvent logEvent) {
 
 			if (logEvent == null) {

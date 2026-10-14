@@ -15,16 +15,9 @@ namespace Tbot.Includes {
 		Task SpyCrash(Celestial fromCelestial, Coordinate target = null);
 		Task AutoFleetSave(Celestial celestial, bool isSleepTimeFleetSave = false, long minDuration = 0, bool WaitFleetsReturn = false, Missions TelegramMission = Missions.None, bool fromTelegram = false, bool saveall = false);
 		Task<int> SendFleet(Celestial origin, Ships ships, Coordinate destination, Missions mission, decimal speed, Resources payload = null, CharacterClass playerClass = CharacterClass.NoClass, bool force = false, bool ignoreLedger = false, long deutToLeave = 0);
-		// ship selection (SC -> LC, mixed fleet, expedition reserve) for the Brain workers.
-		// WaehleBrainSchiffe returns null if the origin cannot carry the payload; BrainQuellSchiffe lists the ships usable for planning.
 		Ships WaehleBrainSchiffe(Celestial origin, Resources payload);
 		Ships BrainQuellSchiffe(Celestial origin);
 		int BrainMaxSendungen(int freieSlots);
-		// account-wide serialized discovery dispatch, ported from TBot v3.5.1-beta1's
-		// FleetScheduler.SendDiscovery. Wraps the existing IOgameService.SendDiscovery call with a
-		// dedicated semaphore so overlapping AutoDiscovery dispatches (and any other worker's discovery
-		// sends) cannot race each other. Deliberately NOT wired into SendFleet/DispatchFleet - this only
-		// serializes discovery sends against each other, leaving normal fleet sends untouched.
 		Task<bool> SendDiscovery(Celestial origin, Coordinate destination);
 		Task CancelFleet(Fleet fleet);
 		Task<List<Fleet>> UpdateFleets();

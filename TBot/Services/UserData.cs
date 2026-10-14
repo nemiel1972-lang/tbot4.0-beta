@@ -9,7 +9,6 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Services {
 
-	// Data required by TBotMain instances
 	public class UserData {
 		public Server serverInfo = new();
 		public ServerData serverData;
@@ -35,7 +34,6 @@ namespace Tbot.Services {
 		public int autoFarmLastRangeIndex = 0;
 	}
 
-	// Data used by TelegramMessenger binded to TBotMain
 	public class TelegramUserData {
         public Celestial CurrentCelestial;
         public Celestial CurrentCelestialToSave;

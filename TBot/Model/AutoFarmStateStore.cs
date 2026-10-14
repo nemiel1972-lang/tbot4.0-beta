@@ -44,14 +44,9 @@ namespace TBot.Model {
 		public Resources PlannedLoot { get; init; } = new();
 	}
 
-	/// <summary>
-	/// Durable AutoFarm state. System snapshots and target decisions survive a
-	/// worker restart without serializing the whole TBot instance.
-	/// </summary>
 	public sealed class AutoFarmStateStore : IDisposable {
 		private readonly string _connectionString;
 		private bool _enabled = true;
-		// Verlusterfassung separat abschaltbar (falls die Tabelle nicht angelegt werden konnte)
 		private bool _lossTrackingEnabled = true;
 
 		static AutoFarmStateStore() {
@@ -143,7 +138,6 @@ ON CONFLICT(galaxy, system) DO UPDATE SET
 					JsonConvert.SerializeObject(planets ?? Array.Empty<Planet>()));
 				command.ExecuteNonQuery();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}
 
@@ -182,7 +176,6 @@ ON CONFLICT(galaxy, system, position, celestial_type) DO UPDATE SET
 				command.Parameters.AddWithValue("$held_for_manual_review", target.HeldForManualReview ? 1 : 0);
 				command.ExecuteNonQuery();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}
 
@@ -294,7 +287,6 @@ VALUES ($report_id, $galaxy, $system, $position, $celestial_type, $target_name,
 				transaction.Commit();
 				return true;
 			} catch {
-				// Persistence must never stop AutoFarm.
 				return false;
 			}
 		}
@@ -339,12 +331,6 @@ LIMIT $limit;";
 			return attacks;
 		}
 
-		// Persistiert, ob seit Prozessstart (genauer: irgendwann, ueberhaupt schonmal) ein voller
-		// Scan-Durchlauf ueber alle konfigurierten Ranges/Bloecke abgeschlossen wurde. Bisher war das
-		// (_mainScanCompletedSinceStart in AutoFarmWorker.cs) reiner In-Memory-Zustand - jeder
-		// Neustart hat den Hintergrund-Scanner (ActiveScan/Block 11) dadurch erneut fuer einen ganzen
-		// Durchlauf pausiert, selbst wenn vorher schon zigmal komplett durchgescannt wurde. Einfache
-		// Ein-Zeilen-Tabelle (Boolean als INTEGER 0/1), analog zu scan_cursor oben.
 		public bool LoadMainScanCompleted() {
 			if (!_enabled)
 				return false;
@@ -382,7 +368,6 @@ ON CONFLICT(id) DO UPDATE SET
 				command.Parameters.AddWithValue("$completed", completed ? 1 : 0);
 				command.ExecuteNonQuery();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}
 
@@ -429,7 +414,6 @@ ON CONFLICT(id) DO UPDATE SET
 				command.Parameters.AddWithValue("$updated_at_utc", FormatUtc(updatedAtUtc));
 				command.ExecuteNonQuery();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}
 
@@ -479,7 +463,6 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 
 				transaction.Commit();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}
 
@@ -579,7 +562,6 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 				command.Parameters.AddWithValue("$return", expectedReturnUtc.HasValue ? FormatUtc(expectedReturnUtc.Value) : DBNull.Value);
 				command.ExecuteNonQuery();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}
 
@@ -603,7 +585,6 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 				command.Parameters.AddWithValue("$ld", lossValue?.Deuterium ?? 0);
 				command.ExecuteNonQuery();
 			} catch {
-				// Persistence must never stop AutoFarm.
 			}
 		}		private void Initialize() {
 			try {
@@ -674,7 +655,6 @@ CREATE TABLE IF NOT EXISTS main_scan_state (
 					migration.CommandText = "ALTER TABLE targets ADD COLUMN consumed_report_id INTEGER NULL;";
 					migration.ExecuteNonQuery();
 				} catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) {
-					// Existing AutoFarm databases already have the new column.
 				}
 
 				try {
@@ -682,7 +662,6 @@ CREATE TABLE IF NOT EXISTS main_scan_state (
 					migration.CommandText = "ALTER TABLE targets ADD COLUMN held_for_manual_review INTEGER NOT NULL DEFAULT 0;";
 					migration.ExecuteNonQuery();
 				} catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) {
-					// Existing AutoFarm databases already have the new column.
 				}
 
 				foreach (var column in new[] {
@@ -697,7 +676,6 @@ CREATE TABLE IF NOT EXISTS main_scan_state (
 						migration.CommandText = $"ALTER TABLE attacks ADD COLUMN {column};";
 						migration.ExecuteNonQuery();
 					} catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) {
-						// Existing AutoFarm databases already have this column.
 					}
 				}
 
@@ -710,7 +688,6 @@ FROM targets
 WHERE consumed_report_id IS NOT NULL AND consumed_report_id > 0;";
 				backfill.ExecuteNonQuery();
 
-				// Verlusterfassung - eigener try, ein Fehler hier darf den Rest nicht abschalten
 				try {
 					using var lossTable = connection.CreateCommand();
 					lossTable.CommandText = @"

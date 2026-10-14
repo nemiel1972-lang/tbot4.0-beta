@@ -14,12 +14,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// DiscordSolver manual discord solver for gameforge challenge solving
-// Create an application here -> https://discord.com/developers/applications
-// Get the "token" from the "Bot" tab
-// Go to "OAuth2" tab, in "scopes" select "Bot" and "applications.commands", in "Bot Permissions" select "Send Messages"
-// Copy the "Generated URL" and invite your bot to a server that you own.
-// "ownerID" get your user ID from your profile in the Discord application
 func DiscordSolver(token string, ownerID string) gameforge.CaptchaSolver {
 	return func(ctx context.Context, question, icons []byte) (int64, error) {
 		bot, err := discordgo.New("Bot " + token)
@@ -27,7 +21,6 @@ func DiscordSolver(token string, ownerID string) gameforge.CaptchaSolver {
 			return -1, err
 		}
 
-		// Init a DM, and interaction management
 		channel, err := bot.UserChannelCreate(ownerID, discordgo.WithContext(ctx))
 		if err != nil {
 			return -1, err
@@ -62,7 +55,6 @@ func DiscordSolver(token string, ownerID string) gameforge.CaptchaSolver {
 		}
 		fmt.Printf("Selected answer : %d.\n", answer)
 
-		// Self-cleaning history / image
 		go func(msg *discordgo.Message) {
 			select {
 			case <-time.After(30 * time.Second):
@@ -76,7 +68,6 @@ func DiscordSolver(token string, ownerID string) gameforge.CaptchaSolver {
 	}
 }
 
-// Generate a single image, as Discord does not support multiple image files in a same embed
 func buildEmbedImg(question, icons []byte) (out []byte, err error) {
 	const topPadding = 5
 	questionImage, err := png.Decode(bytes.NewReader(question))

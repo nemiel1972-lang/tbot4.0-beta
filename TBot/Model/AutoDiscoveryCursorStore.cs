@@ -5,10 +5,6 @@ using Newtonsoft.Json;
 using Tbot.Workers;
 
 namespace TBot.Model {
-	/// <summary>
-	/// Persists AutoDiscovery cursors per instance so a worker restart resumes from
-	/// the last examined position instead of probing the same system again.
-	/// </summary>
 	public sealed class AutoDiscoveryCursorStore {
 		private sealed class CursorEntry {
 			public int System { get; set; }
@@ -78,7 +74,6 @@ namespace TBot.Model {
 					File.Move(tempPath, _filePath);
 				}
 			} catch {
-				// Cursor persistence must never stop discovery planning.
 			}
 		}
 	}

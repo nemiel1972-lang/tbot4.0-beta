@@ -1,6 +1,5 @@
 package ogame
 
-// UserInfos returns the player's information
 type UserInfos struct {
 	PlayerID     int64
 	PlayerName   string

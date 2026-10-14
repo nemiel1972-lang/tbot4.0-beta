@@ -20,7 +20,6 @@ namespace Tbot.Services {
 		private IChangeToken changeToken;
 		private IDisposable changeCallback;
 
-		// extraGlobs: zusaetzliche Muster relativ zum Ordner der Hauptdatei, z. B. "conf.d/**/*.json" (per Load eingebundene Dateien)
 		public SettingsFileWatcher(Action func, string filePathToWatch, string[] extraGlobs = null) {
 			_watchFunc = func;
 			_absFpToWatch = filePathToWatch;

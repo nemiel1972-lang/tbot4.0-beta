@@ -88,7 +88,6 @@ namespace Tbot.Workers.Brain {
 					}
 					if (capacity <= tempCelestial.Resources.TotalResources && (bool) _tbotInstance.InstanceSettings.Brain.AutoCargo.LimitToCapacity) {
 						long difference = tempCelestial.Resources.TotalResources - capacity;
-						// LFBonuses kann null sein (Upstream beta9, d09305d) - ohne Guard NullReferenceException
 						float cargoBonus = tempCelestial.LFBonuses?.GetShipCargoBonus(preferredCargoShip) ?? 0;
 						int oneShipCapacity = _calculationService.CalcShipCapacity(preferredCargoShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 						neededCargos = (long) Math.Round((float) difference / (float) oneShipCapacity, MidpointRounding.ToPositiveInfinity);
@@ -105,7 +104,6 @@ namespace Tbot.Workers.Brain {
 					if (neededCargos < 0)
 						neededCargos = 0;
 
-						// RESOURCE-LEDGER: AutoCargo darf nur den Bestand ausgeben, der nicht fuer andere Worker reserviert ist.
 						Resources freierBestand = LedgerTBot.Available(_tbotInstance, tempCelestial, "AutoCargo");
 						var cost = _calculationService.CalcPrice(preferredCargoShip, (int) neededCargos);
 						if (freierBestand.IsEnoughFor(cost))
@@ -134,7 +132,6 @@ namespace Tbot.Workers.Brain {
 						DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: No ships will be built.");
 					}
 
-					// --- NEW: Deploy surplus finished ships from Planet to its co-located Moon (Phalanx-safe) ---
 					if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoCargo, "SupplyMoonFromPlanet") &&
 						(bool) _tbotInstance.InstanceSettings.Brain.AutoCargo.SupplyMoonFromPlanet &&
 						tempCelestial.Coordinate.Type == Celestials.Planet) {

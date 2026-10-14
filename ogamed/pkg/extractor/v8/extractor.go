@@ -8,17 +8,14 @@ import (
 	"time"
 )
 
-// Extractor ...
 type Extractor struct {
 	v71.Extractor
 }
 
-// NewExtractor ...
 func NewExtractor() *Extractor {
 	return &Extractor{}
 }
 
-// ExtractIsInVacation ...
 func (e *Extractor) ExtractIsInVacation(pageHTML []byte) (bool, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	if err != nil {
@@ -27,12 +24,10 @@ func (e *Extractor) ExtractIsInVacation(pageHTML []byte) (bool, error) {
 	return e.ExtractIsInVacationFromDoc(doc), nil
 }
 
-// ExtractIsInVacationFromDoc ...
 func (e *Extractor) ExtractIsInVacationFromDoc(doc *goquery.Document) bool {
 	return extractIsInVacationFromDoc(doc)
 }
 
-// ExtractAttackBlock ...
 func (e *Extractor) ExtractAttackBlock(pageHTML []byte) (bool, time.Time, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	if err != nil {
@@ -42,12 +37,10 @@ func (e *Extractor) ExtractAttackBlock(pageHTML []byte) (bool, time.Time, error)
 	return attackBlockActivated, blockedUntil, nil
 }
 
-// ExtractAttackBlockFromDoc ...
 func (e *Extractor) ExtractAttackBlockFromDoc(doc *goquery.Document) (bool, time.Time) {
 	return extractAttackBlockFromDoc(doc)
 }
 
-// ExtractEspionageReport ...
 func (e *Extractor) ExtractEspionageReport(pageHTML []byte) (ogame.EspionageReport, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	if err != nil {
@@ -56,7 +49,6 @@ func (e *Extractor) ExtractEspionageReport(pageHTML []byte) (ogame.EspionageRepo
 	return e.ExtractEspionageReportFromDoc(doc)
 }
 
-// ExtractEspionageReportFromDoc ...
 func (e *Extractor) ExtractEspionageReportFromDoc(doc *goquery.Document) (ogame.EspionageReport, error) {
 	return extractEspionageReportFromDoc(doc, e.GetLocation())
 }

@@ -20,12 +20,10 @@ func newSensorPhalanx() *sensorPhalanx {
 	return b
 }
 
-// ScanConsumption deuterium consumption to scan
 func (p sensorPhalanx) ScanConsumption() int64 {
 	return p.scanConsumption
 }
 
-// GetRange gets sensor range
 func (p sensorPhalanx) GetRange(lvl int64, isDiscoverer bool, rangeBonus float64) int64 {
 	var phalanxRange int64
 	if lvl == 0 {

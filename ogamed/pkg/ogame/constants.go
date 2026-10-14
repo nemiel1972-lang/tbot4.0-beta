@@ -4,7 +4,6 @@ import (
 	"strconv"
 )
 
-// MissionID represent a mission id
 type MissionID int
 
 func (m MissionID) String() string {
@@ -40,7 +39,6 @@ func (m MissionID) String() string {
 	}
 }
 
-// CelestialType destination type might be planet/moon/debris
 type CelestialType int64
 
 func (d CelestialType) String() string {
@@ -56,36 +54,28 @@ func (d CelestialType) String() string {
 	}
 }
 
-// Int64 returns an integer value of the CelestialType
 func (d CelestialType) Int64() int64 {
 	return int64(d)
 }
 
-// Int returns an integer value of the CelestialType
-// Deprecated: backward compatibility
 func (d CelestialType) Int() int64 {
 	return int64(d)
 }
 
-// AllianceClass ...
 type AllianceClass int64
 
-// IsWarrior ...
 func (c AllianceClass) IsWarrior() bool {
 	return c == Warrior
 }
 
-// IsTrader ...
 func (c AllianceClass) IsTrader() bool {
 	return c == Trader
 }
 
-// IsResearcher ...
 func (c AllianceClass) IsResearcher() bool {
 	return c == Researcher
 }
 
-// String ...
 func (c AllianceClass) String() string {
 	switch c {
 	case NoAllianceClass:
@@ -101,15 +91,12 @@ func (c AllianceClass) String() string {
 	}
 }
 
-// DMType ...
 type DMType string
 
-// IsValid ...
 func (t DMType) IsValid() bool {
 	return t == BuildingsDmType || t == ResearchDmType || t == ShipyardDmType
 }
 
-// CharacterClass ...
 type CharacterClass int64
 
 func (c CharacterClass) IsCollector() bool {
@@ -124,7 +111,6 @@ func (c CharacterClass) IsDiscoverer() bool {
 	return c == Discoverer
 }
 
-// OGame constants
 const (
 	BuildingsDmType DMType = "buildings"
 	ResearchDmType  DMType = "research"
@@ -144,7 +130,6 @@ const (
 	DebrisType CelestialType = 2
 	MoonType   CelestialType = 3
 
-	//Buildings
 	MetalMineID                         ID = 1
 	CrystalMineID                       ID = 2
 	DeuteriumSynthesizerID              ID = 3
@@ -156,7 +141,7 @@ const (
 	ShieldedMetalDenID                  ID = 25
 	UndergroundCrystalDenID             ID = 26
 	SeabedDeuteriumDenID                ID = 27
-	AllianceDepotID                     ID = 34 // Facilities
+	AllianceDepotID                     ID = 34
 	RoboticsFactoryID                   ID = 14
 	ShipyardID                          ID = 21
 	ResearchLabID                       ID = 31
@@ -164,10 +149,10 @@ const (
 	NaniteFactoryID                     ID = 15
 	TerraformerID                       ID = 33
 	SpaceDockID                         ID = 36
-	LunarBaseID                         ID = 41 // Moon facilities
+	LunarBaseID                         ID = 41
 	SensorPhalanxID                     ID = 42
 	JumpGateID                          ID = 43
-	RocketLauncherID                    ID = 401 // Defense
+	RocketLauncherID                    ID = 401
 	LightLaserID                        ID = 402
 	HeavyLaserID                        ID = 403
 	GaussCannonID                       ID = 404
@@ -177,7 +162,7 @@ const (
 	LargeShieldDomeID                   ID = 408
 	AntiBallisticMissilesID             ID = 502
 	InterplanetaryMissilesID            ID = 503
-	SmallCargoID                        ID = 202 // Ships
+	SmallCargoID                        ID = 202
 	LargeCargoID                        ID = 203
 	LightFighterID                      ID = 204
 	HeavyFighterID                      ID = 205
@@ -194,7 +179,7 @@ const (
 	CrawlerID                           ID = 217
 	ReaperID                            ID = 218
 	PathfinderID                        ID = 219
-	EspionageTechnologyID               ID = 106 // Research
+	EspionageTechnologyID               ID = 106
 	ComputerTechnologyID                ID = 108
 	WeaponsTechnologyID                 ID = 109
 	ShieldingTechnologyID               ID = 110
@@ -210,7 +195,7 @@ const (
 	IntergalacticResearchNetworkID      ID = 123
 	AstrophysicsID                      ID = 124
 	GravitonTechnologyID                ID = 199
-	ResidentialSectorID                 ID = 11101 // Lifeform (humans)
+	ResidentialSectorID                 ID = 11101
 	BiosphereFarmID                     ID = 11102
 	ResearchCentreID                    ID = 11103
 	AcademyOfSciencesID                 ID = 11104
@@ -222,7 +207,7 @@ const (
 	BiotechLabID                        ID = 11110
 	MetropolisID                        ID = 11111
 	PlanetaryShieldID                   ID = 11112
-	MeditationEnclaveID                 ID = 12101 // Lifeform (rocktal)
+	MeditationEnclaveID                 ID = 12101
 	CrystalFarmID                       ID = 12102
 	RuneTechnologiumID                  ID = 12103
 	RuneForgeID                         ID = 12104
@@ -234,7 +219,7 @@ const (
 	DeuteriumSynthesiserID              ID = 12110
 	MineralResearchCentreID             ID = 12111
 	AdvancedRecyclingPlantID            ID = 12112
-	AssemblyLineID                      ID = 13101 // Lifeform (mechas)
+	AssemblyLineID                      ID = 13101
 	FusionCellFactoryID                 ID = 13102
 	RoboticsResearchCentreID            ID = 13103
 	UpdateNetworkID                     ID = 13104
@@ -246,7 +231,7 @@ const (
 	HighPerformanceSynthesiserID        ID = 13110
 	ChipMassProductionID                ID = 13111
 	NanoRepairBotsID                    ID = 13112
-	SanctuaryID                         ID = 14101 // Lifeform (kaelesh)
+	SanctuaryID                         ID = 14101
 	AntimatterCondenserID               ID = 14102
 	VortexChamberID                     ID = 14103
 	HallsOfRealisationID                ID = 14104
@@ -258,7 +243,7 @@ const (
 	PsionicModulatorID                  ID = 14110
 	ShipManufacturingHallID             ID = 14111
 	SupraRefractorID                    ID = 14112
-	IntergalacticEnvoysID               ID = 11201 // Human techs
+	IntergalacticEnvoysID               ID = 11201
 	HighPerformanceExtractorsID         ID = 11202
 	FusionDrivesID                      ID = 11203
 	StealthFieldGeneratorID             ID = 11204
@@ -276,7 +261,7 @@ const (
 	BattlecruiserMkIIID                 ID = 11216
 	RobotAssistantsID                   ID = 11217
 	SupercomputerID                     ID = 11218
-	VolcanicBatteriesID                 ID = 12201 //Rocktal techs
+	VolcanicBatteriesID                 ID = 12201
 	AcousticScanningID                  ID = 12202
 	HighEnergyPumpSystemsID             ID = 12203
 	CargoHoldExpansionCivilianShipsID   ID = 12204
@@ -294,7 +279,7 @@ const (
 	ObsidianShieldReinforcementID       ID = 12216
 	RuneShieldsID                       ID = 12217
 	RocktalCollectorEnhancementID       ID = 12218
-	CatalyserTechnologyID               ID = 13201 //Mechas techs
+	CatalyserTechnologyID               ID = 13201
 	PlasmaDriveID                       ID = 13202
 	EfficiencyModuleID                  ID = 13203
 	DepotAIID                           ID = 13204
@@ -312,7 +297,7 @@ const (
 	GeneralOverhaulDestroyerID          ID = 13216
 	ExperimentalWeaponsTechnologyID     ID = 13217
 	MechanGeneralEnhancementID          ID = 13218
-	HeatRecoveryID                      ID = 14201 //Kaelesh techs
+	HeatRecoveryID                      ID = 14201
 	SulphideProcessID                   ID = 14202
 	PsionicNetworkID                    ID = 14203
 	TelekineticTractorBeamID            ID = 14204
@@ -331,7 +316,6 @@ const (
 	PsionicShieldMatrixID               ID = 14217
 	KaeleshDiscovererEnhancementID      ID = 14218
 
-	// Missions
 	Relocate           MissionID = 0
 	Attack             MissionID = 1
 	GroupedAttack      MissionID = 2
@@ -346,7 +330,6 @@ const (
 	Expedition         MissionID = 15
 	SearchForLifeforms MissionID = 18
 
-	// Speeds
 	TenPercent         Speed = 1
 	TwentyPercent      Speed = 2
 	ThirtyPercent      Speed = 3
@@ -357,7 +340,7 @@ const (
 	EightyPercent      Speed = 8
 	NinetyPercent      Speed = 9
 	HundredPercent     Speed = 10
-	FivePercent        Speed = 0.5 // General class only detailed speeds
+	FivePercent        Speed = 0.5
 	FifteenPercent     Speed = 1.5
 	TwentyFivePercent  Speed = 2.5
 	ThirtyFivePercent  Speed = 3.5

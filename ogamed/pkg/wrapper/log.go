@@ -7,23 +7,18 @@ import (
 	"runtime"
 )
 
-// Quiet mode will not show any informative output
 func (b *OGame) Quiet(quiet bool) {
 	b.quiet = quiet
 }
 
-// SetLogger set a custom logger for the bot
 func (b *OGame) SetLogger(logger *log.Logger) {
 	b.logger = logger
 }
 
-// Terminal styling constants
 const (
 	knrm = "\x1B[0m"
 	kred = "\x1B[31m"
-	//kgrn = "\x1B[32m"
 	kyel = "\x1B[33m"
-	//kblu = "\x1B[34m"
 	kmag = "\x1B[35m"
 	kcyn = "\x1B[36m"
 	kwht = "\x1B[37m"

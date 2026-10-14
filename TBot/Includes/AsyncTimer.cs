@@ -84,37 +84,27 @@ namespace Tbot.Includes {
 				_cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
 				_scheduledAction = Task.Run(async () => {
-					// Change thread name so TaskManager will show it
 					Thread.CurrentThread.Name = $"AT_{_name}";
 					IsRunning = true;
 
 					try {
-						// pruefte vorher ct (das urspruengliche, nie von StopAsync()
-						// abgebrochene Token) statt _cts.Token (das linked Token, das StopAsync() tatsaechlich
-						// cancelt). Meist folgenlos, weil Task.Delay(..., _cts.Token) sauber eine
-						// OperationCanceledException wirft und die Schleife per catch verlaesst - aber die
-						// Bedingung selbst war falsch und sollte das tatsaechlich gecancelte Token pruefen.
 						while (_cts.Token.IsCancellationRequested == false) {
 
 							await Task.Delay(DueTime, _cts.Token);
 
-							// USER CALLBACK START HERE
 							await _callback(_cts.Token);
-							// USER CALLBACK END HERE
 
 							lock (_changeLock) {
 								_canSetBiggerPeriod = true;
 							}
 
 							if (Period == Timeout.InfiniteTimeSpan) {
-								// Exit
 								break;
 							}
 
 							await Task.Delay(Period, _cts.Token);
 						}
 					} catch (OperationCanceledException) {
-						// OK!
 					} finally {
 						IsRunning = false;
 					}
@@ -125,18 +115,6 @@ namespace Tbot.Includes {
 			}
 		}
 
-		// Cancel() bricht nur die Task.Delay-Wartezeiten zwischen
-		// den Zyklen ab. Laeuft der Worker gerade mitten in "await _callback(_cts.Token)" - also mitten
-		// in einem HTTP-Call an ogamed - passiert nichts, weil OgameService das Token nicht auswertet.
-		// Beobachtet 17.09.2026: nach systemctl stop liefen AutoMine-Zyklen noch >30s unbeirrt weiter
-		// ("bot is logged out"-Fehlerschleife nach einem ogamed-Neustart), bis systemd nach
-		// TimeoutStopSec mit SIGKILL nachhelfen musste ("state 'stop-sigterm' timed out. Killing.").
-		// Echtes Cancellation-Propagation durch die komplette OgameService-HTTP-Kette waere der saubere
-		// Fix, aber ein sehr viel groesserer Umbau. Pragmatischer Fix hier: StopAsync() wartet nur noch
-		// bis zu "timeout" auf den Callback, statt unbegrenzt - damit DisposeAsync()/Task.WhenAll in
-		// TBotMain nie unbegrenzt haengt und der Prozess innerhalb von systemds TimeoutStopSec sauber
-		// runterfaehrt. Der haengende Callback laeuft im Hintergrund weiter, wird aber beim
-		// Prozessende ohnehin verworfen.
 		public async Task StopAsync(TimeSpan? timeout = null) {
 			await _startStopSemaphore.WaitAsync();
 			try {

@@ -86,10 +86,6 @@ namespace Tbot.Workers.Brain {
 					List<ConstructionCandidate> constructionCandidates = new();
 
 					foreach (Celestial celestial in _tbotInstance.UserData.celestials.Where(p => p is Planet)) {
-						// same fix as Patch 18 (AutoMineWorker) - Exclude was only applied much
-						// later, so every excluded planet still got touched here for the account-wide
-						// planning phase, triggering OGame's "recent activity" indicator regardless of
-						// LifeformAutoResearch.Exclude. Skip excluded celestials before any data is fetched.
 						if (celestialsToExclude.Has(celestial)) {
 							DoLog(LogLevel.Debug, $"Skipping {celestial.ToString()} in planning phase: celestial in exclude list.");
 							continue;
@@ -102,7 +98,6 @@ namespace Tbot.Workers.Brain {
 							DoLog(LogLevel.Information, $"Skipping {cel.ToString()}: No Lifeform active on this planet.");
 							continue;
 						}
-						// Prioritaets-Slots zuerst, danach normale Auswahl
 						var nextLFTechToBuild = PickNextLFTech(cel, maxLFTechs, priorityTechs, out int level);
 						if (nextLFTechToBuild != LFTechno.None) {
 
@@ -144,12 +139,6 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
-		// Optionale Prioritaetsforschung. Brain.LifeformAutoResearch.PriorityTechs ist eine Liste von
-		// Slotnummern (11..16, 21..26, 31..36), z. B. [15, 25]. Diese Techs werden auf jedem Planeten zuerst erforscht (in der
-		// Reihenfolge der Liste), bis sie ihr MaxTechsXX-Level erreicht haben. Danach laeuft alles wie bisher.
-		// Ausgebaut werden nur bereits vorhandene Techs (Level >= 1, die Stufen 1/2 baut der Spieler selbst). Der Bot beginnt keine neue Tech
-		// und entscheidet nur, in welcher Reihenfolge die vorhandenen Techs bis zu ihrem MaxTechsXX-Level ausgebaut werden.
-		// Fehlt das Feld oder ist die Liste leer, aendert sich nichts.
 		private List<int> ReadPriorityTechs() {
 			List<int> result = new();
 			try {
@@ -168,8 +157,6 @@ namespace Tbot.Workers.Brain {
 			return result;
 		}
 
-		// Waehlt die naechste Forschung: erst die Prioritaets-Slots der Reihe nach (jeweils die vorhandene Tech des Slots),
-		// danach unveraendert ueber alle Slots mit ihren MaxTechsXX-Werten.
 		private LFTechno PickNextLFTech(Celestial cel, LFTechs maxLFTechs, List<int> priorityTechs, out int level) {
 			level = 0;
 			LFTechs existing = RestrictToExisting(cel, maxLFTechs);
@@ -193,7 +180,6 @@ namespace Tbot.Workers.Brain {
 					nextLevel = _calculationService.GetNextLevel(cel, cheaper);
 					next = cheaper;
 				}
-				// Sicherheitsnetz: die gewaehlte Forschung muss zum Prioritaets-Slot gehoeren
 				if (!slotNames.Contains(next.ToString())) {
 					DoLog(LogLevel.Warning, $"PriorityTechs: slot {slot} returned {next.ToString()}, which does not belong to this slot. Priority for this slot ignored.");
 					continue;
@@ -216,7 +202,6 @@ namespace Tbot.Workers.Brain {
 			return normal;
 		}
 
-		// Slot -> Tech je Rasse, je Rasse eine Tech (Humans, Rocktal, Mechas, Kaelesh)
 		private static readonly Dictionary<int, string[]> PrioSlotTechNames = new() {
 			{ 11, new[] { "IntergalacticEnvoys", "VolcanicBatteries", "CatalyserTechnology", "HeatRecovery" } },
 			{ 12, new[] { "HighPerformanceExtractors", "AcousticScanning", "PlasmaDrive", "SulphideProcess" } },
@@ -238,7 +223,6 @@ namespace Tbot.Workers.Brain {
 			{ 36, new[] { "Supercomputer", "RocktalCollectorEnhancement", "MechanGeneralEnhancement", "KaeleshDiscovererEnhancement" } },
 		};
 
-		// Kopie von maxLFTechs, in der nur Techs stehen, die auf dem Planeten bereits Level >= 1 haben; alle anderen bleiben 0.
 		private LFTechs RestrictToExisting(Celestial cel, LFTechs full) {
 			LFTechs result = new();
 			foreach (string name in PrioSlotTechNames.Values.SelectMany(n => n)) {
@@ -255,7 +239,6 @@ namespace Tbot.Workers.Brain {
 			return result;
 		}
 
-		// Erlaubt die vier Techs (je Rasse eine) des Slots mit dem Level aus maxLFTechs; alles andere bleibt 0.
 		private static LFTechs BuildStageMax(int slot, LFTechs full, out string[] slotNames) {
 			slotNames = new string[0];
 			if (!PrioSlotTechNames.TryGetValue(slot, out string[] names)) {

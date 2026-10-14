@@ -5,13 +5,10 @@ import (
 	"time"
 )
 
-// BaseTechnology base struct for technologies
 type BaseTechnology struct {
 	BaseLevelable
 }
 
-// TechnologyConstructionTime returns the duration it takes to build given technology
-// https://board.origin.ogame.gameforge.com/index.php/Thread/3602-Research-Time-Formula-enhanced/
 func (b BaseTechnology) TechnologyConstructionTime(level, universeSpeed int64, acc TechAccelerators, lfBonuses LfBonuses, class CharacterClass, hasTechnocrat bool) time.Duration {
 	price := b.GetPrice(level, lfBonuses)
 	metalCost := float64(price.Metal)
@@ -30,12 +27,10 @@ func (b BaseTechnology) TechnologyConstructionTime(level, universeSpeed int64, a
 	return time.Duration(float64(dur) - float64(dur)*bonus)
 }
 
-// ConstructionTime same as TechnologyConstructionTime, needed for BaseOgameObj implementation
 func (b BaseTechnology) ConstructionTime(level, universeSpeed int64, facilities BuildAccelerators, lfBonuses LfBonuses, class CharacterClass, hasTechnocrat bool) time.Duration {
 	return b.TechnologyConstructionTime(level, universeSpeed, facilities, lfBonuses, class, hasTechnocrat)
 }
 
-// GetLevel returns current level of a technology
 func (b BaseTechnology) GetLevel(_ IResourcesBuildings, _ IFacilities, researches IResearches) int64 {
 	return researches.ByID(b.ID)
 }

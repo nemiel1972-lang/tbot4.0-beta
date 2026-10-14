@@ -4,11 +4,6 @@ using System.Collections.Generic;
 namespace TBot.Model {
 	public readonly record struct JumpGateTarget(int Galaxy, int System, int Position);
 
-	/// <summary>
-	/// Reads the current JumpGate target shape and the legacy single-item array
-	/// shape. The worker can therefore migrate the default without breaking an
-	/// existing instance file.
-	/// </summary>
 	public static class JumpGateTargetResolver {
 		public static JumpGateTarget Resolve(
 			IDictionary<string, object> settings,

@@ -11,9 +11,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-// OGame v13 reworked the lifeform bonuses page:
-//   - categories are keyed with data-toggable-target="ships" / "costreduction" / "expedition" / "characterclasses"
-//   - ship/research sub-categories are keyed directly by their ID (data-toggable="203", "114", ...)
 func extractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error) {
 	b := ogame.NewLfBonuses()
 	ships := doc.Find(`bonus-item-content[data-toggable-target="ships"]`).First()
@@ -47,7 +44,6 @@ func directLfBonusHeadings(section *goquery.Selection) *goquery.Selection {
 	return section.ChildrenFiltered("bonus-item-content-holder").ChildrenFiltered("inner-bonus-item-heading[data-toggable]")
 }
 
-// Extracts ships stats fixed
 func extractShipStatBonus(s *goquery.Selection, b *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -74,7 +70,6 @@ func extractShipStatBonus(s *goquery.Selection, b *ogame.LfBonuses, subcategory 
 	}
 }
 
-// Extracts cost reduction
 func extractCostReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -88,7 +83,6 @@ func extractCostReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcate
 	}
 }
 
-// Extracts time reduction
 func extractTimeReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -102,13 +96,11 @@ func extractTimeReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcate
 	}
 }
 
-// Extract bonus value from a string with percentage sign [ex: 1.056% -> 0.01056]
 func extractBonusFromStringPercentage(s string) float64 {
 	v := strings.Replace(s, "%", "", 1)
 	return extractBonusFromString(v) / 100.0
 }
 
-// Extract bonus value from a string [ex: 1.056]
 func extractBonusFromString(s string) float64 {
 	v := strings.TrimSpace(s)
 	v = strings.Replace(v, ",", ".", 1)

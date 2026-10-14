@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// EspionageReport detailed espionage report
 type EspionageReport struct {
 	Resources
 	ID                           int64
@@ -16,16 +15,16 @@ type EspionageReport struct {
 	LastActivity                 int64
 	CounterEspionage             int64
 	APIKey                       string
-	HasFleetInformation          bool // Either or not we sent enough probes to get the fleet information
-	HasDefensesInformation       bool // Either or not we sent enough probes to get the defenses information
-	HasBuildingsInformation      bool // Either or not we sent enough probes to get the buildings information
-	HasResearchesInformation     bool // Either or not we sent enough probes to get the researches information
+	HasFleetInformation          bool
+	HasDefensesInformation       bool
+	HasBuildingsInformation      bool
+	HasResearchesInformation     bool
 	HonorableTarget              bool
 	IsBandit                     bool
 	IsStarlord                   bool
 	IsInactive                   bool
 	IsLongInactive               bool
-	MetalMine                    *int64 // ResourcesBuildings
+	MetalMine                    *int64
 	CrystalMine                  *int64
 	DeuteriumSynthesizer         *int64
 	SolarPlant                   *int64
@@ -34,7 +33,7 @@ type EspionageReport struct {
 	MetalStorage                 *int64
 	CrystalStorage               *int64
 	DeuteriumTank                *int64
-	RoboticsFactory              *int64 // Facilities
+	RoboticsFactory              *int64
 	Shipyard                     *int64
 	ResearchLab                  *int64
 	AllianceDepot                *int64
@@ -45,7 +44,7 @@ type EspionageReport struct {
 	LunarBase                    *int64
 	SensorPhalanx                *int64
 	JumpGate                     *int64
-	EnergyTechnology             *int64 // Researches
+	EnergyTechnology             *int64
 	LaserTechnology              *int64
 	IonTechnology                *int64
 	HyperspaceTechnology         *int64
@@ -61,7 +60,7 @@ type EspionageReport struct {
 	WeaponsTechnology            *int64
 	ShieldingTechnology          *int64
 	ArmourTechnology             *int64
-	RocketLauncher               *int64 // Defenses
+	RocketLauncher               *int64
 	LightLaser                   *int64
 	HeavyLaser                   *int64
 	GaussCannon                  *int64
@@ -71,7 +70,7 @@ type EspionageReport struct {
 	LargeShieldDome              *int64
 	AntiBallisticMissiles        *int64
 	InterplanetaryMissiles       *int64
-	LightFighter                 *int64 // Fleets
+	LightFighter                 *int64
 	HeavyFighter                 *int64
 	Cruiser                      *int64
 	Battleship                   *int64
@@ -92,7 +91,6 @@ type EspionageReport struct {
 	Date                         time.Time
 }
 
-// ResourcesBuildings returns a ResourcesBuildings struct from the espionage report
 func (r EspionageReport) ResourcesBuildings() *ResourcesBuildings {
 	if !r.HasBuildingsInformation {
 		return nil
@@ -110,7 +108,6 @@ func (r EspionageReport) ResourcesBuildings() *ResourcesBuildings {
 	}
 }
 
-// Facilities returns a Facilities struct from the espionage report
 func (r EspionageReport) Facilities() *Facilities {
 	if !r.HasBuildingsInformation {
 		return nil
@@ -130,7 +127,6 @@ func (r EspionageReport) Facilities() *Facilities {
 	}
 }
 
-// Researches returns a Researches struct from the espionage report
 func (r EspionageReport) Researches() *Researches {
 	if !r.HasResearchesInformation {
 		return nil
@@ -155,7 +151,6 @@ func (r EspionageReport) Researches() *Researches {
 	}
 }
 
-// ShipsInfos returns a ShipsInfos struct from the espionage report
 func (r EspionageReport) ShipsInfos() *ShipsInfos {
 	if !r.HasFleetInformation {
 		return nil
@@ -181,7 +176,6 @@ func (r EspionageReport) ShipsInfos() *ShipsInfos {
 	}
 }
 
-// DefensesInfos returns a DefensesInfos struct from the espionage report
 func (r EspionageReport) DefensesInfos() *DefensesInfos {
 	if !r.HasDefensesInformation {
 		return nil
@@ -200,7 +194,6 @@ func (r EspionageReport) DefensesInfos() *DefensesInfos {
 	}
 }
 
-// PlunderRatio returns the plunder ratio
 func (r EspionageReport) PlunderRatio(characterClass CharacterClass) float64 {
 	plunderRatio := 0.5
 	if r.IsInactive && characterClass == Discoverer {
@@ -214,7 +207,6 @@ func (r EspionageReport) PlunderRatio(characterClass CharacterClass) float64 {
 	return plunderRatio
 }
 
-// Loot returns the possible loot
 func (r EspionageReport) Loot(characterClass CharacterClass) Resources {
 	plunderRatio := r.PlunderRatio(characterClass)
 	return Resources{
@@ -224,9 +216,6 @@ func (r EspionageReport) Loot(characterClass CharacterClass) Resources {
 	}
 }
 
-// IsDefenceless returns either or not the scanned planet has any defense (either ships or defense) against an attack
-// with ships. If no ShipsInfos or DefensesInfos is including in the espionage report due to the lack of enough probes,
-// the planet is assumed to be not defenceless.
 func (r EspionageReport) IsDefenceless() bool {
 	return r.HasFleetInformation &&
 		r.HasDefensesInformation &&

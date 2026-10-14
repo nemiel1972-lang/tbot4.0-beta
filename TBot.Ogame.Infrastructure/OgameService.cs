@@ -40,7 +40,7 @@ namespace TBot.Ogame.Infrastructure {
 
 		public event EventHandler OnError;
 
-		bool _mustKill = false;	// used whenever we want to actually kill ogamed
+		bool _mustKill = false;
 
 		public OgameService(ILoggerService<OgameService> logger) {
 			_logger = logger;
@@ -84,11 +84,10 @@ namespace TBot.Ogame.Infrastructure {
 
 		public bool IsPortAvailable(string host, int port = 8080) {
 			try {
-				// Host is not needed. We need to bind locally
 				IPAddress localAddr = IPAddress.Parse("127.0.0.1");
 				var server = new TcpListener(localAddr, port);
 
-				server.Start(); // Should raise exception if not available
+				server.Start();
 
 				server.Stop();
 
@@ -107,7 +106,6 @@ namespace TBot.Ogame.Infrastructure {
 			Process? ogameProc = null;
 			try {
 				string args = $"--universe=\"{credentials.Universe}\" --device-name={device.Name} --language={credentials.Language} --auto-login=false --port={port} --host=0.0.0.0";
-				// Geheimnisse gehen nur über die Umgebung an ogamed, nie über die Kommandozeile (sichtbar via ps/pgrep)
 				var secretEnv = new Dictionary<string, string>();
 				secretEnv["OGAMED_USERNAME"] = credentials.Username;
 				secretEnv["OGAMED_PASSWORD"] = credentials.Password;
@@ -180,7 +178,7 @@ namespace TBot.Ogame.Infrastructure {
 				ogameProc.BeginErrorReadLine();
 				ogameProc.BeginOutputReadLine();
 
-				_logger.WriteLog(LogLevel.Information, LogSender.OGameD, $"OgameD Started with PID {ogameProc.Id}");   // This would raise an exception
+				_logger.WriteLog(LogLevel.Information, LogSender.OGameD, $"OgameD Started with PID {ogameProc.Id}");
 				_mustKill = false;
 			} catch (Exception ex) {
 				_logger.WriteLog(LogLevel.Error, LogSender.OGameD, $"Error executing ogamed instance: {ex.Message}");
@@ -204,19 +202,10 @@ namespace TBot.Ogame.Infrastructure {
 		}
 
 		private void handle_ogamedProcess_Exited(object? sender, EventArgs e) {
-			// reading StartTime/ExitTime here used to throw InvalidOperationException
-			// ("Cannot process request because the process has exited") whenever this handler
-			// raced with the process already being reaped (common on a deliberate `systemctl
-			// stop`/KillOgamedExecutable, and apparently also possible on an unexpected exit) -
-			// unhandled, that crashed the whole TBot process with SIGABRT instead of shutting
-			// down cleanly. totalRunTime is only actually used below when _mustKill is false, so
-			// skip computing it entirely during a deliberate shutdown, and fall back safely
-			// (treat as "ran fine, don't respawn-loop") if the process info is inaccessible.
 			int exitCode = -1;
 			try {
 				exitCode = _ogamedProcess.ExitCode;
 			} catch (InvalidOperationException) {
-				// Already gone - nothing more to read from it.
 			}
 
 			if (_mustKill) {
@@ -226,7 +215,7 @@ namespace TBot.Ogame.Infrastructure {
 				return;
 			}
 
-			double totalRunTime = 1000; // safe default: "ran long enough, don't treat as a crash-loop"
+			double totalRunTime = 1000;
 			try {
 				totalRunTime = Math.Round((_ogamedProcess.ExitTime - _ogamedProcess.StartTime).TotalMilliseconds);
 			} catch (InvalidOperationException) {
@@ -235,7 +224,6 @@ namespace TBot.Ogame.Infrastructure {
 			_logger.WriteLog(LogLevel.Information, LogSender.OGameD, $"OgameD Exited {exitCode}" +
 				$" TotalTime(ms) {totalRunTime}");
 
-			// If total run time is very low, then OGameD encountered a serious problem
 			if (totalRunTime > 500) {
 				Task.Delay(1000).Wait();
 				RerunOgamed();
@@ -304,8 +292,6 @@ namespace TBot.Ogame.Infrastructure {
 				.WaitAndRetryAsync(3, retryCount => TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
 		}
 
-		// No-retry variants for latency-critical calls: a stale retry after
-		// a real failure just wastes time while the underlying state moves on.
 		private async Task<T> GetAsyncNoRetry<T>(string resource) {
 			var request = new HttpRequestMessage() { Method = HttpMethod.Get, RequestUri = new Uri(resource, UriKind.Relative) };
 			var response = await _client.SendAsync(request);
@@ -319,11 +305,6 @@ namespace TBot.Ogame.Infrastructure {
 			return await ManageResponse<T>(response);
 		}
 
-		// JSON-body POST helper, needed because /bot/simulate-battle takes a nested
-		// JSON payload (attacker/defender fleets) that doesn't fit the form-encoded
-		// KeyValuePair<string,string> shape every other PostAsync* helper uses. No-retry for
-		// the same reason as the other no-retry endpoints: a stale retry of a pure local computation
-		// only wastes time, never fixes a real error.
 		private async Task<T> PostJsonAsyncNoRetry<T>(string resource, object payload) {
 			var request = new HttpRequestMessage() { Method = HttpMethod.Post, RequestUri = new Uri(resource, UriKind.Relative) };
 			request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
@@ -800,7 +781,6 @@ namespace TBot.Ogame.Infrastructure {
 		}
 
 		public async Task<LFBonuses> GetLFBonuses() {
-			//return await GetAsync<LFBonuses>($"/bot/planets/{celestial.ID}/lifeform-bonuses");
 			return await GetAsync<LFBonuses>($"/bot/lfbonuses");
 		}
 
@@ -872,15 +852,12 @@ namespace TBot.Ogame.Infrastructure {
 
 		public async Task<OfferOfTheDayStatus> BuyOfferOfTheDay() {
 			OfferOfTheDayStatus sts = OfferOfTheDayStatus.OfferOfTheDayUnknown;
-			// 200 means it has been bought
-			// 400 {"Status":"error","Code":400,"Message":"Offer already accepted","Result":null}
 			try {
 				await GetAsync<object>("/bot/buy-offer-of-the-day");
 				sts = OfferOfTheDayStatus.OfferOfTheDayBougth;
 			} catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest) {
 				sts = OfferOfTheDayStatus.OfferOfTheDayAlreadyBought;
 			} catch {
-				// Unknown!
 			}
 			return sts;
 		}
@@ -947,8 +924,6 @@ namespace TBot.Ogame.Infrastructure {
 				}
 				parameters.Add(new KeyValuePair<string, string>("mission", ((int) mission).ToString()));
 
-				//if (mission == Missions.Expedition && duration > 0)
-				//	parameters.Add(new KeyValuePair<string, string>("duration", duration.ToString()));
 
 				parameters.Add(new KeyValuePair<string, string>("speed", speed.ToString()));
 				parameters.Add(new KeyValuePair<string, string>("metal", payload.Metal.ToString()));
@@ -1020,7 +995,6 @@ namespace TBot.Ogame.Infrastructure {
 		}
 
 
-		// local combat simulation, see SimulateBattleRequest/SimulatorResult.
 		public async Task<SimulatorResult> SimulateBattle(SimulateBattleRequest request) {
 			return await PostJsonAsyncNoRetry<SimulatorResult>("/bot/simulate-battle", request);
 		}
@@ -1084,7 +1058,6 @@ namespace TBot.Ogame.Infrastructure {
 			try {
 				phalanxedFleets = await GetAsync<List<Fleet>>($"/bot/moons/{origin.ID}/phalanx/{coords.Galaxy}/{coords.System}/{coords.Position}");
 			} catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest) {
-				// Means not fleet or can't phalanx. Got to check better with ogamed
 			}
 			return phalanxedFleets;
 		}

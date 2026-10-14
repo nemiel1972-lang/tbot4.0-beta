@@ -11,12 +11,6 @@ namespace TBot.Model {
 		HasDefense,
 		LowResources,
 		ManuallyAdded,
-		// Ziel ist grundsaetzlich schlagbar, aber strukturell nicht profitabel
-		// (Spritkosten + geschaetzte Eskortenverluste >= Beute) - typischerweise bei sehr
-		// grosser Distanz und/oder sehr grosser benoetigter Eskorte. Anders als HasDefense
-		// bewusst automatisch gesetzt, weil sich Distanz und Eskortenbedarf fuer ein Ziel
-		// praktisch nie von selbst aendern (im Gegensatz zu Verteidigung, die abgebaut
-		// werden kann) - wiederholtes Neuberechnen bei jedem Zyklus ist reine Verschwendung.
 		Unprofitable
 	}
 

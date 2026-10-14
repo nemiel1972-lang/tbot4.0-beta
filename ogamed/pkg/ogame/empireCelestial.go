@@ -1,6 +1,5 @@
 package ogame
 
-// EmpireCelestial celestial information extracted from empire page (commander only)
 type EmpireCelestial struct {
 	Name         string
 	Diameter     int64
@@ -20,5 +19,4 @@ type EmpireCelestial struct {
 	Ships        ShipsInfos
 }
 
-// GetCoordinate ...
 func (c EmpireCelestial) GetCoordinate() Coordinate { return c.Coordinate }

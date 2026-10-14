@@ -73,7 +73,6 @@ namespace Tbot.Workers.Brain {
 				}
 
 				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Facilities) as Planet;
-				// RESOURCE-LEDGER: dieser Worker fuehrt ein eigenes Konto pro Celestial.
 				LedgerTBot.SetContext("AutoResearch", celestial.ID);
 				await LedgerTBot.SyncFleets(_tbotInstance, _fleetScheduler);
 				if (celestial.Facilities.ResearchLab == 0) {
@@ -100,8 +99,6 @@ namespace Tbot.Workers.Brain {
 
 				Buildables research;
 
-				// neue generische Prioritize*-Schalter, defaulten auf false wenn in der Config
-				// (noch) nicht gesetzt (IsSettingSet-Guard wie bei anderen optionalen Feldern im Projekt).
 				bool prioritizeComputerTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeComputerTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeComputerTechnology;
 				bool prioritizeLaserTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeLaserTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeLaserTechnology;
 				bool prioritizeIonTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeIonTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeIonTechnology;
@@ -116,22 +113,6 @@ namespace Tbot.Workers.Brain {
 				bool prioritizeGravitonTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeGravitonTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeGravitonTechnology;
 
 				if ((bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeAstrophysics || (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizePlasmaTechnology || (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeEnergyTechnology || (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeIntergalacticResearchNetwork) {
-					// this DOIR calculation used to loop over EVERY owned
-					// Planet (excluded or not) and call UpdatePlanet(..., Facilities/Buildings/LFBonuses) on
-					// each one, with zero Exclude filtering - AutoResearch has no Exclude setting of its own.
-					// Since PrioritizeAstrophysics/PrioritizePlasmaTechnology/PrioritizeIntergalacticResearchNetwork
-					// are enabled in this config, that meant every single AutoResearch cycle (every
-					// CheckIntervalMin/Max, i.e. every 30-60s) refreshed Facilities+Buildings+LFBonuses on
-					// every planet in the empire - which is exactly what makes OGame's "recent activity"
-					// indicator show up in the galaxy view, regardless of any other feature's Exclude list.
-					// Unlike the LifeformsAutoResearchCelestialWorker.cs case, this loop's result IS actually
-					// used below (CalcNextPlasmaTechDOIR / CalcNextAstroDOIR / ShouldResearchEnergyTech), so it
-					// can't just be deleted. Fix: skip celestials listed in Brain.AutoMine.Exclude - the same
-					// list already used everywhere else to keep worker queries off those planets, and the one
-					// this DOIR calculation is conceptually tied to already (see AutoMine.MaxDaysOfInvestmentReturn
-					// referenced a few lines below). Trade-off: excluded colonies no longer factor into the
-					// Astrophysics/Plasma-Tech/Energy-Tech timing decision - if that's not wanted, tell me and
-					// I'll switch this to a dedicated AutoResearch.Exclude setting instead.
 					List<Celestial> celestialsToExcludeForDOIR = _calculationService.ParseCelestialsList(_tbotInstance.InstanceSettings.Brain.AutoMine.Exclude, _tbotInstance.UserData.celestials);
 					List<Celestial> planets = new();
 					foreach (var p in _tbotInstance.UserData.celestials) {
@@ -203,10 +184,6 @@ namespace Tbot.Workers.Brain {
 
 				int level = _calculationService.GetNextLevel(_tbotInstance.UserData.researches, research);
 				if (research != Buildables.Null) {
-					// re-check live ResearchID right before acting on it. The initial check at the
-					// top of this method can be stale by the time we reach here (multiple awaited calls in
-					// between), causing a race where a research that started in the meantime gets resources
-					// sent to it / a build attempted on top of it. Abort the cycle instead.
 					celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Constructions) as Planet;
 					if (celestial.Constructions.ResearchID != 0) {
 						DoLog(LogLevel.Information, "Skipping AutoResearch: a research started in the meantime (live re-check).");
@@ -220,15 +197,12 @@ namespace Tbot.Workers.Brain {
 						try {
 							await _ogameService.BuildCancelable(celestial, research);
 							DoLog(LogLevel.Information, $"Research {research.ToString()} level {level.ToString()} started on {celestial.ToString()}");
-							// RESOURCE-LEDGER: Forschung gestartet - Anspruch/Reservierung wird abgebucht.
 							LedgerTBot.OnBuilt(_tbotInstance, celestial, "AutoResearch", research.ToString() + " " + level.ToString(), cost);
 						} catch {
 							DoLog(LogLevel.Warning, $"Research {research.ToString()} level {level.ToString()} could not be started on {celestial.ToString()}");
 						}
 					} else {
 						DoLog(LogLevel.Information, $"Not enough resources to build: {research.ToString()} level {level.ToString()} on {celestial.ToString()}. Needed: {cost.TransportableResources} - Available: {celestial.Resources.TransportableResources}");
-						// RESOURCE-LEDGER: Bedarf sofort anmelden, auch wenn gleich kein Transport moeglich ist (Slots, Config, Herkunft).
-						// So bleibt der vorhandene Bestand vor Rueckholung und anderen Workern geschuetzt, solange dieser Worker wartet.
 						LedgerTBot.Plan(_tbotInstance, celestial, "AutoResearch", research.ToString() + " " + level.ToString(), cost);
 						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
 							_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
@@ -270,15 +244,10 @@ namespace Tbot.Workers.Brain {
 							int MaxSlots = _calculationService.CalcSlotsPriority(Feature.BrainAutoResearch, rankSlotsPriority, _tbotInstance.UserData.slots, _tbotInstance.UserData.fleets, (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree);
 
 							if (MaxSlots > 0) {
-								// RESOURCE-LEDGER: gedeckt = Bestand (gehalten) + EIGENE Lieferflotten; fremde Transporte zaehlen nicht.
 								LedgerTBotPlan ledgerPlan = LedgerTBot.Plan(_tbotInstance, celestial, "AutoResearch", research.ToString() + " " + level.ToString(), cost);
 								if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 									Celestial origin = new() { ID = 0 };
 									List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-									// same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
-									// candidate origin celestials instead of the whole empire when MultipleOrigins
-									// is disabled, to avoid triggering OGame's "recent activity" indicator on
-									// every single celestial regardless of Exclude settings.
 									if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 										for (int i = 0; i < allCelestials.Count(); i++) {
 											allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);
@@ -340,7 +309,6 @@ namespace Tbot.Workers.Brain {
 													preferredShip = Buildables.SmallCargo;
 												}
 												long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-												// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 												Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 												if (brainSchiffe != null) {
 													Ships ships = brainSchiffe;
@@ -505,7 +473,6 @@ namespace Tbot.Workers.Brain {
 											.Where(f => f.Destination.Type == celestial.Coordinate.Type)
 											.First().ID;
 									} else {
-										// RESOURCE-LEDGER: nur die EIGENE Lieferflotte bestimmt den naechsten Pruefzeitpunkt.
 										fleetId = ledgerPlan.OwnFleetId;
 									}
 								}

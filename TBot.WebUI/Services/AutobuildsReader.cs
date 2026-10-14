@@ -4,16 +4,11 @@ using Newtonsoft.Json.Linq;
 using TBot.WebUI.Models;
 
 namespace TBot.WebUI.Services {
-	// Liest das Bauwunsch-Protokoll (data/build_requests_*.json), das die Brain-Worker schreiben,
-	// und bereitet es fuer die Seite "Autobuilds" auf. Nur lesend - es wird nichts veraendert.
 	public sealed class AutobuildsReader {
-		// Koordinate steht im Celestial-Namen, z.B. "Plan 4 [P:1:100:8]" oder "... [M:1:100:8]".
 		private static readonly Regex CoordPattern = new(@"^(?<name>.*?)\s*\[(?<t>[PM]):(?<g>\d+):(?<s>\d+):(?<p>\d+)\]", RegexOptions.Compiled);
 
-		// Feste Reihenfolge der vier Worker unter jedem Celestial.
 		private static readonly string[] WorkerOrder = { "AutoMine", "AutoResearch", "LifeformsAutoMine", "LifeformsAutoResearch" };
 
-		// Status-Texte frueherer Staende (deutsch) auf die englischen abbilden, damit alte build_requests_*.json weiter passen.
 		private static string St(Newtonsoft.Json.Linq.JToken e) {
 			switch (e.Value<string>("Status")) {
 				case "Wartet auf Lieferung": return "Waiting for delivery";
@@ -49,7 +44,6 @@ namespace TBot.WebUI.Services {
 
 				var bodies = new Dictionary<long, AutobuildBody>();
 
-				// Offene Wuensche -> Spalte "Naechster Bau"
 				foreach (var e in open) {
 					var row = GetWorker(bodies, e);
 					row.Next = new AutobuildNext {
@@ -70,7 +64,6 @@ namespace TBot.WebUI.Services {
 					};
 				}
 
-				// Historie ist neueste-zuerst: pro Worker+Celestial der erste "Built"-Eintrag ist der zuletzt gestartete Bau.
 				var since24h = DateTime.UtcNow.AddHours(-24);
 				var builtLast24h = 0;
 				foreach (var e in history) {
@@ -91,7 +84,6 @@ namespace TBot.WebUI.Services {
 					};
 				}
 
-				// Sortierung: Koordinate, Planet vor Mond; Worker in fester Reihenfolge.
 				foreach (var b in bodies.Values)
 					b.Workers = b.Workers
 						.OrderBy(w => { var i = Array.IndexOf(WorkerOrder, w.Owner); return i < 0 ? 99 : i; })
@@ -111,7 +103,6 @@ namespace TBot.WebUI.Services {
 					BuiltLast24h = builtLast24h
 				};
 
-				// Bester/schlechtester ROI: nur offene Wuensche mit bekanntem ROI (> 0 Tage)
 				var withRoi = bodies.Values
 					.SelectMany(b => b.Workers.Where(w => w.Next != null && w.Next.RoiDays > 0f).Select(w => new { b, w }))
 					.ToList();
@@ -147,7 +138,6 @@ namespace TBot.WebUI.Services {
 			};
 		}
 
-		// Holt/erzeugt Celestial und Worker-Zeile zu einem JSON-Eintrag.
 		private static AutobuildWorkerRow GetWorker(Dictionary<long, AutobuildBody> bodies, JObject e) {
 			var id = e.Value<long?>("CelestialId") ?? 0;
 			if (!bodies.TryGetValue(id, out var body)) {
@@ -158,7 +148,7 @@ namespace TBot.WebUI.Services {
 					body.Name = m.Groups["name"].Value.Trim();
 					body.IsMoon = m.Groups["t"].Value == "M";
 					body.Coordinate = $"{m.Groups["g"].Value}:{m.Groups["s"].Value}:{m.Groups["p"].Value}";
-					body.GroupKey = body.Coordinate; // Planet und Mond teilen sich die Koordinate
+					body.GroupKey = body.Coordinate;
 				} else {
 					body.Name = full;
 					body.GroupKey = "id" + id;
@@ -181,7 +171,6 @@ namespace TBot.WebUI.Services {
 			return long.MaxValue;
 		}
 
-		// Sucht die passende build_requests-Datei. Bei mehreren Dateien: Name enthaelt Alias, sonst die neueste.
 		private static string? FindFile(string dataDir, string alias) {
 			if (!Directory.Exists(dataDir))
 				return null;
@@ -194,7 +183,6 @@ namespace TBot.WebUI.Services {
 			return byAlias ?? files.OrderByDescending(File.GetLastWriteTimeUtc).First();
 		}
 
-		// Lesen mit FileShare.ReadWrite, kurzer Retry falls der Bot gerade schreibt.
 		private static JObject? ReadJson(string path) {
 			for (var i = 0; i < 3; i++) {
 				try {

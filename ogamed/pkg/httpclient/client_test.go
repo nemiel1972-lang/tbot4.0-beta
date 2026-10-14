@@ -9,22 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// RoundTripFunc .
 type RoundTripFunc func(req *http.Request) *http.Response
 
-// RoundTrip .
 func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
 func TestOgameClient_Do(t *testing.T) {
 	c := Client{userAgent: "test", Client: &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
-		// Test request parameters
 		return &http.Response{
 			StatusCode: 200,
-			// Send response to be tested
 			Body: io.NopCloser(bytes.NewBufferString(`OK`)),
-			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
 		}
 	})}}
@@ -36,12 +31,9 @@ func TestOgameClient_Do(t *testing.T) {
 
 func TestOgameClient_SetUserAgent(t *testing.T) {
 	c := Client{userAgent: "test", Client: &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
-		// Test request parameters
 		return &http.Response{
 			StatusCode: 200,
-			// Send response to be tested
 			Body: io.NopCloser(bytes.NewBufferString(`OK`)),
-			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
 		}
 	})}}

@@ -57,7 +57,6 @@ func (b *OGame) wrapLoginWithExistingCookies() (useCookies, usePhpSessID bool, e
 	return useCookies, usePhpSessID, err
 }
 
-// Return either or not the bot logged in using the provided bearer token.
 func (b *OGame) loginWithBearerToken(token, phpSessID string) (bool, bool, error) {
 	var didPart1n2 bool
 	var server gameforge.Server
@@ -170,7 +169,6 @@ func (b *OGame) loginPart3Tmp(userAccount gameforge.Account, page *parser.Overvi
 	return nil
 }
 
-// Get user's accounts, get GF ogame servers, then find and return the server and userAccount that we asked to play in.
 func (b *OGame) loginPart1(token string) (server gameforge.Server, userAccount gameforge.Account, err error) {
 	client := b.device.GetClient()
 	ctx := b.ctx
@@ -188,9 +186,8 @@ func (b *OGame) loginPart1(token string) (server gameforge.Server, userAccount g
 }
 
 func (b *OGame) loginPart2(server gameforge.Server) (err error) {
-	b.isLoggedInAtom.Store(true) // At this point, we are logged in
+	b.isLoggedInAtom.Store(true)
 	b.isConnectedAtom.Store(true)
-	// Get server data
 	start := time.Now()
 	b.server = server
 	b.cache.serverData, err = getServerData(b.ctx, b.device, b.server.Number, b.server.Language)
@@ -265,7 +262,6 @@ func (b *OGame) loginPart3(userAccount gameforge.Account, page *parser.OverviewP
 		b.ReconnectChat()
 	}
 
-	// V11 Intro bypass
 	if err := b.introBypass(page); err != nil {
 		b.error("failed to bypass intro:", err)
 	}

@@ -32,7 +32,6 @@ namespace TBot.WebUI.Controllers {
 				fileNames.Add(instance.Settings);
 			}
 
-			// Per Load ausgelagerte Dateien: Worker-Einstellungen (conf.d) und Geheimnisse (secrets, maskiert/nur lesbar)
 			foreach (var folder in new[] { SettingsService.DefaultLoadDirectory, SettingsService.SecretsDirectory }) {
 				var dir = Path.Combine(GetCurrentDirectory(), folder);
 				if (!Directory.Exists(dir))
@@ -51,7 +50,6 @@ namespace TBot.WebUI.Controllers {
 			return View(settingsModel);
 		}
 
-		// Nur Dateien aus der berechneten Liste sind erlaubt, keine freien Pfade (Schutz gegen ../ und absolute Pfade)
 		private async Task<string> ResolveAllowedPath(string fileName) {
 			if (string.IsNullOrWhiteSpace(fileName))
 				return null;
@@ -74,7 +72,6 @@ namespace TBot.WebUI.Controllers {
 			if (path == null)
 				return Json(new { data = "", error = "File not allowed" });
 			string fileContents = await SettingsService.GetSettingsFileContents(path);
-			// Geheimnisse nur maskiert anzeigen
 			return Json(new { data = SecretMasker.MaskJson(fileContents, IsSecretsFile(fileName)) });
 		}
 
@@ -84,10 +81,8 @@ namespace TBot.WebUI.Controllers {
 				var path = await ResolveAllowedPath(fileName);
 				if (path == null)
 					return Json(new { success = false, error = "File not allowed" });
-				// Validate Json, if incorrect, exception is thrown and message will be sent to the user.
 				string original = await SettingsService.GetSettingsFileContents(path);
 				string jsonFormatted = SecretMasker.RestoreSecrets(JValue.Parse(content).ToString(Formatting.Indented), original, IsSecretsFile(fileName));
-				// Backup vor dem Überschreiben
 				try { System.IO.File.Copy(path, path + ".bak", true); } catch { }
 				await SettingsService.WriteSettings(path, jsonFormatted);
 				return Json(new { success = true });

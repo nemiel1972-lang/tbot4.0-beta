@@ -1,6 +1,5 @@
 package ogame
 
-// FleetDispatchInfos ...
 type FleetDispatchInfos struct {
 	Resources Resources
 	Ships     ShipsInfos

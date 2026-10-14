@@ -11,7 +11,6 @@ type IShipsInfos interface {
 	ToQuantifiables() []ogame.Quantifiable
 }
 
-// ShipsInfos ...
 type ShipsInfos struct {
 	wrapper Wrapper
 	ogame.ShipsInfos
@@ -24,7 +23,6 @@ func (s *ShipsInfos) ByID(id ogame.ID) int64                { return s.ShipsInfo
 func (s *ShipsInfos) Set(id ogame.ID, nbr int64)            { s.ShipsInfos.Set(id, nbr) }
 func (s *ShipsInfos) ToQuantifiables() []ogame.Quantifiable { return s.ShipsInfos.ToQuantifiables() }
 
-// NewShipsInfos ...
 func NewShipsInfos(w Wrapper, shipsInfos ogame.ShipsInfos) *ShipsInfos {
 	return &ShipsInfos{
 		wrapper:    w,
@@ -32,7 +30,6 @@ func NewShipsInfos(w Wrapper, shipsInfos ogame.ShipsInfos) *ShipsInfos {
 	}
 }
 
-// GetCargo ...
 func (s *ShipsInfos) GetCargo() (out int64) {
 	tx := s.wrapper.Begin()
 	defer tx.Done()
@@ -44,7 +41,6 @@ func (s *ShipsInfos) GetCargo() (out int64) {
 	return s.ShipsInfos.Cargo(techs, bonuses, characterClass, multiplier, probeRaids)
 }
 
-// Speed ...
 func (s *ShipsInfos) Speed() (out int64) {
 	tx := s.wrapper.Begin()
 	defer tx.Done()

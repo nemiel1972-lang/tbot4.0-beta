@@ -1,6 +1,5 @@
 package ogame
 
-// Planet ogame planet object
 type Planet struct {
 	Img         string
 	ID          PlanetID

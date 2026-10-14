@@ -6,7 +6,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/parser"
 )
 
-// Page names
 const (
 	OverviewPageName         = "overview"
 	PreferencesPageName      = "preferences"
@@ -37,7 +36,6 @@ const (
 	FetchTechsName         = "fetchTechs"
 	FetchResourcesPageName = "fetchResources"
 
-	// ajax pages
 	RocketlayerPageName            = "rocketlayer"
 	FetchEventboxAjaxPageName      = "fetchEventbox"
 	FetchResourcesAjaxPageName     = "fetchResources"

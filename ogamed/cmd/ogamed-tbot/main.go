@@ -296,7 +296,6 @@ func start(ctx context.Context, c *cli.Command) error {
 		deviceBrowserParam = device.Chrome
 	}
 
-	// TODO: put device config in flags & env variables
 	deviceInst, err := device.NewBuilder(deviceName).
 		SetOsName(deviceSystemParam).
 		SetBrowserName(deviceBrowserParam).
@@ -358,7 +357,6 @@ func start(ctx context.Context, c *cli.Command) error {
 	if len(basicAuthUsername) > 0 && len(basicAuthPassword) > 0 {
 		log.Println("Enable Basic Auth")
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			// Be careful to use constant time comparison to prevent timing attacks
 			if subtle.ConstantTimeCompare([]byte(username), []byte(basicAuthUsername)) == 1 &&
 				subtle.ConstantTimeCompare([]byte(password), []byte(basicAuthPassword)) == 1 {
 				return true, nil
@@ -372,7 +370,6 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/", wrapper.HomeHandler)
 	e.GET("/tasks", wrapper.TasksHandler)
 
-	// CAPTCHA Handler
 	e.GET("/bot/captcha", wrapper.GetCaptchaHandler)
 	e.POST("/bot/captcha/solve", wrapper.GetCaptchaSolverHandler)
 	e.GET("/bot/captcha/challenge", wrapper.GetCaptchaChallengeHandler)
@@ -415,7 +412,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/attacks", wrapper.GetAttacksHandler)
 	e.GET("/bot/get-auction", wrapper.GetAuctionHandler)
 	e.POST("/bot/do-auction", wrapper.DoAuctionHandler)
-	e.POST("/bot/simulate-battle", wrapper.SimulateBattleHandler) // local combat simulator, no bot/session needed, no quota
+	e.POST("/bot/simulate-battle", wrapper.SimulateBattleHandler)
 	e.GET("/bot/galaxy-infos/:galaxy/:system", wrapper.GalaxyInfosHandler)
 	e.GET("/bot/get-research", wrapper.GetResearchHandler)
 	e.GET("/bot/buy-offer-of-the-day", wrapper.BuyOfferOfTheDayHandler)
@@ -463,9 +460,8 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.POST("/bot/planets/:planetID/send-ipm", wrapper.SendIPMHandler)
 	e.GET("/bot/moons/:moonID/phalanx/:galaxy/:system/:position", wrapper.PhalanxHandler)
 	e.POST("/bot/moons/:moonID/jump-gate", wrapper.JumpGateHandler)
-	e.GET("/game/allianceInfo.php", wrapper.GetAlliancePageContentHandler) // Example: //game/allianceInfo.php?allianceId=500127
+	e.GET("/game/allianceInfo.php", wrapper.GetAlliancePageContentHandler)
 
-	// TBot Handlers
 	e.GET("/bot/alliance-class", GetAllianceClassHandler)
 	e.GET("/bot/planets/:planetID/lifeform-bonuses", GetLfBonusesTbotHandler)
 	e.GET("/bot/expedition-messages", GetExpeditionMessagesHandler)
@@ -473,27 +469,17 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.POST("/bot/slot-limit", PostSlotLimitHandler)
 	e.GET("/bot/lfbonuses", GetLfBonusesHandler)
 
-	// Get/Post Page Content
 	e.GET("/game/index.php", GetFromGameHandler)
 	e.POST("/game/index.php", PostToGameHandler)
 
-	// For AntiGame plugin
-	// Static content
 	e.GET("/cdn/*", GetStaticHandler)
 	e.GET("/assets/css/*", GetStaticHandler)
 	e.GET("/headerCache/*", GetStaticHandler)
 	e.GET("/favicon.ico", GetStaticHandler)
 	e.GET("/game/sw.js", GetStaticHandler)
 
-	// JSON API
-	/*
-		/api/serverData.xml
-		/api/localization.xml
-		/api/players.xml
-		/api/universe.xml
-	*/
 	e.GET("/api/*", GetStaticHandler)
-	e.HEAD("/api/*", GetStaticHEADHandler) // AntiGame uses this to check if the cached XML files need to be refreshed
+	e.HEAD("/api/*", GetStaticHEADHandler)
 
 	if enableTLS {
 		log.Println("Enable TLS Support")

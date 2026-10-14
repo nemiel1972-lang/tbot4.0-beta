@@ -71,23 +71,11 @@ type FullPagePages interface {
 		FacilitiesPage |
 		LfBuildingsPage |
 		LfResearchPage |
-		//TraderOverviewPageContent |
-		//TraderResourcesPageContent |
 		ResearchPage |
 		ShipyardPage |
 		FleetDispatchPage |
 		DefensesPage |
-		//FleetDispatchPageContent |
 		MovementPage
-	//GalaxyPageContent |
-	//AlliancePageContent |
-	//PremiumPageContent |
-	//ShopPageContent |
-	//MessagesPageContent |
-	//ChatPageContent |
-	//CharacterClassSelectionPageContent |
-	//BuddiesPageContent |
-	//HighScorePageContent
 }
 
 type AjaxPagePages interface {
@@ -136,8 +124,6 @@ func AutoParseFullPage(e extractor.Extractor, pageHTML []byte) (out IFullPage) {
 	return out
 }
 
-// ParsePage given a pageHTML and an extractor for the game version this html represent,
-// returns a page of type T
 func ParsePage[T FullPagePages](e extractor.Extractor, pageHTML []byte) (*T, error) {
 	var zero T
 	fullPage := FullPage{Page{e: e, content: pageHTML}}

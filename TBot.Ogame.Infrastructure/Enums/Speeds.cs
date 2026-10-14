@@ -28,31 +28,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		public const decimal HundredPercent = 10;
 
 		public static List<decimal> GetGeneralSpeedsList() {
-			/* TODO: fix this
-			return new()
-			{
-				10,
-				9.5M,
-				9,
-				8.5M,
-				8,
-				7.5M,
-				7,
-				6.5M,
-				6,
-				5.5M,
-				5,
-				4.5M,
-				4,
-				3.5M,
-				3,
-				2.5M,
-				2,
-				1.5M,
-				1,
-				0.5M
-			};
-			*/
 			return new()
 			{
 				10,

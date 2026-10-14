@@ -21,7 +21,7 @@ func extractServerTimeFromDoc(doc *goquery.Document, clock clockwork.Clock) (tim
 
 	u1 := clock.Now().UTC().Unix()
 	u2 := serverTime.Unix()
-	n := int(math.Round(float64(u2-u1)/900)) * 900 // u2-u1 should be close to 0, round to nearest 15min difference
+	n := int(math.Round(float64(u2-u1)/900)) * 900
 
 	serverTime = serverTime.Add(time.Duration(-n) * time.Second).In(time.FixedZone("OGT", n))
 

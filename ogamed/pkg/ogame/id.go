@@ -5,24 +5,18 @@ import (
 	"strconv"
 )
 
-// ID represent an ogame id
 type ID int64
 
-// NoID constant to represent an unset ID
 const NoID ID = 0
 
-// IsSet returns either or not the id is set to a value different than 0
 func (o ID) IsSet() bool {
 	return o.Int64() != 0
 }
 
-// Int64 returns an integer value of the id
 func (o ID) Int64() int64 {
 	return int64(o)
 }
 
-// Int returns an integer value of the id
-// Deprecated: backward compatibility
 func (o ID) Int() int64 {
 	return int64(o)
 }
@@ -406,12 +400,10 @@ func (o ID) String() string {
 	return res
 }
 
-// IsValid returns either or not the id is valid
 func (o ID) IsValid() bool {
 	return o.IsDefense() || o.IsShip() || o.IsTech() || o.IsBuilding() || o.IsLfBuilding() || o.IsLfTech()
 }
 
-// IsFacility returns either or not the id is a facility
 func (o ID) IsFacility() bool {
 	return o == AllianceDepotID ||
 		o == RoboticsFactoryID ||
@@ -426,7 +418,6 @@ func (o ID) IsFacility() bool {
 		o == JumpGateID
 }
 
-// IsResourceBuilding returns either or not the id is a resource building
 func (o ID) IsResourceBuilding() bool {
 	return o == MetalMineID ||
 		o == CrystalMineID ||
@@ -442,7 +433,7 @@ func (o ID) IsResourceBuilding() bool {
 }
 
 func (o ID) IsLfBuilding() bool {
-	return o == ResidentialSectorID || // humans
+	return o == ResidentialSectorID ||
 		o == BiosphereFarmID ||
 		o == ResearchCentreID ||
 		o == AcademyOfSciencesID ||
@@ -453,7 +444,7 @@ func (o ID) IsLfBuilding() bool {
 		o == SkyscraperID ||
 		o == BiotechLabID ||
 		o == MetropolisID ||
-		o == PlanetaryShieldID || // rocktal
+		o == PlanetaryShieldID ||
 		o == MeditationEnclaveID ||
 		o == CrystalFarmID ||
 		o == RuneTechnologiumID ||
@@ -466,7 +457,7 @@ func (o ID) IsLfBuilding() bool {
 		o == DeuteriumSynthesiserID ||
 		o == MineralResearchCentreID ||
 		o == AdvancedRecyclingPlantID ||
-		o == AssemblyLineID || // mechas
+		o == AssemblyLineID ||
 		o == FusionCellFactoryID ||
 		o == RoboticsResearchCentreID ||
 		o == UpdateNetworkID ||
@@ -478,7 +469,7 @@ func (o ID) IsLfBuilding() bool {
 		o == HighPerformanceSynthesiserID ||
 		o == ChipMassProductionID ||
 		o == NanoRepairBotsID ||
-		o == SanctuaryID || // kaelesh
+		o == SanctuaryID ||
 		o == AntimatterCondenserID ||
 		o == VortexChamberID ||
 		o == HallsOfRealisationID ||
@@ -492,12 +483,10 @@ func (o ID) IsLfBuilding() bool {
 		o == SupraRefractorID
 }
 
-// IsBuilding returns either or not the id is a building (facility, resource building)
 func (o ID) IsBuilding() bool {
 	return o.IsResourceBuilding() || o.IsLfBuilding() || o.IsFacility()
 }
 
-// IsTech returns either or not the id is a technology
 func (o ID) IsTech() bool {
 	return o == EspionageTechnologyID ||
 		o == ComputerTechnologyID ||
@@ -517,7 +506,6 @@ func (o ID) IsTech() bool {
 		o == GravitonTechnologyID
 }
 
-// HumansTechnologiesIDs ...
 var HumansTechnologiesIDs = []ID{
 	IntergalacticEnvoysID,
 	HighPerformanceExtractorsID,
@@ -539,7 +527,6 @@ var HumansTechnologiesIDs = []ID{
 	SupercomputerID,
 }
 
-// RocktalTechnologiesIDs ...
 var RocktalTechnologiesIDs = []ID{
 	VolcanicBatteriesID,
 	AcousticScanningID,
@@ -561,7 +548,6 @@ var RocktalTechnologiesIDs = []ID{
 	RocktalCollectorEnhancementID,
 }
 
-// MechasTechnologiesIDs ...
 var MechasTechnologiesIDs = []ID{
 	CatalyserTechnologyID,
 	PlasmaDriveID,
@@ -583,7 +569,6 @@ var MechasTechnologiesIDs = []ID{
 	MechanGeneralEnhancementID,
 }
 
-// KaeleshTechnologiesIDs ...
 var KaeleshTechnologiesIDs = []ID{
 	HeatRecoveryID,
 	SulphideProcessID,
@@ -605,7 +590,6 @@ var KaeleshTechnologiesIDs = []ID{
 	KaeleshDiscovererEnhancementID,
 }
 
-// IsLfTech returns either or not the id is a lifeform technology
 func (o ID) IsLfTech() bool {
 	return utils.InArr(o, HumansTechnologiesIDs) ||
 		utils.InArr(o, RocktalTechnologiesIDs) ||
@@ -613,7 +597,6 @@ func (o ID) IsLfTech() bool {
 		utils.InArr(o, KaeleshTechnologiesIDs)
 }
 
-// IsDefense returns either or not the id is a defense
 func (o ID) IsDefense() bool {
 	return o == RocketLauncherID ||
 		o == LightLaserID ||
@@ -627,12 +610,10 @@ func (o ID) IsDefense() bool {
 		o == InterplanetaryMissilesID
 }
 
-// IsShip returns either or not the id is a ship
 func (o ID) IsShip() bool {
 	return o.IsCivilShip() || o.IsCombatShip()
 }
 
-// IsFlyableShip returns either or not the id is a ship that can fly
 func (o ID) IsFlyableShip() bool {
 	if o == SolarSatelliteID || o == CrawlerID {
 		return false
@@ -640,7 +621,6 @@ func (o ID) IsFlyableShip() bool {
 	return o.IsShip()
 }
 
-// IsCivilShip returns either or not the id is a civil ship
 func (o ID) IsCivilShip() bool {
 	return o == SmallCargoID ||
 		o == LargeCargoID ||
@@ -651,7 +631,6 @@ func (o ID) IsCivilShip() bool {
 		o == CrawlerID
 }
 
-// IsCombatShip returns either or not the id is a combat ship
 func (o ID) IsCombatShip() bool {
 	return o == LightFighterID ||
 		o == HeavyFighterID ||

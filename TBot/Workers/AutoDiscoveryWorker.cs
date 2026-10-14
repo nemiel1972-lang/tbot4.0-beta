@@ -236,8 +236,6 @@ namespace Tbot.Workers {
 					Type = Celestials.Planet
 				};
 
-				// Commit before sending so a failed request cannot retry the same position
-				// repeatedly. The system view already filtered unavailable positions.
 				cursor.CommitPosition(systemToDo, pos, maxSystem);
 				_cursorStore.Save(OriginKey(origin), cursor);
 
@@ -246,14 +244,6 @@ namespace Tbot.Workers {
 					continue;
 				}
 
-				// the manual randomized delay before every SendDiscovery
-				// call is no longer needed. Rapid-fire consecutive sends (Patch 26's burst-until-slots-
-				// exhausted behaviour) triggered an empty "400 BadRequest" from OGame/ogamed - confirmed via
-				// server log correlation to be genuine server-side rate limiting. Ported from TBot
-				// v3.5.1-beta1: dispatch now goes through _fleetScheduler.SendDiscovery(), which serializes
-				// all discovery sends behind a dedicated semaphore (see FleetScheduler.cs) instead of hoping
-				// a fixed wait is wide enough. AutoDiscovery.MinDelayBetweenSendsMs/MaxDelayBetweenSendsMs
-				// (Patch 35) are no longer read here; safe to remove from instance_settings.json.
 				var ok = await _fleetScheduler.SendDiscovery(origin, dest);
 				if (ok) {
 					DoLog(LogLevel.Information, $"Discovery fleet sent to {dest} from {origin}.");
@@ -263,7 +253,6 @@ namespace Tbot.Workers {
 					DoLog(LogLevel.Warning, $"Failed to send discovery fleet to {dest} from {origin}.");
 				}
 
-				// Keep a failed or sent position out of the next planning pass.
 				UpsertBlacklist(dest, now.AddDays(7));
 				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 			}
@@ -380,9 +369,6 @@ namespace Tbot.Workers {
 					return;
 				}
 
-				// OGame exposes discovery availability through the planet-scoped endpoint.
-				// The returned count is account-wide, so query it once instead of asking
-				// every configured origin and creating unnecessary activity.
 				var availabilityOrigin = origins.FirstOrDefault(origin =>
 					origin?.Coordinate?.Type == Celestials.Planet) ?? origins[0];
 				int discoveries = await _ogameService.GetAvailableDiscoveries(availabilityOrigin);
@@ -407,17 +393,6 @@ namespace Tbot.Workers {
 
 					var cursor = GetOrInitCursor(origin);
 
-					// this used to call ProcessOneSystemForOrigin exactly once per
-					// origin per Execute() cycle, i.e. at most one system's worth of positions
-					// (<=15) per run - regardless of how many fleet slots (ctx.FleetsToSend)
-					// were actually still free. With few configured origins (often just one)
-					// and systems that frequently have zero or only one genuinely available
-					// position, this left most of MaxSlots unused every single cycle instead
-					// of moving on to try further systems in the same run. Keep processing
-					// successive systems for this origin until slots/discoveries run out, a
-					// stop condition is hit, or a per-cycle safety cap is reached (bounds
-					// worst-case API calls per Execute() when scanning through many already
-					// fully-colonized systems in a row).
 					int systemsTriedThisOrigin = 0;
 					const int maxSystemsPerOriginPerCycle = 30;
 					while (ctx.FleetsToSend > 0 && !ctx.Stop && discoveries > 0

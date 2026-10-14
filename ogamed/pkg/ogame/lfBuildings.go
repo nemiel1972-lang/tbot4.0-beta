@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// LazyLfBuildings ...
 type LazyLfBuildings func() LfBuildings
 
 func (b LazyLfBuildings) ByID(id ID) int64                     { return b().ByID(id) }
@@ -83,57 +82,56 @@ func (l *LifeformType) String() string {
 	}
 }
 
-// LfBuildings lifeform buildings
 type LfBuildings struct {
 	LifeformType               LifeformType
-	ResidentialSector          int64 // 11101 // Lifeform (humans)
-	BiosphereFarm              int64 // 11102
-	ResearchCentre             int64 // 11103
-	AcademyOfSciences          int64 // 11104
-	NeuroCalibrationCentre     int64 // 11105
-	HighEnergySmelting         int64 // 11106
-	FoodSilo                   int64 // 11107
-	FusionPoweredProduction    int64 // 11108
-	Skyscraper                 int64 // 11109
-	BiotechLab                 int64 // 11110
-	Metropolis                 int64 // 11111
-	PlanetaryShield            int64 // 11112
-	MeditationEnclave          int64 // 12101 // Lifeform (rocktal)
-	CrystalFarm                int64 // 12102
-	RuneTechnologium           int64 // 12103
-	RuneForge                  int64 // 12104
-	Oriktorium                 int64 // 12105
-	MagmaForge                 int64 // 12106
-	DisruptionChamber          int64 // 12107
-	Megalith                   int64 // 12108
-	CrystalRefinery            int64 // 12109
-	DeuteriumSynthesiser       int64 // 12110
-	MineralResearchCentre      int64 // 12111
-	AdvancedRecyclingPlant     int64 // 12112
-	AssemblyLine               int64 // 13101 // Lifeform (mechas)
-	FusionCellFactory          int64 // 13102
-	RoboticsResearchCentre     int64 // 13103
-	UpdateNetwork              int64 // 13104
-	QuantumComputerCentre      int64 // 13105
-	AutomatisedAssemblyCentre  int64 // 13106
-	HighPerformanceTransformer int64 // 13107
-	MicrochipAssemblyLine      int64 // 13108
-	ProductionAssemblyHall     int64 // 13109
-	HighPerformanceSynthesiser int64 // 13110
-	ChipMassProduction         int64 // 13111
-	NanoRepairBots             int64 // 13112
-	Sanctuary                  int64 // 14101 // Lifeform (kaelesh)
-	AntimatterCondenser        int64 // 14102
-	VortexChamber              int64 // 14103
-	HallsOfRealisation         int64 // 14104
-	ForumOfTranscendence       int64 // 14105
-	AntimatterConvector        int64 // 14106
-	CloningLaboratory          int64 // 14107
-	ChrysalisAccelerator       int64 // 14108
-	BioModifier                int64 // 14109
-	PsionicModulator           int64 // 14110
-	ShipManufacturingHall      int64 // 14111
-	SupraRefractor             int64 // 14112
+	ResidentialSector          int64
+	BiosphereFarm              int64
+	ResearchCentre             int64
+	AcademyOfSciences          int64
+	NeuroCalibrationCentre     int64
+	HighEnergySmelting         int64
+	FoodSilo                   int64
+	FusionPoweredProduction    int64
+	Skyscraper                 int64
+	BiotechLab                 int64
+	Metropolis                 int64
+	PlanetaryShield            int64
+	MeditationEnclave          int64
+	CrystalFarm                int64
+	RuneTechnologium           int64
+	RuneForge                  int64
+	Oriktorium                 int64
+	MagmaForge                 int64
+	DisruptionChamber          int64
+	Megalith                   int64
+	CrystalRefinery            int64
+	DeuteriumSynthesiser       int64
+	MineralResearchCentre      int64
+	AdvancedRecyclingPlant     int64
+	AssemblyLine               int64
+	FusionCellFactory          int64
+	RoboticsResearchCentre     int64
+	UpdateNetwork              int64
+	QuantumComputerCentre      int64
+	AutomatisedAssemblyCentre  int64
+	HighPerformanceTransformer int64
+	MicrochipAssemblyLine      int64
+	ProductionAssemblyHall     int64
+	HighPerformanceSynthesiser int64
+	ChipMassProduction         int64
+	NanoRepairBots             int64
+	Sanctuary                  int64
+	AntimatterCondenser        int64
+	VortexChamber              int64
+	HallsOfRealisation         int64
+	ForumOfTranscendence       int64
+	AntimatterConvector        int64
+	CloningLaboratory          int64
+	ChrysalisAccelerator       int64
+	BioModifier                int64
+	PsionicModulator           int64
+	ShipManufacturingHall      int64
+	SupraRefractor             int64
 }
 
 func (b LfBuildings) GetResidentialSector() int64          { return b.ResidentialSector }
@@ -185,12 +183,10 @@ func (b LfBuildings) GetPsionicModulator() int64           { return b.PsionicMod
 func (b LfBuildings) GetShipManufacturingHall() int64      { return b.ShipManufacturingHall }
 func (b LfBuildings) GetSupraRefractor() int64             { return b.SupraRefractor }
 
-// Lazy returns a function that return self
 func (b LfBuildings) Lazy() LazyLfBuildings {
 	return func() LfBuildings { return b }
 }
 
-// ByID gets the lfBuilding level by lfBuilding id
 func (b LfBuildings) ByID(id ID) int64 {
 	switch id {
 	case ResidentialSectorID:
@@ -293,7 +289,6 @@ func (b LfBuildings) ByID(id ID) int64 {
 	return 0
 }
 
-// BaseLfBuilding base struct for Lifeform buildings
 type BaseLfBuilding struct {
 	BaseBuilding
 	energyIncreaseFactor     float64
@@ -314,12 +309,10 @@ func (b BaseLfBuilding) BuildingConstructionTime(level, universeSpeed int64, acc
 	return time.Duration(float64(dur) - float64(dur)*bonus)
 }
 
-// ConstructionTime returns the duration it takes to build given level. Deconstruction time is the same function.
 func (b BaseLfBuilding) ConstructionTime(level, universeSpeed int64, facilities BuildAccelerators, lfBonuses LfBonuses, _ CharacterClass, _ bool) time.Duration {
 	return b.BuildingConstructionTime(level, universeSpeed, facilities, lfBonuses)
 }
 
-// GetPrice returns the price to build the given level
 func (b BaseLfBuilding) GetPrice(level int64, _ LfBonuses) Resources {
 	resourcesFormula := func(baseCost int64, increaseFactor float64, level int64) int64 {
 		return int64(float64(baseCost) * math.Pow(increaseFactor, float64(level-1)) * float64(level))
@@ -336,7 +329,6 @@ func (b BaseLfBuilding) GetPrice(level int64, _ LfBonuses) Resources {
 	}
 }
 
-// Humans
 type residentialSector struct {
 	BaseLfBuilding
 }
@@ -542,7 +534,6 @@ func newPlanetaryShield() *planetaryShield {
 	return b
 }
 
-// Rocktal
 type meditationEnclave struct {
 	BaseLfBuilding
 }
@@ -738,7 +729,6 @@ func newAdvancedRecyclingPlant() *advancedRecyclingPlant {
 	return b
 }
 
-// Mechas
 type assemblyLine struct {
 	BaseLfBuilding
 }
@@ -934,7 +924,6 @@ func newNanoRepairBots() *nanoRepairBots {
 	return b
 }
 
-// Kaelesh
 type sanctuary struct {
 	BaseLfBuilding
 }

@@ -2,7 +2,6 @@ package ogame
 
 import "github.com/alaingilbert/ogame/pkg/utils"
 
-// ResourceSettings represent a planet resource settings
 type ResourceSettings struct {
 	MetalMine            int64
 	CrystalMine          int64

@@ -25,9 +25,7 @@ namespace Tbot.Common.Settings {
 			}
 		}
 
-		// Unterordner (relativ zum Config-Ordner), in dem "Load": "name" ohne Pfad gesucht wird
 		public const string DefaultLoadDirectory = "conf.d";
-		// Ordner fuer Zugangsdaten (Passwort, Proxy, Webhooks, Tokens), per Load eingebunden
 		public const string SecretsDirectory = "secrets";
 
 		public static async Task<dynamic> GetSettings(string settingsPath) {
@@ -35,7 +33,6 @@ namespace Tbot.Common.Settings {
 			return FinalizeSettings(ParseAndResolve(file, settingsPath));
 		}
 
-		// Synchrone Variante fuer Leser, die den rohen JSON-Baum brauchen (z. B. WebUI-Dashboards): Load ist aufgeloest.
 		public static JObject ReadResolvedObject(string settingsPath) {
 			if (!File.Exists(settingsPath))
 				throw new Exception($"{settingsPath} does not exist.");
@@ -48,7 +45,6 @@ namespace Tbot.Common.Settings {
 			return obj;
 		}
 
-		// Datums-Strings bleiben Strings (sonst wuerde JObject sie beim Zurueckschreiben umformatieren)
 		private static JObject ParseObject(string json) {
 			using var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None };
 			return JObject.Load(reader);
@@ -66,8 +62,6 @@ namespace Tbot.Common.Settings {
 			MergeNullValueHandling = MergeNullValueHandling.Ignore
 		};
 
-		// Loest Bloecke der Form { "Active": true, "Load": "name" } auf: Inhalt der Datei wird eingemischt,
-		// Schluessel direkt neben "Load" (z. B. "Active") haben Vorrang. Fehlende Datei = Exception.
 		private static void ResolveLoadReferences(JObject obj, string baseDir, int depth = 0) {
 			if (obj == null)
 				return;
@@ -78,7 +72,6 @@ namespace Tbot.Common.Settings {
 				if (prop.Value is JObject child) {
 					var references = GetLoadReferences(child);
 					if (references != null) {
-						// Mehrere Dateien werden der Reihe nach gemischt (spaetere gewinnen), danach gewinnen die Schluessel im Block selbst
 						var loaded = new JObject();
 						foreach (var reference in references) {
 							string loadedPath = ResolveLoadPath(baseDir, reference);
@@ -104,7 +97,6 @@ namespace Tbot.Common.Settings {
 			}
 		}
 
-		// "Load": "name" oder "Load": ["name1", "name2"]; null, wenn der Block keinen Load hat
 		private static List<string> GetLoadReferences(JObject block) {
 			if (!block.TryGetValue("Load", StringComparison.OrdinalIgnoreCase, out var token))
 				return null;
@@ -115,8 +107,6 @@ namespace Tbot.Common.Settings {
 			return null;
 		}
 
-		// "AutoMine" -> <baseDir>/conf.d/AutoMine.json; "secrets/credentials" -> <baseDir>/secrets/credentials.json.
-		// Absolute Pfade und Ausbrueche aus dem Config-Ordner (..) sind verboten.
 		public static string ResolveLoadPath(string baseDir, string reference) {
 			string path = (reference ?? "").Trim().Replace('\\', '/');
 			if (path.Length == 0)
@@ -133,7 +123,6 @@ namespace Tbot.Common.Settings {
 			return full;
 		}
 
-		// Alle Dateien, die per Load (rekursiv) in diese Datei eingebunden sind (fuer Anzeige/Watcher/Prueflogik)
 		public static List<string> GetLoadedFiles(string settingsPath) {
 			var result = new List<string>();
 			if (!File.Exists(settingsPath))
@@ -182,7 +171,6 @@ namespace Tbot.Common.Settings {
 			return FinalizeSettings(merged);
         }
 
-        // Hinweis: ohne Dateipfad (nur Inhalte, z. B. Tests) wird Load bewusst nicht aufgeloest.
         public static dynamic GetMergedSettingsFromContents(string baseJson, List<string> overlayJson) {
             return FinalizeSettings(MergeToJObject(baseJson, overlayJson));
         }
@@ -198,9 +186,6 @@ namespace Tbot.Common.Settings {
 			return baseObj;
 		}
 
-		// Schreibt einzelne Werte dorthin zurueck, wo sie wirklich stehen: bei einem Block mit "Load" in die
-		// eingebundene Datei (ausser der Schluessel steht direkt im Block neben "Load", dann dort).
-		// Pfade wie "Brain.Transports.Origin.Galaxy" oder "Expeditions.Origin[0].Type". Fehlt ein Zwischenknoten, gibt es eine Exception.
 		public static async Task SetValuesAsync(string rootPath, IEnumerable<KeyValuePair<string, object>> values) {
 			string rootFull = Path.GetFullPath(rootPath);
 			string baseDir = Path.GetDirectoryName(rootFull);
@@ -215,7 +200,6 @@ namespace Tbot.Common.Settings {
 				return doc;
 			}
 
-			// Originalinhalt der Hauptdatei ueber den Lock lesen (konsistent mit anderen Schreibern)
 			docs[rootFull] = ParseObject(await GetSettingsFileContents(rootFull));
 
 			foreach (var kv in values) {
@@ -231,7 +215,6 @@ namespace Tbot.Common.Settings {
 						int guard = 0;
 						List<string> refs;
 						while (obj.Property(seg.Name) == null && (refs = GetLoadReferences(obj)) != null && guard++ < 8) {
-							// Schluessel steht nicht im Block selbst: in der Load-Datei suchen, die ihn enthaelt (letzte gewinnt), sonst in der ersten
 							string chosen = null;
 							foreach (var reference in refs) {
 								string lp = ResolveLoadPath(baseDir, reference);
@@ -400,9 +383,7 @@ namespace Tbot.Common.Settings {
 			var c = new ConfigObject();
 			var cdict = (IDictionary<string, object>) c;
 
-			// this is not complete. It will, however work for JsonFX ExpandoObjects which consists only of primitive types,
-			// ExpandoObject or ExpandoObject [] but won't work for generic ExpandoObjects which might include collections etc.
-			foreach (var kvp in edict) // recursively convert and add ExpandoObjects
+			foreach (var kvp in edict)
 				switch (kvp.Value) {
 					case ExpandoObject o:
 						cdict.Add(kvp.Key, FromExpando(o));
@@ -442,14 +423,7 @@ namespace Tbot.Common.Settings {
 		#region casts
 
 		public static implicit operator bool(ConfigObject c) {
-			// we want to test for a member:
-			// if (config.SomeMember) { ... }
-			//
-			// instead of:
-			// if (config.SomeMember != null) { ... }
 
-			// we return always true, because a NullExceptionPreventer is returned when member
-			// does not exist
 			return true;
 		}
 
@@ -513,22 +487,12 @@ namespace Tbot.Common.Settings {
 		#endregion
 	}
 
-	/// <summary>
-	///     Null exception preventer. This allows for hassle-free usage of configuration values that are not
-	///     defined in the config file. I.e. we can do Config.Scope.This.Field.Does.Not.Exist.Ever, and it will
-	///     not throw an NullPointer exception, but return te NullExceptionPreventer object instead.
-	///     The NullExceptionPreventer can be cast to everything, and will then return default/empty value of
-	///     that datatype.
-	/// </summary>
 	public class NullExceptionPreventer : DynamicObject {
-		// all member access to a NullExceptionPreventer will return a new NullExceptionPreventer
-		// this allows for infinite nesting levels: var s = Obj1.foo.bar.bla.blubb; is perfectly valid
 		public override bool TryGetMember(GetMemberBinder binder, out object result) {
 			result = new NullExceptionPreventer();
 			return true;
 		}
 
-		// Add all kinds of datatypes we can cast it to, and return default values cast to string will be null
 		public static implicit operator string(NullExceptionPreventer nep) {
 			return null;
 		}
@@ -541,7 +505,6 @@ namespace Tbot.Common.Settings {
 			return Array.Empty<string>();
 		}
 
-		// cast to bool will always be false
 		public static implicit operator bool(NullExceptionPreventer nep) {
 			return false;
 		}
@@ -566,7 +529,6 @@ namespace Tbot.Common.Settings {
 			return 0;
 		}
 
-		// nullable types always return null
 		public static implicit operator bool?(NullExceptionPreventer nep) {
 			return null;
 		}

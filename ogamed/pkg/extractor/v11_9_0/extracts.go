@@ -100,15 +100,12 @@ func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatRe
 	return msgs, nbPage, nil
 }
 
-// extractAuctionFromDoc extract auction information from page "traderAuctioneer"
 func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 	auction := ogame.Auction{}
 	auction.HasFinished = false
 
-	// Detect if Auction has already finished
 	nextAuction := doc.Find("#nextAuction")
 	if nextAuction.Size() > 0 {
-		// Find time until next auction starts
 		auction.Endtime = utils.DoParseI64(nextAuction.Text())
 		auction.HasFinished = true
 	} else {
@@ -140,14 +137,12 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 		return ogame.Auction{}, errors.New("failed to json parse auction multiplier: " + err.Error())
 	}
 
-	// Find auctioneer token
 	tokenRegex := regexp.MustCompile(`token\s?=\s?"([^"]+)";`).FindStringSubmatch(doc.Text())
 	if len(tokenRegex) != 2 {
 		return ogame.Auction{}, errors.New("failed to find auctioneer token")
 	}
 	auction.Token = tokenRegex[1]
 
-	// Find Planet / Moon resources JSON
 	planetMoonResources := regexp.MustCompile(`planetResources\s?=\s?([^;]+);`).FindStringSubmatch(doc.Text())
 	if len(planetMoonResources) != 2 {
 		return ogame.Auction{}, errors.New("failed to find planetResources")
@@ -156,7 +151,6 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 		return ogame.Auction{}, errors.New("failed to json unmarshal planetResources: " + err.Error())
 	}
 
-	// Find already-bid
 	m := regexp.MustCompile(`var playerBid\s?=\s?([^;]+);`).FindStringSubmatch(doc.Text())
 	if len(m) != 2 {
 		return ogame.Auction{}, errors.New("failed to get playerBid")
@@ -167,16 +161,10 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 	}
 	auction.AlreadyBid = alreadyBid
 
-	// Find min-bid
 	auction.MinimumBid = utils.ParseInt(doc.Find("table.table_ressources_sum tr td.auctionInfo.js_price").Text())
 
-	// Find deficit-bid
 	auction.DeficitBid = utils.ParseInt(doc.Find("table.table_ressources_sum tr td.auctionInfo.js_deficit").Text())
 
-	// Note: Don't just bid the min-bid amount. It will keep doubling the total bid and grow exponentially...
-	// DeficitBid is 1000 when another player has outbid you or if nobody has bid yet.
-	// DeficitBid seems to be filled by Javascript in the browser. We're parsing it anyway. Correct Bid calculation would be:
-	// bid = max(auction.DeficitBid, auction.MinimumBid - auction.AlreadyBid)
 
 	return auction, nil
 }

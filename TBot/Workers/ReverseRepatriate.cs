@@ -16,45 +16,19 @@ using TBot.Ogame.Infrastructure.Enums;
 using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Workers {
-	// REVERSE-REPATRIATE (12.10.2026): repatriation "the other way round". No ships are kept on the celestials. When a pickup is due,
-	// the ships fly from the home celestial (repatriate target) to the celestial by DEPLOY (stationing) and bring generous deuterium
-	// for the return leg. On arrival the return leg takes ALL ships lying on that celestial plus the free resources home (again by
-	// Deploy). Warships built by the shipyard on site therefore fly home automatically.
-	//
-	// Settings (all optional; without the block or with Active=false the classic repatriation runs unchanged):
-	//   Brain.AutoRepatriate.Reverse {
-	//     "Active": false,
-	//     "ReturnFuelFactor": 2.0,        // deuterium for the return leg = expected fuel of the return fleet x factor (the rest stays there or flies back)
-	//     "ReturnAllShips": true,         // true = take every movable ship of the celestial, false = only the transport chain types
-	//     "KeepShips": [],                // ship types that stay on the celestial (e.g. ["Pathfinder"])
-	//     "PendingTtlMinutes": 120,       // how long a started pickup is tracked before it is dropped
-	//     "OutboundCapacityFactor": 1.1   // cargo space on the outbound leg = free amount x factor (production during the flight)
-	//   }
-	// There is NO slot reservation: only real fleets (outbound / return leg) occupy slots. The return leg starts right on arrival
-	// (the worker wakes up at the arrival time); if there is no free slot then, it is retried via force (SlotsToLeaveFree) or in the
-	// next cycle - the ships and the deuterium simply stay on the celestial until then.
 	public enum ReverseStatus {
-		// Outbound leg or (direct) return leg was sent.
 		Gesendet,
-		// No free slots / sleep time - try again later.
 		Wartet,
-		// Nothing on the celestial that could fly home.
 		KeineSchiffe,
-		// Could not be planned (no suitable ships at the home celestial, calculation failed) - classic path.
 		NichtMoeglich
 	}
 
-	// Connections to FleetScheduler (keeps this file independent of its private helpers).
 	public class ReverseHaken {
-		// Transport chain of the Brain deliveries (configured type + Brain.Transports.CargoFallback).
 		public Func<Buildables, List<Buildables>> Kette;
-		// Ship selection for a cargo at the home celestial (chain / mixed fleet / expedition reserve); null = not possible.
 		public Func<Celestial, Resources, Buildables, Ships> HinflugSchiffe;
-		// FleetScheduler.SendFleet (origin, ships, destination, mission, speed, payload, force).
 		public Func<Celestial, Ships, Coordinate, Missions, decimal, Resources, bool, Task<int>> Senden;
 	}
 
-	// A started pickup that waits for the arrival of the outbound fleet (saved after every outbound leg).
 	public class ReverseEintrag {
 		public long CelestialId { get; set; }
 		public long HeimatId { get; set; }
@@ -78,9 +52,6 @@ namespace Tbot.Workers {
 		private static List<ReverseEintrag> _eintraege = null;
 		private static string _pfad = null;
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// Settings
-		// ------------------------------------------------------------------------------------------------------------------
 
 		public static ReverseKonfig LiesKonfig(ITBotMain inst) {
 			ReverseKonfig k = new();
@@ -115,9 +86,6 @@ namespace Tbot.Workers {
 			return LiesKonfig(inst).Aktiv;
 		}
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// State (only touched while the feature is on, otherwise no file is ever read or written)
-		// ------------------------------------------------------------------------------------------------------------------
 
 		private static string Pfad(ITBotMain inst) {
 			string spieler = inst?.UserData?.userInfo?.PlayerName ?? "unknown";
@@ -169,7 +137,6 @@ namespace Tbot.Workers {
 			Speichere(inst);
 		}
 
-		// true if a pickup for this celestial is already running (then do not start a new one).
 		public static bool HatOffene(ITBotMain inst, Celestial c) {
 			try {
 				return Schnappschuss(inst).Any(e => e.CelestialId == c.ID);
@@ -178,8 +145,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Seconds until the next arrival of an outbound fleet (wake-up time for the worker); -1 = nothing pending.
-		// If the arrival is already over and the pickup is still pending, 20 is returned (retry every 20 s until the TTL ends).
 		public static long SekundenBisNaechsteAnkunft(ITBotMain inst) {
 			try {
 				if (!Aktiv(inst))
@@ -190,7 +155,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Pure calculation (tested).
 		internal static long NaechsteAnkunftSekunden(IList<DateTime> ankuenfte, DateTime jetzt) {
 			if (ankuenfte == null || ankuenfte.Count == 0)
 				return -1;
@@ -205,21 +169,14 @@ namespace Tbot.Workers {
 			return best;
 		}
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// Pure calculation logic (no game access, tested)
-		// ------------------------------------------------------------------------------------------------------------------
 
-		// Cargo space the outbound leg additionally needs on top of the transporters already lying on the celestial.
 		internal static long FehlendeKapazitaet(long ladung, double faktor, long vorhandeneKapazitaet) {
 			if (ladung <= 0)
 				return 0;
-			// decimal instead of double: 168 M x 1.1 must not round up to 184,800,001 because of floating point noise.
 			long noetig = (long) Math.Ceiling((decimal) ladung * (decimal) Math.Max(1.0, faktor));
 			return Math.Max(0L, noetig - Math.Max(0L, vorhandeneKapazitaet));
 		}
 
-		// Deuterium the outbound leg carries for the return leg: fuel need x factor, limited by cargo space and by the free deuterium
-		// at the home celestial (after the fuel of the outbound leg).
 		internal static long SpritZuladung(long spritRueckflug, double faktor, long laderaum, long heimatFrei) {
 			if (spritRueckflug <= 0)
 				return 0;
@@ -227,9 +184,6 @@ namespace Tbot.Workers {
 			return Math.Max(0L, Math.Min(wunsch, Math.Min(Math.Max(0L, laderaum), Math.Max(0L, heimatFrei))));
 		}
 
-		// Trims the return fleet until the fuel is enough. Order: first non-transporters with the highest fuel need per ship (first
-		// dropped completely, then - once a subset fits - only as many as fit), then the transporters proportionally.
-		// Transporters always fly along so that the resources get home. null = nothing feasible.
 		internal static Dictionary<Buildables, long> KuerzeAufSprit(Dictionary<Buildables, long> alle, ISet<Buildables> transporter, long budget, Func<Dictionary<Buildables, long>, long> spritFuer, Func<Buildables, long> einzelSprit) {
 			if (alle == null || alle.Count == 0)
 				return null;
@@ -245,7 +199,6 @@ namespace Tbot.Workers {
 				if (aktuell.Count == 0)
 					continue;
 				if (spritFuer(aktuell) <= budget) {
-					// Fits with this type dropped completely: take back as many of it as still fit.
 					long lo = 0, hi = original;
 					while (lo < hi) {
 						long mid = (lo + hi + 1) / 2;
@@ -261,7 +214,6 @@ namespace Tbot.Workers {
 				}
 			}
 
-			// Only transporters left: scale them down proportionally.
 			var basis = aktuell.Where(p => transporter.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value);
 			if (basis.Count == 0)
 				return null;
@@ -280,9 +232,6 @@ namespace Tbot.Workers {
 			return best;
 		}
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// Helpers with game access
-		// ------------------------------------------------------------------------------------------------------------------
 
 		private static Dictionary<Buildables, long> Zaehle(Ships s) {
 			Dictionary<Buildables, long> d = new();
@@ -321,7 +270,6 @@ namespace Tbot.Workers {
 			return calc.CalcFleetPrediction(von.Coordinate, nach, s, Missions.Deploy, Speeds.HundredPercent, inst.UserData.researches, inst.UserData.serverData, von.LFBonuses, inst.UserData.userInfo.Class, inst.UserData.allianceClass);
 		}
 
-		// Payload as in the classic repatriation: live stock minus LeaveDeut, limited to the free ledger share.
 		private static Resources BerechneNutzlast(ITBotMain inst, Celestial c) {
 			Resources p = new Resources(c.Resources.Metal, c.Resources.Crystal, c.Resources.Deuterium);
 			p.Food = 0;
@@ -346,7 +294,6 @@ namespace Tbot.Workers {
 			return p;
 		}
 
-		// Deuterium that may be planned for the flight (free in the ledger's sense).
 		private static long FreiesDeuterium(ITBotMain inst, Celestial c) {
 			long live = c.Resources.Deuterium;
 			try {
@@ -366,8 +313,6 @@ namespace Tbot.Workers {
 			inst.log(stufe, LogSender.FleetScheduler, "Reverse-Repatriate: " + text);
 		}
 
-		// Transport limit as in the classic repatriation: Brain.Transports.MaxSlots minus AutoRepatriate.ReserveTransportSlots.
-		// Counted are the account's transport fleets plus the outbound legs of this feature that are still flying.
 		private static bool TransportLimitErreicht(ITBotMain inst, out string text) {
 			text = "";
 			try {
@@ -392,13 +337,9 @@ namespace Tbot.Workers {
 			return false;
 		}
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// Return leg: all ships + free stock from the celestial to the home celestial (Deploy)
-		// ------------------------------------------------------------------------------------------------------------------
 
 		public static async Task<ReverseStatus> RueckflugAsync(ITBotMain inst, ICalculationService calc, ITBotOgamedBridge bridge, ReverseHaken h, ReverseKonfig k, Celestial c, Celestial heimat, Buildables bevorzugt, bool aktualisieren = true) {
 			try {
-				// aktualisieren=false: the caller has just loaded stock, ships and LF bonuses (saves API calls).
 				if (aktualisieren) {
 					c = await bridge.UpdatePlanet(c, UpdateTypes.Resources);
 					c = await bridge.UpdatePlanet(c, UpdateTypes.Ships);
@@ -421,7 +362,6 @@ namespace Tbot.Workers {
 				Resources payload = BerechneNutzlast(inst, c);
 				long budget = FreiesDeuterium(inst, c);
 
-				// Single-ship fuel is only used for the order when trimming (types with a high consumption are dropped first).
 				Func<Buildables, long> einzel = t => {
 					try {
 						Ships eins = new();
@@ -444,11 +384,9 @@ namespace Tbot.Workers {
 				Ships schiffe = ZuSchiffen(gewaehlt);
 				long sprit = (long) Vorhersage(inst, calc, c, heimat.Coordinate, schiffe).Fuel;
 				payload.Deuterium = Math.Min(payload.Deuterium, Math.Max(0L, budget - sprit));
-				// Limit the cargo to the cargo space of the return fleet.
 				payload = calc.CalcMaxTransportableResources(schiffe, payload, inst.UserData.researches.HyperspaceTechnology, inst.UserData.serverData, c.LFBonuses, inst.UserData.userInfo.Class, inst.UserData.serverData.ProbeCargo);
 
 				int id = await h.Senden(c, schiffe, heimat.Coordinate, Missions.Deploy, Speeds.HundredPercent, payload, false);
-				// No free slot besides the one SlotsToLeaveFree keeps free: that is what force is for.
 				if (id == (int) SendFleetCode.NotEnoughSlots && inst.UserData.slots != null && inst.UserData.slots.Free > 0)
 					id = await h.Senden(c, schiffe, heimat.Coordinate, Missions.Deploy, Speeds.HundredPercent, payload, true);
 				if (id > 0) {
@@ -467,9 +405,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// Start of a pickup (from the repatriation loop): outbound leg, or the return leg directly if enough transporters lie there
-		// ------------------------------------------------------------------------------------------------------------------
 
 		public static async Task<ReverseStatus> StarteAbholungAsync(ITBotMain inst, ICalculationService calc, ITBotOgamedBridge bridge, ReverseHaken h, Celestial c, Coordinate heimatKoordinate, Resources payload, Buildables bevorzugt) {
 			try {
@@ -480,8 +415,6 @@ namespace Tbot.Workers {
 				if (heimat == null)
 					return ReverseStatus.NichtMoeglich;
 
-				// Transporters already lying there count (e.g. leftovers of a delayed return leg). Stock and ships were just loaded
-				// by the repatriation loop, only the LF bonuses (cargo space) are missing.
 				c = await bridge.UpdatePlanet(c, UpdateTypes.LFBonuses);
 				List<Buildables> kette = h.Kette(bevorzugt);
 				Ships dort = new();
@@ -514,7 +447,6 @@ namespace Tbot.Workers {
 					return ReverseStatus.NichtMoeglich;
 				}
 
-				// Expected return fleet: what lies there (without KeepShips) plus the outbound ships. The total consumption counts for the fuel.
 				var erwartet = Zaehle(c.Ships.GetMovableShips());
 				foreach (var p in Zaehle(hin))
 					erwartet[p.Key] = (erwartet.ContainsKey(p.Key) ? erwartet[p.Key] : 0) + p.Value;
@@ -572,9 +504,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// ------------------------------------------------------------------------------------------------------------------
-		// Process started pickups (at the beginning of every repatriation cycle, the fleet list is fresh)
-		// ------------------------------------------------------------------------------------------------------------------
 
 		public static async Task VerarbeiteOffeneAsync(ITBotMain inst, ICalculationService calc, ITBotOgamedBridge bridge, ReverseHaken h, Buildables bevorzugt) {
 			try {
@@ -589,7 +518,6 @@ namespace Tbot.Workers {
 						Entferne(inst, e);
 						continue;
 					}
-					// Outbound fleet still flying: wait (no slot is reserved, nothing to do).
 					if (flottenIds.Contains(e.FlottenId) && jetzt < e.Ankunft.AddMinutes(10))
 						continue;
 
@@ -603,7 +531,6 @@ namespace Tbot.Workers {
 					if (st == ReverseStatus.Gesendet) {
 						Entferne(inst, e);
 					} else if (st == ReverseStatus.Wartet) {
-						// stays pending, next attempt in the next cycle
 					} else {
 						e.Versuche++;
 						if (e.Versuche >= 5 || (st == ReverseStatus.KeineSchiffe && e.Versuche >= 3)) {

@@ -279,8 +279,6 @@ type AllianceOverviewExtractorBytes interface {
 	ExtractAllianceClass(pageHTML []byte) (ogame.AllianceClass, error)
 }
 
-// BuffActivationExtractorBytes BuffActivation is the popups that shows up when clicking the icon
-// to activate an item on the overview page.
 type BuffActivationExtractorBytes interface {
 	ExtractBuffActivation(pageHTML []byte) (string, []ogame.Item, error)
 }
@@ -298,7 +296,6 @@ type MessagesCombatReportExtractorBytesDoc interface {
 	MessagesCombatReportExtractorDoc
 }
 
-// DestroyRocketsExtractorBytes popups that shows up when clicking to destroy rockets on the defenses page.
 type DestroyRocketsExtractorBytes interface {
 	ExtractDestroyRockets(pageHTML []byte) (abm, ipm int64, token string, err error)
 }
@@ -308,7 +305,6 @@ type EmpireExtractorBytes interface {
 	ExtractEmpireJSON(pageHTML []byte) (any, error)
 }
 
-// EspionageReportExtractorBytes popup that shows the full espionage report
 type EspionageReportExtractorBytes interface {
 	ExtractEspionageReport(pageHTML []byte) (ogame.EspionageReport, error)
 }
@@ -322,7 +318,6 @@ type EspionageReportExtractorBytesDoc interface {
 	EspionageReportExtractorDoc
 }
 
-// MessagesEspionageReportExtractorBytes ajax page that display all espionage reports summaries
 type MessagesEspionageReportExtractorBytes interface {
 	ExtractEspionageReportMessageIDs(pageHTML []byte) ([]ogame.EspionageReportSummary, int64, error)
 }
@@ -336,7 +331,6 @@ type MessagesEspionageReportExtractorBytesDoc interface {
 	MessagesEspionageReportExtractorDoc
 }
 
-// MessagesExpeditionExtractorBytes ajax page that display all expedition messages
 type MessagesExpeditionExtractorBytes interface {
 	ExtractExpeditionMessages(pageHTML []byte) ([]ogame.ExpeditionMessage, int64, error)
 }
@@ -350,27 +344,22 @@ type MessagesExpeditionExtractorBytesDoc interface {
 	MessagesExpeditionExtractorDoc
 }
 
-// FederationExtractorBytes popup when we click to create a union for our attacking fleet
 type FederationExtractorBytes interface {
 	ExtractFederation(pageHTML []byte) (url.Values, error)
 }
 
-// GalaxyPageExtractorBytes galaxy page
 type GalaxyPageExtractorBytes interface {
 	ExtractAvailableDiscoveries(pageHTML []byte) (int64, error)
 }
 
-// GalaxyExtractorBytes ajax page containing galaxy information in galaxy page
 type GalaxyExtractorBytes interface {
 	ExtractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botPlayerRank int64) (ogame.SystemInfos, error)
 }
 
-// FetchResourcesExtractorBytes "fetchResources" ajax page
 type FetchResourcesExtractorBytes interface {
 	ExtractResourcesDetails(pageHTML []byte) (out ogame.ResourcesDetails, err error)
 }
 
-// TraderImportExportExtractorBytes ajax page Merchant -> Import/Export
 type TraderImportExportExtractorBytes interface {
 	ExtractOfferOfTheDay(pageHTML []byte) (int64, string, ogame.PlanetResources, ogame.Multiplier, error)
 }
@@ -379,7 +368,6 @@ type TraderImportExportExtractorDoc interface {
 	ExtractOfferOfTheDayFromDoc(*goquery.Document) (price int64, importToken string, planetResources ogame.PlanetResources, multiplier ogame.Multiplier, err error)
 }
 
-// FetchTechsExtractorBytes ajax page fetchTechs
 type FetchTechsExtractorBytes interface {
 	ExtractTechs(pageHTML []byte) (ogame.Techs, error)
 }
@@ -429,7 +417,6 @@ type JumpGateLayerExtractorBytes interface {
 	ExtractJumpGate(pageHTML []byte) (ogame.ShipsInfos, string, []ogame.MoonID, int64, error)
 }
 
-// MessagesMarketplaceExtractorBytes marketplace was removed from the game
 type MessagesMarketplaceExtractorBytes interface {
 	ExtractMarketplaceMessages(pageHTML []byte) ([]ogame.MarketplaceMessage, int64, error)
 }
@@ -477,7 +464,6 @@ type LfBonusesExtractorBytesDoc interface {
 	LfBonusesExtractorDoc
 }
 
-// ResourcesBuildingsExtractorBytes supplies page
 type ResourcesBuildingsExtractorBytes interface {
 	ExtractResourcesBuildings(pageHTML []byte) (ogame.ResourcesBuildings, error)
 	ExtractTearDownToken(pageHTML []byte) (string, error)
@@ -493,7 +479,6 @@ type ResourcesBuildingsExtractorBytesDoc interface {
 	ResourcesBuildingsExtractorDoc
 }
 
-// PremiumExtractorBytes ajax page when click to buy an officer
 type PremiumExtractorBytes interface {
 	ExtractPremiumToken(pageHTML []byte, days int64) (token string, err error)
 }
@@ -517,7 +502,6 @@ type TechnologyDetailsExtractorBytesDoc interface {
 	TechnologyDetailsExtractorDoc
 }
 
-// Extractor ...
 type Extractor interface {
 	GetLanguage() string
 	SetLanguage(lang string)
@@ -577,7 +561,6 @@ type Extractor interface {
 	ExtractChapterFromDoc(*goquery.Document) (ogame.Chapter, error)
 }
 
-// Compile time checks to ensure type satisfies Extractor interface
 var _ Extractor = (*v6.Extractor)(nil)
 var _ Extractor = (*v7.Extractor)(nil)
 var _ Extractor = (*v71.Extractor)(nil)

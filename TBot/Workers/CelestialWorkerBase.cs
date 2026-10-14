@@ -75,8 +75,6 @@ namespace Tbot.Workers {
 
 			_ct = ct;
 
-			// TimeSpan periodSpan = TimeSpan.FromMilliseconds(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds));
-			// ThreadName cannot be longer than 16 bytes, so
 			string cutAlias = (_tbotInstance.InstanceAlias.Length > 6 ? _tbotInstance.InstanceAlias.Substring(0, 6) : _tbotInstance.InstanceAlias);
 			_timer = new AsyncTimer(ExecutionWrapper, $"{cutAlias}{GetWorkerName()}");
 			await _timer.StartAsync(ct, period, dueTime);
@@ -85,7 +83,6 @@ namespace Tbot.Workers {
 			await StartWorker(ct, Timeout.InfiniteTimeSpan, dueTime);
 		}
 		public async Task StopWorker() {
-			// Stop also all the timers
 			RemoveAllTimers();
 			if (_timer != null) {
 				DoLog(LogLevel.Information, $"Closing Worker \"{GetWorkerName()}\"..");
@@ -150,7 +147,6 @@ namespace Tbot.Workers {
 
 
 		protected Task EndExecution() {
-			// This is meant to be called within the worker callback, so we can't await _timer to end
 			ChangeWorkerPeriod(Timeout.InfiniteTimeSpan);
 			return Task.CompletedTask;
 		}
@@ -186,7 +182,6 @@ namespace Tbot.Workers {
 				}
 
 			} catch(OperationCanceledException) {
-				// OK
 			} finally {
 				ReleaseWorker();
 				firstExecutionCompletion.TrySetResult(true);

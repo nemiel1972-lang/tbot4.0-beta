@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 using TBot.Ogame.Infrastructure.Enums;
 
 namespace TBot.Ogame.Infrastructure.Models {
-	/// <summary>
-	/// Celestial under consideration to be targetted for farming.
-	/// </summary>
 	public class FarmTarget {
 		public FarmTarget(Celestial target, FarmState farmState = FarmState.Idle, EspionageReport report = null) {
 			Celestial = target;
@@ -20,24 +17,8 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public EspionageReport Report { get; set; }
 		public int? ConsumedReportId { get; set; }
 
-		// Zeitpunkt (Server-Zeit), zu dem State zuletzt auf AttackSent gesetzt wurde.
-		// PruneOldReports() fragt bei jedem Interleaving-Pass die Flottenliste neu ab
-		// und prueft per AutoFarmAttackPolicy.IsAttackInProgress(), ob die Angriffsflotte noch
-		// unterwegs ist. Direkt nach dem Versand kann die frisch abgefragte Flottenliste die
-		// gerade erst losgeschickte Flotte aber noch nicht enthalten (API-/ogamed-Verzoegerung) -
-		// IsAttackInProgress liefert dann faelschlich "nicht unterwegs", der State wird verfrueht
-		// auf ProbesPending zurueckgesetzt, und derselbe Ziel-Zyklus (Sonde -> Bericht -> Angriff)
-		// startet erneut, WAEHREND die erste Flotte noch fliegt - Ergebnis: mehrere echte
-		// Angriffsflotten kurz hintereinander auf dasselbe Ziel. Mit AttackSentAt kann eine
-		// Mindest-Schonfrist erzwungen werden, unabhaengig davon, was die (evtl. noch veraltete)
-		// Flottenliste gerade zeigt.
 		public DateTime? AttackSentAt { get; set; }
 
-		// Markiert Ziele, die schon beim ALLERERSTEN Check (AutoFarm.MaxDefensePoints ueberschritten,
-		// noch bevor irgendeine Eskorten-Simulation laeuft) als "zu stark verteidigt" erkannt wurden.
-		// KEINE Blacklist: das Ziel/der Spionagebericht bleibt normal in der Zielliste sichtbar
-		// (Kampfrechner direkt vom Bericht aus aufrufbar) und wird von AutoFarm.KeepReportFor NICHT
-		// automatisch geloescht - der Nutzer prueft/entfernt es manuell selbst.
 		public bool HeldForManualReview { get; set; }
 
 		public bool HasCoords(Coordinate coords) {
