@@ -56,8 +56,6 @@ namespace Tbot.Workers {
 				f.Origin.Type == origin.Coordinate.Type);
 		}
 
-		// Schreibt die fuer Expeditionen relevanten Lebensform-Boni als Momentaufnahme (data/lf_expedition_<Alias>.json),
-		// damit die WebUI-Seite "Config" sie anzeigen kann. Fehler hier duerfen die Expeditionen nie stoeren.
 		private void WriteLfSnapshot(LFBonuses lf) {
 			try {
 				if (lf == null)
@@ -86,8 +84,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Optionales Feld "MaxExpeditions" im jeweiligen Eintrag von Expeditions.Origin: Obergrenze nur fuer diesen Origin.
-		// Fehlt es (oder ist <= 0), gilt Expeditions.MaxExpeditionsPerOrigin.
 		private int MaxExpeditionsForOrigin(Celestial origin, int globalMax) {
 			try {
 				foreach (var configured in _tbotInstance.InstanceSettings.Expeditions.Origin) {
@@ -139,8 +135,6 @@ namespace Tbot.Workers {
 					}
 				}
 			} else {
-				// Automatic mode chooses one origin from the cached snapshot. It does not
-				// refresh every celestial just to compare them.
 				var best = available
 					.OrderBy(c => c.Coordinate.Type == Celestials.Moon)
 					.ThenByDescending(c => c.Ships == null ? 0 : _calculationService.CalcFleetCapacity(
@@ -210,7 +204,6 @@ namespace Tbot.Workers {
 				_tbotInstance.UserData.userInfo.Class,
 				_tbotInstance.UserData.serverData.ProbeCargo);
 
-			// MinPrimaryToSend: weniger Primaerschiffe als hier eingestellt -> von diesem Origin keine Expedition (0 = kein Minimum)
 			int minPrimary = 0;
 			try {
 				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Expeditions, "MinPrimaryToSend"))
@@ -227,9 +220,6 @@ namespace Tbot.Workers {
 
 		private async Task<Ships> RefreshExpeditionShips(Celestial origin) {
 			try {
-				// The bridge deliberately swallows update errors for the other workers. That
-				// is useful for a best-effort empire refresh, but it is unsafe here: a stale
-				// empty snapshot would make a valid origin look permanently unusable.
 				origin.Ships = await _ogameService.GetShips(origin);
 				return origin.Ships;
 			} catch (Exception e) {
@@ -276,24 +266,12 @@ namespace Tbot.Workers {
 			};
 		}
 
-		// WorkerBase's generic ExecutionWrapper wraps every worker's Execute() in a 45s ExecuteTimeout
-		// by default - Expeditions sends up to MaxExpeditionsPerOrigin fleets per origin sequentially,
-		// with a MinWaitNextFleet-MaxWaitNextFleet second pause between each (see the Task.Delay call
-		// further down using these same two settings), which can legitimately exceed 45s. Computed from
-		// the real config instead of a flat guess, so it stays correct if these settings change -
-		// worst case per origin is maxPerOrigin * (maxWaitNextFleet + a few seconds of SendFleet() HTTP
-		// overhead), times the number of configured origins, with a 3x safety margin and a 15-minute
-		// floor/ceiling as sane bounds if config reading fails or produces something implausible.
-		// Sleep wave (Expeditions.SleepWave): while a speed step (1-10 = 10-100 %) is set, expeditions are sent
-		// with that speed instead of 100 %. 0 = off. Set by TBotMain right before the bot falls asleep.
 		private volatile int _sleepWaveSpeedStep;
 
 		public void SetSleepWaveSpeed(int speedStep) {
 			_sleepWaveSpeedStep = Math.Max(0, Math.Min(10, speedStep));
 		}
 
-		// Sleep wave, Rueckkehr-Ziel (Expeditions.SleepWave.ReturnAt): statt fester Geschwindigkeit wird je Expedition
-		// die Kombination aus Ziel-System und Speed gewaehlt, deren Rueckkehr dem Zielzeitpunkt am naechsten liegt.
 		private volatile string _sleepWaveReturnAt;
 		private volatile string _sleepWaveWakeUp;
 		private bool _sleepWaveTargetWarned;
@@ -304,8 +282,6 @@ namespace Tbot.Workers {
 			_sleepWaveTargetWarned = false;
 		}
 
-		// "WakeUp", "WakeUp+15", "WakeUp-10" (Minuten relativ zum Aufwachen) oder eine feste Uhrzeit "HH:mm".
-		// Gibt den naechsten zukuenftigen Zeitpunkt zurueck, oder null wenn nicht gesetzt / nicht lesbar.
 		private DateTime? ResolveSleepWaveTarget(DateTime now) {
 			string spec = _sleepWaveReturnAt;
 			if (string.IsNullOrWhiteSpace(spec))
@@ -330,10 +306,6 @@ namespace Tbot.Workers {
 			return baseTime.AddMinutes(offsetMinutes);
 		}
 
-		/// <summary>
-		/// Sucht fuer eine Expedition die Kombination aus Ziel-System und Speed, deren Rueckkehr (jetzt + 2 x Flugzeit + 1 h
-		/// Haltezeit, wie in SendFleet gerechnet) dem Zielzeitpunkt am naechsten liegt. null = nicht berechenbar (Fallback auf SpeedPercent).
-		/// </summary>
 		private async Task<(Coordinate destination, decimal speed)?> PlanSleepWaveExpedition(Celestial origin, Ships fleet, int expeditionCount, List<int> usedSystems, LFBonuses lfBonuses) {
 			try {
 				if (_sleepWaveReturnAt == null)
@@ -374,7 +346,6 @@ namespace Tbot.Workers {
 							_tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
 						DateTime ret = now.AddSeconds(2 * prediction.Time + 3600);
 						double diff = Math.Abs((ret - target).TotalSeconds);
-						// bei gleichem Abstand lieber hoeheren Speed (weniger Flugzeit-Risiko, anderes Ziel zuerst)
 						if (diff < bestDiff || (diff == bestDiff && speed > bestSpeed)) {
 							bestDiff = diff; bestDest = dest; bestSpeed = speed; bestReturn = ret;
 						}
@@ -400,11 +371,6 @@ namespace Tbot.Workers {
 			return step > 0 ? step : Speeds.HundredPercent;
 		}
 
-		/// <summary>
-		/// Runs one expedition cycle right now with the given speed step (used by the sleep routine, before the
-		/// bot is marked as sleeping). Takes the worker lock so it never runs in parallel with a regular cycle.
-		/// WaitForAll/WaitForMajority are switched off for this one cycle so every free slot is filled.
-		/// </summary>
 		public async Task<bool> RunSleepWaveAsync(int speedStep, TimeSpan lockTimeout, string returnAt = null, string wakeUp = null) {
 			var sem = GetSemaphore();
 			if (!await sem.WaitAsync(lockTimeout)) {
@@ -452,8 +418,8 @@ namespace Tbot.Workers {
 						originCount = Math.Max(1, ((IEnumerable<object>) _tbotInstance.InstanceSettings.Expeditions.Origin).Count());
 					} catch (Exception) { }
 
-					double perFleetSeconds = maxWaitNextFleet + 5; // +5s generous allowance for the SendFleet() HTTP call itself
-					double estimatedSeconds = maxPerOrigin * originCount * perFleetSeconds * 3; // 3x safety margin
+					double perFleetSeconds = maxWaitNextFleet + 5;
+					double estimatedSeconds = maxPerOrigin * originCount * perFleetSeconds * 3;
 					var computed = TimeSpan.FromSeconds(estimatedSeconds);
 
 					var floor = TimeSpan.FromMinutes(3);
@@ -462,7 +428,7 @@ namespace Tbot.Workers {
 					if (computed > ceiling) return ceiling;
 					return computed;
 				} catch (Exception) {
-					return TimeSpan.FromMinutes(15); // fallback if settings are missing/malformed
+					return TimeSpan.FromMinutes(15);
 				}
 			}
 		}
@@ -482,7 +448,6 @@ namespace Tbot.Workers {
 					return;
 				}
 
-				// This is the only account-wide snapshot phase. No origin is selected here.
 				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 				_tbotInstance.UserData.serverData = await _ogameService.GetServerData();
@@ -562,12 +527,9 @@ namespace Tbot.Workers {
 					return;
 				}
 
-				// LF bonuses are account-wide. They must not be refreshed once per origin.
 				var lfBonuses = await _ogameService.GetLFBonuses();
 				WriteLfSnapshot(lfBonuses);
 				int maxPerOrigin = (int?)_tbotInstance.InstanceSettings.Expeditions.MaxExpeditionsPerOrigin ?? 1;
-				// Bei mehreren Origins werden die Expeditions-Slots reihum verteilt (13 Slots: 2 Origins 7+6, 3 Origins 5+4+4),
-				// sofern kein eigener Wert gesetzt ist. Bei nur einem Origin gilt unveraendert MaxExpeditionsPerOrigin.
 				var defaultMax = new int[origins.Count];
 				for (var i = 0; i < origins.Count; i++) {
 					defaultMax[i] = maxPerOrigin;
@@ -589,8 +551,6 @@ namespace Tbot.Workers {
 				var usedSystems = new List<int>();
 
 			while (remaining > 0) {
-				// Rebuild the plan after every failed origin. This lets an origin with
-				// spare capacity take over instead of losing a slot.
 				var residualCapacities = capacities
 					.Select((capacity, index) => unavailableOrigins[index]
 						? 0
@@ -598,10 +558,6 @@ namespace Tbot.Workers {
 					.ToArray();
 				var plan = ExpeditionOriginPlanner.BuildRoundRobinPlan(residualCapacities, remaining, planningStart);
 				if (plan.Sum() == 0) {
-					// A failed ship refresh is not a permanent property of an origin. Ships
-					// may have returned while this cycle was running. Re-open the origins
-					// once when the first pass cannot satisfy the remaining demand; this is
-					// intentionally bounded so a permanently invalid origin is not polled.
 					if (ExpeditionOriginPlanner.ShouldRetryUnavailableOrigins(
 						remaining, retryableUnavailableOrigins, retriedUnavailableOrigins)) {
 						retriedUnavailableOrigins = true;

@@ -186,7 +186,6 @@ func (a *ActivityJson) UnmarshalJSON(d []byte) error {
 
 func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botPlayerRank int64) (ogame.SystemInfos, error) {
 	var res ogame.SystemInfos
-	// Check for login
 	var check struct {
 		Success bool
 	}
@@ -196,7 +195,6 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 	if !check.Success {
 		return res, errors.New("error in retrieve galaxy infos")
 	}
-	// Real extraction
 	var tmp GalaxyInfosJson
 	if err := json.Unmarshal(pageHTML, &tmp); err != nil {
 		return res, err
@@ -234,7 +232,6 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 			res.ExpeditionDebris.PathfindersNeeded = pos.Planets[0].RequiredShips.Int64()
 			continue
 		}
-		// TODO: manage asteroids and events in P17
 		if pos.Position.Int64() == 17 {
 			continue
 		}
@@ -246,9 +243,7 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 
 		for _, planet := range pos.Planets {
 
-			// Planet
 			if planet.PlanetType.Int64() == ogame.PlanetType.Int64() {
-				// Generic infos
 				planetInfos.ID = planet.PlanetID.Int64()
 				planetInfos.Name = planet.PlanetName
 				planetInfos.Img = planet.Image
@@ -269,7 +264,6 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 				planetInfos.Coordinate.Position = pos.Position.Int64()
 				planetInfos.Coordinate.Type = ogame.PlanetType
 
-				// Player
 				planetInfos.Player.ID = player.PlayerID.Int64()
 				planetInfos.Player.Name = player.PlayerName
 				planetInfos.Player.Rank = player.PositionPlayer.Int64()
@@ -277,7 +271,6 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 				planetInfos.Player.IsBandit = strings.Contains(player.Rank.RankClass, "bandit")
 				planetInfos.Player.IsStarlord = strings.Contains(player.Rank.RankClass, "starlord")
 
-				// Alliance
 				if player.AllianceID.Int64() > 0 {
 					planetInfos.Alliance = new(ogame.AllianceInfos)
 					planetInfos.Alliance.ID = player.AllianceID.Int64()
@@ -288,7 +281,6 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 				}
 
 			} else if planet.PlanetType.Int64() == ogame.MoonType.Int64() {
-				// Moon
 				planetInfos.Moon = new(ogame.MoonInfos)
 
 				planetInfos.Moon.ID = planet.PlanetID.Int64()
@@ -298,7 +290,6 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 				planetInfos.Moon.Activity = planet.Activity.Minutes
 
 			} else if planet.PlanetType.Int64() == ogame.DebrisType.Int64() {
-				// Debris Field
 				planetInfos.Debris.Metal = planet.Resources.Metal
 				planetInfos.Debris.Crystal = planet.Resources.Crystal
 				planetInfos.Debris.Deuterium = planet.Resources.Deuterium

@@ -14,8 +14,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/taskRunner"
 )
 
-// Celestial superset of ogame.Celestial.
-// Add methods that can be called for a planet or moon.
 type Celestial interface {
 	ogame.Celestial
 	ActivateItem(string) error
@@ -43,8 +41,6 @@ type Celestial interface {
 	TearDown(buildingID ogame.ID) error
 }
 
-// Prioritizable list of all actions that needs to communicate with ogame server.
-// These actions can also be prioritized.
 type Prioritizable interface {
 	Abandon(IntoPlanet) error
 	ActivateItem(string, ogame.CelestialID) error
@@ -128,7 +124,6 @@ type Prioritizable interface {
 	TxNamed(name string, clb func(Prioritizable) error) error
 	UseDM(ogame.DMType, ogame.CelestialID) error
 
-	// Planet or Moon functions
 	Build(celestialID ogame.CelestialID, id ogame.ID, nbr int64) error
 	BuildBuilding(celestialID ogame.CelestialID, buildingID ogame.ID) error
 	BuildCancelable(ogame.CelestialID, ogame.ID) error
@@ -161,7 +156,6 @@ type Prioritizable interface {
 	TearDown(celestialID ogame.CelestialID, id ogame.ID) error
 	TechnologyDetails(celestialID ogame.CelestialID, id ogame.ID) (ogame.TechnologyDetails, error)
 
-	// Planet specific functions
 	DestroyRockets(ogame.PlanetID, int64, int64) error
 	GetResourceSettings(ogame.PlanetID, ...Option) (ogame.ResourceSettings, error)
 	GetResourcesProductions(ogame.PlanetID) (ogame.Resources, error)
@@ -169,21 +163,17 @@ type Prioritizable interface {
 	SendIPM(ogame.PlanetID, ogame.Coordinate, int64, ogame.ID) (int64, error)
 	SetResourceSettings(ogame.PlanetID, ogame.ResourceSettings) error
 
-	// Moon specific functions
 	JumpGate(origin, dest ogame.MoonID, ships ogame.ShipsInfos) (bool, int64, error)
 	JumpGateDestinations(origin ogame.MoonID) ([]ogame.MoonID, int64, error)
 	Phalanx(ogame.MoonID, ogame.Coordinate) ([]ogame.PhalanxFleet, error)
 	UnsafePhalanx(ogame.MoonID, ogame.Coordinate) ([]ogame.PhalanxFleet, error)
 }
 
-// Compile time checks to ensure type satisfies Prioritizable interface
 var _ Prioritizable = (*OGame)(nil)
 var _ Prioritizable = (*Prioritize)(nil)
 
-// Compile time checks to ensure type satisfies Wrapper interface
 var _ Wrapper = (*OGame)(nil)
 
-// Wrapper all available functions to control ogame bot
 type Wrapper interface {
 	Prioritizable
 	AddAccount(number int, lang string) (*gameforge.AddAccountResponse, error)

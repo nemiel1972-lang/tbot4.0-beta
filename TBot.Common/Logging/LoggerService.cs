@@ -30,10 +30,6 @@ namespace TBot.Common.Logging {
 		private readonly IHubContext<WebHub, IWebHub> _hub;
 		private readonly IServiceProvider _serviceProvider;
 
-		// strip account-identifying strings (player name / universe name) from every log
-		// message at the single choke point (WriteLog), before it reaches any sink (console, file,
-		// csv, SignalR/WebUI, Telegram). Set via env vars so no settings.json/Credentials wiring is
-		// needed; falls back to no-op if unset.
 		private static readonly string _playerName = Environment.GetEnvironmentVariable("TBOT_LOG_PLAYERNAME") ?? "";
 		private static readonly string _universeName = Environment.GetEnvironmentVariable("TBOT_LOG_UNIVERSENAME") ?? "";
 
@@ -100,11 +96,9 @@ namespace TBot.Common.Logging {
 			var logConfig = new LoggerConfiguration()
 				.Enrich.With(new ThreadIdEnricher())
 				.Enrich.FromLogContext()
-			// Console
 				.WriteTo.TBotColoredConsole(
 					outputTemplate: outTemplate
 				)
-				// Log file
 				.WriteTo.File(
 					path: Path.Combine(_logPath, "TBot.log"),
 					buffered: false,
@@ -113,7 +107,6 @@ namespace TBot.Common.Logging {
 					fileSizeLimitBytes: maxFileSize,
 					retainedFileCountLimit: 10,
 					rollingInterval: RollingInterval.Day)
-				// CSV
 				.WriteTo.File(
 					path: Path.Combine(_logPath, "TBot.csv"),
 					buffered: false,
@@ -126,11 +119,11 @@ namespace TBot.Common.Logging {
 				.WriteTo.SignalRTBotSink<WebHub, IWebHub>(
 					LogEventLevel.Verbose,
 					_serviceProvider,
-					CultureInfo.InvariantCulture, // can be null
-					new string[] { },        // can be null
-					new string[] { },        // can be null
-					new string[] { },        // can be null
-					false) // false is the default value
+					CultureInfo.InvariantCulture,
+					new string[] { },
+					new string[] { },
+					new string[] { },
+					false)
 				.MinimumLevel.Verbose();
 
 			return logConfig;
@@ -142,7 +135,6 @@ namespace TBot.Common.Logging {
 
 				var logConfig = GetDefaultConfiguration();
 
-				// Telegram default values
 				_telegramLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
 				_telegramAdded = false;
 

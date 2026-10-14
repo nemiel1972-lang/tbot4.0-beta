@@ -19,7 +19,6 @@ import (
 	echo "github.com/labstack/echo/v4"
 )
 
-// APIResp ...
 type APIResp struct {
 	Status  string
 	Code    int
@@ -27,17 +26,14 @@ type APIResp struct {
 	Result  any
 }
 
-// SuccessResp ...
 func SuccessResp(data any) APIResp {
 	return APIResp{Status: "ok", Code: 200, Result: data}
 }
 
-// ErrorResp ...
 func ErrorResp(code int, message string) APIResp {
 	return APIResp{Status: "error", Code: code, Message: message}
 }
 
-// HomeHandler ...
 func HomeHandler(c echo.Context) error {
 	version := c.Get("version").(string)
 	commit := c.Get("commit").(string)
@@ -49,43 +45,35 @@ func HomeHandler(c echo.Context) error {
 	})
 }
 
-// TasksHandler return how many tasks are queued in the heap.
 func TasksHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetTasks()))
 }
 
-// GetServerHandler ...
 func GetServerHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetServer()))
 }
 
-// GetServerDataHandler ...
 func GetServerDataHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.cache.serverData))
 }
 
-// SetUserAgentHandler deprecated
 func SetUserAgentHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, ErrorResp(http.StatusBadRequest, "deprecated"))
 }
 
-// ServerURLHandler ...
 func ServerURLHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.ServerURL()))
 }
 
-// GetLanguageHandler ...
 func GetLanguageHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetLanguage()))
 }
 
-// PageContentHandler ...
-// curl 127.0.0.1:1234/bot/page-content -d 'page=overview&cp=123'
 func PageContentHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	if err := c.Request().ParseForm(); err != nil {
@@ -95,7 +83,6 @@ func PageContentHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(pageHTML))
 }
 
-// LoginHandler ...
 func LoginHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	if _, _, err := bot.LoginWithExistingCookies(); err != nil {
@@ -107,51 +94,43 @@ func LoginHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// LogoutHandler ...
 func LogoutHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	bot.Logout()
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetUsernameHandler ...
 func GetUsernameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetUsername()))
 }
 
-// GetUniverseNameHandler ...
 func GetUniverseNameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetUniverseName()))
 }
 
-// GetUniverseSpeedHandler ...
 func GetUniverseSpeedHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.cache.serverData.Speed))
 }
 
-// GetUniverseSpeedFleetHandler ...
 func GetUniverseSpeedFleetHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.cache.serverData.SpeedFleet))
 }
 
-// ServerVersionHandler ...
 func ServerVersionHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.cache.serverData.Version))
 }
 
-// ServerTimeHandler ...
 func ServerTimeHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	serverTime, _ := bot.ServerTime()
 	return c.JSON(http.StatusOK, SuccessResp(serverTime))
 }
 
-// IsUnderAttackHandler ...
 func IsUnderAttackHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	isUnderAttack, err := bot.IsUnderAttack()
@@ -174,62 +153,53 @@ func IsUnderAttackByIDHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(isUnderAttack))
 }
 
-// IsVacationModeHandler ...
 func IsVacationModeHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	isVacationMode := bot.cache.isVacationModeEnabled
 	return c.JSON(http.StatusOK, SuccessResp(isVacationMode))
 }
 
-// GetUserInfosHandler ...
 func GetUserInfosHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	userInfo, _ := bot.GetUserInfos()
 	return c.JSON(http.StatusOK, SuccessResp(userInfo))
 }
 
-// GetCharacterClassHandler ...
 func GetCharacterClassHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.CharacterClass()))
 }
 
-// HasCommanderHandler ...
 func HasCommanderHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	hasCommander := bot.cache.hasCommander
 	return c.JSON(http.StatusOK, SuccessResp(hasCommander))
 }
 
-// HasAdmiralHandler ...
 func HasAdmiralHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	hasAdmiral := bot.cache.hasAdmiral
 	return c.JSON(http.StatusOK, SuccessResp(hasAdmiral))
 }
 
-// HasEngineerHandler ...
 func HasEngineerHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	hasEngineer := bot.cache.hasEngineer
 	return c.JSON(http.StatusOK, SuccessResp(hasEngineer))
 }
 
-// HasGeologistHandler ...
 func HasGeologistHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	hasGeologist := bot.cache.hasGeologist
 	return c.JSON(http.StatusOK, SuccessResp(hasGeologist))
 }
 
-// HasTechnocratHandler ...
 func HasTechnocratHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	hasTechnocrat := bot.cache.hasTechnocrat
 	return c.JSON(http.StatusOK, SuccessResp(hasTechnocrat))
 }
 
-// GetEspionageReportMessagesHandler ...
 func GetEspionageReportMessagesHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	report, err := bot.GetEspionageReportMessages(-1)
@@ -239,7 +209,6 @@ func GetEspionageReportMessagesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(report))
 }
 
-// GetEspionageReportHandler ...
 func GetEspionageReportHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	msgID, err := utils.ParseI64(c.Param("msgid"))
@@ -253,7 +222,6 @@ func GetEspionageReportHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(espionageReport))
 }
 
-// GetEspionageReportForHandler ...
 func GetEspionageReportForHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	galaxy, err := utils.ParseI64(c.Param("galaxy"))
@@ -275,8 +243,6 @@ func GetEspionageReportForHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(planet))
 }
 
-// SendMessageHandler ...
-// curl 127.0.0.1:1234/bot/send-message -d 'playerID=123&message="Sup boi!"'
 func SendMessageHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	playerID, err := utils.ParseI64(c.Request().PostFormValue("playerID"))
@@ -293,21 +259,18 @@ func SendMessageHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetFleetsHandler ...
 func GetFleetsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	fleets, _, _ := bot.GetFleets()
 	return c.JSON(http.StatusOK, SuccessResp(fleets))
 }
 
-// GetSlotsHandler ...
 func GetSlotsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	slots, _ := bot.GetSlots()
 	return c.JSON(http.StatusOK, SuccessResp(slots))
 }
 
-// CancelFleetHandler ...
 func CancelFleetHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	fleetID, err := utils.ParseI64(c.Param("fleetID"))
@@ -320,7 +283,6 @@ func CancelFleetHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetAttacksHandler ...
 func GetAttacksHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	attacks, err := bot.GetAttacks()
@@ -330,7 +292,6 @@ func GetAttacksHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(attacks))
 }
 
-// GalaxyInfosHandler ...
 func GalaxyInfosHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	galaxy, err := utils.ParseI64(c.Param("galaxy"))
@@ -348,14 +309,12 @@ func GalaxyInfosHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetResearchHandler ...
 func GetResearchHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	researches, _ := bot.GetResearch()
 	return c.JSON(http.StatusOK, SuccessResp(researches))
 }
 
-// BuyOfferOfTheDayHandler ...
 func BuyOfferOfTheDayHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	if err := bot.BuyOfferOfTheDay(); err != nil {
@@ -364,14 +323,12 @@ func BuyOfferOfTheDayHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetMoonsHandler ...
 func GetMoonsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	moons, _ := bot.GetMoons()
 	return c.JSON(http.StatusOK, SuccessResp(moons))
 }
 
-// GetMoonHandler ...
 func GetMoonHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	moonID, err := utils.ParseI64(c.Param("moonID"))
@@ -385,7 +342,6 @@ func GetMoonHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(moon))
 }
 
-// GetMoonByCoordHandler ...
 func GetMoonByCoordHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	galaxy, err := utils.ParseI64(c.Param("galaxy"))
@@ -407,14 +363,12 @@ func GetMoonByCoordHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(planet))
 }
 
-// GetPlanetsHandler ...
 func GetPlanetsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planets, _ := bot.GetPlanets()
 	return c.JSON(http.StatusOK, SuccessResp(planets))
 }
 
-// CelestialAbandonHandler ...
 func CelestialAbandonHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	celestialID, err := utils.ParseI64(c.Param("celestialID"))
@@ -440,7 +394,6 @@ func CelestialAbandonHandler(c echo.Context) error {
 
 }
 
-// GetCelestialItemsHandler ...
 func GetCelestialItemsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	celestialID, err := utils.ParseI64(c.Param("celestialID"))
@@ -454,7 +407,6 @@ func GetCelestialItemsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(items))
 }
 
-// ActivateCelestialItemHandler ...
 func ActivateCelestialItemHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	celestialID, err := utils.ParseI64(c.Param("celestialID"))
@@ -468,7 +420,6 @@ func ActivateCelestialItemHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetPlanetHandler ...
 func GetPlanetHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -482,7 +433,6 @@ func GetPlanetHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(planet))
 }
 
-// GetPlanetByCoordHandler ...
 func GetPlanetByCoordHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	galaxy, err := utils.ParseI64(c.Param("galaxy"))
@@ -504,7 +454,6 @@ func GetPlanetByCoordHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(planet))
 }
 
-// GetResourcesDetailsHandler ...
 func GetResourcesDetailsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -518,7 +467,6 @@ func GetResourcesDetailsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(resources))
 }
 
-// GetResourceSettingsHandler ...
 func GetResourceSettingsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -532,8 +480,6 @@ func GetResourceSettingsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// SetResourceSettingsHandler ...
-// curl 127.0.0.1:1234/bot/planets/123/resource-settings -d 'metalMine=100&crystalMine=100&deuteriumSynthesizer=100&solarPlant=100&fusionReactor=100&solarSatellite=100'
 func SetResourceSettingsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -586,7 +532,6 @@ func SetResourceSettingsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetLfBuildingsHandler ...
 func GetLfBuildingsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -600,7 +545,6 @@ func GetLfBuildingsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetLfResearchHandler ...
 func GetLfResearchHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -614,7 +558,6 @@ func GetLfResearchHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetResourcesBuildingsHandler ...
 func GetResourcesBuildingsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -628,7 +571,6 @@ func GetResourcesBuildingsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetDefenseHandler ...
 func GetDefenseHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -642,7 +584,6 @@ func GetDefenseHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetShipsHandler ...
 func GetShipsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -656,7 +597,6 @@ func GetShipsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetFacilitiesHandler ...
 func GetFacilitiesHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -670,7 +610,6 @@ func GetFacilitiesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// BuildHandler ...
 func BuildHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -691,7 +630,6 @@ func BuildHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// BuildCancelableHandler ...
 func BuildCancelableHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -708,7 +646,6 @@ func BuildCancelableHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// BuildProductionHandler ...
 func BuildProductionHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -729,7 +666,6 @@ func BuildProductionHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// BuildBuildingHandler ...
 func BuildBuildingHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -746,7 +682,6 @@ func BuildBuildingHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// BuildTechnologyHandler ...
 func BuildTechnologyHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -763,7 +698,6 @@ func BuildTechnologyHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// BuildDefenseHandler ...
 func BuildDefenseHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -784,7 +718,6 @@ func BuildDefenseHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// BuildShipsHandler ...
 func BuildShipsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -805,7 +738,6 @@ func BuildShipsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetProductionHandler ...
 func GetProductionHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -819,7 +751,6 @@ func GetProductionHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// ConstructionsBeingBuiltHandler ...
 func ConstructionsBeingBuiltHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -850,7 +781,6 @@ func ConstructionsBeingBuiltHandler(c echo.Context) error {
 	))
 }
 
-// CancelBuildingHandler ...
 func CancelBuildingHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -863,7 +793,6 @@ func CancelBuildingHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// CancelResearchHandler ...
 func CancelResearchHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -876,7 +805,6 @@ func CancelResearchHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetResourcesHandler ...
 func GetResourcesHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -890,7 +818,6 @@ func GetResourcesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
-// GetRequirementsHandler ...
 func GetRequirementsHandler(c echo.Context) error {
 	ogameID, err := utils.ParseI64(c.Param("ogameID"))
 	if err != nil {
@@ -904,7 +831,6 @@ func GetRequirementsHandler(c echo.Context) error {
 	return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ogameID"))
 }
 
-// GetPriceHandler ...
 func GetPriceHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	ogameID, err := utils.ParseI64(c.Param("ogameID"))
@@ -924,8 +850,6 @@ func GetPriceHandler(c echo.Context) error {
 	return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ogameID"))
 }
 
-// SendFleetHandler ...
-// curl 127.0.0.1:1234/bot/planets/123/send-fleet -d 'ships=203,1&ships=204,10&speed=10&galaxy=1&system=1&type=1&position=1&mission=3&metal=1&crystal=2&deuterium=3'
 func SendFleetHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -1049,10 +973,7 @@ func SendFleetHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(fleet))
 }
 
-// CheckFleetHandler ...
-// curl 127.0.0.1:1234/bot/planets/123/check-fleet -d 'ships=203,1&ships=204,10&speed=10&galaxy=1&system=1&type=1&position=1&mission=3&metal=1&crystal=2&deuterium=3'
 func CheckFleetHandler(c echo.Context) error {
-	// Content-Type: application/x-www-form-urlencoded
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
 	if err != nil {
@@ -1191,8 +1112,6 @@ func CheckFleetHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(result))
 }
 
-// SendDiscoveryHandler ...
-// curl 127.0.0.1:1234/bot/planets/123/send-discovery -d 'galaxy=1&system=1&type=1&position=1'
 func SendDiscoveryHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -1234,7 +1153,6 @@ func SendDiscoveryHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(true))
 }
 
-// GetAlliancePageContentHandler ...
 func GetAlliancePageContentHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	allianceID := c.QueryParam("allianceId")
@@ -1257,7 +1175,6 @@ func replaceHostname(bot *OGame, html []byte) []byte {
 	return html
 }
 
-// GetStaticHandler ...
 func GetStaticHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 
@@ -1277,10 +1194,9 @@ func GetStaticHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 
-	// Copy the original HTTP headers to our client
-	for k, vv := range resp.Header { // duplicate headers are acceptable in HTTP spec, so add all of them individually: https://stackoverflow.com/questions/4371328/are-duplicate-http-response-headers-acceptable
+	for k, vv := range resp.Header {
 		k = http.CanonicalHeaderKey(k)
-		if k != "Content-Length" && k != "Content-Encoding" { // https://github.com/alaingilbert/ogame/pull/80#issuecomment-674559853
+		if k != "Content-Length" && k != "Content-Encoding" {
 			for _, v := range vv {
 				c.Response().Header().Add(k, v)
 			}
@@ -1304,7 +1220,6 @@ func GetStaticHandler(c echo.Context) error {
 	return c.Blob(http.StatusOK, contentType, body)
 }
 
-// GetFromGameHandler ...
 func GetFromGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	vals := url.Values{"page": {"ingame"}, "component": {"overview"}}
@@ -1317,7 +1232,6 @@ func GetFromGameHandler(c echo.Context) error {
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
-// PostToGameHandler ...
 func PostToGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	vals := url.Values{"page": {"ingame"}, "component": {"overview"}}
@@ -1331,10 +1245,9 @@ func PostToGameHandler(c echo.Context) error {
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
-// GetStaticHEADHandler ...
 func GetStaticHEADHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
-	newURL := "/api/" + strings.Join(c.ParamValues(), "") // + "?" + c.QueryString()
+	newURL := "/api/" + strings.Join(c.ParamValues(), "")
 	if len(c.QueryString()) > 0 {
 		newURL = newURL + "?" + c.QueryString()
 	}
@@ -1345,8 +1258,7 @@ func GetStaticHEADHandler(c echo.Context) error {
 	if len(headers) < 1 {
 		return c.NoContent(http.StatusFailedDependency)
 	}
-	// Copy the original HTTP HEAD headers to our client
-	for k, vv := range headers { // duplicate headers are acceptable in HTTP spec, so add all of them individually: https://stackoverflow.com/questions/4371328/are-duplicate-http-response-headers-acceptable
+	for k, vv := range headers {
 		k = http.CanonicalHeaderKey(k)
 		for _, v := range vv {
 			c.Response().Header().Add(k, v)
@@ -1355,7 +1267,6 @@ func GetStaticHEADHandler(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-// GetEmpireHandler ...
 func GetEmpireHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	nbr, err := utils.ParseI64(c.Param("typeID"))
@@ -1376,7 +1287,6 @@ func GetEmpireHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(getEmpire))
 }
 
-// DeleteMessageHandler ...
 func DeleteMessageHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	messageID, err := utils.ParseI64(c.Param("messageID"))
@@ -1389,16 +1299,14 @@ func DeleteMessageHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// DeleteEspionageMessagesHandler ...
 func DeleteEspionageMessagesHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
-	if err := bot.DeleteAllMessagesFromTab(20); err != nil { // 20 = Espionage Reports
+	if err := bot.DeleteAllMessagesFromTab(20); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "Unable to delete Espionage Reports"))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// DeleteMessagesFromTabHandler ...
 func DeleteMessagesFromTabHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	tabIndex, err := utils.ParseI64(c.Param("tabIndex"))
@@ -1406,13 +1314,6 @@ func DeleteMessagesFromTabHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "must provide tabIndex"))
 	}
 	if tabIndex < 20 || tabIndex > 24 {
-		/*
-			tabid: 20 => Espionage
-			tabid: 21 => Combat Reports
-			tabid: 22 => Expeditions
-			tabid: 23 => Unions/Transport
-			tabid: 24 => Other
-		*/
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid tabIndex provided"))
 	}
 	if err := bot.DeleteAllMessagesFromTab(ogame.MessagesTabID(tabIndex)); err != nil {
@@ -1421,7 +1322,6 @@ func DeleteMessagesFromTabHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// SendIPMHandler ...
 func SendIPMHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	ipmAmount, err := utils.ParseI64(c.Param("ipmAmount"))
@@ -1449,7 +1349,7 @@ func SendIPMHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
 	planetType := ogame.CelestialType(planetTypeInt)
-	if planetType != ogame.PlanetType && planetType != ogame.MoonType { // only accept planet/moon types
+	if planetType != ogame.PlanetType && planetType != ogame.MoonType {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid type"))
 	}
 	priority := utils.DoParseI64(c.Request().PostFormValue("priority"))
@@ -1461,7 +1361,6 @@ func SendIPMHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(duration))
 }
 
-// TeardownHandler ...
 func TeardownHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -1478,7 +1377,6 @@ func TeardownHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// GetAuctionHandler ...
 func GetAuctionHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	auction, err := bot.GetAuction()
@@ -1488,11 +1386,10 @@ func GetAuctionHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(auction))
 }
 
-// DoAuctionHandler (`celestialID=metal:crystal:deuterium` eg: `123456=123:456:789`)
 func DoAuctionHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	bid := make(map[ogame.CelestialID]ogame.Resources)
-	if err := c.Request().ParseForm(); err != nil { // Required for PostForm, not for PostFormValue
+	if err := c.Request().ParseForm(); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
 	}
 	for k, v := range c.Request().PostForm {
@@ -1525,7 +1422,6 @@ func DoAuctionHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// PhalanxHandler ...
 func PhalanxHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	moonID, err := utils.ParseI64(c.Param("moonID"))
@@ -1552,7 +1448,6 @@ func PhalanxHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(fleets))
 }
 
-// JumpGateHandler ...
 func JumpGateHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	if err := c.Request().ParseForm(); err != nil {
@@ -1594,7 +1489,6 @@ func JumpGateHandler(c echo.Context) error {
 	}))
 }
 
-// TechsHandler ...
 func TechsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	celestialID, err := utils.ParseI64(c.Param("celestialID"))
@@ -1616,7 +1510,6 @@ func TechsHandler(c echo.Context) error {
 	}))
 }
 
-// GetCaptchaHandler ...
 func GetCaptchaHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	gf, _ := gameforge.New(&gameforge.Config{Ctx: bot.ctx, Device: bot.device, Platform: PLATFORM, Lobby: bot.lobby})
@@ -1649,7 +1542,6 @@ func GetCaptchaHandler(c echo.Context) error {
 	return c.HTML(http.StatusOK, "no captcha found")
 }
 
-// GetCaptchaSolverHandler ...
 func GetCaptchaSolverHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	challengeID := c.Request().PostFormValue("challenge_id")
@@ -1667,14 +1559,12 @@ func GetCaptchaSolverHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
-// CaptchaChallenge ...
 type CaptchaChallenge struct {
 	ID       string
 	Question string
 	Icons    string
 }
 
-// GetCaptchaChallengeHandler ...
 func GetCaptchaChallengeHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	gf, _ := gameforge.New(&gameforge.Config{Ctx: bot.ctx, Device: bot.device, Platform: PLATFORM, Lobby: bot.lobby})
@@ -1702,7 +1592,6 @@ func GetCaptchaChallengeHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(CaptchaChallenge{}))
 }
 
-// GetPublicIPHandler ...
 func GetPublicIPHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	ip, err := bot.GetPublicIP()
@@ -1719,13 +1608,6 @@ func removeCookiesBanner(pageHTML []byte) []byte {
 	return pageHTML
 }
 
-// SimulateBattleHandler ...
-// local combat simulator, no bot/session needed, no quota. Wired to pkg/simulator's
-// exported Simulate() function. Reconstructed 2026-09 after the original handler source was lost
-// during a server migration - logic re-derived from the still-running production binary's behaviour
-// (bash history curl examples) and the surviving simulator.go/C# model files.
-// curl -X POST 127.0.0.1:8080/bot/simulate-battle -H 'Content-Type: application/json' \
-//   -d '{"attacker":{"weapon":17,"shield":17,"armour":17,"bomber":20},"defender":{"rocketLauncher":50},"simulations":100}'
 func SimulateBattleHandler(c echo.Context) error {
 	var reqBody struct {
 		Attacker      simulator.Attacker `json:"attacker"`

@@ -61,7 +61,6 @@ namespace TBot.WebUI.Controllers {
 						}
 					}
 				} catch {
-					// Keep the single-instance view available if settings are temporarily unreadable.
 				}
 			}
 

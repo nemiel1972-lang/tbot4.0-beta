@@ -1,28 +1,23 @@
 package ogame
 
-// Base struct for all ogame objects
 type Base struct {
 	ID           ID
 	Name         string
 	Requirements map[ID]int64
 }
 
-// GetID returns the ogame id of the object
 func (b Base) GetID() ID {
 	return b.ID
 }
 
-// GetName returns the printable name of the object
 func (b Base) GetName() string {
 	return b.Name
 }
 
-// GetRequirements returns the requirements to have this object available
 func (b Base) GetRequirements() map[ID]int64 {
 	return b.Requirements
 }
 
-// IsAvailable returns either or not the object is available to us
 func (b Base) IsAvailable(t CelestialType, resourcesBuildings IResourcesBuildings, lfBuildings ILfBuildings,
 	lfResearches ILfResearches, facilities IFacilities, researches IResearches, energy int64,
 	characterClass CharacterClass) bool {

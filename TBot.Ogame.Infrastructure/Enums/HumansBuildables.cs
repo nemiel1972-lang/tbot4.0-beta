@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace TBot.Ogame.Infrastructure.Enums {
-	//Used only with Helpers.GetLessExpensiveLFBuilding()
 	public enum HumansBuildables {
 		ResearchCentre = 11103,
 		HighEnergySmelting = 11106,

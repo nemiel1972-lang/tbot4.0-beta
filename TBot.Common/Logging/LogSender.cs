@@ -11,7 +11,6 @@ namespace TBot.Common.Logging {
 		OGameD,
 		Defender,
 		Brain,
-		//Brain Features
 		AutoCargo,
 		AutoDefence,
 		AutoMine,
@@ -21,7 +20,6 @@ namespace TBot.Common.Logging {
 		LifeformsAutoMine,
 		LifeformsAutoResearch,
 		AutoFleetJumpGate,
-		//End Brain Features
 		Expeditions,
 		Harvest,
 		FleetScheduler,

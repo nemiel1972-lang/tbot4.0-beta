@@ -5,7 +5,6 @@ import (
 	"strconv"
 )
 
-// Auction ...
 type Auction struct {
 	Ref                 string
 	HasFinished         bool
@@ -30,7 +29,6 @@ type Auction struct {
 	Resources map[string]any
 }
 
-// String ...
 func (a Auction) String() string {
 	return "" +
 		"           Ref: " + a.Ref + "\n" +

@@ -27,7 +27,6 @@ func newSolarSatellite() *solarSatellite {
 	return s
 }
 
-// Production gets the energy production of nbr solar satellite
 func (s *solarSatellite) Production(temp Temperature, nbr int64, isCollector bool) int64 {
 	energy := int64(float64(temp.Mean()+160)/6) * nbr
 	if isCollector {
@@ -36,12 +35,10 @@ func (s *solarSatellite) Production(temp Temperature, nbr int64, isCollector boo
 	return energy
 }
 
-// GetLevel only useful so the solar satellite can implement Building interface
 func (s *solarSatellite) GetLevel(IResourcesBuildings, IFacilities, IResearches) int64 {
 	return 0
 }
 
-// DeconstructionPrice only useful so the solar satellite can implement Building interface
 func (s *solarSatellite) DeconstructionPrice(level int64, techs IResearches) Resources {
 	return Resources{}
 }

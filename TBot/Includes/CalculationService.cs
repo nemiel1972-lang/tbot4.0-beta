@@ -497,41 +497,6 @@ namespace Tbot.Includes {
 
 		public List<decimal> GetValidSpeedsForClass(CharacterClass playerClass) {
 			var speeds = new List<decimal>();
-			/* TODO: fix general speeds
-			if (playerClass == CharacterClass.General*) {
-				speeds.Add(Speeds.HundredPercent);
-				speeds.Add(Speeds.NinetyfivePercent);
-				speeds.Add(Speeds.NinetyPercent);
-				speeds.Add(Speeds.EightyfivePercent);
-				speeds.Add(Speeds.EightyPercent);
-				speeds.Add(Speeds.SeventyfivePercent);
-				speeds.Add(Speeds.SeventyPercent);
-				speeds.Add(Speeds.SixtyfivePercent);
-				speeds.Add(Speeds.SixtyPercent);
-				speeds.Add(Speeds.FiftyfivePercent);
-				speeds.Add(Speeds.FiftyPercent);
-				speeds.Add(Speeds.FourtyfivePercent);
-				speeds.Add(Speeds.FourtyPercent);
-				speeds.Add(Speeds.ThirtyfivePercent);
-				speeds.Add(Speeds.ThirtyPercent);
-				speeds.Add(Speeds.TwentyfivePercent);
-				speeds.Add(Speeds.TwentyPercent);
-				speeds.Add(Speeds.FifteenPercent);
-				speeds.Add(Speeds.TenPercent);
-				speeds.Add(Speeds.FivePercent);
-			} else {
-				speeds.Add(Speeds.HundredPercent);
-				speeds.Add(Speeds.NinetyPercent);
-				speeds.Add(Speeds.EightyPercent);
-				speeds.Add(Speeds.SeventyPercent);
-				speeds.Add(Speeds.SixtyPercent);
-				speeds.Add(Speeds.FiftyPercent);
-				speeds.Add(Speeds.FourtyPercent);
-				speeds.Add(Speeds.ThirtyPercent);
-				speeds.Add(Speeds.TwentyPercent);
-				speeds.Add(Speeds.TenPercent);
-			}
-			*/
 			speeds.Add(Speeds.HundredPercent);
 			speeds.Add(Speeds.NinetyPercent);
 			speeds.Add(Speeds.EightyPercent);
@@ -560,22 +525,12 @@ namespace Tbot.Includes {
 				.First()
 				.Key;
 			} else if (speedPredictions.Any(p => p.Value.Time < maxFlightTime)) {
-				// MinLootFuelRatio ist bei KEINER Geschwindigkeit erreichbar (Fuel >= maxFuel ueberall),
-				// aber das Zeitlimit waere bei mind. einer Geschwindigkeit eingehalten. Bisher wurde in
-				// diesem Fall pauschal Speeds.HundredPercent (teuerste Option) zurueckgegeben - das
-				// verschaerft die anschliessende Wirtschaftlichkeitspruefung (Fuel+Verluste >= Beute)
-				// beim Aufrufer unnoetig. Stattdessen jetzt die LANGSAMSTE (= guenstigste) Option unter
-				// den zeitlich zulaessigen waehlen - maximiert die Chance, dass der Angriff trotz nicht
-				// erreichbarem Ratio noch wirtschaftlich ist, statt von vornherein die teuerste Variante
-				// zu erzwingen.
 				return speedPredictions
 				.Where(p => p.Value.Time < maxFlightTime)
 				.OrderBy(p => p.Key)
 				.First()
 				.Key;
 			} else {
-				// Nicht mal das Zeitlimit ist bei irgendeiner Geschwindigkeit einzuhalten - dann bleibt
-				// nur die schnellste Option, um wenigstens das (haertere) Zeitlimit zu erfuellen.
 				return Speeds.HundredPercent;
 			}
 		}
@@ -679,7 +634,6 @@ namespace Tbot.Includes {
 					long availableVal = (long) prop.GetValue(fleet);
 					long idealVal = (long) prop.GetValue(ideal);
 					if (availableVal < idealVal * expeditionsNumber) {
-						//long realVal = (long) Math.Round(((float) availableVal / (float) expeditionsNumber), MidpointRounding.AwayFromZero);
 						long realVal = (long) Math.Floor(((float) availableVal / (float) expeditionsNumber));
 						prop.SetValue(ideal, realVal);
 					}
@@ -952,22 +906,16 @@ namespace Tbot.Includes {
 				case Buildables.MetalMine:
 					output.Metal = (long) Math.Round(60 * Math.Pow(1.5, (level - 1)), 0, MidpointRounding.ToPositiveInfinity);
 					output.Crystal = (long) Math.Round(15 * Math.Pow(1.5, (level - 1)), 0, MidpointRounding.ToPositiveInfinity);
-					// MidpointRounding set to "ToNegativeInfinity" because in all cases that i try (metal 51 crystal 44) the result is always the lower integer
-					// Formula: 10 * Mine Level * (1.1 ^ Mine Level)
 					output.Energy = (long) Math.Round((10 * level * (Math.Pow(1.1, level))), 0, MidpointRounding.ToPositiveInfinity);
 					break;
 				case Buildables.CrystalMine:
 					output.Metal = (long) Math.Round(48 * Math.Pow(1.6, (level - 1)), 0, MidpointRounding.ToPositiveInfinity);
 					output.Crystal = (long) Math.Round(24 * Math.Pow(1.6, (level - 1)), 0, MidpointRounding.ToPositiveInfinity);
-					// MidpointRounding set to "ToNegativeInfinity" because in all cases that i try (metal 51 crystal 44) the result is always the lower integer
-					// Formula: 10 * Mine Level * (1.1 ^ Mine Level)
 					output.Energy = (long) Math.Round((10 * level * (Math.Pow(1.1, level))), 0, MidpointRounding.ToPositiveInfinity);
 					break;
 				case Buildables.DeuteriumSynthesizer:
 					output.Metal = (long) Math.Round(225 * Math.Pow(1.5, (level - 1)), 0, MidpointRounding.ToPositiveInfinity);
 					output.Crystal = (long) Math.Round(75 * Math.Pow(1.5, (level - 1)), 0, MidpointRounding.ToPositiveInfinity);
-					// MidpointRounding set to "ToNegativeInfinity" because in all cases that i try (metal 51 crystal 44) the result is always the lower integer
-					// Formula: 20 * Mine Level * (1.1 ^ Mine Level)
 					output.Energy = (long) Math.Round((20 * level * (Math.Pow(1.1, level))), 0, MidpointRounding.ToPositiveInfinity);
 					break;
 				case Buildables.SolarPlant:
@@ -3272,9 +3220,6 @@ namespace Tbot.Includes {
 				researches = new() { PlasmaTechnology = 0 };
 			if (planet.LFBonuses == null || planet.LFBonuses.Production == null)
 				planet.LFBonuses = new() { Production = new() { Metal = 0, Crystal = 0, Deuterium = 0 } };
-			// planet.Buildings can be null (e.g. celestial not yet fully refreshed at this
-			// point in the call chain), which crashed every access below. Default it to an empty
-			// Buildings instance instead.
 			if (planet.Buildings == null)
 				planet.Buildings = new();
 
@@ -3501,7 +3446,6 @@ namespace Tbot.Includes {
 
 		private Dictionary<LFBuildables, int> GetLFBuildingRequirements(LFBuildables buildable) {
 			var rez = new Dictionary<LFBuildables, int>();
-			//Humans
 			if (buildable == LFBuildables.ResearchCentre) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.ResidentialSector, 21 }, { LFBuildables.BiosphereFarm, 22 } };
 			} else if (buildable == LFBuildables.AcademyOfSciences) {
@@ -3523,7 +3467,6 @@ namespace Tbot.Includes {
 			} else if (buildable == LFBuildables.PlanetaryShield) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.ResidentialSector, 41 }, { LFBuildables.BiosphereFarm, 22 }, { LFBuildables.ResearchCentre, 5 }, { LFBuildables.AcademyOfSciences, 1 }, { LFBuildables.FusionPoweredProduction, 5 }, { LFBuildables.Skyscraper, 6 }, { LFBuildables.HighEnergySmelting, 3 }, { LFBuildables.Metropolis, 5 }, { LFBuildables.FoodSilo, 4 }, { LFBuildables.NeuroCalibrationCentre, 5 } };
 			}
-			//Rocktal
 			else if (buildable == LFBuildables.RuneTechnologium) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.MeditationEnclave, 21 }, { LFBuildables.CrystalFarm, 22 } };
 			} else if (buildable == LFBuildables.RuneForge) {
@@ -3545,7 +3488,6 @@ namespace Tbot.Includes {
 			} else if (buildable == LFBuildables.AdvancedRecyclingPlant) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.MeditationEnclave, 41 }, { LFBuildables.CrystalFarm, 22 }, { LFBuildables.RuneForge, 1 }, { LFBuildables.Megalith, 5 }, { LFBuildables.CrystalRefinery, 6 }, { LFBuildables.Oriktorium, 5 }, { LFBuildables.RuneTechnologium, 5 }, { LFBuildables.MagmaForge, 3 }, { LFBuildables.DisruptionChamber, 4 }, { LFBuildables.MineralResearchCentre, 5 } };
 			}
-			//Mechas
 			else if (buildable == LFBuildables.RoboticsResearchCentre) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.AssemblyLine, 17 }, { LFBuildables.FusionCellFactory, 20 } };
 			} else if (buildable == LFBuildables.UpdateNetwork) {
@@ -3567,7 +3509,6 @@ namespace Tbot.Includes {
 			} else if (buildable == LFBuildables.NanoRepairBots) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.AssemblyLine, 41 }, { LFBuildables.FusionCellFactory, 20 }, { LFBuildables.MicrochipAssemblyLine, 5 }, { LFBuildables.RoboticsResearchCentre, 5 }, { LFBuildables.HighPerformanceTransformer, 4 }, { LFBuildables.ProductionAssemblyHall, 6 }, { LFBuildables.QuantumComputerCentre, 5 }, { LFBuildables.ChipMassProduction, 5 } };
 			}
-			//Kaelesh
 			else if (buildable == LFBuildables.VortexChamber) {
 				rez = new Dictionary<LFBuildables, int> { { LFBuildables.Sanctuary, 20 }, { LFBuildables.AntimatterCondenser, 21 } };
 			} else if (buildable == LFBuildables.HallsOfRealisation) {
@@ -3598,7 +3539,7 @@ namespace Tbot.Includes {
 			var reqlist = GetLFBuildingRequirements(buildable);
 
 			if (reqlist.Count == 0)
-				return true; //nextBuilding do not need requirement (base building)
+				return true;
 
 			foreach (var item in reqlist) {
 				var lv = celestial.GetLevel(item.Key);
@@ -4087,9 +4028,6 @@ namespace Tbot.Includes {
 		}
 
 		public LFTechno GetNextLFTechToBuild(Celestial celestial, LFTechs MaxReasearchLevel) {
-			//TODO
-			//As planets can have any lifeform techs, its complicated to find which techs are existing on a planet if the techs are not at least level 1
-			//Therefore, for the moment, up only techs that are minimum level 1, its a way to also allows player to chose which research to up
 			foreach (LFTechno nextLFTech in Enum.GetValues<LFTechno>()) {
 				int? level = celestial.LFTechs.GetLevel(nextLFTech);
 				if (level is null) {
@@ -4097,7 +4035,6 @@ namespace Tbot.Includes {
 				}
 
 				if (level >= 2 && GetNextLevel(celestial, nextLFTech) <= MaxReasearchLevel.GetLevel(nextLFTech)) {
-					//Console.WriteLine($"-----------------------------> {nextLFTech}: {GetNextLevel(celestial, nextLFTech)} / {MaxReasearchLevel.GetLevel(nextLFTech)}");
 					return nextLFTech;
 				}
 			}
@@ -4117,7 +4054,6 @@ namespace Tbot.Includes {
 				}
 
 				if (level >= 2 && GetNextLevel(celestial, next) <= MaxReasearchLevel.GetLevel(next)) {
-					//Console.WriteLine($"-----------------------------> {next}: {GetNextLevel(celestial, next)} / {MaxReasearchLevel.GetLevel(next)}");
 					var nextLFtechlvl = GetNextLevel(celestial, next);
 					Resources newcost = CalcPrice(next, nextLFtechlvl, costReduction);
 					if (newcost.ConvertedDeuterium < currentcost.ConvertedDeuterium) {
@@ -4289,12 +4225,6 @@ namespace Tbot.Includes {
 			var nextLabLevel = GetNextLevel(celestial, Buildables.ResearchLab);
 			var nextLabPrice = CalcPrice(Buildables.ResearchLab, nextLabLevel);
 
-			/*
-			var nextResearch = GetNextResearchToBuild(celestial, researches);
-			var nextResearchLevel = GetNextLevel(researches, nextResearch);
-			var nextResearchTime = CalcProductionTime(nextResearch, nextResearchLevel, (int) Math.Round(speedFactor * researchDurationDivisor), celestial.Facilities);
-			var nextLabTime = CalcProductionTime(Buildables.ResearchLab, nextLabLevel, speedFactor, celestial.Facilities);
-			*/
 
 			if (
 				nextLabLevel <= maxLevel &&
@@ -4462,10 +4392,6 @@ namespace Tbot.Includes {
 			return ShouldResearchEnergyTech(planets, researches.EnergyTechnology, maxEnergyTech, playerClass, hasEngineer, hasStaff);
 		}
 
-		// generische Prioritize*-Schalter f r alle bisher nicht priorisierbaren Forschungen
-		// (Energie/Plasma/Astrophysik/IGRN werden weiterhin extern in AutoResearchWorker.cs per DOIR-
-		// Vergleich priorisiert, unver ndert). Alle neuen Parameter defaulten auf false = kein Verhaltensunterschied,
-		// solange sie nicht explizit in instance_settings.json gesetzt werden.
 		public Buildables GetNextResearchToBuild(Planet celestial, Researches researches, bool prioritizeRobotsAndNanitesOnNewPlanets = false, Slots slots = null, int maxEnergyTechnology = 20, int maxLaserTechnology = 12, int maxIonTechnology = 5, int maxHyperspaceTechnology = 20, int maxPlasmaTechnology = 20, int maxCombustionDrive = 19, int maxImpulseDrive = 17, int maxHyperspaceDrive = 15, int maxEspionageTechnology = 8, int maxComputerTechnology = 20, int maxAstrophysics = 23, int maxIntergalacticResearchNetwork = 12, int maxWeaponsTechnology = 25, int maxShieldingTechnology = 25, int maxArmourTechnology = 25, bool optimizeForStart = true, bool ensureExpoSlots = true, bool ForceResearchWhateverTheLabLevel = false, CharacterClass playerClass = CharacterClass.NoClass, bool hasGeologist = false, bool hasAdmiral = false,
 			bool prioritizeComputerTechnology = false, bool prioritizeLaserTechnology = false, bool prioritizeIonTechnology = false, bool prioritizeHyperspaceTechnology = false, bool prioritizeCombustionDrive = false, bool prioritizeImpulseDrive = false, bool prioritizeHyperspaceDrive = false, bool prioritizeEspionageTechnology = false, bool prioritizeWeaponsTechnology = false, bool prioritizeShieldingTechnology = false, bool prioritizeArmourTechnology = false, bool prioritizeGravitonTechnology = false) {
 			if (ShouldBuildResearchLab(celestial, 12, researches) && !ForceResearchWhateverTheLabLevel) {
@@ -4650,10 +4576,6 @@ namespace Tbot.Includes {
 			if (dic.Count == 0)
 				return Buildables.Null;
 
-			// falls eine der neuen Prioritize*-Forschungen f llig UND deren Schalter aktiv ist,
-			// wird sie unabh ngig vom Deuterium-Preis bevorzugt statt der g nstigsten Forschung insgesamt.
-			// Feste Reihenfolge bei mehreren aktiven Schaltern gleichzeitig: Computertechnik zuerst
-			// (Flottenslots sind der kritischste Engpass), danach Antriebe, danach Kampf-/Sonstige-Techs.
 			List<(Buildables research, bool prioritize)> priorityOrder = new() {
 				(Buildables.ComputerTechnology, prioritizeComputerTechnology),
 				(Buildables.LaserTechnology, prioritizeLaserTechnology),
@@ -4895,8 +4817,6 @@ namespace Tbot.Includes {
 				.Count();
 		}
 
-		// Der Start-Planet des Accounts hat die kleinste ID (OGame vergibt IDs in Kolonisierungs-Reihenfolge).
-		// Einzige Quelle fuer den Heimatplaneten-Schutz in ColonizeWorker und AutoMineCelestialWorker (Upstream beta9, edb0f27).
 		public int GetHomePlanetId(List<Celestial> celestials) {
 			return celestials
 				.Where(c => c is Planet)
@@ -4914,11 +4834,6 @@ namespace Tbot.Includes {
 					Celestials.Moon
 				)
 			)) ?? new() { ID = 0 };
-				/*.Where(c => c.Coordinate.Galaxy == (int) celestial.Coordinate.Galaxy)
-				.Where(c => c.Coordinate.System == (int) celestial.Coordinate.System)
-				.Where(c => c.Coordinate.Position == (int) celestial.Coordinate.Position)
-				.Where(c => c.Coordinate.Type == Celestials.Moon)
-				.SingleOrDefault() ?? new() { ID = 0 };*/
 
 			return moon.ID == 0 ? false: true;
 		}
@@ -4990,8 +4905,6 @@ namespace Tbot.Includes {
 		}
 
 		public List<Dictionary<Celestial, Resources>> CalcMultipleOrigin(Celestial celestialToBuild, List<Celestial> allCelestials, Resources missingResources, TransportSettings transportSettings, List<Fleet> fleets, UserData userData, Func<Celestial, Ships> quellSchiffe = null, int maxShipments = int.MaxValue) {
-			// quellSchiffe liefert pro Celestial die nutzbaren Transporter (nach Expeditions-Reserve,
-			// ggf. KT+GT gemischt). Ohne Callback gilt wie bisher nur der konfigurierte CargoType.
 			Ships SchiffeVon(Celestial c) {
 				if (quellSchiffe != null) {
 					var gewaehlt = quellSchiffe(c);
@@ -5087,9 +5000,6 @@ namespace Tbot.Includes {
 				new[] { new ResourceDemand(destination.ID, roundRes ? missingResources.Round() : missingResources) },
 				shipmentSources,
 				minimumShipmentResources: transportSettings.MultipleOrigin.MinimumResourcesToSend);
-			// braucht der Plan mehr Sendungen als freie Slots, wird einmal mit den Quellen mit der
-			// groessten Transportmenge zuerst neu geplant (weniger Sendungen). Passt es dann in die Slots, wird dieser Plan genommen,
-			// sonst bleibt der erste Plan und der Aufrufer wartet wie bisher (Delay).
 			if (shipmentPlan.IsComplete && shipmentPlan.Shipments.Count > maxShipments) {
 				var wenigerSendungen = shipmentSources
 					.Select(q => new ResourceSource(q.OriginId, q.Available, q.Capacity, q.Distance, -(double) Math.Min(q.Capacity, q.Available.TotalResources)))

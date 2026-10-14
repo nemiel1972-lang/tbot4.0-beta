@@ -1,6 +1,5 @@
 package ogame
 
-// Techs ...
 type Techs struct {
 	ResourcesBuildings
 	Facilities

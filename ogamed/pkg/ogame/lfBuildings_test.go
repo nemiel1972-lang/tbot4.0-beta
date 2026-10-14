@@ -28,7 +28,6 @@ func TestResearchCenterCost(t *testing.T) {
 }
 
 func TestResidentialSectorConstructionTime(t *testing.T) {
-	// https://proxyforgame.com/en/ogame/calc/lfcosts.php
 	rs := newResidentialSector()
 	assert.Equal(t, (25*60+36)*time.Second, rs.BuildingConstructionTime(23, 8, Facilities{RoboticsFactory: 5}, LfBonuses{}))
 	assert.Equal(t, (25*60+36)*time.Second, rs.ConstructionTime(23, 8, Facilities{RoboticsFactory: 5}, LfBonuses{}, NoClass, false))
@@ -54,12 +53,6 @@ func TestAntimatterCondenserCost(t *testing.T) {
 		{2, Resources{Metal: 14, Crystal: 7, Energy: 18}},
 		{3, Resources{Metal: 25, Crystal: 12, Energy: 28}},
 		{4, Resources{Metal: 41, Crystal: 20, Energy: 38}},
-		//{5, Resources{Metal: 62, Crystal: 31, Energy: 49}},
-		//{6, Resources{Metal: 89, Crystal: 44, Energy: 60}},
-		//{7, Resources{Metal: 125, Crystal: 62, Energy: 72}},
-		//{8, Resources{Metal: 171, Crystal: 85, Energy: 84}},
-		//{28, Resources{Metal: 23_078, Crystal: 11_539, Energy: 438}},
-		//{70, Resources{Metal: 122_111_134, Crystal: 61_055_567, Energy: 2519}},
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Level %d", tc.level), func(t *testing.T) {

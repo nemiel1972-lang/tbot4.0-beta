@@ -4,7 +4,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/utils"
 )
 
-// LazyFacilities ...
 type LazyFacilities func() Facilities
 
 func (f LazyFacilities) GetRoboticsFactory() int64 { return f().RoboticsFactory }
@@ -20,19 +19,18 @@ func (f LazyFacilities) GetSensorPhalanx() int64   { return f().SensorPhalanx }
 func (f LazyFacilities) GetJumpGate() int64        { return f().JumpGate }
 func (f LazyFacilities) ByID(id ID) int64          { return f().ByID(id) }
 
-// Facilities represent a planet facilities information
 type Facilities struct {
-	RoboticsFactory int64 // 14
-	Shipyard        int64 // 21
-	ResearchLab     int64 // 31
-	AllianceDepot   int64 // 34
-	MissileSilo     int64 // 44
-	NaniteFactory   int64 // 15
-	Terraformer     int64 // 33
-	SpaceDock       int64 // 36
-	LunarBase       int64 // 41
-	SensorPhalanx   int64 // 42
-	JumpGate        int64 // 43
+	RoboticsFactory int64
+	Shipyard        int64
+	ResearchLab     int64
+	AllianceDepot   int64
+	MissileSilo     int64
+	NaniteFactory   int64
+	Terraformer     int64
+	SpaceDock       int64
+	LunarBase       int64
+	SensorPhalanx   int64
+	JumpGate        int64
 }
 
 func (f Facilities) GetRoboticsFactory() int64 { return f.RoboticsFactory }
@@ -47,12 +45,10 @@ func (f Facilities) GetLunarBase() int64       { return f.LunarBase }
 func (f Facilities) GetSensorPhalanx() int64   { return f.SensorPhalanx }
 func (f Facilities) GetJumpGate() int64        { return f.JumpGate }
 
-// Lazy returns a function that return self
 func (f Facilities) Lazy() LazyFacilities {
 	return func() Facilities { return f }
 }
 
-// ByID gets the facility level by facility id
 func (f Facilities) ByID(id ID) int64 {
 	switch id {
 	case RoboticsFactoryID:

@@ -10,7 +10,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 	public class LFBuildings {
 		public int LifeformType { get; set; }
 
-		//humans
 		public int ResidentialSector { get; set; }
 		public int BiosphereFarm { get; set; }
 		public int ResearchCentre { get; set; }
@@ -24,7 +23,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int Metropolis { get; set; }
 		public int PlanetaryShield { get; set; }
 
-		//Rocktal
 		public int MeditationEnclave { get; set; }
 		public int CrystalFarm { get; set; }
 		public int RuneTechnologium { get; set; }
@@ -38,7 +36,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int MineralResearchCentre { get; set; }
 		public int AdvancedRecyclingPlant { get; set; }
 
-		//Mechas
 		public int AssemblyLine { get; set; }
 		public int FusionCellFactory { get; set; }
 		public int RoboticsResearchCentre { get; set; }
@@ -52,7 +49,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int ChipMassProduction { get; set; }
 		public int NanoRepairBots { get; set; }
 
-		//Kaelesh
 		public int Sanctuary { get; set; }
 		public int AntimatterCondenser { get; set; }
 		public int VortexChamber { get; set; }

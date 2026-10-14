@@ -43,7 +43,6 @@ namespace Tbot.Workers
 			}
 		}
 		public async Task<Celestial> UpdatePlanet(Celestial planet, UpdateTypes UpdateTypes = UpdateTypes.Full) {
-			// log(LogLevel.Information, LogSender.Tbot, $"Updating {planet.ToString()}. Mode: {UpdateTypes.ToString()}");
 			IOgameService ogameService = _ogameService;
 			try {
 				switch (UpdateTypes) {
@@ -129,7 +128,6 @@ namespace Tbot.Workers
 		}
 
 		public async Task<List<Celestial>> UpdatePlanets(UpdateTypes UpdateTypes = UpdateTypes.Full) {
-			// log(LogLevel.Information, LogSender.Tbot, $"Updating userData.celestials... Mode: {UpdateTypes.ToString()}");
 			List<Celestial> localPlanets = (await GetPlanets()).ToList();
 			List<Celestial> newPlanets = new();
 			try {
@@ -335,7 +333,7 @@ namespace Tbot.Workers
 			} catch {
 				_tbotInstance.UserData.celestials = _tbotInstance.UserData.celestials.Unique().ToList();
 			}
-			return false;   // Boolean indicates if SleepMode must start
+			return false;
 		}
 	}
 }

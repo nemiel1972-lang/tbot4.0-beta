@@ -173,8 +173,8 @@ func TestExtractHighscore(t *testing.T) {
 	assert.Equal(t, int64(0), highscore.Type)
 	assert.Equal(t, 100, len(highscore.Players))
 	assert.Equal(t, "Bob", highscore.Players[7].Name)
-	assert.Equal(t, int64(0), highscore.Players[7].ID)         // Player ID is broken for self
-	assert.Equal(t, int64(0), highscore.Players[7].AllianceID) // Alliance ID is broken for self
+	assert.Equal(t, int64(0), highscore.Players[7].ID)
+	assert.Equal(t, int64(0), highscore.Players[7].AllianceID)
 
 	pageHTMLBytes, _ = os.ReadFile("../../../samples/v7.1/en/highscore_fullPage.html")
 	highscore, _ = NewExtractor().ExtractHighscore(pageHTMLBytes)
@@ -184,8 +184,8 @@ func TestExtractHighscore(t *testing.T) {
 	assert.Equal(t, int64(0), highscore.Type)
 	assert.Equal(t, 100, len(highscore.Players))
 	assert.Equal(t, "Bob", highscore.Players[7].Name)
-	assert.Equal(t, int64(0), highscore.Players[7].ID)         // Player ID is broken for self
-	assert.Equal(t, int64(0), highscore.Players[7].AllianceID) // Alliance ID is broken for self
+	assert.Equal(t, int64(0), highscore.Players[7].ID)
+	assert.Equal(t, int64(0), highscore.Players[7].AllianceID)
 
 	pageHTMLBytes, _ = os.ReadFile("../../../samples/v7.1/en/highscore_withShips.html")
 	highscore, _ = NewExtractor().ExtractHighscore(pageHTMLBytes)
@@ -249,9 +249,6 @@ func TestExtractEspionageReportAllianceClass(t *testing.T) {
 	infos, _ = e.ExtractEspionageReport(pageHTMLBytes)
 	assert.Equal(t, ogame.Warrior, infos.AllianceClass)
 
-	//pageHTMLBytes, _ = os.ReadFile("../../samples/v8.1/en/spy_report_alliance_class_researcher.html")
-	//infos, _ = NewExtractor().ExtractEspionageReport(pageHTMLBytes, time.FixedZone("OGT", 3600))
-	//assert.Equal(t, Researcher, infos.AllianceClass)
 
 	pageHTMLBytes, _ = os.ReadFile("../../../samples/v8.1/en/spy_report_alliance_no_class.html")
 	e = NewExtractor()

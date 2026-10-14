@@ -10,16 +10,11 @@ import (
 	"sync"
 )
 
-// PowChallenge is a single hashcash-style proof-of-work challenge.
-// The nonce to find must satisfy: hex(sha256(salt || dec(nonce))) starts with target.
 type PowChallenge struct {
 	Salt   string `json:"salt"`
 	Target string `json:"target"`
 }
 
-// PowFile is the container served by gameforge (OGame v13 login).
-// The "instrumentation" field is an orthogonal browser fingerprinting payload
-// that ogamed (headless) cannot execute; only the proof-of-work is needed.
 type PowFile struct {
 	Pow struct {
 		Algorithm  string         `json:"algorithm"`
@@ -27,8 +22,6 @@ type PowFile struct {
 	} `json:"pow"`
 }
 
-// SolvePow finds the minimal nonce such that the sha256 digest of salt+dec(nonce)
-// starts with the target hex prefix.
 func SolvePow(salt, target string) int64 {
 	var nonce int64
 	for {
@@ -40,9 +33,6 @@ func SolvePow(salt, target string) int64 {
 	}
 }
 
-// SolvePowParallel solves a single challenge by splitting the search space into
-// contiguous windows processed by `workers` goroutines. It returns the minimal
-// valid nonce, preserving equivalence with the sequential solver.
 func SolvePowParallel(salt, target string, workers int) int64 {
 	if workers < 1 {
 		workers = 1
@@ -81,7 +71,6 @@ func SolvePowParallel(salt, target string, workers int) int64 {
 	}
 }
 
-// ParsePowFile parses the .pow JSON container.
 func ParsePowFile(by []byte) (*PowFile, error) {
 	var pf PowFile
 	if err := json.Unmarshal(by, &pf); err != nil {
@@ -96,8 +85,6 @@ func ParsePowFile(by []byte) (*PowFile, error) {
 	return &pf, nil
 }
 
-// SolvePowFile solves all challenges of a .pow container and returns the
-// nonces in the same order.
 func SolvePowFile(by []byte, workers int) ([]int64, error) {
 	pf, err := ParsePowFile(by)
 	if err != nil {

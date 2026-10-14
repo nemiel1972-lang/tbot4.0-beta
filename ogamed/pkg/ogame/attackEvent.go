@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// AttackEvent all information available about an enemy attack
 type AttackEvent struct {
 	ID              int64
 	MissionType     MissionID

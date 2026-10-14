@@ -23,7 +23,6 @@ namespace Tbot.Services {
 		dynamic InstanceSettings { get; }
 		string InstanceAlias { get; }
 		UserData UserData { get; set; }
-		// true only while the expedition wave before sleeping is being sent (bypasses the bed-time check for expeditions)
 		bool SleepWaveActive { get; set; }
 		TelegramUserData TelegramUserData { get; }
 		long SleepDuration { get; set; }
@@ -33,7 +32,6 @@ namespace Tbot.Services {
 		Task StopFeature(Feature feat);
 		bool IsFeatureRunning(Feature feat);
 		Task SendTelegramMessage(string fmt, bool mirrorToDiscord = true);
-		// send only to the global Discord webhook; false if not active
 		Task<bool> SendDiscordMessage(string fmt, NotificationKind kind = NotificationKind.Information);
 		Task<bool> TelegramSwitch(decimal speed, Celestial attacked = null, bool fromTelegram = false);
 		Task SleepNow(DateTime WakeUpTime);
@@ -41,28 +39,12 @@ namespace Tbot.Services {
 		Task LoadProfile(List<string> profileName);
 		Task ResetProfile();
 
-		// von DefenderWorker aufgerufen (HandleAttack/Execute), wenn waehrend
-		// GhostSleep-PASSIV ein echter Angriff erkannt wird (active=true, Eskalation auf AKTIV) bzw.
-		// wenn keine Angriffswelle mehr aussteht (active=false, Deeskalation zurueck auf PASSIV mit
-		// neuem Zufalls-Anker). Siehe TBotMain.cs, Abschnitt "GhostSleep", und
-		// claude/ghostsleep-plan-adr.md. No-Op, wenn GhostSleep gerade gar nicht laeuft.
 		void GhostSleepEscalate(bool active);
 
-		// PATCH GhostSleep-Fix (Anker-Refresh, 28.09.2026, siehe DefenderWorker.cs/TBotMain.cs): von
-		// DefenderWorker aufgerufen, sobald der zuletzt gesetzte GhostSleepNextAnchorUtc erreicht/
-		// ueberschritten ist. Waehlt (falls PASSIV weiterhin aktiv ist) eine neue zufaellige rueckkehrende
-		// Expedition als frischen Weck-Anker - ohne diesen Aufruf blieb der alte, jetzt vergangene Anker
-		// stehen und der Worker feuerte praktisch im Sekundentakt weiter (Log-Spam, siehe
-		// ghostsleep-plan-adr.md). No-Op, wenn GhostSleep gerade gar nicht laeuft oder kein Defender-Worker
-		// gefunden wird.
 		void GhostSleepRearmDefenderAnchor();
 
-		// stoppt (active=true) alle Worker ausser Defender/SleepMode bzw.
-		// startet sie nach Ende der Angriffswelle wieder (active=false). Siehe TBotMain.cs.
 		Task AttackLockdown(bool active);
 
-		// DefenderWorker meldet nach jedem Check die aktuelle Angriffsliste (leer = sicher),
-		// damit die Kachel im Browser eingehende Angriffe anzeigen kann. fetchedUtc = Abrufzeitpunkt (ArriveIn gilt dazu).
 		void PublishAttackSnapshot(List<AttackerFleet> attacks, DateTime fetchedUtc);
 	}
 }

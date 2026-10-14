@@ -19,17 +19,16 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int LastActivity { get; set; }
 		public int CounterEspionage { get; set; }
 		public string APIKey { get; set; }
-		public bool HasFleetInformation { get; set; } // Either or not we sent enough probes to get the fleet information
-		public bool HasDefensesInformation { get; set; } // Either or not we sent enough probes to get the defenses information
-		public bool HasBuildingsInformation { get; set; } // Either or not we sent enough probes to get the buildings information
-		public bool HasResearchesInformation { get; set; } // Either or not we sent enough probes to get the researches information
+		public bool HasFleetInformation { get; set; }
+		public bool HasDefensesInformation { get; set; }
+		public bool HasBuildingsInformation { get; set; }
+		public bool HasResearchesInformation { get; set; }
 		public bool HonorableTarget { get; set; }
 		public bool IsBandit { get; set; }
 		public bool IsStarlord { get; set; }
 		public bool IsInactive { get; set; }
 		public bool IsLongInactive { get; set; }
 
-		// ResourcesBuildings
 		public int? MetalMine { get; set; }
 		public int? CrystalMine { get; set; }
 		public int? DeuteriumSynthesizer { get; set; }
@@ -40,7 +39,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int? CrystalStorage { get; set; }
 		public int? DeuteriumTank { get; set; }
 
-		// Facilities
 		public int? RoboticsFactory { get; set; }
 		public int? Shipyard { get; set; }
 		public int? ResearchLab { get; set; }
@@ -53,7 +51,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int? SensorPhalanx { get; set; }
 		public int? JumpGate { get; set; }
 
-		// Researches
 		public int? EnergyTechnology { get; set; }
 		public int? LaserTechnology { get; set; }
 		public int? IonTechnology { get; set; }
@@ -71,7 +68,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int? ShieldingTechnology { get; set; }
 		public int? ArmourTechnology { get; set; }
 
-		// Defenses
 		public long? RocketLauncher { get; set; }
 		public long? LightLaser { get; set; }
 		public long? HeavyLaser { get; set; }
@@ -83,7 +79,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public long? AntiBallisticMissiles { get; set; }
 		public long? InterplanetaryMissiles { get; set; }
 
-		// Fleets
 		public long? LightFighter { get; set; }
 		public long? HeavyFighter { get; set; }
 		public long? Cruiser { get; set; }
@@ -108,10 +103,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 			return $"{Username} {Coordinate.ToString()}";
 		}
 
-		/// <summary>
-		/// Get whether or not the scanned planet has any defence (either ships or defence) against an attack.
-		/// </summary>
-		/// <returns>Returns true if the target is defenceless, false otherwise.</returns>
 		public bool IsDefenceless(bool isUsingProbes = false) {
 			if (HasDefensesInformation && HasFleetInformation && !isUsingProbes) {
 				return LightFighter == null
@@ -162,11 +153,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 			return false;
 		}
 
-		/// <summary>
-		/// Get the plunder ratio of the target.
-		/// </summary>
-		/// <param name="playerClass"></param>
-		/// <returns>Returns the plunder ratio.</returns>
 		public float PlunderRatio(CharacterClass playerClass) {
 			if (IsInactive && playerClass == CharacterClass.Discoverer)
 				return 0.75F;
@@ -177,10 +163,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 			return 0.5F;
 		}
 
-		/// <summary>
-		/// Get the maximum possible loot that can be collected from this target.
-		/// </summary>
-		/// <returns>Returns the possible loot.</returns>
 		public Resources Loot(CharacterClass playerClass) {
 			float ratio = PlunderRatio(playerClass);
 			return new Resources { Deuterium = (long) (Deuterium * ratio), Crystal = (long) (Crystal * ratio), Metal = (long) (Metal * ratio) };

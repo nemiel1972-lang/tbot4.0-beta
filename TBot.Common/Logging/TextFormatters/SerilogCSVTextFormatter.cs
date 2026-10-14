@@ -11,9 +11,7 @@ namespace TBot.Common.Logging.TextFormatters {
 	public class SerilogCSVTextFormatter : ITextFormatter {
 		public void Format(LogEvent logEvent, TextWriter output) {
 			string message;
-			// TYPE;Sender;DateTime;Message
 			if (logEvent.Exception != null) {
-				// Log exception
 				message = $"EXCEPTION:{logEvent.Exception.ToString()}. {logEvent.MessageTemplate.ToString()}";
 			} else {
 				message = $"{logEvent.MessageTemplate.ToString()}";
@@ -27,7 +25,6 @@ namespace TBot.Common.Logging.TextFormatters {
 		}
 
 		public static string EscapeForCSV(string str) {
-			// Taken from https://stackoverflow.com/questions/6377454/escaping-tricky-string-to-csv-format
 			bool mustQuote = (str.Contains(",") || str.Contains("\"") || str.Contains("\r") || str.Contains("\n"));
 			if (mustQuote) {
 				StringBuilder sb = new StringBuilder();

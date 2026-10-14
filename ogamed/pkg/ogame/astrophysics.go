@@ -18,7 +18,6 @@ func newAstrophysics() *astrophysics {
 	return b
 }
 
-// GetPrice returns the price to build the given level
 func (b astrophysics) GetPrice(level int64, lfBonuses LfBonuses) Resources {
 	tmp := func(baseCost int64, increaseFactor float64, level int64) int64 {
 		return int64(math.Round(float64(baseCost)*math.Pow(increaseFactor, float64(level-1))/100) * 100)

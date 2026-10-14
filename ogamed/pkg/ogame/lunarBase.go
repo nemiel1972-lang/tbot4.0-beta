@@ -14,7 +14,6 @@ func newLunarBase() *lunarBase {
 	return b
 }
 
-// DeconstructionPrice lunar base cannot be deconstructed
 func (s *lunarBase) DeconstructionPrice(level int64, techs IResearches) Resources {
 	return Resources{}
 }

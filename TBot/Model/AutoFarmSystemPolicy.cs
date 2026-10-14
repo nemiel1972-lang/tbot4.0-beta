@@ -3,10 +3,6 @@ using System.Linq;
 using TBot.Ogame.Infrastructure.Models;
 
 namespace TBot.Model {
-	/// <summary>
-	/// Defines which galaxy-view results are useful to AutoFarm and which
-	/// systems can safely receive the long empty-system cooldown.
-	/// </summary>
 	public static class AutoFarmSystemPolicy {
 		public static bool IsEligibleTarget(Planet planet) {
 			return planet != null

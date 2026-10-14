@@ -5,9 +5,6 @@ using Tbot.Common.Settings;
 using TBot.WebUI.Models;
 
 namespace TBot.WebUI.Controllers {
-	// Formular-Ansicht der Instanz-Config, Block fuer Block. Nur Expeditions hat eine eigene Seite; alle anderen Bloecke sind
-	// Platzhalter und werden ueber settings.json -> WebUI.FormPages freigeschaltet (dann mit automatisch erzeugtem Formular).
-	// Zugangsdaten (secrets/) werden hier nie gelesen oder geschrieben.
 	public sealed class ConfigController : Controller {
 		private const string CustomPage = "Expeditions";
 		private static readonly HashSet<string> NeverForm = new(StringComparer.OrdinalIgnoreCase) { "Credentials", "DiscordWebhook" };
@@ -23,7 +20,6 @@ namespace TBot.WebUI.Controllers {
 			return reference.Replace('\\', '/').Trim().StartsWith(SettingsService.SecretsDirectory + "/", StringComparison.OrdinalIgnoreCase);
 		}
 
-		// Instanz-Aliase und -Dateien aus der globalen settings.json (ohne Instances: die Datei selbst)
 		private static List<(string Alias, string Path)> GetInstances() {
 			var result = new List<(string, string)>();
 			var globalPath = SettingsService.GlobalSettingsPath;
@@ -44,7 +40,6 @@ namespace TBot.WebUI.Controllers {
 			return result;
 		}
 
-		// settings.json: "WebUI": { "FormPages": ["Expeditions", "AutoFarm"] } oder "*" fuer alle. Standard: nur Expeditions.
 		private static HashSet<string> GetEnabledPages() {
 			var pages = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { CustomPage };
 			try {
@@ -105,7 +100,6 @@ namespace TBot.WebUI.Controllers {
 			return View(model);
 		}
 
-		// Liefert den Block ohne Zugangsdaten: Inhalte der (nicht geheimen) Load-Dateien, darueber die Schluessel direkt im Block.
 		private static JObject ReadBlock(JObject main, string block, string baseDir, out string? targetFile, out int secretRefs) {
 			targetFile = null;
 			secretRefs = 0;
@@ -146,7 +140,6 @@ namespace TBot.WebUI.Controllers {
 			return data;
 		}
 
-		// Momentaufnahme der Lebensform-Boni fuer Expeditionen (vom ExpeditionsWorker geschrieben)
 		[HttpGet]
 		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 		public IActionResult LfSnapshot(string? instance) {
@@ -195,14 +188,12 @@ namespace TBot.WebUI.Controllers {
 				var incoming = ParseObject(content);
 				string mainText = System.IO.File.ReadAllText(mainPath);
 				var main = ParseObject(mainText);
-				// Nur lesen, um Fehler (mehrere Dateien, fehlende Datei) vor dem Schreiben zu melden
 				ReadBlock(main, block, baseDir, out var targetFile, out _);
 				var blockMain = (JObject) main[block]!;
 
 				if (blockMain["Load"] == null) {
 					main[block] = incoming;
 				} else {
-					// Schluessel direkt neben Load gewinnen gegenueber der Datei: dort aktualisieren, nicht in die Datei schreiben
 					var inline = blockMain.Properties().Where(p => p.Name != "Load").Select(p => p.Name).ToList();
 					if (incoming["Active"] != null && !inline.Contains("Active"))
 						inline.Add("Active");
@@ -223,7 +214,6 @@ namespace TBot.WebUI.Controllers {
 							await SettingsService.WriteSettings(targetFile, newText);
 						}
 					} else {
-						// Load ohne (nicht geheime) Datei: der Rest steht im Block selbst
 						foreach (var p in incoming.Properties())
 							blockMain[p.Name] = p.Value.DeepClone();
 					}

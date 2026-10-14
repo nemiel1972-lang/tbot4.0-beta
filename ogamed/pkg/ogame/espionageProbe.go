@@ -9,8 +9,8 @@ func newEspionageProbe() *espionageProbe {
 	s.Name = "espionage probe"
 	s.ID = EspionageProbeID
 	s.StructuralIntegrity = 1000
-	s.ShieldPower = 0 //0.01
-	s.WeaponPower = 0 //0.01
+	s.ShieldPower = 0
+	s.WeaponPower = 0
 	s.BaseCargoCapacity = 5
 	s.BaseSpeed = 100000000
 	s.FuelConsumption = 1

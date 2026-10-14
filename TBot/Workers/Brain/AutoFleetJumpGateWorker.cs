@@ -31,7 +31,6 @@ namespace Tbot.Workers.Brain {
 				if (brain.TryGetValue("AutoFleetJumpGate", out var currentSettings))
 					return currentSettings;
 
-				// Keep existing user settings working after the spelling correction.
 				if (brain.TryGetValue("AutoFleepJumpGate", out var legacySettings)) {
 					DoLog(LogLevel.Warning,
 						"Brain.AutoFleepJumpGate is deprecated; rename it to Brain.AutoFleetJumpGate.");
@@ -66,7 +65,6 @@ namespace Tbot.Workers.Brain {
 				try {
 					jumpGateSettings = GetJumpGateSettings();
 					var targetCoordinates = GetTargetCoordinates(jumpGateSettings);
-					// Get target moon coordinates
 					var targetGalaxy = targetCoordinates.Galaxy;
 					var targetSystem = targetCoordinates.System;
 					var targetPosition = targetCoordinates.Position;
@@ -85,7 +83,6 @@ namespace Tbot.Workers.Brain {
 					}
 
 
-					// Update target moon facilities to check JumpGate
 					try {
 						moondest = await _tbotOgameBridge.UpdatePlanet(moondest, UpdateTypes.Facilities) as Moon;
 						if (moondest == null) {
@@ -108,7 +105,6 @@ namespace Tbot.Workers.Brain {
 					var minPointsToTeleport = (long) jumpGateSettings
 						.MinimumAmountOfShipPointsToTeleport;
 
-					// Define jumpable ships and map 'leave on moon' config only for jumpable
 					var jumpable = new HashSet<Buildables> {
 						Buildables.LightFighter,
 						Buildables.HeavyFighter,
@@ -149,23 +145,18 @@ namespace Tbot.Workers.Brain {
 						pathfinder: (long) leaveCfg.Pathfinder
 					);
 
-					// Get all moons except target, calculate potential teleportable fleet points
 					var moonsWithTeleportablePoints = new List<(Moon moon, long teleportablePoints)>();
 
 					foreach (var celestial in _tbotInstance.UserData.celestials.Where(c =>
 						         c is Moon && c.ID != moondest.ID)) {
 						var moon = celestial as Moon;
-						// Update ships on moon
 						moon = await _tbotOgameBridge.UpdatePlanet(moon, UpdateTypes.Ships) as Moon;
-						// Update facilities to check jump gate
 						moon = await _tbotOgameBridge.UpdatePlanet(moon, UpdateTypes.Facilities) as Moon;
 
-						// Check if moon has jump gate
 						if (moon.Facilities.JumpGate <= 0) {
 							continue;
 						}
 
-						// Calculate ships that would be left (only for jumpable types)
 						var shipsToLeaveAdjusted = new Ships();
 						foreach (var shipType in jumpable) {
 							var currentAmount = moon.Ships.GetAmount(shipType);
@@ -174,12 +165,10 @@ namespace Tbot.Workers.Brain {
 							shipsToLeaveAdjusted.SetAmount(shipType, amountToLeave);
 						}
 
-						// Calculate teleportable points (total points - points of ships to leave)
 						var totalPoints = moon.Ships.GetFleetPoints();
 						var leftPoints = shipsToLeaveAdjusted.GetFleetPoints();
 						var teleportablePoints = totalPoints - leftPoints;
 
-						// Keep qualified list for actual jump attempts
 						if (teleportablePoints >= minPointsToTeleport) {
 							DoLog(LogLevel.Debug, $"Moon {moon.Coordinate} qualifies for JumpGate with teleportablePoints={teleportablePoints}");
 							moonsWithTeleportablePoints.Add((moon, teleportablePoints));
@@ -189,7 +178,6 @@ namespace Tbot.Workers.Brain {
 						}
 					}
 
-					// Order by teleportable points descending
 					var orderedMoons = moonsWithTeleportablePoints
 						.OrderByDescending(x => x.teleportablePoints)
 						.Select(x => x.moon)
@@ -200,7 +188,6 @@ namespace Tbot.Workers.Brain {
 						return;
 					}
 
-					// Build actions: best -> target, then pairwise i=1 -> i+1
 					var teleportsPairs = new List<(Moon origin, Celestial destination)>();
 					teleportsPairs.Add((orderedMoons[0], moondest));
 
@@ -213,7 +200,6 @@ namespace Tbot.Workers.Brain {
 						var destination = teleportsPairs[i].destination;
 						jumpGateAttempted = true;
 
-						// Calculate ships to send (only for jumpable types)
 						var shipsToSend = new Ships();
 						foreach (var shipType in jumpable) {
 							var currentAmount = origin.Ships.GetAmount(shipType);
@@ -223,10 +209,9 @@ namespace Tbot.Workers.Brain {
 						}
 
 						if (shipsToSend.IsEmpty()) {
-							continue; // No ships to send
+							continue;
 						}
 
-						// Perform JumpGate
 						try {
 							var result = await _ogameService.JumpGate(origin, destination, shipsToSend);
 							if (result.Success) {
@@ -250,7 +235,6 @@ namespace Tbot.Workers.Brain {
 							DoLog(LogLevel.Error, $"JumpGate failed from {origin.Coordinate}: {ex.Message}");
 						}
 
-						// Small delay between jumpgates in the same loop if we have any pending jumps.
 						if (i < teleportsPairs.Count - 1) {
 							try {
 								var delayMs = RandomizeHelper.CalcRandomIntervalSecToMs(5, 15);
@@ -263,15 +247,13 @@ namespace Tbot.Workers.Brain {
 				}
 			}
 
-			// Set next interval based on whether JumpGate was attempted/succeeded
 			if (jumpGateAttempted && jumpGateSucceeded) {
-				// Compare recharge (ms) vs configured random interval (min -> ms), then add 2-5 min jitter if recharge dominates
 				int minIntervalMin = (int) jumpGateSettings.CheckIntervalMin;
 				int maxIntervalMin = (int) jumpGateSettings.CheckIntervalMax;
 				long cfgRandom = RandomizeHelper.CalcRandomInterval(minIntervalMin, maxIntervalMin);
 				long rechargeMs = highestRechargeCountdown > 0 ? highestRechargeCountdown * 1000 : 0;
 				long interval = rechargeMs > cfgRandom
-					? rechargeMs + RandomizeHelper.CalcRandomInterval(2, 5) // jitter in minutes
+					? rechargeMs + RandomizeHelper.CalcRandomInterval(2, 5)
 					: cfgRandom;
 				if (interval <= 0)
 					interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
@@ -280,7 +262,6 @@ namespace Tbot.Workers.Brain {
 				ChangeWorkerPeriod(interval);
 				DoLog(LogLevel.Information, $"Next JumpGate check at {newTime.ToString()}");
 			} else {
-				// Set next interval using minutes (helper converts to ms)
 				var newTime = await SetDefaultWorkerPeriod();
 				DoLog(LogLevel.Information, $"Next JumpGate check at {newTime.ToString()}");
 			}

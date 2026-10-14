@@ -108,7 +108,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.AllianceClass = ogame.Researcher
 	}
 
-	// Bandit, Starlord
 	banditstarlord := doc.Find("div.detail_txt").First().Find("span")
 	if banditstarlord.HasClass("honorRank") {
 		report.IsBandit = banditstarlord.HasClass("rank_bandit1") || banditstarlord.HasClass("rank_bandit2") || banditstarlord.HasClass("rank_bandit3")
@@ -118,7 +117,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 	honorableFound := doc.Find("div.detail_txt").First().Find("span.status_abbr_honorableTarget")
 	report.HonorableTarget = honorableFound.Length() > 0
 
-	// IsInactive, IsLongInactive
 	inactive := doc.Find("div.detail_txt").First().Find("span")
 	if inactive.HasClass("status_abbr_longinactive") {
 		report.IsInactive = true
@@ -127,7 +125,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.IsInactive = true
 	}
 
-	// APIKey
 	apikey := doc.Find("span.icon_apikey").AttrOr("title", "")
 	apiDoc, err := goquery.NewDocumentFromReader(strings.NewReader(apikey))
 	if err != nil {
@@ -135,13 +132,11 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 	}
 	report.APIKey = apiDoc.Find("input").First().AttrOr("value", "")
 
-	// Inactivity timer
 	activity := doc.Find("div.detail_txt").Eq(3).Find("font")
 	if len(activity.Text()) == 2 {
 		report.LastActivity = utils.ParseInt(activity.Text())
 	}
 
-	// CounterEspionage
 	ceTxt := doc.Find("div.detail_txt").Eq(2).Text()
 	m1 := regexp.MustCompile(`(\d+)%`).FindStringSubmatch(ceTxt)
 	if len(m1) == 2 {

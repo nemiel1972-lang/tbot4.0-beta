@@ -12,7 +12,6 @@ import (
 	"unicode"
 )
 
-// ParseCoord parse a coordinate from a string
 func ParseCoord(str string) (coord Coordinate, err error) {
 	m := regexp.MustCompile(`^\[?(([PMD]):)?(\d{1,3}):(\d{1,3}):(\d{1,3})]?$`).FindStringSubmatch(str)
 	if len(m) == 6 {
@@ -31,13 +30,11 @@ func ParseCoord(str string) (coord Coordinate, err error) {
 	return coord, errors.New("unable to parse coordinate")
 }
 
-// DoParseCoord parse a coordinate from a string and ignore errors
 func DoParseCoord(str string) (coord Coordinate) {
 	coord, _ = ParseCoord(str)
 	return coord
 }
 
-// MustParseCoord parse a coordinate from a string and panic if there is an error
 func MustParseCoord(str string) Coordinate {
 	coord, err := ParseCoord(str)
 	if err != nil {
@@ -50,7 +47,6 @@ var namesChars = "ЁАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭ
 var namesRgx = regexp.MustCompile("[^a-zA-Zα-ωΑ-Ω" + namesChars + "]+")
 
 func unique(s string) string {
-	//s = strings.ToLower(s)
 	m := make(map[rune]struct{})
 	for _, c := range s {
 		m[c] = struct{}{}
@@ -63,37 +59,29 @@ func unique(s string) string {
 	return strings.Join(arr, "")
 }
 
-// MetalStrings ...
 var MetalStrings = []string{"metalli", "métal", "metal", "metall", "kov", "kovy", "металл", "metallo", "metaal", "メタル", "金屬", "μέταλλο"}
 
-// CrystalStrings ...
 var CrystalStrings = []string{"kristalli", "kristal", "cristal", "crystal", "krystal", "kryštály", "kryształ", "kristall", "krystall", "cristallo", "кристалл", "krystaly", "クリスタル", "晶體", "κρύσταλλο"}
 
-// DeuteriumStrings ...
 var DeuteriumStrings = []string{"deuter", "deuterij", "deutérium", "deuterium", "deuterio", "дейтерий", "deutério", "deuteriu", "デューテリウム", "重氫", "δευτέριο"}
 
-// IsStrMetal ...
 func IsStrMetal(name string) bool {
 	return utils.InArr(name, MetalStrings)
 }
 
-// IsStrCrystal ...
 func IsStrCrystal(name string) bool {
 	return utils.InArr(name, CrystalStrings)
 }
 
-// IsStrDeuterium ...
 func IsStrDeuterium(name string) bool {
 	return utils.InArr(name, DeuteriumStrings)
 }
 
-// DefenceName2ID ...
 func DefenceName2ID(name string) ID {
 	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
 	name, _, _ = transform.String(t, name)
 	processedString := strings.ToLower(namesRgx.ReplaceAllString(name, ""))
 	nameMap := map[string]ID{
-		// en
 		"rocketlauncher":         RocketLauncherID,
 		"lightlaser":             LightLaserID,
 		"heavylaser":             HeavyLaserID,
@@ -105,7 +93,6 @@ func DefenceName2ID(name string) ID {
 		"antiballisticmissiles":  AntiBallisticMissilesID,
 		"interplanetarymissiles": InterplanetaryMissilesID,
 
-		// hu
 		"raketakilovo":            RocketLauncherID,
 		"konnyulezer":             LightLaserID,
 		"nehezlezer":              HeavyLaserID,
@@ -117,7 +104,6 @@ func DefenceName2ID(name string) ID {
 		"antiballasztikusraketak": AntiBallisticMissilesID,
 		"bolygokoziraketak":       InterplanetaryMissilesID,
 
-		// si
 		"raketnik":              RocketLauncherID,
 		"lahkilaser":            LightLaserID,
 		"tezeklaser":            HeavyLaserID,
@@ -129,7 +115,6 @@ func DefenceName2ID(name string) ID {
 		"protibalisticnerakete": AntiBallisticMissilesID,
 		"medplanetarnerakete":   InterplanetaryMissilesID,
 
-		// ro
 		"lansatorderachete":     RocketLauncherID,
 		"laserusor":             LightLaserID,
 		"lasergreu":             HeavyLaserID,
@@ -141,7 +126,6 @@ func DefenceName2ID(name string) ID {
 		"rachetaantibalistica":  AntiBallisticMissilesID,
 		"racheteinterplanetare": InterplanetaryMissilesID,
 
-		// sk
 		"raketovykomplet":       RocketLauncherID,
 		"lahkylaser":            LightLaserID,
 		"tazkylaser":            HeavyLaserID,
@@ -153,7 +137,6 @@ func DefenceName2ID(name string) ID {
 		"protiraketovestrely":   AntiBallisticMissilesID,
 		"medziplanetarnerakety": InterplanetaryMissilesID,
 
-		// gr
 		"εκτοξευτηςπυραυλων":      RocketLauncherID,
 		"ελαφρυλειζερ":            LightLaserID,
 		"βαρυλειζερ":              HeavyLaserID,
@@ -165,7 +148,6 @@ func DefenceName2ID(name string) ID {
 		"αντιβαλλιστικοιπυραυλοι": AntiBallisticMissilesID,
 		"διαπλανητικοιπυραυλοι":   InterplanetaryMissilesID,
 
-		// tw
 		"飛彈發射器": RocketLauncherID,
 		"輕型雷射炮": LightLaserID,
 		"重型雷射炮": HeavyLaserID,
@@ -177,7 +159,6 @@ func DefenceName2ID(name string) ID {
 		"反彈道導彈": AntiBallisticMissilesID,
 		"星際導彈":  InterplanetaryMissilesID,
 
-		// hr
 		"raketobacaci":          RocketLauncherID,
 		"malilaser":             LightLaserID,
 		"velikilaser":           HeavyLaserID,
@@ -187,7 +168,6 @@ func DefenceName2ID(name string) ID {
 		"antibalistickerakete":  AntiBallisticMissilesID,
 		"interplanetarnerakete": InterplanetaryMissilesID,
 
-		// mx
 		"lanzamisiles":              RocketLauncherID,
 		"laserpequeno":              LightLaserID,
 		"lasergrande":               HeavyLaserID,
@@ -199,7 +179,6 @@ func DefenceName2ID(name string) ID {
 		"misildeintercepcion":       AntiBallisticMissilesID,
 		"misilinterplanetario":      InterplanetaryMissilesID,
 
-		// cz
 		"raketomet":            RocketLauncherID,
 		"lehkylaser":           LightLaserID,
 		"tezkylaser":           HeavyLaserID,
@@ -211,7 +190,6 @@ func DefenceName2ID(name string) ID {
 		"antibalistickerakety": AntiBallisticMissilesID,
 		"meziplanetarnirakety": InterplanetaryMissilesID,
 
-		// it
 		"lanciamissili":         RocketLauncherID,
 		"laserleggero":          LightLaserID,
 		"laserpesante":          HeavyLaserID,
@@ -223,7 +201,6 @@ func DefenceName2ID(name string) ID {
 		"missiliantibalistici":  AntiBallisticMissilesID,
 		"missiliinterplanetari": InterplanetaryMissilesID,
 
-		// de
 		"raketenwerfer":         RocketLauncherID,
 		"leichteslasergeschutz": LightLaserID,
 		"schwereslasergeschutz": HeavyLaserID,
@@ -235,7 +212,6 @@ func DefenceName2ID(name string) ID {
 		"abfangrakete":          AntiBallisticMissilesID,
 		"interplanetarrakete":   InterplanetaryMissilesID,
 
-		// dk
 		"raketkanon":         RocketLauncherID,
 		"lillelaserkanon":    LightLaserID,
 		"storlaserkanon":     HeavyLaserID,
@@ -247,10 +223,8 @@ func DefenceName2ID(name string) ID {
 		"forsvarsraket":      AntiBallisticMissilesID,
 		"interplanetarraket": InterplanetaryMissilesID,
 
-		// es
 		"misilesantibalisticos": AntiBallisticMissilesID,
 
-		// fr
 		"lanceurdemissiles":      RocketLauncherID,
 		"artillerielaserlegere":  LightLaserID,
 		"artillerielaserlourde":  HeavyLaserID,
@@ -262,7 +236,6 @@ func DefenceName2ID(name string) ID {
 		"missiledinterception":   AntiBallisticMissilesID,
 		"missileinterplanetaire": InterplanetaryMissilesID,
 
-		// br
 		"lancadordemisseis":       RocketLauncherID,
 		"laserligeiro":            LightLaserID,
 		"laserpesado":             HeavyLaserID,
@@ -274,7 +247,6 @@ func DefenceName2ID(name string) ID {
 		"missildeinterceptacao":   AntiBallisticMissilesID,
 		"missilinterplanetario":   InterplanetaryMissilesID,
 
-		// jp
 		"ロケットランチャー": RocketLauncherID,
 		"ライトレーサー":   LightLaserID,
 		"ヘーレーサー":    HeavyLaserID,
@@ -286,7 +258,6 @@ func DefenceName2ID(name string) ID {
 		"抗弾道ミサイル":   AntiBallisticMissilesID,
 		"星間ミサイル":    InterplanetaryMissilesID,
 
-		// pl
 		"wyrzutniarakiet":         RocketLauncherID,
 		"lekkiedziaolaserowe":     LightLaserID,
 		"ciezkiedziaolaserowe":    HeavyLaserID,
@@ -298,7 +269,6 @@ func DefenceName2ID(name string) ID {
 		"przeciwrakieta":          AntiBallisticMissilesID,
 		"rakietamiedzyplanetarna": InterplanetaryMissilesID,
 
-		// tr
 		"roketatar":               RocketLauncherID,
 		"hafiflazertopu":          LightLaserID,
 		"agrlazertopu":            HeavyLaserID,
@@ -310,11 +280,9 @@ func DefenceName2ID(name string) ID {
 		"yakalycroketler":         AntiBallisticMissilesID,
 		"gezegenlerarasiroketler": InterplanetaryMissilesID,
 
-		// pt
 		"canhaodeioes":        IonCannonID,
 		"missildeintercepcao": AntiBallisticMissilesID,
 
-		// nl
 		"raketlanceerder":              RocketLauncherID,
 		"kleinelaser":                  LightLaserID,
 		"grotelaser":                   HeavyLaserID,
@@ -323,7 +291,6 @@ func DefenceName2ID(name string) ID {
 		"antiballistischeraketten":     AntiBallisticMissilesID,
 		"interplanetaireraketten":      InterplanetaryMissilesID,
 
-		// ru
 		"ракетнаяустановка":   RocketLauncherID,
 		"легкиилазер":         LightLaserID,
 		"тяжелыилазер":        HeavyLaserID,
@@ -335,20 +302,15 @@ func DefenceName2ID(name string) ID {
 		"ракетаперехватчик":   AntiBallisticMissilesID,
 		"межпланетнаяракета":  InterplanetaryMissilesID,
 
-		// fi --
-		// no --
-		// ba --
 	}
 	return nameMap[processedString]
 }
 
-// ShipName2ID ...
 func ShipName2ID(name string) ID {
 	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
 	name, _, _ = transform.String(t, name)
 	processedString := strings.ToLower(namesRgx.ReplaceAllString(name, ""))
 	nameMap := map[string]ID{
-		// en
 		"lightfighter":   LightFighterID,
 		"heavyfighter":   HeavyFighterID,
 		"cruiser":        CruiserID,
@@ -367,7 +329,6 @@ func ShipName2ID(name string) ID {
 		"reaper":         ReaperID,
 		"pathfinder":     PathfinderID,
 
-		// fi
 		"kevythavittaja":     LightFighterID,
 		"raskashavittaja":    HeavyFighterID,
 		"risteilija":         CruiserID,
@@ -383,7 +344,6 @@ func ShipName2ID(name string) ID {
 		"vakoiluluotain":     EspionageProbeID,
 		"aurinkosatelliitti": SolarSatelliteID,
 
-		// hu
 		"konnyuharcos": LightFighterID,
 		"nehezharcos":  HeavyFighterID,
 		"cirkalo":      CruiserID,
@@ -401,7 +361,6 @@ func ShipName2ID(name string) ID {
 		"kaszas":       ReaperID,
 		"felderito":    PathfinderID,
 
-		// si
 		"laheklovec":          LightFighterID,
 		"tezkilovec":          HeavyFighterID,
 		"krizarka":            CruiserID,
@@ -419,7 +378,6 @@ func ShipName2ID(name string) ID {
 		"kombajn":             ReaperID,
 		"iskalecsledi":        PathfinderID,
 
-		// ro
 		"vanatorusor":      LightFighterID,
 		"vanatorgreu":      HeavyFighterID,
 		"crucisator":       CruiserID,
@@ -433,7 +391,6 @@ func ShipName2ID(name string) ID {
 		"probadespionaj":   EspionageProbeID,
 		"satelitsolar":     SolarSatelliteID,
 
-		// sk
 		"lahkystihac":    LightFighterID,
 		"tazkystihac":    HeavyFighterID,
 		"bojovalod":      BattleshipID,
@@ -447,7 +404,6 @@ func ShipName2ID(name string) ID {
 		"kosa":           ReaperID,
 		"prieskumnik":    PathfinderID,
 
-		// gr
 		"ελαφρυμαχητικο":         LightFighterID,
 		"βαρυμαχητικο":           HeavyFighterID,
 		"καταδιωκτικο":           CruiserID,
@@ -461,7 +417,6 @@ func ShipName2ID(name string) ID {
 		"κατασκοπευτικοστελεχος": EspionageProbeID,
 		"ηλιακοισυλλεκτες":       SolarSatelliteID,
 
-		// no
 		"lettjeger":      LightFighterID,
 		"tungjeger":      HeavyFighterID,
 		"krysser":        CruiserID,
@@ -474,7 +429,6 @@ func ShipName2ID(name string) ID {
 		"spionasjesonde": EspionageProbeID,
 		"solarsatelitt":  SolarSatelliteID,
 
-		// tw
 		"輕型戰鬥機": LightFighterID,
 		"重型戰鬥機": HeavyFighterID,
 		"戰列艦":   BattleshipID,
@@ -492,7 +446,6 @@ func ShipName2ID(name string) ID {
 		"惡魔飛船":  ReaperID,
 		"探路者":   PathfinderID,
 
-		// hr
 		"malilovac":         LightFighterID,
 		"velikilovac":       HeavyFighterID,
 		"krstarica":         CruiserID,
@@ -509,18 +462,15 @@ func ShipName2ID(name string) ID {
 		"zetelac":           ReaperID,
 		"krcilac":           PathfinderID,
 
-		// ba
 		"krstarice":      CruiserID,
 		"borbenibrodovi": BattleshipID,
 		"razaraci":       DestroyerID,
 
-		// mx
 		"navedelacolonia": ColonyShipID,
 		"taladrador":      CrawlerID,
 		"segador":         ReaperID,
 		"explorador":      PathfinderID,
 
-		// cz
 		"lehkystihac":      LightFighterID,
 		"tezkystihac":      HeavyFighterID,
 		"kriznik":          CruiserID,
@@ -538,7 +488,6 @@ func ShipName2ID(name string) ID {
 		"rozparovac":       ReaperID,
 		"pruzkumnik":       PathfinderID,
 
-		// it
 		"caccialeggero":           LightFighterID,
 		"cacciapesante":           HeavyFighterID,
 		"incrociatore":            CruiserID,
@@ -554,7 +503,6 @@ func ShipName2ID(name string) ID {
 		"sondaspia":               EspionageProbeID,
 		"satellitesolare":         SolarSatelliteID,
 
-		// de
 		"leichterjager":      LightFighterID,
 		"schwererjager":      HeavyFighterID,
 		"kreuzer":            CruiserID,
@@ -567,14 +515,10 @@ func ShipName2ID(name string) ID {
 		"kolonieschiff":      ColonyShipID,
 		"spionagesonde":      EspionageProbeID,
 		"solarsatellit":      SolarSatelliteID,
-		// "bomber":             BomberID,
-		// "recycler":           RecyclerID,
 
-		// dk
 		"kravler":   CrawlerID,
 		"stifinder": PathfinderID,
 
-		// es
 		"cazadorligero":      LightFighterID,
 		"cazadorpesado":      HeavyFighterID,
 		"crucero":            CruiserID,
@@ -590,7 +534,6 @@ func ShipName2ID(name string) ID {
 		"sondadeespionaje":   EspionageProbeID,
 		"satelitesolar":      SolarSatelliteID,
 
-		// fr
 		"chasseurleger":          LightFighterID,
 		"chasseurlourd":          HeavyFighterID,
 		"croiseur":               CruiserID,
@@ -609,7 +552,6 @@ func ShipName2ID(name string) ID {
 		"faucheur":               ReaperID,
 		"eclaireur":              PathfinderID,
 
-		// br
 		"cacaligeiro":       LightFighterID,
 		"cacapesado":        HeavyFighterID,
 		"cruzador":          CruiserID,
@@ -622,10 +564,7 @@ func ShipName2ID(name string) ID {
 		"cargueirogrande":   LargeCargoID,
 		"navecolonizadora":  ColonyShipID,
 		"sondadeespionagem": EspionageProbeID,
-		//"reciclador":        RecyclerID,
-		//"satelitesolar":     SolarSatelliteID,
 
-		// jp
 		"軽戦闘機":      LightFighterID,
 		"重戦闘機":      HeavyFighterID,
 		"巡洋艦":       CruiserID,
@@ -644,7 +583,6 @@ func ShipName2ID(name string) ID {
 		"ーー":        ReaperID,
 		"スファインター":   PathfinderID,
 
-		// pl
 		"lekkimysliwiec":      LightFighterID,
 		"ciezkimysliwiec":     HeavyFighterID,
 		"krazownik":           CruiserID,
@@ -663,7 +601,6 @@ func ShipName2ID(name string) ID {
 		"rozpruwacz":          ReaperID,
 		"pionier":             PathfinderID,
 
-		// tr
 		"hafifavc":           LightFighterID,
 		"agravc":             HeavyFighterID,
 		"kruvazor":           CruiserID,
@@ -682,49 +619,36 @@ func ShipName2ID(name string) ID {
 		"azrail":             ReaperID,
 		"rehber":             PathfinderID,
 
-		// pt
 		"interceptor":       BattlecruiserID,
 		"navedecolonizacao": ColonyShipID,
 		"rastejador":        CrawlerID,
 		"ceifeira":          ReaperID,
 		"exploradora":       PathfinderID,
 
-		// nl
 		"lichtgevechtsschip": LightFighterID,
 		"zwaargevechtsschip": HeavyFighterID,
 		"kruiser":            CruiserID,
 		"slagschip":          BattleshipID,
-		//"interceptor":          BattlecruiserID,
 		"bommenwerper":     BomberID,
 		"vernietiger":      DestroyerID,
 		"sterdesdoods":     DeathstarID,
 		"kleinvrachtschip": SmallCargoID,
 		"grootvrachtschip": LargeCargoID,
 		"kolonisatieschip": ColonyShipID,
-		//"recycler":      RecyclerID,
-		//"spionagesonde":       EspionageProbeID,
 		"zonneenergiesatelliet": SolarSatelliteID,
 		"processer":             CrawlerID,
 		"ruimer":                ReaperID,
 		"navigator":             PathfinderID,
 
-		//dk
 		"lillejger": LightFighterID,
 		"storjger":  HeavyFighterID,
 		"krydser":   CruiserID,
 		"slagskib":  BattleshipID,
-		//"interceptor":      BattlecruiserID,
-		//"bomber":           BomberID,
-		//"destroyer":        DestroyerID,
 		"ddsstjerne":       DeathstarID,
 		"lilletransporter": SmallCargoID,
 		"stortransporter":  LargeCargoID,
 		"koloniskib":       ColonyShipID,
-		//"recycler":         RecyclerID,
-		//"spionagesonde":    EspionageProbeID,
-		//"solarsatellit":    SolarSatelliteID,
 
-		// ru
 		"легкииистребитель":  LightFighterID,
 		"тяжелыиистребитель": HeavyFighterID,
 		"креисер":            CruiserID,

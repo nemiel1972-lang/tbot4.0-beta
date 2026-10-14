@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 )
 
-// SystemInfos planets information for a specific system
 type SystemInfos struct {
 	galaxy           int64
 	system           int64
@@ -23,32 +22,26 @@ type SystemInfos struct {
 	OverlayToken string
 }
 
-// Galaxy returns galaxy info
 func (s SystemInfos) Galaxy() int64 {
 	return s.galaxy
 }
 
-// SetGalaxy ...
 func (s *SystemInfos) SetGalaxy(galaxy int64) {
 	s.galaxy = galaxy
 }
 
-// System returns system info
 func (s SystemInfos) System() int64 {
 	return s.system
 }
 
-// SetSystem ...
 func (s *SystemInfos) SetSystem(system int64) {
 	s.system = system
 }
 
-// SetPlanet ...
 func (s *SystemInfos) SetPlanet(i int, planet *PlanetInfos) {
 	s.planets[i] = planet
 }
 
-// Position returns planet at position idx in the SystemInfos
 func (s SystemInfos) Position(idx int64) *PlanetInfos {
 	if idx < 1 || idx > 15 {
 		return nil
@@ -56,7 +49,6 @@ func (s SystemInfos) Position(idx int64) *PlanetInfos {
 	return s.planets[idx-1]
 }
 
-// Each will execute provided callback for every positions in the system
 func (s SystemInfos) Each(clb func(planetInfo *PlanetInfos)) {
 	var i int64
 	for i = 1; i <= 15; i++ {
@@ -64,7 +56,6 @@ func (s SystemInfos) Each(clb func(planetInfo *PlanetInfos)) {
 	}
 }
 
-// MarshalJSON export private fields to json for ogamed
 func (s SystemInfos) MarshalJSON() ([]byte, error) {
 	var tmp struct {
 		Galaxy           int64
@@ -87,7 +78,6 @@ func (s SystemInfos) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tmp)
 }
 
-// MoonInfos public information of a moon in the galaxy page
 type MoonInfos struct {
 	ID       int64
 	Name     string
@@ -95,7 +85,6 @@ type MoonInfos struct {
 	Activity int64
 }
 
-// AllianceInfos public information of an alliance in the galaxy page
 type AllianceInfos struct {
 	ID     int64
 	Name   string
@@ -104,10 +93,9 @@ type AllianceInfos struct {
 	Member int64
 }
 
-// PlanetInfos public information of a planet in the galaxy page
 type PlanetInfos struct {
 	ID              int64
-	Activity        int64 // no activity: 0, active: 15, inactive: [16, 59]
+	Activity        int64
 	Name            string
 	Img             string
 	Coordinate      Coordinate

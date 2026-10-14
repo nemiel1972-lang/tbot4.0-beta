@@ -4,32 +4,27 @@ import (
 	"github.com/alaingilbert/ogame/pkg/utils"
 )
 
-// DefensesInfos represent a planet defenses information
 type DefensesInfos struct {
-	RocketLauncher         int64 // 401
-	LightLaser             int64 // 402
-	HeavyLaser             int64 // 403
-	GaussCannon            int64 // 404
-	IonCannon              int64 // 405
-	PlasmaTurret           int64 // 406
-	SmallShieldDome        int64 // 407
-	LargeShieldDome        int64 // 408
-	AntiBallisticMissiles  int64 // 502
-	InterplanetaryMissiles int64 // 503
+	RocketLauncher         int64
+	LightLaser             int64
+	HeavyLaser             int64
+	GaussCannon            int64
+	IonCannon              int64
+	PlasmaTurret           int64
+	SmallShieldDome        int64
+	LargeShieldDome        int64
+	AntiBallisticMissiles  int64
+	InterplanetaryMissiles int64
 }
 
-// HasShipDefense returns either or not at least one defense which can attack ships is present i.e., excluding
-// AntiBallisticMissiles
 func (d DefensesInfos) HasShipDefense() bool {
 	return d.CountShipDefenses() > 0
 }
 
-// HasMissilesDefense returns either or not AntiBallisticMissiles are present
 func (d DefensesInfos) HasMissilesDefense() bool {
 	return d.AntiBallisticMissiles > 0
 }
 
-// CountShipDefenses returns the count of defenses which can attack ships i.e., excluding AntiBallisticMissiles
 func (d DefensesInfos) CountShipDefenses() (out int64) {
 	excluded := []ID{
 		InterplanetaryMissilesID,
@@ -45,7 +40,6 @@ func (d DefensesInfos) CountShipDefenses() (out int64) {
 	return
 }
 
-// AttackableValue returns the value of the defenses that can be attacked
 func (d DefensesInfos) AttackableValue() int64 {
 	val := d.RocketLauncher * RocketLauncher.Price.Total()
 	val += d.LightLaser * LightLaser.Price.Total()
@@ -58,7 +52,6 @@ func (d DefensesInfos) AttackableValue() int64 {
 	return val
 }
 
-// GetWeaponPower returns weapon power of a DefensesInfos
 func (d DefensesInfos) GetWeaponPower(researches IResearches) (out int64) {
 	for _, defense := range Defenses {
 		out += d.ByID(defense.GetID()) * defense.GetWeaponPower(researches)
@@ -66,7 +59,6 @@ func (d DefensesInfos) GetWeaponPower(researches IResearches) (out int64) {
 	return
 }
 
-// GetShieldPower returns shield power of a DefensesInfos
 func (d DefensesInfos) GetShieldPower(researches IResearches) (out int64) {
 	for _, defense := range Defenses {
 		out += d.ByID(defense.GetID()) * defense.GetShieldPower(researches)
@@ -74,7 +66,6 @@ func (d DefensesInfos) GetShieldPower(researches IResearches) (out int64) {
 	return
 }
 
-// GetStructuralIntegrity returns structural integrity of a DefensesInfos
 func (d DefensesInfos) GetStructuralIntegrity(researches IResearches) (out int64) {
 	for _, defense := range Defenses {
 		out += d.ByID(defense.GetID()) * defense.GetStructuralIntegrity(researches)
@@ -96,7 +87,6 @@ func (d DefensesInfos) String() string {
 		"Interplanetary Missiles: " + utils.FI64(d.InterplanetaryMissiles)
 }
 
-// ByID get number of defenses by defense id
 func (d DefensesInfos) ByID(id ID) int64 {
 	switch id {
 	case RocketLauncherID:
@@ -124,7 +114,6 @@ func (d DefensesInfos) ByID(id ID) int64 {
 	}
 }
 
-// Set sets the defenses value using the defense id
 func (d *DefensesInfos) Set(id ID, val int64) {
 	switch id {
 	case RocketLauncherID:

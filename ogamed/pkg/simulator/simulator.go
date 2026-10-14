@@ -45,7 +45,6 @@ func isAlive(unit *CombatUnit) bool {
 	return getUnitHull(unit) > 0
 }
 
-// CombatUnit ...
 type CombatUnit struct {
 	PackedInfos uint64
 }
@@ -91,7 +90,6 @@ type price struct {
 	Deuterium int
 }
 
-// String ...
 func (p price) String() string {
 	return fmt.Sprintf("[M: %d, C: %d, D: %d]", p.Metal, p.Crystal, p.Deuterium)
 }
@@ -181,7 +179,7 @@ func getUnitBaseShield(unitID uint64) int {
 	case recyclerConst:
 		return 10
 	case espionageProbeConst:
-		return 1 // 0.01
+		return 1
 	case bomberConst:
 		return 500
 	case solarSatelliteConst:
@@ -237,7 +235,7 @@ func getUnitBaseWeapon(unitID uint64) uint64 {
 	case recyclerConst:
 		return 1
 	case espionageProbeConst:
-		return 1 // 0.01
+		return 1
 	case bomberConst:
 		return 1000
 	case solarSatelliteConst:
@@ -728,7 +726,6 @@ func (simulator *combatSimulator) attack(attacker *entity, attackingUnit *Combat
 	}
 
 	weapon := getUnitWeaponPower(getUnitID(attackingUnit), attacker.Weapon)
-	// Check for shot bounce
 	if float64(weapon) < 0.01*float64(getUnitShield(defendingUnit)) {
 		if simulator.IsLogging {
 			simulator.Logs += "shot bounced\n"
@@ -736,7 +733,6 @@ func (simulator *combatSimulator) attack(attacker *entity, attackingUnit *Combat
 		return
 	}
 
-	// Attack target
 	currentHull := getUnitHull(defendingUnit)
 	currentShield := getUnitShield(defendingUnit)
 	if currentShield < weapon {
@@ -754,7 +750,6 @@ func (simulator *combatSimulator) attack(attacker *entity, attackingUnit *Combat
 		simulator.Logs += fmt.Sprintf("result is %s %d %d\n", getUnitName(getUnitID(defendingUnit)), getUnitHull(defendingUnit), getUnitShield(defendingUnit))
 	}
 
-	// Check for explosion
 	if isAlive(defendingUnit) {
 		if simulator.hasExploded(defender, defendingUnit) {
 			setUnitHull(defendingUnit, 0)
@@ -840,13 +835,11 @@ func (simulator *combatSimulator) removeDestroyedUnits() {
 			if isShip(unit) {
 				simulator.Debris.Metal += int(simulator.FleetToDebris * float64(unitPrice.Metal))
 				simulator.Debris.Crystal += int(simulator.FleetToDebris * float64(unitPrice.Crystal))
-				// Server rechnet Deuterium ins Truemmerfeld mit
 				simulator.Debris.Deuterium += int(simulator.FleetToDebris * float64(unitPrice.Deuterium))
 			}
 			simulator.Defender.Losses.add(unitPrice)
 			simulator.Defender.Units[i] = simulator.Defender.Units[simulator.Defender.TotalUnits-1]
 			simulator.Defender.TotalUnits--
-			//simulator.Defender.Units = simulator.Defender.Units[:len(simulator.Defender.Units)-1]
 			if simulator.IsLogging {
 				simulator.Logs += fmt.Sprintf("%s lost all its integrity, remove from battle\n", getUnitName(getUnitID(unit)))
 			}
@@ -860,13 +853,11 @@ func (simulator *combatSimulator) removeDestroyedUnits() {
 			if isShip(unit) {
 				simulator.Debris.Metal += int(simulator.FleetToDebris * float64(unitPrice.Metal))
 				simulator.Debris.Crystal += int(simulator.FleetToDebris * float64(unitPrice.Crystal))
-				// Server rechnet Deuterium ins Truemmerfeld mit
 				simulator.Debris.Deuterium += int(simulator.FleetToDebris * float64(unitPrice.Deuterium))
 			}
 			simulator.Attacker.Losses.add(unitPrice)
 			simulator.Attacker.Units[i] = simulator.Attacker.Units[simulator.Attacker.TotalUnits-1]
 			simulator.Attacker.TotalUnits--
-			//simulator.Attacker.Units = simulator.Attacker.Units[:len(simulator.Attacker.Units)-1]
 			if simulator.IsLogging {
 				simulator.Logs += fmt.Sprintf("%s lost all its integrity, remove from battle\n", getUnitName(getUnitID(unit)))
 			}
@@ -896,7 +887,6 @@ func (simulator *combatSimulator) isCombatDone() bool {
 }
 
 func (simulator *combatSimulator) getMoonchance() int {
-	// Mondchance bleibt bewusst Metall+Kristall (wie OGame)
 	debris := float64(simulator.Debris.Metal) + float64(simulator.Debris.Crystal)
 	return int(math.Min(debris/100000.0, 20.0))
 }
@@ -955,7 +945,6 @@ func newCombatSimulator(attacker *entity, defender *entity) *combatSimulator {
 	return cs
 }
 
-// Config ...
 type Config struct {
 	IsLogging   bool
 	Simulations int
@@ -1082,7 +1071,6 @@ func (e *entity) reset() {
 	e.TotalUnits += e.LargeShieldDome
 }
 
-// Simulate ...
 func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorParams) SimulatorResult {
 	nbSimulations := params.Simulations
 
@@ -1094,7 +1082,6 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	debris := price{}
 	rounds := 0
 	moonchance := 0
-	// cargo-specific survival tracking, summed across runs like attackerLosses etc, averaged at the end.
 	attackerCargoSurvivedTotal := 0
 
 	attacker := newEntity()
@@ -1115,7 +1102,6 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	attacker.Destroyer = int(attackerParam.Destroyer)
 	attacker.Deathstar = int(attackerParam.Deathstar)
 	attacker.Battlecruiser = int(attackerParam.Battlecruiser)
-	// Reaper/Pathfinder/Crawler wurden nicht uebernommen und fehlten komplett im Kampf
 	attacker.Reaper = int(attackerParam.Reaper)
 	attacker.Pathfinder = int(attackerParam.Pathfinder)
 	attacker.Crawler = int(attackerParam.Crawler)
@@ -1148,7 +1134,6 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	defender.Destroyer = int(defenderParam.Destroyer)
 	defender.Deathstar = int(defenderParam.Deathstar)
 	defender.Battlecruiser = int(defenderParam.Battlecruiser)
-	// Reaper/Pathfinder/Crawler des Verteidigers (1:34:6: Pfadfinder fehlten -> TF zu klein)
 	defender.Reaper = int(defenderParam.Reaper)
 	defender.Pathfinder = int(defenderParam.Pathfinder)
 	defender.Crawler = int(defenderParam.Crawler)
@@ -1184,12 +1169,6 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 		debris.add(cs.Debris)
 		rounds += cs.Rounds
 		moonchance += cs.getMoonchance()
-		// count surviving cargo units this run by scanning cs.Attacker.Units the same way
-		// cs.Attacker.Losses is already relied on above - Units[] is populated sequentially by type in
-		// entity.init(), each slot carrying a packed unit ID.
-		// Pathfinder zaehlt als Cargo (AutoFarm nutzt Pfadfinder). Ausserdem nur die
-		// lebenden Slots [0, TotalUnits) zaehlen - removeDestroyedUnits() kopiert die letzte Einheit in
-		// die Luecke, die alte Kopie bleibt hinter TotalUnits stehen und wurde doppelt gezaehlt.
 		for _, unit := range cs.Attacker.Units[:cs.Attacker.TotalUnits] {
 			id := getUnitID(&unit)
 			if (id == smallCargoConst || id == largeCargoConst || id == pathfinderConst) && isAlive(&unit) {
@@ -1215,11 +1194,9 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	result.Debris = price{}
 	result.Debris.Metal = int(float64(debris.Metal) / float64(nbSimulations))
 	result.Debris.Crystal = int(float64(debris.Crystal) / float64(nbSimulations))
-	// Deuterium im TF und in der Recycler-Anzahl
 	result.Debris.Deuterium = int(float64(debris.Deuterium) / float64(nbSimulations))
 	result.Recycler = int(math.Ceil((float64(debris.Metal+debris.Crystal+debris.Deuterium) / float64(nbSimulations)) / 20000.0))
 	result.Moonchance = int(float64(moonchance) / float64(nbSimulations))
-	// Pathfinder als Cargo mitzaehlen
 	result.AttackerCargoSent = int(attackerParam.SmallCargo) + int(attackerParam.LargeCargo) + int(attackerParam.Pathfinder)
 	result.AttackerCargoSurvived = float64(attackerCargoSurvivedTotal) / float64(nbSimulations)
 
@@ -1228,7 +1205,6 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	return result
 }
 
-// Attacker ...
 type Attacker struct {
 	Weapon int
 	Shield int
@@ -1236,7 +1212,6 @@ type Attacker struct {
 	ogame.ShipsInfos
 }
 
-// Defender ...
 type Defender struct {
 	Metal     int
 	Crystal   int
@@ -1248,13 +1223,11 @@ type Defender struct {
 	ogame.DefensesInfos
 }
 
-// SimulatorParams ...
 type SimulatorParams struct {
 	Simulations   int
 	FleetToDebris float64
 }
 
-// SimulatorResult ...
 type SimulatorResult struct {
 	Simulations           int
 	AttackerWin           int
@@ -1271,7 +1244,6 @@ type SimulatorResult struct {
 	Logs                  string
 }
 
-// String ...
 func (s SimulatorResult) String() string {
 	return "" +
 		"   Simulations: " + strconv.Itoa(s.Simulations) + "\n" +

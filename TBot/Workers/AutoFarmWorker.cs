@@ -38,29 +38,16 @@ namespace Tbot.Workers {
 		private bool _defendedHalfToggle;
 
 		private long? _sequentialModeNextArrivalSeconds;
-		// Sende-Zeitpunkt der Sonde (UTC) - siehe Kommentar bei der Reschedule-Stelle
-		// ganz am Ende von Execute() (dort wird die seit dem Versand bereits verstrichene Zeit von
-		// der Flugzeit abgezogen, statt den vollen Wert ab "jetzt" nochmal draufzuschlagen).
 		private DateTime? _sequentialModeProbeSentAtUtc;
 
-		// nur noch Startwert vor dem Laden aus der DB (siehe Konstruktor) - der
-		// eigentliche persistente Wert liegt jetzt in AutoFarmStateStore.
 		private volatile bool _mainScanCompletedSinceStart = false;
 
 		private readonly ConcurrentQueue<Coordinate> _activeScanDiscoveries = new();
 		private Task _activeScanLoopTask;
 		private readonly object _activeScanStartLock = new object();
 
-		// Zeitpunkt (UTC) des letzten Abarbeitens der ActiveScan-Entdeckungs-Queue ("Block 11") -
-		// bewusst reiner In-Memory-Zustand (kein Persistieren noetig): schlimmstenfalls wird nach
-		// einem Neustart einmal sofort abgearbeitet, statt auf AutoFarm.Block11MaxAgeHours zu warten -
-		// das ist sicher (kein doppeltes Abarbeiten moeglich, nur potenziell frueher als sonst).
 		private DateTime _lastActiveScanDrainUtc = DateTime.MinValue;
 
-		// Verzoegerte Recycler-Starts werden in einer kleinen JSON-Datei neben der AutoFarm-DB gespeichert
-		// (gleiches Muster wie die Fleetsave-Recalls in FleetScheduler), damit ein Neustart sie nicht
-		// verliert. Jeder Auftrag bekommt einen eigenen One-Shot-Timer, der nie per Change() umgestellt
-		// wird (bekanntes Timer.Change()-Problem), sondern bei Bedarf neu erzeugt.
 		private class PendingRecyclerEntry {
 			public string Id { get; set; }
 			public int OriginGalaxy { get; set; }
@@ -74,7 +61,6 @@ namespace Tbot.Workers {
 			public decimal Speed { get; set; }
 			public DateTime SendAtUtc { get; set; }
 			public DateTime GiveUpAtUtc { get; set; }
-			// Fehlversuche NACH dem Kampf (begrenzt)
 			public int PostBattleAttempts { get; set; }
 			public int Attempts { get; set; }
 		}
@@ -82,9 +68,6 @@ namespace Tbot.Workers {
 		private readonly ConcurrentDictionary<string, Timer> _recyclerTimers = new();
 		private bool _pendingRecyclersReconciled;
 
-		// Die berechneten Flugzeiten (CalcFleetPrediction) weichen in der Praxis ab (Recycler kamen
-		// 2-3 min zu frueh). Nach jedem Versand wird die ECHTE Restflugzeit aus der Flottenliste gelesen
-		// und als Korrekturfaktor (gleitender Mittelwert) pro Flottenart gemerkt und gespeichert.
 		private class FlightCalibration {
 			public double RecyclerFactor { get; set; } = 1.0;
 			public int RecyclerSamples { get; set; }
@@ -118,7 +101,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// isRecycler: true = Recycler (Abbau), false = Hauptflotte (Angriff)
 		private void RecordFlightSample(bool isRecycler, long predictedSec, long actualSec) {
 			if (predictedSec <= 0 || actualSec <= 0) return;
 			double ratio = Math.Clamp((double) actualSec / predictedSec, 0.3, 3.0);
@@ -126,7 +108,6 @@ namespace Tbot.Workers {
 				var cal = GetFlightCalibration();
 				double oldFactor = isRecycler ? cal.RecyclerFactor : cal.AttackFactor;
 				int samples = isRecycler ? cal.RecyclerSamples : cal.AttackSamples;
-				// erste Messung direkt uebernehmen, danach gleitend (30% neue Messung)
 				double newFactor = samples == 0 ? ratio : oldFactor * 0.7 + ratio * 0.3;
 				if (isRecycler) { cal.RecyclerFactor = newFactor; cal.RecyclerSamples = samples + 1; }
 				else { cal.AttackFactor = newFactor; cal.AttackSamples = samples + 1; }
@@ -139,8 +120,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// Status messages that would otherwise repeat every cycle are written once per key and then only again
-		// after AutoFarm.RepeatedLogIntervalMinutes (default 360; 0 = log every time as before).
 		private readonly Dictionary<string, DateTime> _throttledLogUtc = new();
 
 		private void LogThrottled(string key, LogLevel level, string message) {
@@ -151,7 +130,6 @@ namespace Tbot.Workers {
 					if (_throttledLogUtc.TryGetValue(key, out var lastUtc) && (nowUtc - lastUtc).TotalMinutes < intervalMinutes)
 						return;
 					_throttledLogUtc[key] = nowUtc;
-					// drop stale keys so the dictionary does not grow forever
 					if (_throttledLogUtc.Count > 2000) {
 						foreach (var stale in _throttledLogUtc.Where(kv => (nowUtc - kv.Value).TotalMinutes >= intervalMinutes).Select(kv => kv.Key).ToList())
 							_throttledLogUtc.Remove(stale);
@@ -161,8 +139,6 @@ namespace Tbot.Workers {
 			_tbotInstance.log(level, LogSender.AutoFarm, message);
 		}
 
-		// Result per attack: returned (return flight seen, exact losses), destroyed (vanished at arrival, no
-		// return flight, bot was active) or unknown (bot inactive during the relevant window - NOT counted as a loss).
 		private static readonly Buildables[] LossShipTypes = {
 			Buildables.LightFighter, Buildables.HeavyFighter, Buildables.Cruiser, Buildables.Battleship,
 			Buildables.Battlecruiser, Buildables.Bomber, Buildables.Destroyer, Buildables.Deathstar,
@@ -238,7 +214,6 @@ namespace Tbot.Workers {
 				foreach (var rec in pending) {
 					var fleet = fleets.FirstOrDefault(f => f.ID == rec.FleetId);
 					if (fleet == null) {
-						// Fallback in case the return flight carries a different ID: same route, attack mission, returning
 						fleet = fleets.FirstOrDefault(f => f.ReturnFlight && f.Mission == Missions.Attack
 							&& !pendingIds.Contains(f.ID) && !usedFallback.Contains(f.ID)
 							&& f.Origin != null && f.Destination != null
@@ -252,7 +227,6 @@ namespace Tbot.Workers {
 						if (fleet.ReturnFlight) {
 							var returned = ShipsToLossDict(fleet.Ships);
 							if (returned.Count == 0) {
-								// Ships not readable - better "unknown" than a false total loss
 								_stateStore.ResolveFleetLoss(rec.FleetId, "unknown", null, new Resources(), nowUtc);
 								continue;
 							}
@@ -273,7 +247,6 @@ namespace Tbot.Workers {
 						continue;
 					}
 
-					// Fleet not (or no longer) in the list - decide only on the second miss (guards against empty lists)
 					int miss = rec.MissCount + 1;
 					if (miss < 2) {
 						_stateStore.UpdateFleetLossObservation(rec.FleetId, miss, null, null);
@@ -282,7 +255,6 @@ namespace Tbot.Workers {
 					double outboundSec = Math.Max(0, (rec.ExpectedArrivalUtc - rec.DispatchedAtUtc).TotalSeconds);
 					double marginSec = Math.Max(120, outboundSec * 0.15);
 					if (nowUtc >= rec.ExpectedArrivalUtc.AddSeconds(-marginSec) && nowUtc < rec.ExpectedReturnUtc.AddSeconds(-marginSec)) {
-						// vanished after arrival while the return flight should still be visible -> destroyed
 						var destroyed = new AutoFarmFleetLossRecord { Sent = rec.Sent, Status = "destroyed" };
 						var lost = LostShips(destroyed);
 						var value = LossValueOf(lost);
@@ -294,7 +266,6 @@ namespace Tbot.Workers {
 					}
 				}
 
-				// once per calendar day: summary
 				var today = DateTime.Now.Date;
 				if (_lastLossSummaryLocalDate != today) {
 					_lastLossSummaryLocalDate = today;
@@ -329,7 +300,7 @@ namespace Tbot.Workers {
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
 					$"AutoFarm losses {label}: {counted} attacks evaluated ({destroyedCount} destroyed), lost {FormatLostShips(total)} = {lossValue:N0} ({ratio}) | unknown {unknown}, pending {open}.");
 			}
-		}		// Echte Restflugzeit (Sekunden) einer gerade gesendeten Flotte aus der Flottenliste
+		}
 		private async Task<long?> GetActualArriveInAsync(int fleetId) {
 			try {
 				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
@@ -409,19 +380,10 @@ namespace Tbot.Workers {
 			_recyclerTimers[id] = timer;
 		}
 
-		// GiveUpAtUtc liegt bei allen Aufrufern genau 30 min hinter der Angriffsankunft.
-		// Schlaegt der Versand VOR dem Kampf fehl (typisch: Truemmerfeld existiert noch nicht), bringt
-		// alle 30s erneut versuchen nichts - naechster Versuch erst 20s nach Kampfende. Danach alle 90s,
-		// hoechstens RecyclerMaxRetriesAfterBattle Mal (Default 10).
-		// aus JSON zurueckgelesene decimals behalten ihre Skalierung ("10.0") - ogamed lehnt
-		// das mit "invalid speed" ab. Vor jedem Versand auf die minimale Darstellung normalisieren.
 		private static decimal NormalizeSpeed(decimal speed) {
 			return decimal.Parse(speed.ToString("0.#####", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 		}
 
-		// FleetScheduler.SendFleet ("bed time has passed" / "would come back during sleep time"), aber
-		// VOR Trigger-Sonde und Recycler, damit nicht erst Sonde + Recycler rausgehen und die
-		// Hauptflotte dann abgelehnt wird.
 		private async Task<bool> WouldConflictWithSleepAsync(long roundTripSec) {
 			try {
 				if (!SettingsService.IsSettingSet(_tbotInstance.InstanceSettings, "SleepMode")
@@ -447,8 +409,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// geplante Recycler-Auftraege fuer ein Truemmerfeld verwerfen und bereits fliegende
-		// Recycler zu diesem Feld zurueckrufen (Hauptflotte wurde doch nicht gesendet).
 		private async Task CancelRecyclersForDebrisAsync(Coordinate debris) {
 			try {
 				lock (_pendingRecyclersLock) {
@@ -509,8 +469,6 @@ namespace Tbot.Workers {
 			ArmRecyclerTimer(entry);
 		}
 
-		// Sofort senden; schlaegt das fehl (Truemmerfeld noch nicht da, kein Slot, ...), wird ein
-		// persistierter Wiederholungsauftrag angelegt (Taktik siehe NextRecyclerRetryUtc, PATCH 128).
 		private async Task<long?> SendRecyclerOrScheduleRetryAsync(Celestial origin, Ships recyclers, Coordinate debris, decimal speed, DateTime giveUpAtUtc) {
 			int fleetId;
 			try {
@@ -521,7 +479,6 @@ namespace Tbot.Workers {
 			}
 			if (fleetId > (int) SendFleetCode.GenericError) {
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Recycler ({recyclers.GetAmount(Buildables.Recycler)}x) sent to {debris}, {speed * 10}% speed.");
-				// echte Flugzeit messen -> Kalibrierung; Rueckgabe = echte Restflugzeit
 				long predictedRec = PredictRecyclerSeconds(origin, recyclers, debris, speed);
 				long? actualRec = await GetActualArriveInAsync(fleetId);
 				if (actualRec.HasValue) RecordFlightSample(true, predictedRec, actualRec.Value);
@@ -569,7 +526,6 @@ namespace Tbot.Workers {
 					if (fleetId > (int) SendFleetCode.GenericError) {
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Scheduled recycler ({toSend}x) sent to {debris}, {entry.Speed * 10}% speed{(entry.Attempts > 0 ? $" (attempt {entry.Attempts + 1})" : "")}.");
 						RemovePendingRecycler(id);
-						// echte Flugzeit messen -> Kalibrierung
 						var sentRecyclers = new Ships().Add(Buildables.Recycler, toSend);
 						long predictedRec = PredictRecyclerSeconds(origin, sentRecyclers, debris, entry.Speed);
 						long? actualRec = await GetActualArriveInAsync(fleetId);
@@ -596,8 +552,6 @@ namespace Tbot.Workers {
 			ArmRecyclerTimer(entry);
 		}
 
-		// Einmal beim ersten Execute() nach dem Start: gespeicherte Auftraege neu bewaffnen, ueberfaellige
-		// sofort ausfuehren, abgelaufene verwerfen.
 		private void ReconcilePendingRecyclers() {
 			var entries = LoadPendingRecyclers();
 			if (entries.Count == 0) {
@@ -629,11 +583,6 @@ namespace Tbot.Workers {
 			string successfulPath = $"autofarm_successful_{_tbotInstance.InstanceAlias}.json";
 			_successfulTargets = new AutoFarmSuccessfulTargets(successfulPath);
 			_stateStore = new AutoFarmStateStore($"autofarm_{_tbotInstance.InstanceAlias}.db");
-			// _mainScanCompletedSinceStart war bisher reiner In-Memory-Zustand - jeder
-			// Neustart hat den Hintergrund-Scanner (ActiveScan) dadurch erneut fuer einen ganzen
-			// Durchlauf pausiert, obwohl schon laengst mindestens einmal komplett durchgescannt wurde.
-			// Jetzt beim Start aus der DB geladen (Default false bei einer frischen/neuen DB - dann
-			// bleibt das bisherige, sichere Verhalten: erst nach einem vollen Durchlauf freischalten).
 			_mainScanCompletedSinceStart = _stateStore.LoadMainScanCompleted();
 		}
 		public override bool IsWorkerEnabledBySettings() {
@@ -679,9 +628,6 @@ namespace Tbot.Workers {
 			while (!ct.IsCancellationRequested) {
 				try {
 					var scanRanges = GetEffectiveScanRanges();
-					// Umstellung wie im Haupt-Scan-Zyklus: konfigurierte Reihenfolge statt
-					// Galaxy/StartSystem-Sortierung, fuer konsistentes Verhalten zwischen
-					// ActiveScan und dem regulaeren AutoFarm-Zyklus.
 					var orderedRanges = scanRanges.ToList();
 
 					foreach (var range in orderedRanges) {
@@ -753,8 +699,6 @@ namespace Tbot.Workers {
 				if (!persisted.ConsumedReportId.HasValue &&
 					persisted.State == FarmState.AttackSent &&
 					persisted.Report?.ID > 0) {
-					// Databases created before report consumption was persisted still
-					// contain the report that was used for this completed dispatch.
 					persisted.ConsumedReportId = persisted.Report.ID;
 				}
 
@@ -805,9 +749,6 @@ namespace Tbot.Workers {
 
 		private async Task PruneOldReports(List<Fleet> fleets) {
 			var newTime = await _tbotOgameBridge.GetDateTime();
-			// HeldForManualReview-Ziele (initial zu stark verteidigt) werden von der altersbasierten
-			// Report-Loeschung ausgenommen - der Bericht soll bestehen bleiben, bis der Nutzer ihn
-			// selbst manuell prueft/entfernt, nicht automatisch nach AutoFarm.KeepReportFor verschwinden.
 			var removeReports = _tbotInstance.UserData.farmTargets.Where(t => t.State == FarmState.AttackSent || (!t.HeldForManualReview && t.Report != null && DateTime.Compare(t.Report.Date.AddMinutes((double) _tbotInstance.InstanceSettings.AutoFarm.KeepReportFor), newTime) < 0)).ToList();
 			int attackGraceSeconds = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "AttackGraceSeconds", 60);
 			foreach (var remove in removeReports) {
@@ -817,7 +758,6 @@ namespace Tbot.Workers {
 					bool stillInProgress = AutoFarmAttackPolicy.IsAttackInProgress(remove, fleets);
 
 					if (withinGracePeriod || stillInProgress) {
-						// logged once per target and interval instead of every cycle
 						LogThrottled($"attacksent:{remove.Celestial?.Coordinate}", LogLevel.Debug,
 							withinGracePeriod && !stillInProgress
 								? $"Keeping {remove} in AttackSent state - within {attackGraceSeconds}s grace period after dispatch (fleet list may not be updated yet)."
@@ -865,17 +805,6 @@ namespace Tbot.Workers {
 				.ToList();
 		}
 
-		// Liefert die tatsaechlich zu scannenden Ranges (Galaxy/StartSystem/EndSystem). Normalerweise
-		// identisch mit der manuell konfigurierten Liste AutoFarm.ScanRange - ist aber zusaetzlich
-		// die optionale Einstellung AutoFarm.SystemRange (int, Radius) gesetzt, wird ScanRange
-		// komplett IGNORIERT und die Ranges stattdessen automatisch berechnet: fuer jede Galaxie, in
-		// der ein AutoFarm-Origin liegt (AutoFarm.Origin, sonst alle Celestials), wird eine Range
-		// [homeSystem - SystemRange, homeSystem + SystemRange] erzeugt (auf [1, ServerData.Systems]
-		// geklemmt - bewusst OHNE Wraparound ueber die Galaxie-Ringgrenze, das waere nur relevant,
-		// wenn die Heimatwelt sehr nah an System 1 oder Systems liegt UND der Radius entsprechend
-		// gross ist; fuer den Normalfall reicht Klemmen). Grund: Nutzer-Feedback, dass eine manuell
-		// gepflegte Start/End-Range ueberfluessig ist, seit die Scan-REIHENFOLGE ohnehin
-		// vom Origin aus gezaehlt wird - ein einzelner Radius-Wert ist einfacher zu pflegen.
 		private List<dynamic> GetEffectiveScanRanges() {
 			bool useSystemRange = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "SystemRange") &&
 				(int) _tbotInstance.InstanceSettings.AutoFarm.SystemRange > 0;
@@ -897,29 +826,6 @@ namespace Tbot.Workers {
 				int rawStart = home - radius;
 				int rawEnd = home + radius;
 
-				// PATCH 111 hat bei Ueber-/Unterlauf zwei getrennte Range-Segmente erzeugt (z.B.
-				// [107,499] + [1,108]). Bug (Nutzer-Meldung: "block reihenfolge falschrum, weiteste
-				// weg in block 5"): die beiden Segmente werden als GETRENNTE Ranges weiter unten per
-				// `orderedRanges.OrderBy(Galaxy).ThenBy(StartSystem)` einsortiert - das sortiert nach
-				// roher Systemnummer, NICHT nach Distanz zur Heimatwelt. Ergebnis: das Segment mit der
-				// kleineren StartSystem-Zahl (hier [1,108], Distanzbereich ~143-249) wurde KOMPLETT VOR
-				// dem Segment abgearbeitet, das die Heimatwelt selbst enthaelt ([107,499], Distanz
-				// 0-250) - obwohl innerhalb jedes einzelnen Segments korrekt nach Distanz sortiert
-				// wurde, war die REIHENFOLGE DER SEGMENTE UNTEREINANDER falsch, weil die beiden
-				// Distanzbereiche sich ueberlappen (ein Segment kann nicht einfach "danach" drankommen,
-				// wenn es naehere Systeme enthaelt als das Ende des anderen Segments).
-				// Fix: bei Ueber-/Unterlauf wird jetzt EIN einziges Segment ueber die GESAMTE Galaxie
-				// [1, totalSystems] erzeugt, statt zwei getrennte Segmente. AutoFarmScanPlanner.
-				// EnumerateSystemsByDistance sortiert dieses eine Segment danach als GANZES korrekt
-				// nach Distanz zur Heimatwelt (naechstes zuerst, echter Ring-Wraparound inklusive) -
-				// es gibt dann keine zwei Teillisten mehr, deren Reihenfolge zueinander stimmen
-				// muesste. Praktische Konsequenz: bei einem Radius, der ueberhaupt einen Wraparound
-				// ausloest, wird effektiv die komplette Galaxie als Kandidatenmenge herangezogen (die
-				// Sortierung nach Distanz sorgt aber weiterhin dafuer, dass die naechsten Systeme
-				// zuerst drankommen - AutoFarm.ScanBlockSize/TargetsProbedBeforeAttack begrenzen die
-				// tatsaechliche Arbeit pro Zyklus ohnehin unabhaengig von der Groesse der Kandidatenmenge).
-				// Ohne bekannte Gesamt-Systemzahl (totalSystems <= 0) wird weiterhin nur geklemmt, da
-				// dann kein sicherer Wraparound berechenbar ist.
 				if (totalSystems > 0 && (rawStart < 1 || rawEnd > totalSystems)) {
 					generatedRanges.Add(new { Galaxy = galaxy, StartSystem = 1, EndSystem = totalSystems });
 				} else {
@@ -938,13 +844,6 @@ namespace Tbot.Workers {
 			return generatedRanges;
 		}
 
-		// Liefert das System, das als "0-Punkt" fuer die distanzbasierte Scan-Reihenfolge dient
-		// (siehe AutoFarmScanPlanner.EnumerateSystemsByDistance) - also das System, von dem aus in
-		// der angegebenen Galaxie tatsaechlich Flotten/Sonden verschickt werden (Heimatwelt oder
-		// Mond, beide teilen sich dieselbe Systemnummer). Bevorzugt einen Origin (AutoFarm.Origin,
-		// oder falls leer alle Celestials) in derselben Galaxie wie die zu scannende Range; gibt es
-		// dort keinen, wird ersatzweise der erste bekannte Origin ueberhaupt verwendet (besser eine
-		// grobe Naeherung als gar keine Sortierung).
 		private int GetHomeSystemForGalaxy(int galaxy) {
 			var farmOrigins = GetFarmOrigins();
 			if (farmOrigins.Count == 0)
@@ -1076,10 +975,6 @@ namespace Tbot.Workers {
 			return true;
 		}
 
-		// --- AutoFarm.AllianceWhitelist: Mitglieder der eigenen (und optional weiterer) Allianzen werden nie
-		// ausgespaeht oder angegriffen. Mitgliederliste aus der oeffentlichen OGame-API (alliances.xml, aktualisiert
-		// sich dort nur 1x/Tag -> alle ~20 h neu laden). ShouldExcludePlanet ist der gemeinsame Filter fuer Scan,
-		// Spionage und Angriff, daher greift der Schutz an allen drei Stellen.
 		private static readonly HttpClient _allianceApiClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 		private HashSet<int> _allyPlayerIds = new();
 		private readonly HashSet<string> _allyPlanetPositions = new();
@@ -1135,7 +1030,6 @@ namespace Tbot.Workers {
 						_allyCacheTime = DateTime.UtcNow.AddHours(-19);
 					}
 				}
-				// Bereits bekannte Ziele von Allianzmitgliedern entfernen (z. B. nach Beitritt), ausser Flotte/Sonden sind unterwegs
 				if (_allyPlayerIds.Count > 0 && _tbotInstance.UserData.farmTargets != null) {
 					int removed = _tbotInstance.UserData.farmTargets.RemoveAll(t =>
 						t?.Celestial is Planet pl && pl.Player != null && _allyPlayerIds.Contains(pl.Player.ID)
@@ -1157,7 +1051,6 @@ namespace Tbot.Workers {
 				LogThrottled($"allywl:{pos}", LogLevel.Debug, $"Skipping {planet.ToString()}: alliance whitelist (player {p.Player.ID}).");
 				return true;
 			}
-			// Monde tragen kein Player-Objekt: gleiche Koordinate wie ein bereits erkannter Allianz-Planet
 			if (planet.Coordinate.Type == Celestials.Moon && _allyPlanetPositions.Contains(pos)) {
 				LogThrottled($"allywl:{pos}:moon", LogLevel.Debug, $"Skipping {planet.ToString()}: moon of an alliance whitelist member.");
 				return true;
@@ -1200,24 +1093,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// CheckDuplicatesAndGetExisting() (direkt unter dieser Methode) raeumt Duplikate nur
-		// OPPORTUNISTISCH auf - und zwar nur fuer genau das eine Celestial, das gerade per
-		// GetFarmTarget() erneut gescannt wird. Ein Duplikat, das zur Laufzeit entsteht (genaue
-		// Ursache noch nicht abschliessend verifiziert - Verdacht: verwaister Eintrag aus einer
-		// alten Sondierung/Report-Verarbeitung, moeglicherweise im Zusammenhang mit dem separat
-		// gefixten ABRT-Crash beim Prozess-Stop), bleibt deshalb bestehen, bis der normale Scan-
-		// Cursor zufaellig wieder genau bei diesem System vorbeikommt - mit PATCH 104
-		// (distanzbasierte Scan-Reihenfolge) kann das fuer weit entfernte Systeme sehr lange
-		// dauern. Ergebnis (Nutzer-Meldung, Screenshot): zwei komplett unabhaengige FarmTarget-
-		// Objekte fuer dieselbe Koordinate erreichen unabhaengig voneinander AttackPending -> zwei
-		// separate Angriffsflotten auf dasselbe Ziel.
-		// Fix: einmal pro Execute()-Zyklus wird JETZT die GESAMTE farmTargets-Liste auf Duplikate
-		// (gleiche Koordinate, siehe HasCoords) durchsucht, nicht nur das gerade gescannte Ziel.
-		// Bei einem Duplikat-Fund wird NICHT einfach das erste behalten, sondern gezielt der am
-		// weitesten fortgeschrittene/aktuellste Eintrag (siehe FarmStateRank - AttackSent/
-		// AttackPending/ProbesSent haben Vorrang vor einem frischen, noch unbearbeiteten Eintrag,
-		// damit kein bereits laufender Angriffs-/Sondenversand-Fortschritt und keine
-		// ConsumedReportId-Buchhaltung verloren geht), bei Gleichstand der mit dem neueren Report.
 		private void DeduplicateFarmTargets() {
 			var targets = _tbotInstance.UserData.farmTargets;
 			if (targets == null || targets.Count < 2)
@@ -1275,7 +1150,7 @@ namespace Tbot.Workers {
 				case FarmState.ProbesRequired: return 2;
 				case FarmState.NotSuitable: return 1;
 				case FarmState.ProbesPending: return 0;
-				default: return -1; // Idle / unbekannt
+				default: return -1;
 			}
 		}
 
@@ -1361,7 +1236,6 @@ namespace Tbot.Workers {
 			return cargoType;
 		}
 
-		// PATCH 39, 58, 60, 61, 64, 79, 65, 62, 66, 67, 80, 82, 68, 86, 69, 70, 51, 71, 72, 73, 59, 74, 47, 56, 57:
 		private class EscortSearchProgress {
 			public Dictionary<Buildables, long> Escort;
 			public SimulatorResult LastResult;
@@ -1390,7 +1264,7 @@ namespace Tbot.Workers {
 					continue;
 				}
 				if (origin.Ships.GetAmount(candidateType) >= step) {
-					return false; // at least one type still has a usable amount - pool is fine
+					return false;
 				}
 			}
 			return true;
@@ -1440,16 +1314,6 @@ namespace Tbot.Workers {
 			int intermediateSimulations = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "EscortSearchSimulationRuns", 100);
 
 			Dictionary<Buildables, long> shipCaps = new();
-			// EscortShipCaps ist eine FIXE absolute Obergrenze pro Schiffstyp - bei einer grossen
-			// Flotte (z.B. >120000 Cruiser verfuegbar) kann das dazu fuehren, dass fuer EIN einzelnes
-			// Ziel praktisch die gesamte verfuegbare Kampfkraft dieses Typs in die Ceiling-
-			// Berechnung/Suche einfliesst (siehe Abschnitt 136/PATCH 116 - genau das hat zum
-			// Sprit-Overkill-Fall gefuehrt). MaxEscortFleetPercent begrenzt den effektiven Cap
-			// zusaetzlich auf einen Prozentsatz der AKTUELL VERFUEGBAREN Menge dieses Typs auf dem
-			// Ursprungscelestial - damit wird nie mehr als dieser Anteil der Flotte fuer EIN Ziel in
-			// Erwaegung gezogen, unabhaengig davon wie hoch EscortShipCaps gesetzt ist. Default 0 =
-			// deaktiviert (altes Verhalten, volle Abwaertskompatibilitaet). Wirkt IMMER zusaetzlich zu
-			// EscortShipCaps (der kleinere der beiden Werte gewinnt), ersetzt es nicht.
 			double maxEscortFleetPercent = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxEscortFleetPercent", 0.0);
 			foreach (Buildables candidateType in candidateTypes.Concat(fallbackTypes)) {
 				long typeCap = fallbackCap;
@@ -1502,15 +1366,6 @@ namespace Tbot.Workers {
 			long defensePoints = reportDefences.GetDefencePoints() + fleetPoints;
 			_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: defense points {reportDefences.GetDefencePoints():N0} + fleet points {fleetPoints:N0} = {defensePoints:N0} (for AutoFarm.MaxDefensePoints calibration).");
 			if (maxDefensePoints > 0 && defensePoints > maxDefensePoints) {
-				// Von Anfang an ("initial") zu stark verteidigte Ziele werden NICHT geblacklistet
-				// (das wuerde den Spionagebericht nach AutoFarm.Blacklist.ResetAfterHours automatisch
-				// wieder freigeben und die Entscheidung dem Nutzer entziehen) und auch NICHT in eine
-				// separate DB-Liste verschoben (der Nutzer will den Kampfrechner direkt vom normalen
-				// Spionagebericht aus aufrufen koennen, eine eigene Liste waere dafuer nicht
-				// kontrollierbar). Stattdessen wird das Ziel nur als HeldForManualReview markiert:
-				// bleibt in der normalen Zielliste sichtbar, wird aber von PruneOldReports NICHT mehr
-				// automatisch nach AutoFarm.KeepReportFor geloescht - der Nutzer prueft/entfernt es
-				// manuell selbst (z.B. per Kampfrechner direkt am Bericht).
 				if (!target.HeldForManualReview) {
 					target.HeldForManualReview = true;
 					_tbotInstance.UserData.farmTargets.Remove(target);
@@ -1522,9 +1377,6 @@ namespace Tbot.Workers {
 				}
 				return null;
 			}
-			// Ziel ist nicht (mehr) ueber dem Schwellwert - falls es vorher HeldForManualReview
-			// war (z.B. weil der Verteidiger abgezogen ist oder der Nutzer den Schwellwert erhoeht hat),
-			// die Markierung wieder entfernen, damit es wieder ganz normal verarbeitet wird.
 			if (target.HeldForManualReview) {
 				target.HeldForManualReview = false;
 				_tbotInstance.UserData.farmTargets.Remove(target);
@@ -1589,15 +1441,6 @@ namespace Tbot.Workers {
 				return merged;
 			}
 
-			// statt nur nach Schiffsanzahl. Bisher galt als "Ja" nur Winrate + Cargo-Verlust, die
-			// Eskortenverluste selbst spielten fuer die Suche keine Rolle - Ergebnis war z.B. eine
-			// "minimale" Eskorte, die zwar zu 100% gewinnt, dabei aber 42 Mio. an eigenen Schiffen
-			// verliert. Neu:
-			//   - optionales Verlustlimit AutoFarm.MaxEscortLossPercent (Anteil des Werts der
-			//     GESAMTEN Angriffsflotte, der laut Simulation verloren geht; 0 = aus)
-			//   - Kostenfunktion Verluste + Sprit (Referenz 100% Geschwindigkeit, gleich wie beim
-			//     bisherigen PreferLowerLossComposition-Vergleich), um unter allen getesteten
-			//     "Ja"-Punkten den billigsten zu waehlen und das Feintuning danach zu steuern
 			double maxEscortLossPercent = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxEscortLossPercent", 0.0);
 
 			Ships ToShipsWithCargo(Dictionary<Buildables, long> fullComposition) {
@@ -1620,9 +1463,6 @@ namespace Tbot.Workers {
 				return losses * 100.0 / fleetValue <= maxEscortLossPercent;
 			}
 
-			// when choosing the escort. 1.0 = unchanged (1 resource lost = 1 resource fuel). >1 = losses weigh more, a
-			// larger escort with fewer losses is preferred. Affects ONLY the selection, the profitability
-			// check still uses real losses.
 			double escortLossWeight = Math.Max(0.0, SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "EscortLossWeight", 1.0));
 
 			long CompositionCost(Dictionary<Buildables, long> fullComposition, SimulatorResult result) {
@@ -1631,7 +1471,6 @@ namespace Tbot.Workers {
 				try {
 					fuel = _calculationService.CalcFleetPrediction(origin.Coordinate, target.Celestial.Coordinate, ToShipsWithCargo(fullComposition), Missions.Attack, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Fuel;
 				} catch (Exception e) {
-					// Sprit nicht berechenbar - dann nur nach Verlust vergleichen (wie PATCH 116 im Fehlerfall)
 					_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: fuel estimate for the cost comparison failed ({e.Message}) - comparing by loss only.");
 				}
 				return losses + fuel;
@@ -1644,8 +1483,6 @@ namespace Tbot.Workers {
 			async Task<(bool Accepted, SimulatorResult Result, bool CallFailed)> ConfirmCompositionAsync(Dictionary<Buildables, long> composition) {
 				SimulatorResult confirmation;
 				try {
-					// Lebenszeichen vor jedem teuren, u.U. bis zu 60s
-					// dauernden SimulateBattle-Aufruf - siehe WorkerBase.Heartbeat()/HangDetectionTimeout.
 					Heartbeat();
 					confirmation = await _ogameService.SimulateBattle(new SimulateBattleRequest {
 						Attacker = BuildAttackerFleet(composition),
@@ -1658,7 +1495,6 @@ namespace Tbot.Workers {
 					return (false, null, true);
 				}
 				double confirmationCargoLossPercent = confirmation.CargoLossRate * 100;
-				// Verlustlimit (MaxEscortLossPercent) gilt auch fuer die Bestaetigung
 				bool accepted = confirmation.AttackerWinRate >= minWinRate && confirmationCargoLossPercent <= maxCargoLossPercent
 					&& EscortLossOk(composition, confirmation);
 				return (accepted, confirmation, false);
@@ -1667,9 +1503,6 @@ namespace Tbot.Workers {
 			Dictionary<Buildables, long> ceilingComposition = new();
 			SimulatorResult ceilingResult = null;
 			{
-				// Each type at its own cap (shipCaps) now - no more shared total to split, so
-				// this can use every type at full strength simultaneously, same as the greedy
-				// search's actual per-type ceiling.
 				foreach (Buildables candidateType in candidateTypes) {
 					long capped = Math.Min(origin.Ships.GetAmount(candidateType), shipCaps[candidateType]);
 					if (capped > 0) {
@@ -1679,9 +1512,6 @@ namespace Tbot.Workers {
 				var ceilingAttacker = BuildAttackerFleet(ceilingComposition);
 				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: running ceiling check (every candidate type at its cap) before the detailed search...");
 				try {
-					// A rough pass/fail check doesn't need the full simulation count - fewer runs
-					// here means less time spent before either bailing out or moving on to the
-					// (also individually much smaller, per-type) detailed search below.
 					int ceilingSimulations = Math.Min(simulations, intermediateSimulations);
 					Heartbeat();
 					ceilingResult = await _ogameService.SimulateBattle(new SimulateBattleRequest {
@@ -1726,10 +1556,6 @@ namespace Tbot.Workers {
 							_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: selbst Tier 1 + Tier 2 zusammen am Cap erreichen nur {combinedResult.AttackerWinRate:P0} win rate / {combinedCargoLossPercent:F1}% cargo loss - not beatable within the configured per-type caps and loss limits, skipping detailed search.");
 							return null;
 						}
-						// Tier 1 wird ab hier als fixedBase eingefroren (immer am Cap, nie wieder variiert),
-						// candidateTypes wechselt auf die Tier-2-Typen, und ceilingComposition/ceilingResult
-						// werden auf die reine Tier-2-Ceiling-Referenz bzw. das kombinierte Ergebnis
-						// umgestellt - Bisektion und Feinabstimmung unten sehen dann nur noch Tier 2.
 						fixedBase = ceilingComposition;
 						candidateTypes = fallbackTypes;
 						ceilingComposition = fallbackCeilingComposition;
@@ -1750,8 +1576,6 @@ namespace Tbot.Workers {
 					return (minimalComposition, minimalResult, usedFallbackTier);
 				}
 				var fullCeilingComposition = WithFixedBase(ceilingComposition);
-				// Ceiling und minimale Loesung koennen identisch sein (z.B. wenn die Ceiling selbst
-				// schon die "minimale" ist) - dann gibt's nichts zu vergleichen/loggen.
 				bool sameComposition = fullCeilingComposition.Count == minimalComposition.Count &&
 					fullCeilingComposition.All(kv => minimalComposition.GetValueOrDefault(kv.Key, 0) == kv.Value);
 				if (sameComposition) {
@@ -1760,19 +1584,6 @@ namespace Tbot.Workers {
 				long minimalLosses = minimalResult?.AttackerLosses?.Total() ?? long.MaxValue;
 				long ceilingLosses = ceilingResult.AttackerLosses?.Total() ?? long.MaxValue;
 				if (ceilingLosses < minimalLosses) {
-					// Vorher wurde hier NUR der geschaetzte Schiffsverlust verglichen - die volle
-					// Eskorte am Cap gewann automatisch, sobald sie weniger Verlust hatte, egal wie
-					// viel MEHR Sprit dafuer draufgeht (bei EscortShipCaps im 5- oder 6-stelligen
-					// Bereich kann das die Flottengroesse verhundertfachen). Das hat in der Praxis
-					// dazu gefuehrt, dass an sich profitable Angriffe durch eine unnoetig riesige
-					// Eskorte einen Sprit-Overkill bekommen und danach bei der
-					// Wirtschaftlichkeitspruefung (predictedCost >= predictedLoot) als "not
-					// profitable" geblacklistet wurden - obwohl die minimierte Eskorte den Angriff
-					// profitabel gemacht haette. Fix: den Sprit-MEHRBEDARF der vollen Eskorte
-					// gegenueber der minimierten grob abschaetzen (gleiche Referenzgeschwindigkeit
-					// fuer beide, damit der Vergleich fair ist) und die volle Eskorte nur noch nehmen,
-					// wenn dieser Mehrbedarf die eingesparten Schiffsverluste nicht uebersteigt -
-					// also ein echter Kosten-Nutzen-Vergleich statt reiner Verlust-Vergleich.
 					long lossSavings = minimalLosses - ceilingLosses;
 					long extraFuel = 0;
 					bool fuelEstimateFailed = false;
@@ -1788,7 +1599,6 @@ namespace Tbot.Workers {
 						fuelEstimateFailed = true;
 						_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: fuel estimate for PreferLowerLossComposition failed ({e.Message}) - to be safe, comparing by ship loss only (old behavior).");
 					}
-					// loss savings weighted by EscortLossWeight
 					if (fuelEstimateFailed || extraFuel <= (long) (lossSavings * escortLossWeight)) {
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: full escort at cap ({string.Join(", ", fullCeilingComposition.Select(kv => $"{kv.Value}x{kv.Key}"))}) has clearly less risk with an estimated {ceilingLosses:N0} loss than the minimized escort ({string.Join(", ", minimalComposition.Select(kv => $"{kv.Value}x{kv.Key}"))}, estimated {minimalLosses:N0}); the extra fuel ({extraFuel:N0}) does not exceed the savings ({lossSavings:N0}) - taking the full escort.");
 						return (fullCeilingComposition, ceilingResult, fixedBase.Count > 0);
@@ -1815,8 +1625,6 @@ namespace Tbot.Workers {
 				Dictionary<Buildables, long> bestComposition = ceilingComposition;
 				SimulatorResult bestResult = ceilingResult;
 				Dictionary<Buildables, long> lastTestedComposition = ceilingComposition;
-				// alle getesteten Ja-Punkte (variabler Anteil, Ergebnis, Kosten) - die
-				// Ceiling selbst ist auch ein Kandidat, sofern sie das Verlustlimit einhaelt
 				var okPoints = new List<(Dictionary<Buildables, long> Varying, SimulatorResult Result, long Cost)>();
 				if (EscortLossOk(WithFixedBase(ceilingComposition), ceilingResult)) {
 					okPoints.Add((ceilingComposition, ceilingResult, CompositionCost(WithFixedBase(ceilingComposition), ceilingResult)));
@@ -1830,17 +1638,11 @@ namespace Tbot.Workers {
 							midComposition[kv.Key] = scaled;
 						}
 					}
-					// Die Rundung auf EscortShipsStep-Vielfache erschoepft den Suchraum
-					// irgendwann - wenn zwei Runden dieselbe Komposition ergeben, ist fuer
-					// diese Aufloesung nichts mehr zu gewinnen, weitere Runden wuerden nur
-					// denselben Sim-Aufruf wiederholen.
 					if (midComposition.Count > 0 && midComposition.OrderBy(kv => kv.Key).SequenceEqual(lastTestedComposition.OrderBy(kv => kv.Key))) {
 						break;
 					}
 					lastTestedComposition = midComposition;
 					if (midComposition.Count == 0) {
-						// Auf "quasi nichts" herunterskaliert (jeder Typ unter einem Step) -
-						// kein Sim-Aufruf noetig, das reicht so gut wie sicher nicht.
 						low = mid;
 						continue;
 					}
@@ -1858,16 +1660,12 @@ namespace Tbot.Workers {
 						break;
 					}
 					double midCargoLossPercent = midResult.CargoLossRate * 100;
-					// "Ja" beruecksichtigt jetzt zusaetzlich das Verlustlimit
-					// (MaxEscortLossPercent) - groessere Flotte = weniger Verlust-%, der Ja-Bereich
-					// bleibt also monoton und die Bisektion funktioniert weiterhin.
 					bool midOk = midResult.AttackerWinRate >= minWinRate && midCargoLossPercent <= maxCargoLossPercent
 						&& EscortLossOk(WithFixedBase(midComposition), midResult);
 					if (midOk) {
 						high = mid;
 						bestComposition = midComposition;
 						bestResult = midResult;
-						// jeden Ja-Punkt mit seinen Kosten merken
 						long midCost = CompositionCost(WithFixedBase(midComposition), midResult);
 						okPoints.Add((midComposition, midResult, midCost));
 						_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: bisection yes at {FormatComposition(WithFixedBase(midComposition))} - loss {(midResult.AttackerLosses?.Total() ?? 0):N0}, cost (loss+fuel@100%) {midCost:N0}.");
@@ -1876,9 +1674,6 @@ namespace Tbot.Workers {
 					}
 				}
 
-				// statt des kleinsten Ja-Punkts den BILLIGSTEN Ja-Punkt (Verlust + Sprit)
-				// nehmen. Kosten sind U-foermig ueber die Flottengroesse (klein = hohe Verluste,
-				// gross = viel Sprit) - der kleinste Punkt ist daher oft nicht der beste.
 				if (okPoints.Count > 0) {
 					var cheapest = okPoints.OrderBy(p => p.Cost).ThenBy(p => p.Varying.Values.Sum()).First();
 					bestComposition = cheapest.Varying;
@@ -1886,12 +1681,6 @@ namespace Tbot.Workers {
 					long bestCost = cheapest.Cost;
 					_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: billigster Ja-Punkt aus {okPoints.Count} Kandidaten: {FormatComposition(WithFixedBase(bestComposition))} (Kosten {bestCost:N0}).");
 
-					// Feintuning NACH UNTEN ("minus 1 Schiffsklasse"):
-					//   Stufe 1: je Schiffstyp probieren, ihn komplett wegzulassen
-					//   Stufe 2: je Schiffstyp reihum Schiffe abziehen (Menge startet bei der Haelfte
-					//            des Typs, bei Nein wird sie halbiert, bis unter EscortShipsStep)
-					// Eine Kuerzung wird nur uebernommen, wenn das Ergebnis weiterhin "Ja" ist UND die
-					// Kosten nicht steigen. Begrenzt durch AutoFarm.EscortFineTuneMaxSims.
 					int fineTuneMaxSims = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "EscortFineTuneMaxSims", 40);
 					int fineTuneSims = 0;
 					bool fineTuneAborted = false;
@@ -1901,7 +1690,7 @@ namespace Tbot.Workers {
 
 					async Task<bool> TryReductionAsync(Dictionary<Buildables, long> trial) {
 						if (trial.Count == 0 && fixedBase.Count == 0) {
-							return false; // ganz ohne Eskorte ist hier kein Thema - dafuer ist die Bisektion da
+							return false;
 						}
 						SimulatorResult trialResult;
 						try {
@@ -1933,7 +1722,6 @@ namespace Tbot.Workers {
 						return true;
 					}
 
-					// Stufe 1: ganze Schiffsklasse weglassen
 					foreach (var type in current.Keys.ToList()) {
 						if (fineTuneAborted || fineTuneSims >= fineTuneMaxSims) break;
 						if (!current.ContainsKey(type)) continue;
@@ -1944,7 +1732,6 @@ namespace Tbot.Workers {
 						}
 					}
 
-					// Stufe 2: pro Schiffstyp halbierend kuerzen
 					long RoundDownToStep(long value) => step > 0 ? (value / step) * step : value;
 					var reduceAmount = current.ToDictionary(kv => kv.Key, kv => Math.Max(step, RoundDownToStep(kv.Value / 2)));
 					while (!fineTuneAborted && fineTuneSims < fineTuneMaxSims && reduceAmount.Any(kv => kv.Value >= step && current.ContainsKey(kv.Key))) {
@@ -1960,7 +1747,6 @@ namespace Tbot.Workers {
 								trial[type] = newCount;
 							}
 							if (await TryReductionAsync(trial)) {
-								// Menge beibehalten, aber nicht groesser als der verbleibende Bestand
 								reduceAmount[type] = current.ContainsKey(type) ? Math.Min(reduceAmount[type], Math.Max(step, current[type])) : 0;
 							} else {
 								reduceAmount[type] = RoundDownToStep(amount / 2);
@@ -1981,7 +1767,6 @@ namespace Tbot.Workers {
 				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: bisection seeded the search at {string.Join(", ", escort.Select(kv => $"{kv.Value}x{kv.Key}"))} ({totalEscort} ships total, win rate {lastResult.AttackerWinRate:P0}, cargo loss {lastResult.CargoLossRate * 100:F1}%) instead of starting from zero.");
 			}
 
-			// Verlustlimit auch hier
 			if (lastResult != null && lastResult.AttackerWinRate >= minWinRate && lastResult.CargoLossRate * 100 <= maxCargoLossPercent
 				&& EscortLossOk(escort, lastResult)) {
 				var (accepted, confirmation, callFailed) = await ConfirmCompositionAsync(escort);
@@ -2006,7 +1791,7 @@ namespace Tbot.Workers {
 					double cargoLossGapRatio = maxCargoLossPercent > 0 ? lastCargoLossPercent / maxCargoLossPercent : 1;
 					double accelerationFactor;
 					if (winRateGap > 0.05) {
-						accelerationFactor = 8; // not even close to winning yet
+						accelerationFactor = 8;
 					} else if (cargoLossGapRatio > 6) {
 						accelerationFactor = 8;
 					} else if (cargoLossGapRatio > 3) {
@@ -2014,7 +1799,7 @@ namespace Tbot.Workers {
 					} else if (cargoLossGapRatio > 1.5) {
 						accelerationFactor = 2;
 					} else {
-						accelerationFactor = 1; // close to the threshold - fine-tune at the configured step
+						accelerationFactor = 1;
 					}
 					effectiveStep = step * (long) accelerationFactor;
 				}
@@ -2027,7 +1812,7 @@ namespace Tbot.Workers {
 					long currentOfType = escort.GetValueOrDefault(candidateType, 0);
 					long available = origin.Ships.GetAmount(candidateType);
 					if (currentOfType + effectiveStep > available || currentOfType + effectiveStep > shipCaps[candidateType]) {
-						continue; // tapped out at the origin, or hit this type's own cap - skip it this round
+						continue;
 					}
 
 					var candidateComposition = new Dictionary<Buildables, long>(escort) {
@@ -2049,28 +1834,12 @@ namespace Tbot.Workers {
 						continue;
 					}
 
-					// Selection order per round, each tier only decides ties from the one above it:
-					//   1. clearly higher win rate (more than NearTieWinRate apart) always wins
-					//   2. within NearTieWinRate of each other -> prefer LOWER cargo loss (this is
-					//      the actual goal - a technically-higher win rate that costs more dead
-					//      cargo ships is not an improvement worth making)
-					//   3. win rate AND cargo loss both near-tied -> prefer the less-used type
-					//      (diversify), falling back to AutoFarm.EscortShipTypes priority order
-					//      only when usage is also tied. Critical for stuck-at-0% situations (hard
-					//      defense a given type has no answer for): pure priority-order tie-breaking
-					//      previously meant the search kept escalating the same priority type
-					//      forever without ever meaningfully trying the others, since "more of a
-					//      useless type" and "a bit of a potentially useful type" both look like 0%
-					//      until proven otherwise.
-					const double NearTieWinRate = 0.02; // 2 percentage points
+					const double NearTieWinRate = 0.02;
 					double resultCargoLoss = result.CargoLossRate;
 					double bestCargoLoss = bestStepResult?.CargoLossRate ?? double.MaxValue;
 					bool clearlyBetterWinRate = result.AttackerWinRate > bestWinRate + NearTieWinRate;
 					bool winRateNearTied = bestType != Buildables.Null && Math.Abs(result.AttackerWinRate - bestWinRate) <= NearTieWinRate;
 					bool betterCargoLossOnNearTie = winRateNearTied && resultCargoLoss < bestCargoLoss - 1e-9
-						// still require the win rate to be at least as good, so a near-tie loss
-						// on win rate can't be "fixed" by picking something with a worse win rate
-						// just because it happens to keep more cargo alive
 						&& result.AttackerWinRate >= bestWinRate - NearTieWinRate;
 					long candidateUsage = escort.GetValueOrDefault(candidateType, 0);
 					long bestTypeUsage = bestType != Buildables.Null ? escort.GetValueOrDefault(bestType, 0) : long.MaxValue;
@@ -2086,14 +1855,13 @@ namespace Tbot.Workers {
 				}
 
 				if (bestType == Buildables.Null) {
-					break; // no candidate type has supply left at the origin - nothing more to try
+					break;
 				}
 				escort[bestType] = escort.GetValueOrDefault(bestType, 0) + effectiveStep;
 				totalEscort += effectiveStep;
 				lastResult = bestStepResult;
 				double cargoLossPercent = bestStepResult.CargoLossRate * 100;
 
-				// Verlustlimit (MaxEscortLossPercent) gehoert mit zum "Ja"
 				if (bestWinRate >= minWinRate && cargoLossPercent <= maxCargoLossPercent && EscortLossOk(escort, bestStepResult)) {
 					var (accepted, confirmation, callFailed) = await ConfirmCompositionAsync(escort);
 					if (callFailed) {
@@ -2123,14 +1891,7 @@ namespace Tbot.Workers {
 			return null;
 		}
 
-		// Builds the defender payload for AutoFarmDetermineEscort from a real espionage report.
-		// Split out since the greedy search calls simulate-battle many times per target but the
-		// defender side never changes between those calls - build it once, reuse it.
 		private SimulatorDefender AutoFarmBuildSimulatorDefender(EspionageReport report) {
-			// Tech fallback: if the report doesn't carry researches (insufficient spy strength),
-			// assume the target's own current tech rather than 0/0/0 - "inactive" is not a
-			// guarantee of unresearched, an ex-active player's defenses keep their full tech
-			// bonus regardless of how long they've been offline.
 			int defWeapon = report.HasResearchesInformation ? report.WeaponsTechnology.GetValueOrDefault() : _tbotInstance.UserData.researches.WeaponsTechnology;
 			int defShield = report.HasResearchesInformation ? report.ShieldingTechnology.GetValueOrDefault() : _tbotInstance.UserData.researches.ShieldingTechnology;
 			int defArmour = report.HasResearchesInformation ? report.ArmourTechnology.GetValueOrDefault() : _tbotInstance.UserData.researches.ArmourTechnology;
@@ -2144,8 +1905,6 @@ namespace Tbot.Workers {
 				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{report.Coordinate}: defender is class General - tech levels for the simulation raised from {rawWeapon}/{rawShield}/{rawArmour} to effectively {defWeapon}/{defShield}/{defArmour} (+{generalClassCombatResearchBonus} levels class bonus).");
 			}
 
-			// The espionage report only shows research levels, NO lifeform combat bonuses - a target with
-			// such bonuses is otherwise simulated too weak (more losses than predicted). Default 0 = off.
 			int targetCombatTechBonus = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "TargetCombatTechBonus", 0);
 			if (targetCombatTechBonus > 0) {
 				defWeapon += targetCombatTechBonus;
@@ -2192,10 +1951,6 @@ namespace Tbot.Workers {
 		}
 
 
-		// - scan finished and nothing open -> false (regular CheckIntervalMin/Max).
-		// - AutoFarm slots free and nothing waiting -> continue scanning after a few seconds.
-		// - slots full or targets waiting for a slot -> until the next return of an own AutoFarm fleet
-		//   (probes or attack) + buffer, at most CheckIntervalMax.
 		private bool TryGetFillSlotsInterval(bool finishedFullScan, out long intervalMs) {
 			intervalMs = 0;
 			try {
@@ -2365,7 +2120,6 @@ namespace Tbot.Workers {
 
 		protected override async Task Execute() {
 			await RefreshAllianceWhitelistAsync();
-			// geplante Recycler-Starts nach einem Neustart wiederherstellen (einmalig)
 			if (!_pendingRecyclersReconciled) {
 				_pendingRecyclersReconciled = true;
 				try {
@@ -2378,22 +2132,9 @@ namespace Tbot.Workers {
 			bool stopAfterFullScan = false;
 			bool finishedFullScan = false;
 			int skippedEmptySystems = 0;
-			// muessen VOR dem aeusseren try deklariert sein (nicht nur vor dem
-			// inneren do-while) - der finally-Block dieses try (siehe Zyklus-Umplanung ganz unten)
-			// braucht beide Werte ebenfalls, und try/catch/finally haben in C# je eigenen Scope;
-			// innerhalb des try deklariert waeren sie im finally schlicht nicht sichtbar (CS0103,
-			// so beim ersten Deploy von PATCH 102 tatsaechlich passiert).
 			bool sequentialModeActive = false;
 			bool sequentialModeProbeInFlight = false;
-			// konfigurierbare Anzahl gleichzeitig "in Bearbeitung" erlaubter Spionage-
-			// Angriffe im Sequential-Modus statt fest 1 - siehe AutoFarm.SequentialModeProbesPerCycle
-			// (Default 1, unveraendertes Verhalten). Hoehere Werte beschleunigen den gefuehlten
-			// Scan-Fortschritt (mehrere Ziele parallel in der Pipeline statt strikt eins nach dem
-			// anderen), opfern dafuer aber etwas von der urspruenglichen Garantie "nie weiter
-			// vorscannen als die Angriffskapazitaet hergibt" - je hoeher der Wert,
-			// desto naeher am alten Batch-Verhalten.
 			int sequentialModeProbesPerCycle = 1;
-			// Must be declared before the try like sequentialModeActive - the finally block uses it to schedule the next cycle.
 			bool fillSlotsActive = false;
 			try {
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "Running autofarm...");
@@ -2417,8 +2158,6 @@ namespace Tbot.Workers {
 					int interleavePass = 0;
 					const int maxInterleavePasses = 20;
 					bool keepInterleaving;
-					// Zaehlt die in DIESEM Zyklus bereits gescannten Systeme (unabhaengig davon, ob
-					// darin Ziele gefunden wurden) - Grundlage fuer AutoFarm.ScanBlockSize weiter unten.
 					int systemsScannedThisPass = 0;
 					do {
 					interleavePass++;
@@ -2429,17 +2168,12 @@ namespace Tbot.Workers {
 					_sequentialModeProbeSentAtUtc = null;
 					sequentialModeActive = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "SequentialMode") &&
 						(bool) _tbotInstance.InstanceSettings.AutoFarm.SequentialMode;
-					// siehe Kommentar bei der Feld-Deklaration oben.
 					sequentialModeProbesPerCycle = sequentialModeActive
 						? Math.Max(1, SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "SequentialModeProbesPerCycle", 1))
 						: 1;
 					int scanBlockSize = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "ScanBlockSize", 0);
 					sequentialModeProbeInFlight = sequentialModeActive &&
 						_tbotInstance.UserData.farmTargets.Count(t => t.State == FarmState.ProbesSent) >= sequentialModeProbesPerCycle;
-					// passProbeLimit replaces the former TargetsProbedBeforeAttack check (0 = unlimited).
-					// FillSlots off -> exactly as before. FillSlots on -> as many probes as AutoFarm slots are free
-					// minus targets already ready to attack (each still needs an attack slot);
-					// TargetsProbedBeforeAttack > 0 remains the upper limit.
 					int configuredProbeLimit = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "TargetsProbedBeforeAttack")
 						? (int) _tbotInstance.InstanceSettings.AutoFarm.TargetsProbedBeforeAttack : 0;
 					int passProbeLimit = configuredProbeLimit;
@@ -2447,7 +2181,6 @@ namespace Tbot.Workers {
 					DateTime? fillSlotsLastProbeArrivalUtc = null;
 					try {
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
-						// evaluate losses of running/returning AutoFarm attacks
 						TrackFleetLosses();
 						if (fillSlotsActive) {
 							_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
@@ -2465,15 +2198,6 @@ namespace Tbot.Workers {
 						var celestialProbes = GetCachedCelestialProbes(farmOrigins);
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 
-						// "Block 11": statt die ActiveScan-Entdeckungs-Queue JEDEN Zyklus sofort und mit
-						// Prioritaet abzuarbeiten (bisheriges Verhalten seit PATCH 82), wird sie nur noch
-						// abgearbeitet, wenn entweder genug neue Ziele aufgelaufen sind
-						// (AutoFarm.Block11MinCount) ODER seit der letzten Abarbeitung genug Zeit
-						// vergangen ist (AutoFarm.Block11MaxAgeHours) - je nachdem, was zuerst eintritt.
-						// Sind BEIDE Einstellungen 0/nicht gesetzt, bleibt das alte Verhalten unveraendert
-						// (immer sofort abarbeiten - Default, volle Abwaertskompatibilitaet). Grund:
-						// Nutzer-Wunsch, den normalen Block-Scan "in Ruhe" durchlaufen zu lassen, statt
-						// ihn staendig fuer einzelne neue ActiveScan-Funde zu unterbrechen.
 						int block11MinCount = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "Block11MinCount", 0);
 						double block11MaxAgeHours = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "Block11MaxAgeHours", 0.0);
 						bool block11ThresholdReached = block11MinCount > 0 && _activeScanDiscoveries.Count >= block11MinCount;
@@ -2516,9 +2240,6 @@ namespace Tbot.Workers {
 								}
 
 								List<Celestial> quickClosestOrigins = farmOrigins
-									// das zweite OrderBy ersetzte die Mond-Praeferenz bisher komplett (LINQ) -
-									// effektiv wurde nur nach Distanz sortiert. Das bleibt so (kuerzeste Flugzeit zuerst),
-									// der Mond entscheidet jetzt aber echt bei Gleichstand (gleiche Distanz -> Mond zuerst).
 									.OrderBy(c => _calculationService.CalcDistance(c.Coordinate, quickTarget.Celestial.Coordinate, _tbotInstance.UserData.serverData))
 									.ThenByDescending(p => p.Coordinate.Type == Celestials.Moon)
 									.ToList();
@@ -2538,13 +2259,7 @@ namespace Tbot.Workers {
 								Ships quickShips = new();
 								quickShips.Add(Buildables.EspionageProbe, quickNeededProbes);
 
-								// siehe Kommentar bei der gleichen Vorhersage im normalen Scan-
-								// Pfad weiter unten - ohne das wuerde ein ueber diesen ActiveScan-Pfad
-								// gesendeter Spionage-Angriff im Sequential-Modus keine exakte Ankunftszeit
-								// liefern und der naechste Zyklus faellt auf den (langsameren) Kurz-Retry-
-								// Fallback zurueck statt direkt auf die Ankunft zu takten.
 								FleetPrediction quickProbePrediction = null;
-								// prediction also in FillSlots mode
 								if (sequentialModeActive || fillSlotsActive) {
 									quickBestOrigin.Origin = await _tbotOgameBridge.UpdatePlanet(quickBestOrigin.Origin, UpdateTypes.LFBonuses);
 									quickProbePrediction = _calculationService.CalcFleetPrediction(quickBestOrigin.Origin.Coordinate, quickTarget.Celestial.Coordinate, quickShips, Missions.Spy, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, quickBestOrigin.Origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
@@ -2556,7 +2271,6 @@ namespace Tbot.Workers {
 									freeSlots--;
 									numProbed++;
 									celestialProbes[quickBestOrigin.Origin.ID] -= quickNeededProbes;
-									// remember the latest probe arrival of this pass
 									if (fillSlotsActive && quickProbePrediction != null) {
 										DateTime quickArrival136 = DateTime.UtcNow.AddSeconds(quickProbePrediction.Time);
 										if (!fillSlotsLastProbeArrivalUtc.HasValue || quickArrival136 > fillSlotsLastProbeArrivalUtc.Value)
@@ -2611,15 +2325,6 @@ namespace Tbot.Workers {
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"[GLOBAL SPACING] Global offset: {globalOffset} systems");
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"[GLOBAL SPACING] Target Galaxy: {targetGalaxy}, Target System: {targetSystem}");
 
-						// AutoFarm.ScanRange-Eintraege werden jetzt in KONFIGURIERTER Reihenfolge (also
-						// der Reihenfolge im JSON-Array) abgearbeitet statt aufsteigend nach Galaxy/
-						// StartSystem sortiert. Bisher wurde bei z.B. Eintrag1=Galaxy2, Eintrag2=Galaxy1
-						// trotzdem zuerst Galaxy1 abgearbeitet (weil 1 < 2), was der Nutzer nicht
-						// erwartet hatte. Jeder Eintrag bekommt weiterhin seinen eigenen Cursor-Index
-						// (unveraendert ueber `rangeIndex`/`SaveScanCursor`); nach dem letzten Eintrag
-						// der Liste springt der Cursor wie bisher zyklisch zurueck auf den ERSTEN Eintrag
-						// (siehe `(startRangeIndex + rangeOffset) % orderedRanges.Count` weiter unten -
-						// diese Modulo-Logik war bereits korrekt und musste nicht angepasst werden).
 						var orderedRanges = scanRanges.ToList();
 
 						if (!orderedRanges.Any()) {
@@ -2638,12 +2343,6 @@ namespace Tbot.Workers {
 						}
 
 						if (sequentialModeActive && !stopAutoFarm && sequentialModeProbeInFlight) {
-							// Noch ein Bericht einer zuvor verschickten Sonde ausstehend (State bleibt
-							// ProbesSent, bis AutoFarmProcessReports() ihn verarbeitet hat) - keine neue
-							// Sonde verschicken, bevor dieser Bericht ausgewertet (und ggf. angegriffen)
-							// wurde. Reihenfolge innerhalb EINES Execute()-Zyklus ist sonst Scan->Verarbeiten->
-							// Angriff - ohne diese Bremse wuerde also schon die naechste Sonde raus, BEVOR
-							// der gerade eingetroffene Bericht der vorigen ueberhaupt verarbeitet ist.
 							_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, "Sequential mode: report of the previous espionage attack not evaluated yet - skipping the scan this cycle.");
 							stopAutoFarm = true;
 						}
@@ -2653,10 +2352,6 @@ namespace Tbot.Workers {
 							startRangeIndex = 0;
 						}
 						if (_tbotInstance.UserData.autoFarmLastGalaxy == 0 && _tbotInstance.UserData.autoFarmLastSystem == 0) {
-							// MEHRERE Bot-Instanzen auf verschiedene Startpunkte. Bei nur einer Instanz hat es nach
-							// jedem vollen Durchlauf den Start auf einen per Instanzname "zufaelligen" ScanRange-Eintrag
-							// verschoben (z.B. Galaxie 4 statt Eintrag 1). Jetzt nur noch mit AutoFarm.GlobalSpacing=true,
-							// sonst startet ein neuer Durchlauf immer beim ersten Eintrag.
 							bool globalSpacingEnabled = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "GlobalSpacing", false);
 							if (globalSpacingEnabled) {
 								int idx = orderedRanges.FindIndex(r => (int)r.Galaxy == targetGalaxy);
@@ -2682,10 +2377,6 @@ namespace Tbot.Workers {
 							int originalStartSystem = (int) range.StartSystem;
 							int endSystem = (int) range.EndSystem;
 							int startSystem = originalStartSystem;
-							// fuer den Range-Eintrag, in dem der Cursor tatsaechlich gespeichert wurde
-							// (rangeOffset == 0 = rangeIndex == gespeicherter autoFarmLastRangeIndex).
-							// Vorher reichte "gleiche Galaxie + System im Bereich" - bei zwei Eintraegen
-							// in derselben Galaxie konnte so faelschlich der falsche Eintrag resumen.
 							bool resumeThisRange = rangeOffset == 0 &&
 								_tbotInstance.UserData.autoFarmLastGalaxy == galaxy &&
 								_tbotInstance.UserData.autoFarmLastSystem >= originalStartSystem &&
@@ -2724,13 +2415,6 @@ namespace Tbot.Workers {
 									stopAutoFarm = true;
 									break;
 								}
-								// Zusaetzliche Bremse unabhaengig von gefundenen/sondierten Zielen: nach
-								// AutoFarm.ScanBlockSize gescannten Systemen (0 = deaktiviert, altes
-								// Verhalten) wird der Scan angehalten und in die Angriffs-Verarbeitung
-								// gesprungen, auch wenn in diesem Block kaum/keine Ziele gefunden wurden -
-								// verhindert, dass ein einzelner, sehr dichter oder sehr leerer Bereich den
-								// Zyklus unvorhersehbar lange dauern laesst (Nutzer-Vorschlag: feste
-								// 50er-Bloecke statt zielabhaengiger Cutoffs).
 								if (scanBlockSize > 0 && systemsScannedThisPass >= scanBlockSize) {
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"AutoFarm.ScanBlockSize erreicht ({scanBlockSize} Systeme gescannt), proceeding to attack.");
 									SaveScanCursor(rangeIndex, galaxy, system);
@@ -2792,9 +2476,6 @@ namespace Tbot.Workers {
 									List<Celestial> tempCelestials = farmOrigins;
 
 									List<Celestial> closestCelestials = tempCelestials
-										// das zweite OrderBy ersetzte die Mond-Praeferenz bisher komplett (LINQ) -
-										// effektiv wurde nur nach Distanz sortiert. Das bleibt so (kuerzeste Flugzeit zuerst),
-										// der Mond entscheidet jetzt aber echt bei Gleichstand (gleiche Distanz -> Mond zuerst).
 										.OrderBy(c => _calculationService.CalcDistance(c.Coordinate, target.Celestial.Coordinate, _tbotInstance.UserData.serverData))
 										.ThenByDescending(planet => planet.Coordinate.Type == Celestials.Moon).ToList();
 
@@ -2926,7 +2607,6 @@ namespace Tbot.Workers {
 										}
 
 									FleetPrediction sequentialProbePrediction = null;
-									// prediction also in FillSlots mode (to wait for the reports)
 									if (sequentialModeActive || fillSlotsActive) {
 										bestOrigin.Origin = await _tbotOgameBridge.UpdatePlanet(bestOrigin.Origin, UpdateTypes.LFBonuses);
 										sequentialProbePrediction = _calculationService.CalcFleetPrediction(bestOrigin.Origin.Coordinate, target.Celestial.Coordinate, ships, Missions.Spy, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, bestOrigin.Origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
@@ -2938,17 +2618,13 @@ namespace Tbot.Workers {
 											numProbed++;
 											celestialProbes[bestOrigin.Origin.ID] -= neededProbes;
 
-											// remember the latest probe arrival of this pass
 											if (fillSlotsActive && sequentialProbePrediction != null) {
 												DateTime arrival136 = DateTime.UtcNow.AddSeconds(sequentialProbePrediction.Time);
 												if (!fillSlotsLastProbeArrivalUtc.HasValue || arrival136 > fillSlotsLastProbeArrivalUtc.Value)
 													fillSlotsLastProbeArrivalUtc = arrival136;
 											}
-											// sequential mode only - otherwise the finally block would use the sequential timing
 											if (sequentialProbePrediction != null && sequentialModeActive) {
 												_sequentialModeNextArrivalSeconds = (long) sequentialProbePrediction.Time;
-												// siehe Kommentar beim Feld - Zeitpunkt HIER (kurz nach dem
-												// tatsaechlichen Versand) festhalten, nicht erst am Ende von Execute().
 												_sequentialModeProbeSentAtUtc = DateTime.UtcNow;
 												_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Sequential mode: espionage attack ({neededProbes}x probe) on its way to {target.Celestial.Coordinate}, arrival in ~{TimeSpan.FromSeconds(sequentialProbePrediction.Time)}.");
 											}
@@ -3005,8 +2681,6 @@ namespace Tbot.Workers {
 
 					_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 
-					// this pass so their reports are processed NOW and the targets are attacked in the same pass
-					// (previously only in the next cycle, CheckIntervalMin/Max later).
 					if (fillSlotsActive && fillSlotsLastProbeArrivalUtc.HasValue) {
 						int maxProbeWaitSec = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "FillSlotsMaxProbeWaitSec", 300);
 						double waitSec = Math.Min((fillSlotsLastProbeArrivalUtc.Value - DateTime.UtcNow).TotalSeconds + 8, maxProbeWaitSec);
@@ -3066,15 +2740,6 @@ namespace Tbot.Workers {
 
 					bool isUsingProbesForHalfSplit = configuredCargoType == Buildables.EspionageProbe && _tbotInstance.UserData.serverData.ProbeCargo == 1;
 
-					// Nutzer-Wunsch: unverteidigte Ziele (billig, keine Eskorten-Simulation noetig)
-					// werden jetzt GRUNDSAETZLICH vor allen verteidigten einsortiert - erst alle
-					// unverteidigten nach Beute absteigend "in Ruhe" abarbeiten, danach erst die
-					// verteidigten (ebenfalls nach Beute absteigend), statt wie bisher rein nach Beute
-					// gemischt (wo ein hochprofitables verteidigtes Ziel die teure Eskorten-Simulation
-					// vor vielen kleinen, aber garantiert einfachen Zielen ausloesen konnte). Der
-					// bestehende PATCH-96-Haelfte-Mechanismus direkt darunter bleibt zusaetzlich
-					// bestehen und wirkt jetzt einfach auf diese bereits "unverteidigt zuerst"
-					// sortierte Liste, statt auf eine rein nach Beute gemischte.
 					Func<FarmTarget, long> lootMetric;
 					if (_tbotInstance.InstanceSettings.AutoFarm.PreferedResource == "Metal")
 						lootMetric = t => t.Report.Loot(_tbotInstance.UserData.userInfo.Class).Metal;
@@ -3096,7 +2761,7 @@ namespace Tbot.Workers {
 					int deferredDefendedCount = 0;
 					attackTargets = attackTargets.Where(t => {
 						if (t.Report.IsDefenceless(isUsingProbesForHalfSplit)) {
-							return true; // unverteidigt/billig - immer mitnehmen, keine Drosselung noetig
+							return true;
 						}
 						var c = t.Celestial.Coordinate;
 						bool targetHalf = ((c.Galaxy * 100000) + (c.System * 1000) + c.Position) % 2 == 0;
@@ -3116,7 +2781,6 @@ namespace Tbot.Workers {
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Attacking suitable farm targets... (Estimated total profit: {resourceAmount.TransportableResources})");
 					} else {
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "No suitable targets found.");
-						// in FillSlots mode continue scanning (next pass) instead of ending the whole cycle
 						if (!fillSlotsActive)
 							return;
 					}
@@ -3141,7 +2805,6 @@ namespace Tbot.Workers {
 						attackTargetsCount++;
 						_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Evaluating target {attackTargetsCount}/{attackTargets.Count()} at {target.Celestial.Coordinate.ToString()} for {target.Report.Loot(_tbotInstance.UserData.userInfo.Class).TransportableResources}.");
 
-						// (e.g. unprofitable from an earlier cycle).
 						bool blacklistActive135 = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "Blacklist") &&
 							SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm.Blacklist, "Active") &&
 							(bool) _tbotInstance.InstanceSettings.AutoFarm.Blacklist.Active;
@@ -3159,12 +2822,6 @@ namespace Tbot.Workers {
 							continue;
 						}
 
-						// Spionageberichts direkt vor Verteidigungspruefung/Eskortensuche. AutoFarm.KeepReportFor
-						// steuert nur, wie lange ein Bericht sichtbar bleibt - ein bis zu 24h alter Bericht
-						// ("keine Verteidigung") kann inzwischen veraltet sein, das Galaxy-Scan oben sieht keine
-						// Verteidigung/Flotte. Ist der Bericht aelter als AutoFarm.MaxReportAgeMinutesForAttack
-						// (Default 120, 0 = aus), wird nicht angegriffen und das Ziel fuer eine frische Sonde
-						// vorgemerkt.
 						int maxReportAgeMinutesForAttack = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxReportAgeMinutesForAttack", 120);
 						if (maxReportAgeMinutesForAttack > 0 && target.Report != null) {
 							var reportAge130 = (await _tbotOgameBridge.GetDateTime()) - target.Report.Date;
@@ -3197,9 +2854,6 @@ namespace Tbot.Workers {
 
 						List<Celestial> tempCelestials = (_tbotInstance.InstanceSettings.AutoFarm.Origin.Length > 0) ? _calculationService.ParseCelestialsList(_tbotInstance.InstanceSettings.AutoFarm.Origin, _tbotInstance.UserData.celestials) : _tbotInstance.UserData.celestials;
 						List<Celestial> closestCelestials = tempCelestials
-							// das zweite OrderBy ersetzte die Mond-Praeferenz bisher komplett (LINQ) -
-							// effektiv wurde nur nach Distanz sortiert. Das bleibt so (kuerzeste Flugzeit zuerst),
-							// der Mond entscheidet jetzt aber echt bei Gleichstand (gleiche Distanz -> Mond zuerst).
 							.OrderBy(c => _calculationService.CalcDistance(c.Coordinate, target.Celestial.Coordinate, _tbotInstance.UserData.serverData))
 							.ThenByDescending(planet => planet.Coordinate.Type == Celestials.Moon)
 							.ToList();
@@ -3213,15 +2867,6 @@ namespace Tbot.Workers {
 							if (tempCelestial.Ships != null && availableCargoShips120 >= (numCargo + _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep)) {
 								speed = 0;
 								if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MinLootFuelRatio") && _tbotInstance.InstanceSettings.AutoFarm.MinLootFuelRatio != 0) {
-									// MaxFlightTime = 0 bedeutet ueberall sonst im Code "kein Limit" (siehe
-									// weiter unten die Celestial-Auswahl: "!IsSettingSet || MaxFlightTime==0
-									// || prediction.Time <= MaxFlightTime"). Hier wurde die 0 aber bisher 1:1
-									// an CalcOptimalFarmSpeed durchgereicht, wo sie als "Time < 0" geprueft
-									// wird - das ist NIE erfuellt, egal wie schnell die Flotte ist. Ergebnis:
-									// bei MaxFlightTime=0 hat CalcOptimalFarmSpeed IMMER den teuersten
-									// Fallback (Speeds.HundredPercent) zurueckgegeben, MinLootFuelRatio wurde
-									// dadurch faktisch nie wirksam. Fix: 0 wird jetzt wie ueberall sonst als
-									// "kein Limit" behandelt (long.MaxValue statt 0).
 									long configuredMaxFlightTime114 = (long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime;
 									long maxFlightTime = !SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MaxFlightTime")
 										? 86400
@@ -3283,15 +2928,6 @@ namespace Tbot.Workers {
 								} else {
 									speed = 0;
 									if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MinLootFuelRatio") && _tbotInstance.InstanceSettings.AutoFarm.MinLootFuelRatio != 0) {
-									// MaxFlightTime = 0 bedeutet ueberall sonst im Code "kein Limit" (siehe
-									// weiter unten die Celestial-Auswahl: "!IsSettingSet || MaxFlightTime==0
-									// || prediction.Time <= MaxFlightTime"). Hier wurde die 0 aber bisher 1:1
-									// an CalcOptimalFarmSpeed durchgereicht, wo sie als "Time < 0" geprueft
-									// wird - das ist NIE erfuellt, egal wie schnell die Flotte ist. Ergebnis:
-									// bei MaxFlightTime=0 hat CalcOptimalFarmSpeed IMMER den teuersten
-									// Fallback (Speeds.HundredPercent) zurueckgegeben, MinLootFuelRatio wurde
-									// dadurch faktisch nie wirksam. Fix: 0 wird jetzt wie ueberall sonst als
-									// "kein Limit" behandelt (long.MaxValue statt 0).
 									long configuredMaxFlightTime114 = (long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime;
 									long maxFlightTime = !SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MaxFlightTime")
 										? 86400
@@ -3385,7 +3021,7 @@ namespace Tbot.Workers {
 
 								var cargoCapacity = _calculationService.CalcFleetCapacity(
 									attackingShips, _tbotInstance.UserData.serverData, _tbotInstance.UserData.researches.HyperspaceTechnology,
-									fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo); // count probe cargo
+									fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 								var totalLoot = target.Report.Loot(_tbotInstance.UserData.userInfo.Class).TotalResources;
 
 								if (cargoCapacity < totalLoot) {
@@ -3471,12 +3107,6 @@ namespace Tbot.Workers {
 								}
 							}
 
-							// War vorher "Attacking ..." - klang nach bereits erfolgtem Versand, obwohl
-							// erst DANACH (Speed-Berechnung + Wirtschaftlichkeitspruefung, Zeile ~2510)
-							// entschieden wird ob ueberhaupt versendet wird. Hat im Log den falschen
-							// Eindruck erweckt, es wuerde erst angegriffen und danach als unprofitabel
-							// erkannt/blacklisted - tatsaechlich wird bei "not profitable" per continue
-							// aus der Schleife gesprungen, BEVOR SendFleet (Zeile ~2616) erreicht wird.
 							_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Evaluating attack on {target.ToString()} from {fromCelestial} with {numCargo} {cargoShip.ToString()}...");
 							Ships ships = new();
 							fromCelestial = await _tbotOgameBridge.UpdatePlanet(fromCelestial, UpdateTypes.LFBonuses);
@@ -3508,7 +3138,6 @@ namespace Tbot.Workers {
 								}
 							}
 
-							// lohnt sich das Truemmerfeld ueberhaupt fuer Trigger-Sonde + Recycler?
 							bool debrisWorthHarvesting = false;
 							if (escortSimResult != null) {
 								FleetPrediction profitPrediction = _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, target.Celestial.Coordinate, attackingShips, Missions.Attack, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
@@ -3518,12 +3147,6 @@ namespace Tbot.Workers {
 								long predictedLoot = loot.TotalResources;
 								long distanceForLog = _calculationService.CalcDistance(fromCelestial.Coordinate, target.Celestial.Coordinate, _tbotInstance.UserData.serverData);
 								long predictedDebrisForLog = escortSimResult.Debris?.Total() ?? 0;
-								// Bisher zaehlte nur die Beute; ein Ziel mit grosser Flotte (z.B. 11,7 Mio. Flottenwert,
-								// ~3,5 Mio. Truemmer, 0,6 Mio. Beute) wurde als unprofitabel 72h geblacklistet, obwohl
-								// die Recycler ein Vielfaches einsammeln. Gutschrift nur, wenn AutoHarvestDebrisAfterAttack
-								// aktiv ist und Recycler auf dem Start-Celestial stehen; begrenzt auf deren Ladekapazitaet,
-								// abzueglich Recycler-Sprit, gewichtet mit AutoFarm.DebrisCreditPercent (Default 80,
-								// Abschlag fuer Klau-/Ausfallrisiko). 0 = altes Verhalten (nur Beute).
 								long debrisCredit = 0;
 								long debrisCollectable = 0;
 								long recyclerFuelForProfit = 0;
@@ -3550,19 +3173,12 @@ namespace Tbot.Workers {
 									}
 								}
 								long predictedGain = predictedLoot + debrisCredit;
-								// Recycler + Trigger-Sonde + Ankunftsabstimmung nur, wenn das einsammelbare Feld
-								// nach Abzug des Recycler-Sprits mehr als AutoFarm.MinDebrisToHarvest bringt (Default 0).
-								// Vorher gingen z.B. fuer 251 Truemmer 2 Recycler (4.139 Sprit, 2h20 Slot) raus und die
-								// Hauptflotte wurde dafuer gebremst und verzoegert.
 								long minDebrisToHarvest = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MinDebrisToHarvest", (long) 0);
 								debrisWorthHarvesting = debrisCollectable - recyclerFuelForProfit > minDebrisToHarvest;
 								if (debrisHarvestActive && predictedDebrisForLog > 0 && !debrisWorthHarvesting) {
 									_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: debris field ({debrisCollectable:N0} collectable, recycler fuel {recyclerFuelForProfit:N0}) is not worth it - without trigger probe and recycler.");
 								}
 								_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: profitability check - distance {distanceForLog:N0}, speed {speed * 10}%, fleet {numCargo}x{cargoShip} + {escortBreakdownForLog}, fuel {predictedFuel:N0}, estimated escort losses {predictedLosses:N0}, estimated debris {predictedDebrisForLog:N0} (collectable {debrisCollectable:N0}, recycler fuel {recyclerFuelForProfit:N0}, credit {debrisCredit:N0}), loot {predictedLoot:N0}.");
-								// Geschwindigkeit unprofitabel? Dann langsamere Stufen pruefen (nur der Sprit aendert sich,
-								// die Verluste nicht), aber nicht unter AutoFarm.MinSpeedPercentForProfitRetry (Default 50)
-								// und nicht ueber MaxFlightTime. Die schnellste profitable Stufe gewinnt.
 								if (predictedCost >= predictedGain) {
 									int minRetrySpeedPercent = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MinSpeedPercentForProfitRetry", 50);
 									long maxFlightForRetry = !SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MaxFlightTime")
@@ -3593,8 +3209,6 @@ namespace Tbot.Workers {
 										_blacklist.AddTarget(target.Celestial.Coordinate, BlacklistReason.Unprofitable, unprofitableHoursUntilReset);
 										_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Target {target.Celestial.Coordinate} blacklisted for {unprofitableHoursUntilReset}h (unprofitable: fuel+losses {predictedCost:N0} >= loot {predictedLoot:N0} + debris credit {debrisCredit:N0}).");
 									}
-									// otherwise it is re-simulated every cycle (X:31:8 with 68k cruisers: 7x). A new report
-									// (new probe after the blacklist reset) can set it back to AttackPending.
 									target.State = FarmState.NotSuitable;
 									continue;
 								}
@@ -3603,16 +3217,11 @@ namespace Tbot.Workers {
 							Ships recyclerFleetToSend = null;
 							Coordinate recyclerDebrisCoordinate = null;
 							decimal recyclerSpeed = 0;
-							// Ankunftskoordination Hauptflotte/Recycler
 							long recyclerDelaySec = 0;
 							long attackDelaySec = 0;
 							long recyclerPlannedAttackFlightSec = 0;
-							// fuer die Nachkorrektur mit echten Ankunftszeiten
 							long recyclerGapTargetSec = 0;
 							long recyclerCorrectedFlightSec = 0;
-							// Rueckkehr in die Schlafenszeit VOR Trigger-Sonde/Recycler pruefen. Rundflug
-							// der Hauptflotte (+ Recycler, falls Truemmer eingesammelt werden) + 10 min Puffer fuer
-							// moegliche Verlangsamung/Verzoegerung aus PATCH 126.
 							{
 								long sleepCheckAttackT = (long) _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, target.Celestial.Coordinate, attackingShips, Missions.Attack, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time;
 								long sleepCheckRoundTrip = 2 * sleepCheckAttackT;
@@ -3623,7 +3232,6 @@ namespace Tbot.Workers {
 								if (sleepCheckDebris) {
 									var sleepCheckDebrisCoord = new Coordinate(target.Celestial.Coordinate.Galaxy, target.Celestial.Coordinate.System, target.Celestial.Coordinate.Position, Celestials.Debris);
 									long sleepCheckRecT = (long) _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, sleepCheckDebrisCoord, new Ships().Add(Buildables.Recycler, 1), Missions.Harvest, _calculationService.GetValidSpeedsForClass(_tbotInstance.UserData.userInfo.Class).Max(), _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time;
-									// Recycler kommt ~2 min nach der Hauptflotte an und fliegt dann zurueck
 									sleepCheckRoundTrip = Math.Max(sleepCheckRoundTrip, sleepCheckAttackT + 120 + sleepCheckRecT);
 								}
 								if (await WouldConflictWithSleepAsync(sleepCheckRoundTrip + 600)) {
@@ -3641,10 +3249,6 @@ namespace Tbot.Workers {
 								if (availableTriggerProbes <= 0) {
 									_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: no probe available for the debris field trigger - attack goes out without recycler preparation.");
 								} else {
-									// die Sonde fliegt als Attack-Mission (nicht Spionage) - nur eine
-									// Attack-Mission erzeugt garantiert einen Truemmerfeld-Datensatz, egal ob
-									// echter Kampf stattfindet. Sie kommt dabei nicht zurueck (wird beim Ziel
-									// verbraucht/zerstoert) - es muss nur ihre Ankunft abgewartet werden.
 									Ships triggerProbeFleet = new Ships().Add(Buildables.EspionageProbe, 1);
 									decimal triggerSpeed = _calculationService.GetValidSpeedsForClass(_tbotInstance.UserData.userInfo.Class).Max();
 									FleetPrediction probePrediction = _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, target.Celestial.Coordinate, triggerProbeFleet, Missions.Attack, triggerSpeed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
@@ -3654,15 +3258,10 @@ namespace Tbot.Workers {
 									} else {
 										_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Debris field trigger probe sent to {target.Celestial.Coordinate} (attack mission, does not return), arrival in ~{TimeSpan.FromSeconds(probePrediction.Time)}.");
 										triggerProbeFleetIdForGuard = triggerFleetId;
-										// mindestens bis zur berechneten Ankunft der Sonde (+10s) warten statt fix 30s -
-										// bei weiten Zielen (andere Galaxie) war das Truemmerfeld nach 30s evtl. noch nicht da.
-										// Obergrenze 300s, damit AutoFarm nicht zu lange blockiert.
 										int triggerProbeGraceSeconds = (int) Math.Min(300, Math.Max(30, (long) probePrediction.Time + 10));
 										Heartbeat();
 										await Task.Delay(TimeSpan.FromSeconds(triggerProbeGraceSeconds), _ct);
 
-										// 2 Slots noetig (Angriffsflotte + Recycler zusammen) - nicht
-										// abbrechen, wenn die gerade nicht da sind, sondern warten.
 										_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 										int slotsToLeaveFreeForBundle = (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree;
 										if (_tbotInstance.UserData.slots.Free - slotsToLeaveFreeForBundle < 2) {
@@ -3674,9 +3273,6 @@ namespace Tbot.Workers {
 										fromCelestial = await _tbotOgameBridge.UpdatePlanet(fromCelestial, UpdateTypes.LFBonuses);
 										float recyclerCargoBonus = fromCelestial.LFBonuses?.GetShipCargoBonus(Buildables.Recycler) ?? 0;
 										Resources predictedDebris = new Resources { Metal = escortSimResult.Debris.Metal, Crystal = escortSimResult.Debris.Crystal, Deuterium = escortSimResult.Debris.Deuterium };
-										// Reaper/Crawler and left deuterium out of the debris field (1:34:6: sim 33.0M,
-										// actual 42.1M -> too few recyclers). Lower bound: fleet debris from the report + debris of
-										// own losses (both incl. deuterium). The larger value wins.
 										{
 											double fleetToDebris135 = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "FleetToDebrisPercent", 30.0) / 100.0;
 											long reportFleetDebris135 = EstimateReportFleetDebris(target.Report);
@@ -3703,11 +3299,6 @@ namespace Tbot.Workers {
 											FleetPrediction atkPredictionForRecycler = _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, target.Celestial.Coordinate, attackingShips, Missions.Attack, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
 											decimal fastestRecyclerSpeed = _calculationService.GetValidSpeedsForClass(_tbotInstance.UserData.userInfo.Class).Max();
 											FleetPrediction recyclerAtFastest = _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, recyclerDebrisCoordinate, recyclerFleetToSend, Missions.Harvest, fastestRecyclerSpeed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
-											// Recycler fliegt IMMER mit voller Geschwindigkeit (Vorrang), Ankunft soll
-											// RecyclerArrivalGapMinSec..MaxSec nach der Hauptflotte liegen.
-											//   Recycler waere zu frueh -> Recycler verzoegert starten (persistiert, Neustart-sicher)
-											//   Recycler waere zu spaet -> Angriff langsamer (spart Sprit), Rest per kurzer
-											//                              Angriffsverzoegerung (max. MaxAttackDelaySec)
 											bool coordinateRecyclerArrival = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "CoordinateRecyclerArrival", true);
 											if (coordinateRecyclerArrival) {
 												long gapMin = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "RecyclerArrivalGapMinSec", (long) 15);
@@ -3715,7 +3306,6 @@ namespace Tbot.Workers {
 												if (gapMax < gapMin) gapMax = gapMin;
 												long gapTarget = (gapMin + gapMax) / 2;
 												long maxAttackDelaySec = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxAttackDelaySec", (long) 600);
-												// berechnete Zeiten mit den gemessenen Korrekturfaktoren anpassen
 												var flightCal = GetFlightCalibration();
 												long recT = (long) Math.Round(recyclerAtFastest.Time * flightCal.RecyclerFactor);
 												long atkT = (long) Math.Round(atkPredictionForRecycler.Time * flightCal.AttackFactor);
@@ -3724,11 +3314,8 @@ namespace Tbot.Workers {
 												recyclerSpeed = fastestRecyclerSpeed;
 
 												if (atkT + gapMin > recT) {
-													// Recycler waere bei voller Geschwindigkeit vor/zu knapp an der Hauptflotte
 													recyclerDelaySec = atkT + gapTarget - recT;
 												} else if (atkT + gapMax < recT) {
-													// Recycler waere zu spaet - Angriff auf die langsamste Stufe bremsen, die
-													// noch mindestens gapMin vor dem Recycler ankommt
 													long configuredMaxFlight126 = !SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MaxFlightTime")
 														? 86400
 														: ((long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime == 0 ? long.MaxValue : (long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime);
@@ -3787,21 +3374,16 @@ namespace Tbot.Workers {
 								continue;
 							}
 
-							// Recycler waere selbst mit 100% zu spaet -> Recycler ZUERST schicken,
-							// Hauptflotte danach um attackDelaySec verzoegert, damit sie knapp vorher ankommt.
 							bool recyclerAlreadyHandled = false;
 							if (recyclerFleetToSend != null && attackDelaySec > 0) {
 								DateTime recyclerGiveUpUtc = DateTime.UtcNow.AddSeconds(attackDelaySec + recyclerPlannedAttackFlightSec + 1800);
 								long? actualRecyclerArriveIn = await SendRecyclerOrScheduleRetryAsync(fromCelestial, recyclerFleetToSend, recyclerDebrisCoordinate, recyclerSpeed, recyclerGiveUpUtc);
 								freeSlots--;
 								recyclerAlreadyHandled = true;
-								// Vorabversand gescheitert (z.B. "Kein Truemmerfeld vorhanden") - der Recycler
-								// geht dann ohnehin erst nach dem Kampf raus, die Hauptflotte noch zu verzoegern bringt nichts.
 								if (!actualRecyclerArriveIn.HasValue && attackDelaySec > 0) {
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: recycler pre-dispatch failed - main fleet starts immediately instead of in {attackDelaySec}s, recycler follows after the battle.");
 									attackDelaySec = 0;
 								}
-								// Angriffsverzoegerung an der ECHTEN Recycler-Ankunft ausrichten
 								if (actualRecyclerArriveIn.HasValue && recyclerGapTargetSec > 0) {
 									long correctedAtkT = Math.Max(0, recyclerPlannedAttackFlightSec);
 									long maxAttackDelay127 = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxAttackDelaySec", (long) 600);
@@ -3824,7 +3406,6 @@ namespace Tbot.Workers {
 							var fleetId = await _fleetScheduler.SendFleet(fromCelestial, attackingShips, target.Celestial.Coordinate, Missions.Attack, speed);
 							if (recyclerAlreadyHandled && fleetId <= (int) SendFleetCode.GenericError) {
 								_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: main fleet NOT sent after the delay (code {fleetId}) - recyclers are cancelled/recalled.");
-								// sonst fliegt der Recycler umsonst bzw. ein geplanter Wiederholungsversuch laeuft ins Leere
 								await CancelRecyclersForDebrisAsync(recyclerDebrisCoordinate);
 							}
 
@@ -3841,15 +3422,9 @@ namespace Tbot.Workers {
 								if (!_stateStore.RecordAttack(target, loot, DateTime.UtcNow, fromCelestial.Coordinate, Missions.Attack.ToString()))
 									_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm,
 										$"Attack sent to {target.Celestial.Coordinate}, but it could not be recorded in the AutoFarm database.");
-								// remember sent ships for loss tracking (real attacks only, no trigger probe)
 								RecordFleetForLossTracking(fleetId, fromCelestial, target.Celestial.Coordinate, attackingShips, speed, loot);
 								PersistTargets();
 
-								// Ankunftsplan sofort, nach kurzer Wartezeit (<= 120s, inline) oder zeitversetzt
-								// (persistierter Auftrag, Neustart-sicher). Fehlschlaege (z.B. Truemmerfeld noch
-								// nicht da, kein Slot frei) werden erneut versucht (Taktik siehe PATCH 128).
-								// echte Ankunft der Hauptflotte messen -> Kalibrierung + Recycler-Start
-								// exakt daran ausrichten (statt nur an der berechneten Flugzeit)
 								if (recyclerFleetToSend != null && !recyclerAlreadyHandled && recyclerGapTargetSec > 0) {
 									long? actualAttackArriveIn = await GetActualArriveInAsync(fleetId);
 									if (actualAttackArriveIn.HasValue) {
@@ -3911,23 +3486,6 @@ namespace Tbot.Workers {
 				}
 
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Attacked targets: {_tbotInstance.UserData.farmTargets.Where(t => t.State == FarmState.AttackSent).Count()}");
-				// Diese Zeile hat bisher AM ENDE JEDES ZYKLUS ausnahmslos ALLE Ziele im Status
-				// ProbesSent geloescht (und sofort mitpersistiert). Da eine Sondenflugzeit immer
-				// > 0 ist, kann der zugehoerige Spionagebericht praktisch nie im selben Zyklus
-				// eintreffen, in dem die Sonde losgeschickt wurde - jedes noch auf seinen Bericht
-				// wartende Ziel wurde also garantiert geloescht, BEVOR AutoFarmProcessReports() es
-				// je auswerten konnte. Folgen: (1) SequentialMode's eigene Bremse
-				// (sequentialModeProbeInFlight, siehe oben) zaehlte ProbesSent-Ziele und war dadurch
-				// nie aktiv - es wurde immer sofort die naechste Sonde losgeschickt, obwohl der
-				// Bericht der vorherigen nachweislich noch nicht ausgewertet war. (2) Kam der
-				// Bericht erst nach diesem Loeschvorgang zurueck, fand AutoFarmProcessReports()
-				// keinen passenden farmTargets-Eintrag mehr zu der Koordinate und der Bericht wurde
-				// (ohne ProcessAllReports) stillschweigend verworfen - verschwendete Spionage-Slots
-				// ohne je zu einem Angriff zu fuehren. Fix: Zeile ersatzlos entfernt. Ziele im
-				// Status ProbesSent werden bereits regulaer durch AutoFarmProcessReports() aufgeloest
-				// (State-Wechsel zu ProbesPending/AttackPending/blacklisted), sobald ihr Bericht
-				// eintrifft - eine zusaetzliche pauschale Loeschung hier ist nicht noetig und war der
-				// eigentliche Bug.
 				PersistTargets();
 				if (!_tbotInstance.UserData.isSleeping) {
 					if (stop) {
@@ -3937,15 +3495,6 @@ namespace Tbot.Workers {
 						var time = await _tbotOgameBridge.GetDateTime();
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 						long interval;
-						// Bugfix: zwischen dem tatsaechlichen Sondenversand (weiter oben im selben
-						// Execute()-Aufruf) und HIER liegen AutoFarmProcessReports() + der komplette
-						// Angriffs-Dispatch - je nach Eskortensimulationen u.U. mehrere Sekunden bis
-						// Minuten. Ohne Korrektur wuerde die volle Flugzeit ERST AB JETZT nochmal
-						// draufgerechnet, der naechste Zyklus liefe also systematisch zu spaet (um genau
-						// die in diesem Zyklus verbrauchte Verarbeitungszeit verzoegert). Deshalb hier
-						// die seit dem Versand (_sequentialModeProbeSentAtUtc) bereits verstrichene Zeit
-						// abziehen, damit der naechste Zyklus wieder auf den tatsaechlichen
-						// Ankunftszeitpunkt der Sonde trifft, nicht auf "Ankunftszeitpunkt + Zykluszeit".
 						if (_sequentialModeNextArrivalSeconds.HasValue && _sequentialModeProbeSentAtUtc.HasValue) {
 							double elapsedSeconds = (DateTime.UtcNow - _sequentialModeProbeSentAtUtc.Value).TotalSeconds;
 							double remainingSeconds = _sequentialModeNextArrivalSeconds.Value - elapsedSeconds;
@@ -3953,24 +3502,6 @@ namespace Tbot.Workers {
 							interval = (long) Math.Max(0, remainingSeconds * 1000) + bufferMs;
 							_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Sequential mode: next cycle in {TimeSpan.FromMilliseconds(interval)} (probe arrival in {_sequentialModeNextArrivalSeconds.Value}s, of which {elapsedSeconds:F1}s already elapsed during report/attack processing, + buffer).");
 						} else if (sequentialModeActive) {
-							// dieser Zyklus hat KEINE neue Sonde verschickt - entweder weil der
-							// Scan-Check (siehe Kommentar bei sequentialModeProbeInFlight weiter oben) noch
-							// den GERADE ERST in diesem Zyklus verarbeiteten Bericht der vorherigen Sonde
-							// gesehen hat (Scan-Check laeuft VOR AutoFarmProcessReports() im selben Zyklus,
-							// blockiert die naechste Sonde also noch fuer genau diesen einen Durchlauf),
-							// oder weil sonst kein Slot/keine Sonde verfuegbar war. Ohne diesen Sonderfall
-							// griff hier bisher das normale (fuer Batch-Modus gedachte, viel traegere)
-							// CheckIntervalMin/Max - dadurch entstand nach jedem Angriff/jeder Auswertung
-							// eine unnoetig lange Pause, bevor die naechste Sonde ueberhaupt losging. Im
-							// Sequential-Modus stattdessen kurz nachfassen, damit der naechste Zyklus (der
-							// dann die neue Sonde verschickt) praktisch nahtlos an Pruefung/Angriff anschliesst.
-							// bewusst fix 1000ms statt eines der RandomizeHelper-IntervalType-
-							// Tiers (kleinste Stufe AFewSeconds waere hier noch spuerbar traeger) - dieser
-							// Zweig macht keine ziel-/serverseitige Anfrage, ist also kein "Request-Spam"-
-							// Risiko wie bei echten Sonden-/Flottenversand-Intervallen; er soll nur so
-							// schnell wie sinnvoll pruefbar wieder feuern, damit die naechste Sonde
-							// praktisch nahtlos an Pruefung/Angriff anschliesst. Kein Random-Jitter noetig,
-							// da hier kein an den Server gerichteter Request dahintersteckt.
 							interval = 1000;
 							_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Sequential mode: no new probe sent this cycle - short retry in {TimeSpan.FromMilliseconds(interval)} instead of CheckIntervalMin/Max.");
 						} else if (fillSlotsActive && TryGetFillSlotsInterval(finishedFullScan, out long fillInterval)) {
@@ -4002,8 +3533,6 @@ namespace Tbot.Workers {
 			return (maxCapacity < minimumResourcesThreshold, maxCapacity);
 		}
 
-		// gesehenen Flotte (Flottenwert x FleetToDebrisPercent). Nur wenn verteidigte Ziele angegriffen und
-		// Truemmer eingesammelt werden (sonst bringt die Flotte keinen Ertrag) - sonst 0.
 		private long ReportFleetDebrisForThreshold(EspionageReport report) {
 			try {
 				if (!report.HasFleetInformation) return 0;
@@ -4018,7 +3547,6 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// from the report (no config gating), also used for the recycler count.
 		private long EstimateReportFleetDebris(EspionageReport report) {
 			try {
 				if (report == null || !report.HasFleetInformation) return 0;
@@ -4053,8 +3581,6 @@ namespace Tbot.Workers {
 			try {
 				summaryReports = await _ogameService.GetEspionageReports() ?? new List<EspionageReportSummary>();
 			} catch (Exception e) {
-				// Report cleanup is best effort. A temporary OGame/API failure must not
-				// prevent the attack phase from processing targets already marked pending.
 				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm,
 					$"Unable to retrieve espionage reports; keeping existing attack-pending targets: {e.Message}");
 				return;
@@ -4086,7 +3612,6 @@ namespace Tbot.Workers {
 					if (reportBlacklistActive && _blacklist.IsBlacklisted(report.Coordinate)) {
 						var blacklistedTarget = _blacklist.GetBlacklistedTarget(report.Coordinate);
 						if (blacklistedTarget != null && (blacklistedTarget.Reason == BlacklistReason.HasDefense || blacklistedTarget.Reason == BlacklistReason.Unprofitable)) {
-							// logged once per report and interval instead of every cycle
 							LogThrottled($"blreport:{report.ID}", LogLevel.Debug,
 								$"Keeping espionage report {report.ID} for {blacklistedTarget.Reason}-blacklisted target {report.Coordinate} - not deleted.");
 							continue;
@@ -4102,7 +3627,6 @@ namespace Tbot.Workers {
 						continue;
 					}
 					if (_stateStore.HasConsumedReport(report.ID)) {
-						// logged once per report and interval instead of every cycle
 						LogThrottled($"consumed:{report.ID}", LogLevel.Debug,
 							$"Ignoring consumed espionage report {report.ID} for {report.Coordinate}; keeping it and waiting for a fresh report after re-spy.");
 						continue;
@@ -4152,7 +3676,6 @@ namespace Tbot.Workers {
 						Buildables cargoShip = GetConfiguredCargoType();
 						bool isUsingProbes = cargoShip == Buildables.EspionageProbe && _tbotInstance.UserData.serverData.ProbeCargo == 1 ? true : false;
 						newFarmTarget.Report = report;
-						// Flottentruemmer zaehlen beim Beute-Minimum mit (siehe ReportFleetDebrisForThreshold)
 						long reportFleetDebris = ReportFleetDebrisForThreshold(report);
 						bool lootByFleetDebris = reportFleetDebris > 0 && report.Loot(_tbotInstance.UserData.userInfo.Class).TotalResources + reportFleetDebris > _tbotInstance.InstanceSettings.AutoFarm.MinimumResources;
 						if (lootByFleetDebris) {
@@ -4193,7 +3716,6 @@ namespace Tbot.Workers {
 							if (blacklistActiveLowRes) {
 								int hoursUntilReset = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm.Blacklist, "ResetAfterHours", 48);
 								var storageAssessment = AssessStorageCapacity(report, (long) _tbotInstance.InstanceSettings.AutoFarm.MinimumResources);
-								// Monde haben keine Minen - dort liegen nur hingebrachte Rohstoffe, die das Lager nicht deckelt
 								if (storageAssessment.IsHopeless && report.Coordinate.Type != Celestials.Moon) {
 									hoursUntilReset = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm.Blacklist, "PermanentResetAfterHours", 8760);
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Target {report.Coordinate}: maximum storage capacity ({storageAssessment.MaxCapacity:N0}) is below AutoFarm.MinimumResources - structurally never profitable, {hoursUntilReset}h instead of the usual {SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm.Blacklist, "ResetAfterHours", 48)}h blacklisted.");
@@ -4206,12 +3728,6 @@ namespace Tbot.Workers {
 						_tbotInstance.UserData.farmTargets.Remove(target);
 						_tbotInstance.UserData.farmTargets.Add(newFarmTarget);
 					} else {
-					// ProcessAllReports fest auf true hartkodiert (Config-Wert wird nicht mehr
-					// gelesen/beachtet). Grund: durch den PATCH-123-Fix des ProbesSent-Wipe-Bugs
-					// (siehe Execute()) sollte das eigentlich seltener noetig sein, aber als
-					// zusaetzliches Sicherheitsnetz gegen verlorene/nicht zugeordnete Berichte
-					// (z.B. durch Scan-Zyklus-Timing oder manuell ausgeloeste Spionage) soll dieser
-					// Pfad immer aktiv sein, unabhaengig von der Config.
 					bool processAllReports = true;
 					if (processAllReports && report.IsInactive) {
 						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Processing report for {report.Coordinate} not scanned by TBot (ProcessAllReports enabled)...");
@@ -4235,7 +3751,6 @@ namespace Tbot.Workers {
 								Buildables cargoShip = GetConfiguredCargoType();
 								bool isUsingProbes = cargoShip == Buildables.EspionageProbe && _tbotInstance.UserData.serverData.ProbeCargo == 1 ? true : false;
 								newFarmTarget.Report = report;
-								// Flottentruemmer zaehlen beim Beute-Minimum mit
 								if (report.Loot(_tbotInstance.UserData.userInfo.Class).TotalResources + ReportFleetDebrisForThreshold(report) > _tbotInstance.InstanceSettings.AutoFarm.MinimumResources) {
 									if (report.HasFleetInformation && report.HasDefensesInformation) {
 										if (report.IsDefenceless(isUsingProbes)) {

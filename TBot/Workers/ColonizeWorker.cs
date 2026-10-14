@@ -66,14 +66,6 @@ namespace Tbot.Workers {
 					List<Celestial> newCelestials = _tbotInstance.UserData.celestials.ToList();
 					var dic = new Dictionary<Coordinate, Celestial>();
 
-					// this used to touch every single owned planet (UpdatePlanet ->
-					// in-game context switch -> triggers OGame's "recent activity" indicator) every
-					// single Colonize cycle, regardless of AutoMine.Exclude - even though a planet
-					// that's already excluded from active mining (i.e. deliberately left alone) is
-					// essentially never going to be a fresh, empty (Fields.Built == 0) abandon
-					// candidate anyway, since excluded colonies in this account are mature and
-					// already built up. Skip planets in AutoMine.Exclude before any data is fetched,
-					// same reasoning as Patches 18-20 for AutoMine/LifeformAutoMine/LifeformAutoResearch.
 					List<Celestial> abandonExclude = _calculationService.ParseCelestialsList(
 						_tbotInstance.InstanceSettings.Brain.AutoMine.Exclude, _tbotInstance.UserData.celestials);
 
@@ -99,7 +91,6 @@ namespace Tbot.Workers {
 							} else {
 								DoLog(LogLevel.Debug, $"No planet should be abandoned.");
 							}
-							//DoLog(LogLevel.Debug, $"Because: cases -> {tempCelestial.Fields.Total.ToString()}/{fieldsSettings.Total.ToString()}, MinimumTemp -> {tempCelestial.Temperature.Max.ToString()}>={temperaturesSettings.Min.ToString()}, MaximumTemp -> {tempCelestial.Temperature.Max.ToString()}<={temperaturesSettings.Max.ToString()}");
 						}
 					}
 					await _tbotOgameBridge.CheckCelestials();
@@ -155,13 +146,6 @@ namespace Tbot.Workers {
 						};
 						int MaxSlots = _calculationService.CalcSlotsPriority(Feature.Colonize, rankSlotsPriority, _tbotInstance.UserData.slots, _tbotInstance.UserData.fleets, (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree);
 
-						// previously, with IntensiveResearch.Active, a single in-flight colonize
-						// mission (> 0) blocked all further sends, making IntensiveResearch.MaxSlots
-						// completely ineffective - the bot only ever sent one colony ship at a time,
-						// waited for it to arrive, then sent the next one, serially instead of the
-						// intended parallel burst. Compare against MaxSlots instead, so up to MaxSlots
-						// colonize missions can genuinely be in flight simultaneously, matching the
-						// .Take(MaxSlots) selection logic further below in this same method.
 						if (
 							(!(bool) _tbotInstance.InstanceSettings.AutoColonize.IntensiveResearch.Active && _tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Colonize && !f.ReturnFlight) >= maxPlanets - currentPlanets)
 							|| ((bool) _tbotInstance.InstanceSettings.AutoColonize.IntensiveResearch.Active && _tbotInstance.UserData.fleets.Count(f => f.Mission == Missions.Colonize && !f.ReturnFlight) >= (int) _tbotInstance.InstanceSettings.AutoColonize.IntensiveResearch.MaxSlots)
@@ -307,7 +291,7 @@ namespace Tbot.Workers {
 											if (maxWaitNextFleet < 1)
 												maxWaitNextFleet = 1;
 											
-											var rndWaitTimeMs = 0;	//(int) RandomizeHelper.CalcRandomIntervalSecToMs(minWaitNextFleet, maxWaitNextFleet);
+											var rndWaitTimeMs = 0;
 											if (indexList < filteredTargets.Count()) {
 												Coordinate nextSlot = filteredTargets.ElementAt(indexList);
 												rndWaitTimeMs = _calculationService.CalcFleetPrediction(origin, nextSlot, ships, Missions.Colonize, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time - _calculationService.CalcFleetPrediction(origin, target, ships, Missions.Colonize, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time < maxWaitNextFleet ? 

@@ -279,7 +279,6 @@ type planetTechsResp struct {
 	Num502 int64 `json:"502"`
 	Num503 int64 `json:"503"`
 
-	// LFbuildings
 	Num11101 int64 `json:"11101"`
 	Num11102 int64 `json:"11102"`
 	Num11103 int64 `json:"11103"`
@@ -329,7 +328,6 @@ type planetTechsResp struct {
 	Num14111 int64 `json:"14111"`
 	Num14112 int64 `json:"14112"`
 
-	// LfResearches
 	Num11201 int64 `json:"11201"`
 	Num11202 int64 `json:"11202"`
 	Num11203 int64 `json:"11203"`
@@ -341,7 +339,6 @@ type planetTechsResp struct {
 	Num11209 int64 `json:"11209"`
 	Num11210 int64 `json:"11210"`
 	Num11211 int64 `json:"11211"`
-	//Num11112 int64 `json:"11112"`
 	Num11213 int64 `json:"11213"`
 	Num11214 int64 `json:"11214"`
 	Num11215 int64 `json:"11215"`
@@ -613,34 +610,6 @@ func extractTechs(pageHTML []byte) (techs ogame.Techs, err error) {
 	return
 }
 
-// ar, Argentina           -> Recolector, General, Descubridor
-// ba, Balkan              -> Sakupljač, General, Otkrivač
-// br, Brasil              -> Coletor, General, Descobridor
-// dk, Danmark             -> Samleren, Generalen, Opdageren
-// de, Deutschland         -> Kollektor, General, Entdecker
-// es, España              -> Recolector, General, Descubridor
-// fr, France              -> Le collecteur, Général, L`explorateur
-// hr, Hrvatska            -> Sakupljač, General, Otkrivač
-// it, Italia              -> Collezionista, Generale, Esploratore
-// hu, Magyarország        -> Gyűjtő, Tábornok, Felfedező
-// mx, México              -> Recolector, General, Descubridor
-// nl, Netherlands         -> Verzamelaar, Generaal, Ontdekker
-// no, Norge               -> Collector, General, Discoverer (no i18n)
-// pl, Polska              -> Zbieracz, Generał, Odkrywca
-// pt, Portugal            -> Colecionador, General, Descobridor
-// ro, Romania             -> Colecționarul, General, Exploratorul
-// si, Slovenija           -> Zbiralec, Splošno, Odkritelj
-// sk, Slovensko           -> Zberateľ, Generál, Objaviteľ
-// fi, Suomi               -> Keräilijä, Komentaja, Löytäjä
-// se, Sverige             -> Samlare, General, Upptäckare
-// tr, Türkiye             -> Koleksiyoncu, General, Kaşif
-// us, USA                 -> Collector, General, Discoverer
-// en, United Kingdom      -> Collector, General, Discoverer
-// cz, Če Republika        -> Sběratel, Generál, Průzkumník
-// gr, Ελλάδα              -> Συλλέκτης, Στρατηγός, Εξερευνητής
-// ru, Российс Федерация   -> Коллекционер, Генерал, Исследователь
-// tw, 台灣                 -> 採礦師, 將軍, 探險家
-// jp, 日本                 -> 回収船, 将軍, 探索船
 func GetCharacterClass(characterClassStr string) ogame.CharacterClass {
 	switch characterClassStr {
 	case "Recolector", "Sakupljač", "Coletor", "Samleren", "Kollektor", "Le collecteur", "Collezionista", "Gyűjtő",
@@ -707,7 +676,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.AllianceClass = ogame.Researcher
 	}
 
-	// Bandit, Starlord
 	banditstarlord := doc.Find("div.detail_txt").First().Find("span")
 	if banditstarlord.HasClass("honorRank") {
 		report.IsBandit = banditstarlord.HasClass("rank_bandit1") || banditstarlord.HasClass("rank_bandit2") || banditstarlord.HasClass("rank_bandit3")
@@ -717,7 +685,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 	honorableFound := doc.Find("div.detail_txt").First().Find("span.status_abbr_honorableTarget")
 	report.HonorableTarget = honorableFound.Length() > 0
 
-	// IsInactive, IsLongInactive
 	inactive := doc.Find("div.detail_txt").First().Find("span")
 	if inactive.HasClass("status_abbr_longinactive") {
 		report.IsInactive = true
@@ -726,7 +693,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.IsInactive = true
 	}
 
-	// APIKey
 	apikey := doc.Find("span.icon_apikey").AttrOr("title", "")
 	apiDoc, err := goquery.NewDocumentFromReader(strings.NewReader(apikey))
 	if err != nil {
@@ -734,13 +700,11 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 	}
 	report.APIKey = apiDoc.Find("input").First().AttrOr("value", "")
 
-	// Inactivity timer
 	activity := doc.Find("div.detail_txt").Eq(2).Find("font")
 	if len(activity.Text()) == 2 {
 		report.LastActivity = utils.ParseInt(activity.Text())
 	}
 
-	// CounterEspionage
 	ceTxt := doc.Find("div.detail_txt").Eq(2).Text()
 	m1 := regexp.MustCompile(`(\d+)%`).FindStringSubmatch(ceTxt)
 	if len(m1) == 2 {
@@ -1175,7 +1139,6 @@ func extractAttacksFromDoc(doc *goquery.Document, clock clockwork.Clock, ownCoor
 				attack.Missiles = utils.ParseInt(s.Find("td.detailsFleet span").First().Text())
 			}
 
-			// Get ships infos if available
 			if movement, exists := s.Find("td.icon_movement span").Attr("title"); exists {
 				root, err := html.Parse(strings.NewReader(movement))
 				if err != nil {
@@ -1233,7 +1196,6 @@ func extractAttacksFromDoc(doc *goquery.Document, clock clockwork.Clock, ownCoor
 
 			if !partner {
 
-				// People invite you to attack your own self, and ogame sees it as friendly.
 				if isFriendly && attack.MissionType == ogame.GroupedAttack {
 					if utils.InArray(attack.Destination, ownCoords) {
 						isHostile = true

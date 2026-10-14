@@ -2,7 +2,6 @@ namespace TBot.WebUI.Models {
 	public class ConfigBlockInfo {
 		public string Name { get; set; } = "";
 		public bool? Active { get; set; }
-		// custom = eigene Formularseite, generic = automatisch erzeugtes Formular, placeholder = noch nicht freigeschaltet, secret = nur ueber den JSON-Editor
 		public string Mode { get; set; } = "placeholder";
 	}
 

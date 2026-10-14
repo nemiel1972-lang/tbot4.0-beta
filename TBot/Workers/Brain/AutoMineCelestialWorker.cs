@@ -23,13 +23,6 @@ namespace Tbot.Workers.Brain {
 		private readonly IOgameService _ogameService;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
 
-		// remembers the buildable a resource transport was specifically sent to fund, so that
-		// once those resources arrive we finish paying for it instead of letting a freshly (and cheaper)
-		// re-evaluated "best building" spend them first. Without this, GetNextBuildingToBuild() is
-		// recomputed from scratch every cycle with no memory of in-flight funding, so a big transport
-		// aimed at an expensive building (e.g. ResearchLab) routinely gets consumed by whatever cheap
-		// building (a storage upgrade, a tank) happens to look best by the time the cargo lands - the
-		// originally funded building never gets built and resources keep piling up on the celestial.
 		private Buildables _pendingFundedBuildable = Buildables.Null;
 		private int _pendingFundedLevel = 0;
 		public AutoMineCelestialWorker(ITBotMain parentInstance,
@@ -46,9 +39,6 @@ namespace Tbot.Workers.Brain {
 			_tbotOgameBridge = tbotOgameBridge;
 		}
 
-		// Caps je Planet: HomeWorld (Brain.AutoMine.HomeWorld) -> Colony (Fallback fuer alle uebrigen) -> global,
-		// falls die Gruppe nicht konfiguriert ist. Einzelne Planeten ueberschreiben feldweise per
-		// Brain.AutoMine.ColonyOverrides (siehe AutoMineOverrideHelper).
 		private Buildings GetMaxBuildingsForCelestial(Celestial cel) {
 			bool isHomeWorld =
 				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
@@ -78,7 +68,6 @@ namespace Tbot.Workers.Brain {
 				maxDeuteriumTank = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxDeuteriumTank;
 			}
 
-			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -106,7 +95,6 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// siehe AutoMineWorker.cs.
 		private Facilities GetMaxFacilitiesForCelestial(Celestial cel) {
 			bool isHomeWorld =
 				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
@@ -134,7 +122,6 @@ namespace Tbot.Workers.Brain {
 				maxSpaceDock = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxSpaceDock;
 			}
 
-			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -160,7 +147,6 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// siehe AutoMineWorker.cs.
 		private int GetCrawlerAmountToBuild(Planet planet) {
 			bool fixedTargetSet = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "FixedCrawlerTarget") && (int) _tbotInstance.InstanceSettings.Brain.AutoMine.FixedCrawlerTarget > 0;
 			if (fixedTargetSet) {
@@ -172,9 +158,6 @@ namespace Tbot.Workers.Brain {
 			return _calculationService.CalcOptimalCrawlers(planet, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData);
 		}
 
-		// liefert das aktuell konfigurierte Cap fuer einen gegebenen Buildable-Typ, damit
-		// Patch 13 (Pending-Funded-Building) sein Memo gegen den GERADE GUELTIGEN Cap validieren kann,
-		// statt ihn zu umgehen. Buildables ohne bekanntes Cap-Feld (z.B. Deposit) sind ungedeckelt.
 		private int GetCapForBuildable(Buildables b, Buildings maxBuildings, Facilities maxFacilities) {
 			switch (b) {
 				case Buildables.MetalMine: return maxBuildings.MetalMine;
@@ -196,10 +179,6 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
-		// Alles-oder-nichts-Pruefung fuer Funding-Transporte. Liefert nur dann true,
-		// wenn die Herkunft die komplette Menge senden kann: Metall und Kristall vorhanden, Deuterium vorhanden PLUS Sprit
-		// (der Spritverbrauch wird vom Deuterium der Herkunft abgezogen, die Ladung wird sonst von OGame gekuerzt) und der
-		// Laderaum der Schiffe reicht fuer alles. Bei jedem Zweifel/Fehler false = lieber nichts senden als zu wenig.
 		private bool KannVollstaendigLiefern(Celestial herkunft, Ships schiffe, Coordinate ziel, Resources menge, Resources zuruecklassen) {
 			try {
 				long mengeMetall = menge.Metal;
@@ -292,7 +271,6 @@ namespace Tbot.Workers.Brain {
 			bool delayProduction = false;
 			try {
 				DoLog(LogLevel.Information, $"Running AutoMine on {celestial.ToString()}");
-				// RESOURCE-LEDGER: dieser Worker fuehrt ein eigenes Konto pro Celestial.
 				LedgerTBot.SetContext("AutoMine", celestial.ID);
 				await LedgerTBot.SyncFleets(_tbotInstance, _fleetScheduler);
 				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Fast);
@@ -330,17 +308,12 @@ namespace Tbot.Workers.Brain {
 						DoLog(LogLevel.Information, $"Skipping {celestial.ToString()}: not enough fields available.");
 						return;
 					}
-					// Heimatplanet nie als Abandon-Kandidat behandeln: sonst Deadlock auf frischem Account (Fields.Built bleibt 0, weil nie gebaut wird)
 					int homePlanetId = _calculationService.GetHomePlanetId(_tbotInstance.UserData.celestials);
 					if (celestial.ID != homePlanetId && _tbotInstance.UserData.celestials.Count > 1 && celestial.Coordinate.Type == Celestials.Planet && celestial.Fields.Built == 0 && (bool) _tbotInstance.InstanceSettings.AutoColonize.Abandon.Active) {
 						if (_calculationService.ShouldAbandon(celestial as Planet, celestial.Fields.Total, abaCelestial.Temperature.Max, fieldsSettings, temperaturesSettings)) {
 							DoLog(LogLevel.Debug, $"Skipping {celestial.ToString()}: planet should be abandoned.");
-							//DoLog(LogLevel.Debug, $"Because: cases -> {abaCelestial.Fields.Total.ToString()}/{fieldsSettings.Total.ToString()}, MinimumTemp -> {abaCelestial.Temperature.Max.ToString()}>={temperaturesSettings.Min.ToString()}, MaximumTemp -> {abaCelestial.Temperature.Max.ToString()}<={temperaturesSettings.Max.ToString()}");
 							return;
-						}/* else {
-							DoLog(LogLevel.Debug, $"Confirm AutoMine on {celestial.ToString()}.");
-							DoLog(LogLevel.Debug, $"Because: cases -> {abaCelestial.Fields.Total.ToString()}/{fieldsSettings.Total.ToString()}, MinimumTemp -> {abaCelestial.Temperature.Max.ToString()}>={temperaturesSettings.Min.ToString()}, MaximumTemp -> {abaCelestial.Temperature.Max.ToString()}<={temperaturesSettings.Max.ToString()}");
-						}*/
+						}
 					}
 					if (celestial.Constructions.BuildingID != 0) {
 						DoLog(LogLevel.Information, $"Skipping {celestial.ToString()}: there is already a building in production.");
@@ -367,36 +340,19 @@ namespace Tbot.Workers.Brain {
 						buildable = _calculationService.GetNextBuildingToBuild(celestial as Planet, _tbotInstance.UserData.researches, maxBuildings, maxFacilities, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.serverData, autoMinerSettings);
 						level = _calculationService.GetNextLevel(celestial as Planet, buildable, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
 
-						// if we're still owed a building we previously sent a transport to fund,
-						// and it's still the correct next level (i.e. nothing else already built it in the
-						// meantime) and we can now afford it, prefer it over the freshly computed "best
-						// building" - that's what the incoming resources were actually for.
 						if (_pendingFundedBuildable != Buildables.Null) {
 							int pendingCurrentLevel = celestial.GetLevel(_pendingFundedBuildable);
 							if (pendingCurrentLevel + 1 != _pendingFundedLevel) {
-								// Already built (or otherwise no longer the next level) - forget it.
 								_pendingFundedBuildable = Buildables.Null;
 								_pendingFundedLevel = 0;
 								EnergyFundingTracker.Clear(celestial.ID);
 							} else if (_pendingFundedLevel > GetCapForBuildable(_pendingFundedBuildable, maxBuildings, maxFacilities)) {
-								// the memoized target level now exceeds the currently configured cap
-								// for this celestial (e.g. Colony-Cap wurde nachtraeglich gesenkt,
-								// nachdem der finanzierende Transport bereits unterwegs war). Das Memo darf
-								// diesen Cap nicht mehr umgehen - verwerfen und normal mit dem frisch
-								// berechneten "best building" weitermachen.
 								DoLog(LogLevel.Information, $"Discarding previously funded {_pendingFundedBuildable.ToString()} level {_pendingFundedLevel.ToString()} on {celestial.ToString()}: exceeds current cap.");
 								_pendingFundedBuildable = Buildables.Null;
 								_pendingFundedLevel = 0;
 								EnergyFundingTracker.Clear(celestial.ID);
 							} else {
 								bool pendingIsEnergySource = _pendingFundedBuildable == Buildables.SolarPlant || _pendingFundedBuildable == Buildables.FusionReactor;
-								// GetNextBuildingToBuild() hat oben bereits die Energie-Prioritaet
-								// beruecksichtigt (ShouldBuildEnergySource) - das Pending-Funded-Override durfte
-								// das bisher ungeprueft ueberschreiben, wodurch bei aktivem Energiedefizit trotzdem
-								// die alte Finanzierung (z.B. eine Mine) durchgezogen wurde, statt dem frisch
-								// berechneten Solarkraftwerk/-satelliten den Vorrang zu lassen. Fix: Override nur
-								// anwenden, wenn entweder kein Energiedefizit besteht, ODER das Memo selbst die
-								// Energiequelle ist. Das Memo wird dabei NICHT verworfen, nur zurueckgestellt.
 								bool energyDeficit = !pendingIsEnergySource && _calculationService.ShouldBuildEnergySource(celestial as Planet);
 								if (energyDeficit) {
 									DoLog(LogLevel.Information, $"Deferring previously funded {_pendingFundedBuildable.ToString()} level {_pendingFundedLevel.ToString()} on {celestial.ToString()}: energy deficit takes priority.");
@@ -407,8 +363,6 @@ namespace Tbot.Workers.Brain {
 										buildable = _pendingFundedBuildable;
 										level = _pendingFundedLevel;
 									}
-									// else: not affordable yet, fall through with the freshly computed buildable
-									// as usual (e.g. resources for the pending target are still in flight).
 								}
 							}
 						}
@@ -426,7 +380,6 @@ namespace Tbot.Workers.Brain {
 					}
 
 					Resources xCostBuildable = _calculationService.CalcPrice(buildable, level, celestial.LFBonuses);
-					// ROI (Tage bis Amortisation) fuer das Bauwunsch-Protokoll / Autobuilds-Seite; nur Minen haben einen ROI, sonst 0.
 					float ledgerRoi = 0f;
 					if (celestial is Planet && (buildable == Buildables.MetalMine || buildable == Buildables.CrystalMine || buildable == Buildables.DeuteriumSynthesizer)) {
 						try {
@@ -477,19 +430,11 @@ namespace Tbot.Workers.Brain {
 						}
 
 						if (result) {
-						// RESOURCE-LEDGER: Bau gestartet - Anspruch/Reservierung dieses Workers wird abgebucht.
 						LedgerTBot.OnBuilt(_tbotInstance, celestial, "AutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
-							// a build just actually started - whatever it was, our funding memo is
-							// no longer needed (if it was the pending target, it's done; if it was something
-							// else, buildable/level here already IS that override from the check above).
 							if (buildable == _pendingFundedBuildable && level == _pendingFundedLevel) {
 								_pendingFundedBuildable = Buildables.Null;
 								_pendingFundedLevel = 0;
 							}
-							// der Bau ist tatsaechlich gestartet - egal was es war, eine evtl.
-							// laufende Energie-Finanzierungssperre fuer LifeformAutoMine/-Research ist damit
-							// hinfaellig (entweder war es die Energiequelle selbst, oder etwas anderes hat
-							// die Ressourcen schon verbraucht - so oder so gibt es nichts mehr zu schuetzen).
 							EnergyFundingTracker.Clear(celestial.ID);
 							if (buildable == Buildables.MetalMine || buildable == Buildables.CrystalMine || buildable == Buildables.DeuteriumSynthesizer) {
 								float DOIR = _calculationService.CalcDaysOfInvestmentReturn(celestial as Planet, buildable, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData.Speed, 1, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull);
@@ -546,20 +491,11 @@ namespace Tbot.Workers.Brain {
 						} else {
 							DoLog(LogLevel.Information, $"Not enough resources to build: {buildable.ToString()} level {level.ToString()} on {celestial.ToString()}. Needed: {xCostBuildable.TransportableResources} - Available: {celestial.Resources.TransportableResources}");
 						}
-						// RESOURCE-LEDGER: Bedarf sofort anmelden, auch wenn gleich kein Transport moeglich ist (Slots, Config, Herkunft).
-						// So bleibt der vorhandene Bestand vor Rueckholung und anderen Workern geschuetzt, solange dieser Worker wartet.
 						LedgerTBot.Plan(_tbotInstance, celestial, "AutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable, ledgerRoi);
 						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
-							// about to (try to) fund this exact buildable/level with a transport -
-							// remember it so that once resources arrive, we build it before re-evaluating
-							// "best building" from scratch (see the override check where buildable/level are
-							// first computed above).
 							if (buildable != Buildables.SolarSatellite && buildable != Buildables.Crawler) {
 								_pendingFundedBuildable = buildable;
 								_pendingFundedLevel = level;
-								// falls es sich um eine Energiequelle handelt, LifeformAutoMine und
-								// LifeformAutoResearch fuer diesen Celestial sperren, bis die Ressourcen
-								// entweder verbaut oder das Memo verworfen wurden (siehe Clear-Aufrufe oben).
 								EnergyFundingTracker.SetPending(celestial.ID, buildable);
 							}
 							_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
@@ -616,25 +552,12 @@ namespace Tbot.Workers.Brain {
 										incomingTransport = _calculationService.IsThereTransportTowardsCelestial(coLocatedMoon, _tbotInstance.UserData.fleets);
 									}
 								}
-								// RESOURCE-LEDGER: statt "irgendein Transport unterwegs" entscheidet das eigene Konto: gedeckt = Bestand
-								// (gehalten) + EIGENE Lieferflotten. Fremde Transporte zaehlen nicht mehr als Deckung.
 								LedgerTBotPlan ledgerPlan = LedgerTBot.Plan(_tbotInstance, celestial, "AutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable, ledgerRoi);
 								if (!ledgerPlan.Legacy)
 									incomingTransport = ledgerPlan.MissingIsZero;
 								if (!incomingTransport) {
 									Celestial origin = new() { ID = 0 };
 									List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-									// refreshing every single celestial here (planets AND moons) switches
-									// the in-game context into each of them, which triggers OGame's "recent activity"
-									// indicator in the galaxy view - on ALL celestials, every time a funding transport
-									// is evaluated (i.e. very often), completely independent of AutoMine/LifeformAutoMine/
-									// AutoCargo Exclude settings, since those only gate building/transport actions, not
-									// this lookup. When MultipleOrigins is disabled (the common case), the origin used
-									// further down is either the co-located moon/planet of `celestial` (CheckMoonOrPlanetFirst
-									// branch) or the single fixed Brain.Transports.Origin celestial (HandleMinerTransport
-									// fallback branch) - so only those two actually need fresh data. When MultipleOrigins
-									// IS active, CalcMultipleOrigin() genuinely needs fresh data for potentially any
-									// celestial, so the original full-empire refresh is kept in that case.
 									if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 										for (int i = 0; i < allCelestials.Count(); i++) {
 											allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);
@@ -701,11 +624,9 @@ namespace Tbot.Workers.Brain {
 													preferredShip = Buildables.SmallCargo;
 												}
 												long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-												// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 												Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 												if (brainSchiffe != null) {
 													Ships ships = brainSchiffe;
-													// nur senden, wenn Metall, Kristall, Deuterium (inkl. Sprit) und Laderaum die KOMPLETTE Menge abdecken.
 													if (!KannVollstaendigLiefern(origin, ships, celestial.Coordinate, missingResources, resToLeave)) {
 														DoLog(LogLevel.Warning, $"Partial delivery blocked: {origin.ToString()} cannot deliver {missingResources.TransportableResources} for {celestial.ToString()} completely (resources/fuel/cargo space).");
 													} else {
@@ -718,7 +639,6 @@ namespace Tbot.Workers.Brain {
 														}
 													}
 												} else {
-													// DoMultipleTransportIsNotEnoughShipButSamePosition (absichtlicher Teiltransport bei zu wenig Frachtern) ist fuer AutoMine-Funding gesperrt.
 													DoLog(LogLevel.Warning, $"Not enough Cargo available. Teillieferung unterbunden, skipping CheckMoonOrPlanetFirst.");
 												}
 											} else {
@@ -793,8 +713,6 @@ namespace Tbot.Workers.Brain {
 												return;
 											}
 
-											// erst ALLE Lieferungen planen und pruefen, dann senden - alles oder nichts.
-											// Vorher wurde Herkunft fuer Herkunft verschickt; reichten die Quellen zusammen nicht, kam nur ein Teil an.
 											var geplanteLieferungen = new List<(Celestial Herkunft, Ships Schiffe, Resources Menge, Coordinate Ziel)>();
 											Resources gesamtMenge = new();
 											foreach (var item in resultOrigins) {
@@ -845,11 +763,6 @@ namespace Tbot.Workers.Brain {
 													.SingleOrDefault() ?? new() { ID = 0 };
 												if (destination.Ships.IsEmpty() || celestial.Resources.TotalResources == 0)
 													destination = celestial;
-												// NOTE (patch 11): do NOT pre-subtract xCostBuildable here.
-												// HandleMinerTransport() below already computes missingResources = resources.Difference(destination.Resources)
-												// internally, using the correct target (celestial). Pre-subtracting here caused a double subtraction
-												// that always collapsed to 0 whenever the shortfall was smaller than the celestial's own resources
-												// (i.e. almost always). xCostBuildable is intentionally left as the full, undiminished cost here.
 											} else {
 												destination = allCelestials
 													.Unique()
@@ -887,7 +800,6 @@ namespace Tbot.Workers.Brain {
 											.FirstOrDefault();
 										fleetId = incomingFleet != null ? incomingFleet.ID : 0;
 									} else {
-										// RESOURCE-LEDGER: nur die EIGENE Lieferflotte bestimmt den naechsten Pruefzeitpunkt.
 										fleetId = ledgerPlan.OwnFleetId;
 									}
 								}
@@ -1021,8 +933,6 @@ namespace Tbot.Workers.Brain {
 					if (_tbotInstance.UserData.lastDOIR >= _tbotInstance.UserData.nextDOIR) {
 						_tbotInstance.UserData.nextDOIR = 0;
 					}
-					//DoLog(LogLevel.Debug, $"Last DOIR: {Math.Round(_tbotInstance.UserData.lastDOIR, 2)}");
-					//DoLog(LogLevel.Debug, $"Next DOIR: {Math.Round(_tbotInstance.UserData.nextDOIR, 2)}");
 
 				}
 			}
@@ -1087,7 +997,6 @@ namespace Tbot.Workers.Brain {
 								float cryProductionTime = float.IsNaN(missingResources.Crystal / cryProdInASecond) ? 0.0F : missingResources.Crystal / cryProdInASecond;
 								float deutProductionTime = float.IsNaN(missingResources.Deuterium / deutProdInASecond) ? 0.0F : missingResources.Deuterium / deutProdInASecond;
 								productionTime = (long) (Math.Round(Math.Max(Math.Max(metProductionTime, cryProductionTime), deutProductionTime), 0) * 1000);
-								//DoLog(LogLevel.Debug, $"The required resources will be produced by {now.AddMilliseconds(productionTime).ToString()}");
 							}
 						}
 
@@ -1096,13 +1005,11 @@ namespace Tbot.Workers.Brain {
 						if (incomingFleets.Any()) {
 							var fleet = incomingFleets.First();
 							transportTime = ((fleet.Mission == Missions.Transport || fleet.Mission == Missions.Deploy) && !fleet.ReturnFlight ? (long) fleet.ArriveIn : (long) fleet.BackIn) * 1000;
-							//DoLog(LogLevel.Debug, $"Next fleet with resources arriving by {now.AddMilliseconds(transportTime).ToString()}");
 						}
 
 						var returningExpo = _calculationService.GetFirstReturningExpedition(celestial.Coordinate, _tbotInstance.UserData.fleets);
 						if (returningExpo != null) {
 							returningExpoTime = (long) (returningExpo.BackIn * 1000) + RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
-							//DoLog(LogLevel.Debug, $"Next expedition returning by {now.AddMilliseconds(returningExpoTime).ToString()}");
 						}
 
 						if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
@@ -1117,14 +1024,12 @@ namespace Tbot.Workers.Brain {
 								var returningExpoOrigin = _calculationService.GetFirstReturningExpedition(origin.Coordinate, _tbotInstance.UserData.fleets);
 								if (returningExpoOrigin != null) {
 									returningExpoOriginTime = (long) (returningExpoOrigin.BackIn * 1000) + RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
-									//DoLog(LogLevel.Debug, $"Next expedition returning in transport origin celestial by {now.AddMilliseconds(returningExpoOriginTime).ToString()}");
 								}
 
 								var incomingOriginFleets = _calculationService.GetIncomingFleetsWithResources(origin, _tbotInstance.UserData.fleets);
 								if (incomingOriginFleets.Any()) {
 									var fleet = incomingOriginFleets.First();
 									transportOriginTime = ((fleet.Mission == Missions.Transport || fleet.Mission == Missions.Deploy) && !fleet.ReturnFlight ? (long) fleet.ArriveIn : (long) fleet.BackIn) * 1000;
-									//DoLog(LogLevel.Debug, $"Next fleet with resources arriving in transport origin celestial by {DateTime.Now.AddMilliseconds(transportOriginTime).ToString()}");
 								}
 							}
 						}

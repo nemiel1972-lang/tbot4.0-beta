@@ -45,7 +45,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Anti-Ballistic Missiles"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Interplanetary Missiles"))
 
-	// hu
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Rakéta kilövő"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Könnyű lézer"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Nehéz lézer"))
@@ -57,7 +56,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Anti-Ballasztikus rakéták"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Bolygóközi rakéták"))
 
-	// si
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketnik"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Lahki laser"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Težek laser"))
@@ -69,7 +67,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Protibalistične rakete"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Medplanetarne rakete"))
 
-	// ro
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lansator de Rachete"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Laser Usor"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Laser Greu"))
@@ -81,7 +78,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Racheta Anti-Balistica"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Rachete Interplanetare"))
 
-	// sk
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketový komplet"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Ľahký laser"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Ťažký laser"))
@@ -93,7 +89,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Protiraketové strely"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Medziplanetárne rakety"))
 
-	// gr
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Εκτοξευτής Πυραύλων"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Ελαφρύ Λέιζερ"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Βαρύ Λέιζερ"))
@@ -105,7 +100,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Αντι-Βαλλιστικοί Πύραυλοι"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Διαπλανητικοί Πύραυλοι"))
 
-	// tw
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("飛彈發射器"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("輕型雷射炮"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("重型雷射炮"))
@@ -117,7 +111,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("反彈道導彈"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("星際導彈"))
 
-	// hr
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketobacači"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Mali laser"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Veliki laser"))
@@ -129,7 +122,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Anti-balističke rakete"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Interplanetarne rakete"))
 
-	// mx
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lanzamisiles"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Láser pequeño"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Láser grande"))
@@ -141,7 +133,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Misil de intercepción"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Misil interplanetario"))
 
-	// cz
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketomet"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Lehký laser"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Těžký laser"))
@@ -153,7 +144,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Antibalistické rakety"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Meziplanetární rakety"))
 
-	// it
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lanciamissili"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Laser leggero"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Laser pesante"))
@@ -165,7 +155,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Missili anti balistici"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Missili Interplanetari"))
 
-	// de
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketenwerfer"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Leichtes Lasergeschütz"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Schweres Lasergeschütz"))
@@ -177,7 +166,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Abfangrakete"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Interplanetarrakete"))
 
-	// dk
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketkanon"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Lille Laserkanon"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Stor Laserkanon"))
@@ -189,7 +177,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Forsvarsraket"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Interplanetarraket"))
 
-	// es
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lanzamisiles"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Láser pequeño"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Láser grande"))
@@ -201,7 +188,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Misiles antibalísticos"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Misil interplanetario"))
 
-	// fr
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lanceur de missiles"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Artillerie laser légère"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Artillerie laser lourde"))
@@ -213,7 +199,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Missile d`interception"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Missile interplanétaire"))
 
-	// br
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lançador de Mísseis"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Laser Ligeiro"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Laser Pesado"))
@@ -225,7 +210,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Míssil de Interceptação"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Míssil Interplanetário"))
 
-	// jp
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("ロケットランチャー"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("ライトレーザー"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("ヘビーレーザー"))
@@ -237,7 +221,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("抗弾道ミサイル"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("星間ミサイル"))
 
-	// pl
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Wyrzutnia rakiet"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Lekkie działo laserowe"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Ciężkie działo laserowe"))
@@ -249,7 +232,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Przeciwrakieta"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Rakieta międzyplanetarna"))
 
-	// tr
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Roketatar"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Hafif Lazer Topu"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Ağır Lazer Topu"))
@@ -261,7 +243,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Yakalıyıcı Roketler"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Gezegenlerarasi Roketler"))
 
-	// pt
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Lançador de Mísseis"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Laser Ligeiro"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Laser Pesado"))
@@ -273,7 +254,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Míssil de Intercepção"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Míssil Interplanetário"))
 
-	// nl
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Raketlanceerder"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Kleine laser"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Grote laser"))
@@ -285,7 +265,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Anti-ballistische raketten"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Interplanetaire raketten"))
 
-	// ru
 	assert.Equal(t, RocketLauncherID, DefenceName2ID("Ракетная установка"))
 	assert.Equal(t, LightLaserID, DefenceName2ID("Лёгкий лазер"))
 	assert.Equal(t, HeavyLaserID, DefenceName2ID("Тяжёлый лазер"))
@@ -297,7 +276,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, AntiBallisticMissilesID, DefenceName2ID("Ракета-перехватчик"))
 	assert.Equal(t, InterplanetaryMissilesID, DefenceName2ID("Межпланетная ракета"))
 
-	// SHIPS
 	assert.Equal(t, ID(0), ShipName2ID("Not valid"))
 	assert.Equal(t, LightFighterID, ShipName2ID("Light Fighter"))
 	assert.Equal(t, LightFighterID, ShipName2ID("Chasseur léger"))
@@ -310,7 +288,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, SolarSatelliteID, ShipName2ID("Satélite solar"))
 	assert.Equal(t, ID(0), ShipName2ID("人中位"))
 
-	// fi
 	assert.Equal(t, LightFighterID, ShipName2ID("Kevyt Hävittäjä"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Raskas Hävittäjä"))
 	assert.Equal(t, CruiserID, ShipName2ID("Risteilijä"))
@@ -329,7 +306,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Reaper"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Pathfinder"))
 
-	// hu
 	assert.Equal(t, LightFighterID, ShipName2ID("Könnyű Harcos"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Nehéz Harcos"))
 	assert.Equal(t, CruiserID, ShipName2ID("Cirkáló"))
@@ -348,7 +324,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Kaszás"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Felderítő"))
 
-	// ro
 	assert.Equal(t, LightFighterID, ShipName2ID("Vanator usor"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Vanator greu"))
 	assert.Equal(t, CruiserID, ShipName2ID("Crucisator"))
@@ -367,7 +342,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Reaper"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Pathfinder"))
 
-	// cz
 	assert.Equal(t, LightFighterID, ShipName2ID("Lehký stíhač"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Těžký stíhač"))
 	assert.Equal(t, CruiserID, ShipName2ID("Křižník"))
@@ -386,7 +360,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Rozparovač"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Průzkumník"))
 
-	// mx
 	assert.Equal(t, LightFighterID, ShipName2ID("Cazador ligero"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Cazador pesado"))
 	assert.Equal(t, CruiserID, ShipName2ID("Crucero"))
@@ -405,7 +378,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Segador"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Explorador"))
 
-	// hr
 	assert.Equal(t, LightFighterID, ShipName2ID("Mali lovac"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Veliki lovac"))
 	assert.Equal(t, CruiserID, ShipName2ID("Krstarica"))
@@ -424,7 +396,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Žetelac"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Krčilac"))
 
-	// ba
 	assert.Equal(t, LightFighterID, ShipName2ID("Mali lovac"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Veliki lovac"))
 	assert.Equal(t, CruiserID, ShipName2ID("Krstarice"))
@@ -443,7 +414,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Žetelac"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Krčilac"))
 
-	// no
 	assert.Equal(t, LightFighterID, ShipName2ID("Lett Jeger"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Tung Jeger"))
 	assert.Equal(t, CruiserID, ShipName2ID("Krysser"))
@@ -462,7 +432,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Reaper"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Pathfinder"))
 
-	// it
 	assert.Equal(t, LightFighterID, ShipName2ID("Caccia Leggero"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Caccia Pesante"))
 	assert.Equal(t, CruiserID, ShipName2ID("Incrociatore"))
@@ -481,7 +450,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Reaper"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Pathfinder"))
 
-	// pl
 	assert.Equal(t, LightFighterID, ShipName2ID("Lekki myśliwiec"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Ciężki myśliwiec"))
 	assert.Equal(t, CruiserID, ShipName2ID("Krążownik"))
@@ -500,7 +468,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Rozpruwacz"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Pionier"))
 
-	// tr
 	assert.Equal(t, LightFighterID, ShipName2ID("Hafif Avcı"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Ağır Avcı"))
 	assert.Equal(t, CruiserID, ShipName2ID("Kruvazör"))
@@ -519,7 +486,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Azrail"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Rehber"))
 
-	// ar
 	assert.Equal(t, LightFighterID, ShipName2ID("Cazador ligero"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Cazador pesado"))
 	assert.Equal(t, CruiserID, ShipName2ID("Crucero"))
@@ -538,7 +504,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Segador"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Explorador"))
 
-	// pt
 	assert.Equal(t, LightFighterID, ShipName2ID("Caça Ligeiro"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Caça Pesado"))
 	assert.Equal(t, CruiserID, ShipName2ID("Cruzador"))
@@ -557,7 +522,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Ceifeira"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Exploradora"))
 
-	// nl
 	assert.Equal(t, LightFighterID, ShipName2ID("Licht gevechtsschip"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Zwaar gevechtsschip"))
 	assert.Equal(t, CruiserID, ShipName2ID("Kruiser"))
@@ -576,7 +540,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Ruimer"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Navigator"))
 
-	// dk
 	assert.Equal(t, LightFighterID, ShipName2ID("Lille Jæger"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Stor Jæger"))
 	assert.Equal(t, CruiserID, ShipName2ID("Krydser"))
@@ -595,7 +558,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Reaper"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Stifinder"))
 
-	// ru
 	assert.Equal(t, LightFighterID, ShipName2ID("Лёгкий истребитель"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Тяжёлый истребитель"))
 	assert.Equal(t, CruiserID, ShipName2ID("Крейсер"))
@@ -614,7 +576,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Жнец"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Первопроходец"))
 
-	// gr
 	assert.Equal(t, LightFighterID, ShipName2ID("Ελαφρύ Μαχητικό"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Βαρύ Μαχητικό"))
 	assert.Equal(t, CruiserID, ShipName2ID("Καταδιωκτικό"))
@@ -633,7 +594,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Reaper"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Pathfinder"))
 
-	// jp
 	assert.Equal(t, LightFighterID, ShipName2ID("軽戦闘機"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("重戦闘機"))
 	assert.Equal(t, CruiserID, ShipName2ID("巡洋艦"))
@@ -652,7 +612,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("リーパー"))
 	assert.Equal(t, PathfinderID, ShipName2ID("パスファインダー"))
 
-	// sk
 	assert.Equal(t, LightFighterID, ShipName2ID("Ľahký stíhač"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Ťažký stíhač"))
 	assert.Equal(t, CruiserID, ShipName2ID("Krížnik"))
@@ -671,7 +630,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Kosa"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Prieskumník"))
 
-	// si
 	assert.Equal(t, LightFighterID, ShipName2ID("Lahek lovec"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Težki lovec"))
 	assert.Equal(t, CruiserID, ShipName2ID("Križarka"))
@@ -690,7 +648,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Kombajn"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Iskalec sledi"))
 
-	// fr
 	assert.Equal(t, LightFighterID, ShipName2ID("Chasseur léger"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("Chasseur lourd"))
 	assert.Equal(t, CruiserID, ShipName2ID("Croiseur"))
@@ -709,7 +666,6 @@ func TestName2id(t *testing.T) {
 	assert.Equal(t, ReaperID, ShipName2ID("Faucheur"))
 	assert.Equal(t, PathfinderID, ShipName2ID("Éclaireur"))
 
-	// tw
 	assert.Equal(t, LightFighterID, ShipName2ID("輕型戰鬥機"))
 	assert.Equal(t, HeavyFighterID, ShipName2ID("重型戰鬥機"))
 	assert.Equal(t, CruiserID, ShipName2ID("巡洋艦"))

@@ -4,7 +4,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/utils"
 )
 
-// LazyResourcesBuildings ...
 type LazyResourcesBuildings func() ResourcesBuildings
 
 func (r LazyResourcesBuildings) GetMetalMine() int64            { return r().MetalMine }
@@ -18,17 +17,16 @@ func (r LazyResourcesBuildings) GetCrystalStorage() int64       { return r().Cry
 func (r LazyResourcesBuildings) GetDeuteriumTank() int64        { return r().DeuteriumTank }
 func (r LazyResourcesBuildings) ByID(id ID) int64               { return r().ByID(id) }
 
-// ResourcesBuildings represent a planet resource buildings
 type ResourcesBuildings struct {
-	MetalMine            int64 // 1
-	CrystalMine          int64 // 2
-	DeuteriumSynthesizer int64 // 3
-	SolarPlant           int64 // 4
-	FusionReactor        int64 // 12
-	SolarSatellite       int64 // 212
-	MetalStorage         int64 // 22
-	CrystalStorage       int64 // 23
-	DeuteriumTank        int64 // 24
+	MetalMine            int64
+	CrystalMine          int64
+	DeuteriumSynthesizer int64
+	SolarPlant           int64
+	FusionReactor        int64
+	SolarSatellite       int64
+	MetalStorage         int64
+	CrystalStorage       int64
+	DeuteriumTank        int64
 }
 
 func (r ResourcesBuildings) GetMetalMine() int64            { return r.MetalMine }
@@ -41,12 +39,10 @@ func (r ResourcesBuildings) GetMetalStorage() int64         { return r.MetalStor
 func (r ResourcesBuildings) GetCrystalStorage() int64       { return r.CrystalStorage }
 func (r ResourcesBuildings) GetDeuteriumTank() int64        { return r.DeuteriumTank }
 
-// Lazy returns a function that return self
 func (r ResourcesBuildings) Lazy() LazyResourcesBuildings {
 	return func() ResourcesBuildings { return r }
 }
 
-// ByID gets the resource building level from a building id
 func (r ResourcesBuildings) ByID(id ID) int64 {
 	switch id {
 	case MetalMineID:

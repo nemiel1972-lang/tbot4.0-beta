@@ -10,10 +10,6 @@ using TBot.Model;
 using Tbot.Includes;
 
 namespace Tbot.Services {
-	/// <summary>
-	/// Sends TBot notifications to a Discord incoming webhook.
-	/// Discord webhooks are outbound-only: they cannot receive bot commands.
-	/// </summary>
 	public sealed class DiscordWebhookMessenger : IDiscordWebhookMessenger {
 		public const int DiscordMessageLimit = 2000;
 
@@ -52,8 +48,6 @@ namespace Tbot.Services {
 				};
 				var payload = new Dictionary<string, object> {
 					["embeds"] = new[] { embed },
-					// TBot messages can contain player names or coordinates. Never let
-					// notification text trigger an accidental Discord mention.
 					["allowed_mentions"] = new Dictionary<string, object> {
 						["parse"] = Array.Empty<string>()
 					}
@@ -92,13 +86,13 @@ namespace Tbot.Services {
 
 		private static int GetColor(NotificationKind kind) {
 			return kind switch {
-				NotificationKind.Attack => 15548997,        // #ED4245
-				NotificationKind.MissileAttack => 15105570, // #E67E22
-				NotificationKind.Warning => 15105570,       // #E67E22
-				NotificationKind.Success => 5763719,        // #57F287
-				NotificationKind.Error => 10038562,         // #992D22
-				NotificationKind.SleepMode => 5998254,      // #5B6EAE
-				_ => 5793266                             // #5865F2
+				NotificationKind.Attack => 15548997,
+				NotificationKind.MissileAttack => 15105570,
+				NotificationKind.Warning => 15105570,
+				NotificationKind.Success => 5763719,
+				NotificationKind.Error => 10038562,
+				NotificationKind.SleepMode => 5998254,
+				_ => 5793266
 			};
 		}
 
@@ -127,7 +121,6 @@ namespace Tbot.Services {
 						length = newline - offset + 1;
 				}
 
-				// Do not split a UTF-16 surrogate pair between two Discord messages.
 				if (offset + length < message.Length &&
 					length > 0 && char.IsHighSurrogate(message[offset + length - 1]))
 					length--;

@@ -112,7 +112,6 @@ func TestCancelBuilding(t *testing.T) {
 }
 
 func TestGetConstructions(t *testing.T) {
-	// Without lifeform
 	pageHTMLBytes, _ := os.ReadFile("../../../samples/v9.0.2/en/overview_all_queues.html")
 	clock := clockwork.NewFakeClockAt(time.Date(2022, 8, 20, 12, 43, 11, 0, time.UTC))
 	constructions := ExtractConstructions(pageHTMLBytes, clock)
@@ -121,7 +120,6 @@ func TestGetConstructions(t *testing.T) {
 	assert.Equal(t, ogame.ComputerTechnologyID, constructions.Research.ID)
 	assert.Equal(t, int64(7), int64(constructions.Research.Countdown.Seconds()))
 
-	// With lifeform
 	pageHTMLBytes, _ = os.ReadFile("../../../samples/v9.0.2/en/lifeform/overview_all_queues2.html")
 	clock = clockwork.NewFakeClockAt(time.Date(2022, 8, 28, 17, 22, 26, 0, time.UTC))
 	constructions = ExtractConstructions(pageHTMLBytes, clock)

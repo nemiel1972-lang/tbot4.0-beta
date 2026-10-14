@@ -5,7 +5,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/ogame"
 )
 
-// GetFleetSpeedForMission ...
 func GetFleetSpeedForMission(serverData ServerData, missionID ogame.MissionID) int64 {
 	if missionID == ogame.Attack ||
 		missionID == ogame.GroupedAttack ||
@@ -18,12 +17,10 @@ func GetFleetSpeedForMission(serverData ServerData, missionID ogame.MissionID) i
 	return serverData.SpeedFleetPeaceful
 }
 
-// HasCoordinate ...
 type HasCoordinate interface {
 	GetCoordinate() ogame.Coordinate
 }
 
-// ConvertIntoCoordinate helper that turns any type into a coordinate
 func ConvertIntoCoordinate(w Wrapper, v IntoCoordinate) (ogame.Coordinate, error) {
 	switch vv := v.(type) {
 	case string:
@@ -43,12 +40,10 @@ func ConvertIntoCoordinate(w Wrapper, v IntoCoordinate) (ogame.Coordinate, error
 	}
 }
 
-// ConvertIntoCelestial helper that turns any type into a Celestial
 func ConvertIntoCelestial(w Wrapper, v IntoCelestial) (Celestial, error) {
 	return w.GetCachedCelestial(v)
 }
 
-// ConvertIntoPlanet helper that turns any type into a Planet
 func ConvertIntoPlanet(w Wrapper, v IntoPlanet) (Planet, error) {
 	if c, err := w.GetCachedCelestial(v); err == nil {
 		if p, ok := c.(Planet); ok {
@@ -59,7 +54,6 @@ func ConvertIntoPlanet(w Wrapper, v IntoPlanet) (Planet, error) {
 	return Planet{}, errors.New("planet not found")
 }
 
-// ConvertIntoMoon helper that turns any type into a Moon
 func ConvertIntoMoon(w Wrapper, v IntoMoon) (Moon, error) {
 	if c, err := w.GetCachedCelestial(v); err == nil {
 		if m, ok := c.(Moon); ok {

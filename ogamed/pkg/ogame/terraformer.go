@@ -14,7 +14,6 @@ func newTerraformer() *terraformer {
 	return b
 }
 
-// DeconstructionPrice terraformer cannot be deconstructed
 func (s *terraformer) DeconstructionPrice(level int64, techs IResearches) Resources {
 	return Resources{}
 }

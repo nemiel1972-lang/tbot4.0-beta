@@ -8,8 +8,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/ogame"
 )
 
-// OGame v13 movement page: the recall link exposes data-recall-action and the
-// csrf token is stored in the page script (var token = "...").
 func extractCancelFleetTokenFromDoc(doc *goquery.Document, _ ogame.FleetID) (string, error) {
 	rgx := regexp.MustCompile(`var token = "([^"]+)"`)
 	for _, s := range doc.Find("script").EachIter() {

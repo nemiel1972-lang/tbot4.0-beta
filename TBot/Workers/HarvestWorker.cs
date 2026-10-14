@@ -59,27 +59,8 @@ namespace Tbot.Workers {
 
 					_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 
-					// _tbotInstance.UserData.celestials is a List<Celestial> shared with every
-					// other worker (AutoMine, AutoCargo, ...) running concurrently on its own thread. The
-					// two foreach loops below each contain "await" calls in their body, so control yields
-					// back to other workers mid-iteration; if one of them mutates the same shared list
-					// while we're still enumerating it (directly, not a copy), .NET throws
-					// "InvalidOperationException: Collection was modified; enumeration operation may not
-					// execute." Take a single private snapshot up front and iterate that instead - never
-					// touch _tbotInstance.UserData.celestials directly inside a loop with an await in it.
 					List<Celestial> celestialSnapshot = _tbotInstance.UserData.celestials.ToList();
 
-					// this used to refresh Ships for every single celestial (all planets
-					// AND all moons) every cycle, so any of them could in theory be considered as a
-					// harvest origin. That means every excluded colony moon got touched here on every
-					// Harvest check regardless of AutoMine/LifeformAutoMine/AutoCargo Exclude settings -
-					// triggering OGame's "recent activity" indicator on all of them, worse than planets
-					// even (planets at least get touched for a legitimate reason further below, debris
-					// detection; moons get touched ONLY here). Restrict ship-refresh (and therefore
-					// origin candidacy) to AutoHarvest.Origin when configured - same list-of-coordinates
-					// pattern already used by Expeditions.Origin/AutoFarm.Origin/AutoDiscovery.Origin -
-					// defaulting to the account's home moon when the setting is absent, instead of
-					// silently falling back to "every celestial" for backward compatibility.
 					List<Celestial> harvestOrigins = celestialSnapshot;
 					if (Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "Origin")) {
 						var configuredOrigins = _calculationService.ParseCelestialsList(_tbotInstance.InstanceSettings.AutoHarvest.Origin, celestialSnapshot);
@@ -97,7 +78,6 @@ namespace Tbot.Workers {
 							harvestOrigins = new List<Celestial> { homeMoon };
 					}
 
-					// Refresh ship data only for the chosen harvest origins, not every celestial.
 					List<Celestial> updatedCelestials = new();
 					foreach (Celestial c in celestialSnapshot) {
 						if (harvestOrigins.Any(o => o.Coordinate.IsSame(c.Coordinate))) {
@@ -107,13 +87,6 @@ namespace Tbot.Workers {
 							updatedCelestials.Add(c);
 						}
 					}
-					// the line below used to assign the shared field the exact same
-					// List<Celestial> object we then keep iterating over locally as "updatedCelestials"
-					// (foreach at line ~86). That means other workers mutating
-					// _tbotInstance.UserData.celestials were mutating the very list our own loop was
-					// still enumerating - the earlier snapshot fix alone didn't help, since this later
-					// assignment re-introduced the same shared reference. Give the shared field its own
-					// independent copy instead, so our local "updatedCelestials" stays private.
 					_tbotInstance.UserData.celestials = updatedCelestials.ToList();
 
 					var targets = new List<HarvestTarget>();
@@ -138,13 +111,11 @@ namespace Tbot.Workers {
 						}
 
 						if ((bool) _tbotInstance.InstanceSettings.AutoHarvest.HarvestDeepSpace) {
-							// DeepSpace debris scan range is read from AutoHarvest.DeepSpaceRange,
-							// independent of Expeditions.SplitExpeditionsBetweenSystems.Range.
 							int deepSpaceRange;
 							try {
 								deepSpaceRange = (int) _tbotInstance.InstanceSettings.AutoHarvest.DeepSpaceRange;
 							} catch (Exception) {
-								deepSpaceRange = 1; // safe fallback if setting is missing from config
+								deepSpaceRange = 1;
 							}
 							for (int i = -deepSpaceRange; i <= deepSpaceRange; i++) {
 								Coordinate destination = new Coordinate {
@@ -160,8 +131,6 @@ namespace Tbot.Workers {
 								if (_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination == destination))
 									continue;
 
-								// Spread requests out instead of firing them back-to-back,
-								// to keep the API call rate lower for wide scan ranges.
 								await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.LessThanASecond));
 								ExpeditionDebris expoDebris = (await _ogameService.GetGalaxyInfo(destination)).ExpeditionDebris;
 								if (expoDebris != null && expoDebris.Resources.TotalResources >= (long) _tbotInstance.InstanceSettings.AutoHarvest.MinimumResourcesDeepSpace) {
@@ -176,13 +145,6 @@ namespace Tbot.Workers {
 					}
 					_tbotInstance.UserData.celestials = newCelestials;
 
-					// HarvestForeignDF - additionally harvest debris fields sitting at a
-					// foreign (non-own) planet's position, in the same systems as your own planets.
-					// Debris fields belong to nobody in OGame - whoever gets a Recycler there first
-					// can loot them, and flying to one does NOT notify the planet's owner (no combat
-					// report is generated; only an active Sensor Phalanx on their side could reveal
-					// the incoming fleet). Off by default via IsSettingSet, since it wasn't part of
-					// the original config schema.
 					if (Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "HarvestForeignDF")
 						&& (bool) _tbotInstance.InstanceSettings.AutoHarvest.HarvestForeignDF) {
 						long minForeignDF = Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "MinimumResourcesForeignDF")
@@ -193,7 +155,7 @@ namespace Tbot.Workers {
 						foreach (Planet ownPlanet in updatedCelestials.Where(c => c is Planet).Cast<Planet>()) {
 							var sysKey = (ownPlanet.Coordinate.Galaxy, ownPlanet.Coordinate.System);
 							if (!scannedSystems.Add(sysKey))
-								continue; // already scanned this system via another own planet in it
+								continue;
 
 							await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.LessThanASecond));
 							var galaxyInfo = await _ogameService.GetGalaxyInfo(ownPlanet.Coordinate);
@@ -203,7 +165,7 @@ namespace Tbot.Workers {
 								if (_tbotInstance.UserData.celestials.Any(c => c.Coordinate.Galaxy == foreignPlanet.Coordinate.Galaxy
 									&& c.Coordinate.System == foreignPlanet.Coordinate.System
 									&& c.Coordinate.Position == foreignPlanet.Coordinate.Position))
-									continue; // it's actually one of ours, already handled above
+									continue;
 								if (foreignPlanet.Debris.Resources.TotalResources < minForeignDF)
 									continue;
 								Coordinate dest = new(foreignPlanet.Coordinate.Galaxy, foreignPlanet.Coordinate.System, foreignPlanet.Coordinate.Position, Celestials.Debris);
@@ -211,11 +173,6 @@ namespace Tbot.Workers {
 									continue;
 								if (_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination == dest))
 									continue;
-								// isOwnDebris:true is intentional even though the planet isn't ours - it
-								// controls ship selection (Recycler) and priority in HarvestPlanner, both
-								// correct for any normal in-system position; Pathfinder/lower-priority is
-								// reserved for genuine Deep Space targets, which is the actual
-								// distinguishing factor, not ownership.
 								targets.Add(new HarvestTarget(dest, foreignPlanet.Debris.Resources, isOwnDebris: true));
 								targetShipsNeeded[dest] = foreignPlanet.Debris.RecyclersNeeded;
 							}
@@ -225,11 +182,6 @@ namespace Tbot.Workers {
 					if (targets.Count == 0)
 						DoLog(LogLevel.Information, "Skipping harvest: there are no fields to harvest.");
 
-					// Any celestial (planet or moon) with idle recyclers/pathfinders can be
-					// used as an origin, e.g. a centralized fleet parked on the home moon.
-					// restrict to harvestOrigins (whose Ships data we actually refreshed
-					// above) rather than every celestial - celestials outside that list keep stale
-					// ship data and must not be selectable as a send origin based on it.
 					var origins = _tbotInstance.UserData.celestials
 						.Where(c => harvestOrigins.Any(o => o.Coordinate.IsSame(c.Coordinate)))
 						.Select(c => new HarvestOriginState(c))
@@ -248,8 +200,6 @@ namespace Tbot.Workers {
 						return targetShipsNeeded.TryGetValue(target.Destination, out long needed) ? needed : 0;
 					}
 
-					// Respect AutoHarvest.MaxSlots: don't send more concurrent harvest
-					// missions than configured, accounting for ones already in flight.
 					int configuredMaxSlots;
 					try {
 						configuredMaxSlots = (int) _tbotInstance.InstanceSettings.AutoHarvest.MaxSlots;

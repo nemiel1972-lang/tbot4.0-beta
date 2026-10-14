@@ -9,7 +9,6 @@ using TBot.Ogame.Infrastructure.Enums;
 
 namespace TBot.Ogame.Infrastructure.Models {
 	public class LFTechs {
-		//Humans
 		public int? IntergalacticEnvoys { get; set; }
 		public int? HighPerformanceExtractors { get; set; }
 		public int? FusionDrives { get; set; }
@@ -29,7 +28,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int? RobotAssistants { get; set; }
 		public int? Supercomputer { get; set; }
 
-		//Rocktal
 		public int? VolcanicBatteries { get; set; }
 		public int? AcousticScanning { get; set; }
 		public int? HighEnergyPumpSystems { get; set; }
@@ -49,7 +47,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int? RuneShields { get; set; }
 		public int? RocktalCollectorEnhancement { get; set; }
 
-		//Mechas
 		public int? CatalyserTechnology { get; set; }
 		public int? PlasmaDrive { get; set; }
 		public int? EfficiencyModule { get; set; }
@@ -69,7 +66,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int? ExperimentalWeaponsTechnology { get; set; }
 		public int? MechanGeneralEnhancement { get; set; }
 
-		//Kaelesh
 		public int? HeatRecovery { get; set; }
 		public int? SulphideProcess { get; set; }
 		public int? PsionicNetwork { get; set; }

@@ -33,7 +33,6 @@ namespace TBot.Ogame.Infrastructure {
 		Task<Celestial> GetCelestial(Celestial celestial);
 		Task<List<Celestial>> GetCelestials();
 		Task<Constructions> GetConstructions(Celestial celestial);
-		// local, quota-free combat simulation via ogamed Patch 38 (POST /bot/simulate-battle).
 		Task<SimulatorResult> SimulateBattle(SimulateBattleRequest request);
 		Task<Defences> GetDefences(Celestial celestial);
 		Task<EspionageReport> GetEspionageReport(Coordinate coordinate);

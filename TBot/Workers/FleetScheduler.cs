@@ -207,9 +207,6 @@ namespace Tbot.Workers {
 				SavePendingRecalls(entries);
 		}
 
-		// Beim Start (aus TBotMain.Init()) aufgerufen, nachdem Celestials/Fleets geladen sind: bewaffnet
-		// jeden Recall neu, dessen In-Memory-Timer durch einen Neustart verloren ging; ueberfaellige werden
-		// sofort ausgeloest statt liegen zu bleiben.
 		public async Task ReconcilePendingRecalls() {
 			var entries = LoadPendingRecalls();
 			if (entries.Count == 0) return;
@@ -345,8 +342,6 @@ namespace Tbot.Workers {
 					payload.Deuterium = 0;
 			}
 
-			// Liefert die Ladung fuer eine konkrete Flotte: Schlaf-Fleetsave unveraendert, bei Angriff
-			// alles (Metall, Kristall, Nahrung, Deuterium abzueglich Sprit) - ohne celestial.Resources zu veraendern.
 			Resources PayloadFuer(FleetHypotesis f) {
 				if (isSleepTimeFleetSave)
 					return payload;
@@ -618,9 +613,6 @@ namespace Tbot.Workers {
 					return false;
 				}
 
-				// The slot snapshot is part of the dispatch decision. It must be refreshed while the
-				// discovery dispatch gate is held so another worker cannot consume the observed slot
-				// between the check and the actual POST.
 				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 				int slotsToLeaveFree = (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree;
 				if (_tbotInstance.UserData.slots == null || _tbotInstance.UserData.slots.Free <= slotsToLeaveFree) {
@@ -725,8 +717,6 @@ _tbotInstance.log(LogLevel.Debug, LogSender.FleetScheduler,
 
 origin = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
 
-// Deut-Reserve (deutToLeave) und das Deuterium in der Nutzlast muessen zusammen mit dem Flugtreibstoff
-// aus demselben Bestand kommen (Upstream beta9, fe3fde7) - sonst faellt der Origin unter die Reserve.
 long deuteriumInPayload = payload?.Deuterium ?? 0;
 if (origin.Resources.Deuterium - deuteriumInPayload - deutToLeave < fleetPrediction.Fuel) {
     _tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler,
@@ -752,7 +742,6 @@ bool ignoreSleepForExpeditions =
     mission == Missions.Expedition &&
     (bool)_tbotInstance.InstanceSettings.Expeditions.IgnoreSleep;
 
-// Expedition wave right before sleeping (Expeditions.SleepWave): the bed-time checks below must not block it.
 bool sleepWaveActive = mission == Missions.Expedition && _tbotInstance.SleepWaveActive;
 
 if (
@@ -800,8 +789,6 @@ if (
 						payload.Deuterium = 0;
 					if (payload.Food < 0)
 						payload.Food = 0;
-					// RESOURCE-LEDGER: gehaltener Bestand anderer Worker auf dem Herkunfts-Celestial bleibt unangetastet.
-					// Telegram-Befehle (ignoreLedger) duerfen den gehaltenen Bestand mitnehmen: Fleetsave geht vor.
 					if (!ignoreLedger && !LedgerTBot.CheckOrigin(_tbotInstance, origin, payload, (long) fleetPrediction.Fuel))
 						return (int) SendFleetCode.NotEnoughRessources;
 					Fleet newFleet = await _ogameService.SendFleet(origin, ships, destination, mission, speed, payload);
@@ -853,7 +840,6 @@ if (
 							_tbotInstance.log(LogLevel.Debug, LogSender.FleetScheduler, $"[RECALL-CHECK] Fleet {fleet.ID} would return in ~{estimatedReturnSeconds}s if recalled now");
 							_tbotInstance.log(LogLevel.Debug, LogSender.FleetScheduler, $"[RECALL-CHECK] Last attack on {fleet.Origin} arrives in {lastAttack.ArriveIn}s");
 							if (estimatedReturnSeconds < lastAttack.ArriveIn) {
-								// beide Seiten laufen weiter: Wartezeit = Differenz/2 + 30s
 								long waitSeconds = (lastAttack.ArriveIn - estimatedReturnSeconds) / 2 + 30;
 								if (waitSeconds >= currentFleet.ArriveIn - 15) {
 									_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"[RECALL-SKIPPED] Fleet {fleet.ID} lands in {currentFleet.ArriveIn}s, return would be before the attack ({estimatedReturnSeconds}s < {lastAttack.ArriveIn}s) - fleet stays at the target (safe).");
@@ -922,8 +908,6 @@ if (
 			}
 		}
 
-		// Telegram /debrissave: komplette Flotte per Harvest-Mission zu einem Truemmerfeld, Rueckruf nach der halben Dauer.
-		// speed: 1..10 (10 = 100 %), wie bei SendFleet. Rueckgabe true, wenn die Flotte unterwegs ist.
 		public async Task<bool> DebrisSave(Celestial celestial, Coordinate debris, bool random, long durationSeconds, decimal speed) {
 			celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Resources);
 			celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Ships);
@@ -937,7 +921,6 @@ if (
 				return false;
 			}
 			if (random) {
-				// naechstes Truemmerfeld mit Ressourcen: System fuer System nach aussen (+-10), innerhalb des Systems nach Position
 				debris = null;
 				for (int d = 0; d <= 10 && debris == null; d++) {
 					foreach (int sys in d == 0 ? new[] { celestial.Coordinate.System } : new[] { celestial.Coordinate.System - d, celestial.Coordinate.System + d }) {
@@ -1026,21 +1009,11 @@ if (
 			}
 		}
 
-		// PATCH Transport chain (12.10.2026) ------------------------------------------------------------------------------
-		// Configuration (all optional; without entries the old behavior applies):
-		//   Brain.Transports.CargoType      preferred type (e.g. "SmallCargo")
-		//   Brain.Transports.CargoFallback  fallback steps in order, only "SmallCargo"/"LargeCargo" (e.g. ["LargeCargo"])
-		//   Brain.Transports.KeepOnOrigin   reserve per type that stays on the origin: fixed amount ("LargeCargo": 0) plus amount per free
-		//                                   expedition slot ("LargeCargoPerFreeExpoSlot": 4000; likewise "SmallCargoPerFreeExpoSlot")
-		//                                   or "UseExpeditionManualShips": true = amount per expedition read live from Expeditions.ManualShips.Ships
-		//   Brain.Transports.MixFleet       true = as the last step mix SC+LC (the fleet then flies at the speed of the slowest ship)
-		// Pathfinders are never used for transports (AutoFarm/Salvage).
 
 		private static bool IstTransportTyp(Buildables typ) {
 			return typ == Buildables.SmallCargo || typ == Buildables.LargeCargo;
 		}
 
-		// Ships of this type per expedition according to Expeditions.ManualShips.Ships (only if ManualShips.Active); otherwise 0.
 		private long LiesExpoSchiffeJeExpedition(string typName) {
 			try {
 				var expo = _tbotInstance.InstanceSettings.Expeditions;
@@ -1058,7 +1031,6 @@ if (
 			}
 		}
 
-		// true if the origin is one of the expedition start celestials (Expeditions.Origin); without an entry every celestial counts.
 		private bool IstExpeditionsHerkunft(Celestial origin) {
 			try {
 				var expo = _tbotInstance.InstanceSettings.Expeditions;
@@ -1089,10 +1061,6 @@ if (
 				long fest = 0;
 				if (SettingsService.IsSettingSet(keep, name))
 					fest = Math.Max(0L, (long) (typ == Buildables.SmallCargo ? keep.SmallCargo : keep.LargeCargo));
-				// Reserve per FREE expedition slot: running expeditions have already taken their ships and need no
-				// reserve on the moon anymore - otherwise the ships would be locked twice (on the origin and in flight).
-				// Source of the amount per expedition: UseExpeditionManualShips = Expeditions.ManualShips.Ships (live from the config),
-				// otherwise the fixed value <Type>PerFreeExpoSlot.
 				long jeSlot = 0;
 				string slotName = name + "PerFreeExpoSlot";
 				if (SettingsService.IsSettingSet(keep, "UseExpeditionManualShips") && (bool) keep.UseExpeditionManualShips)
@@ -1113,7 +1081,6 @@ if (
 			return 0;
 		}
 
-		// Ships of this type on the origin minus the reserve.
 		private long VerfuegbareTransportSchiffe(Celestial origin, Buildables typ) {
 			long vorhanden = origin.Ships.GetAmount(typ);
 			if (!IstTransportTyp(typ))
@@ -1145,7 +1112,6 @@ if (
 			}
 		}
 
-		// Cargo capacity of one ship incl. hyperspace tech/LF bonus/class (same calculation as the partial-delivery check).
 		private long KapazitaetJeSchiff(Celestial origin, Buildables typ) {
 			try {
 				Ships eins = new();
@@ -1158,9 +1124,6 @@ if (
 			}
 		}
 
-		// Pure selection logic (no game access, tested): returns the ship list (type, count) or null if nothing fits.
-		// Step 1: the first type in the chain whose available ships carry the whole load. Step 2 (only mischen=true): all
-		// available ships of the chain in order until the load is covered.
 		internal static List<KeyValuePair<Buildables, long>> WaehleTransportKette(IList<Buildables> kette, long gesamtLadung, Func<Buildables, long> verfuegbar, Func<Buildables, long> kapazitaetJeSchiff, bool mischen) {
 			if (gesamtLadung <= 0)
 				return null;
@@ -1193,8 +1156,6 @@ if (
 			return (rest <= 0 && mix.Count > 1) ? mix : null;
 		}
 
-		// Chooses the ship type for a delivery. Returns the type used for further calculation (for a mixed fleet the last
-		// added, i.e. slower type); mischflotte is only set when mixing. Error/unclear -> configured type (old behavior).
 		private Buildables WaehleTransportSchiff(Celestial origin, Resources payload, Buildables konfiguriert, out Ships mischflotte) {
 			mischflotte = null;
 			try {
@@ -1227,9 +1188,6 @@ if (
 			}
 		}
 
-		// Alles-oder-nichts-Pruefung fuer Transporte. true nur, wenn die Herkunft die komplette
-		// Menge senden kann: Metall/Kristall vorhanden, Deuterium vorhanden PLUS Sprit (der Spritverbrauch kommt vom Deuterium der Herkunft,
-		// sonst kuerzt OGame die Ladung) und der Laderaum reicht. Bei Zweifel/Fehler false = lieber nichts senden als zu wenig.
 		private bool KannVollstaendigLiefern(Celestial herkunft, Ships schiffe, Coordinate ziel, Resources menge, Resources zuruecklassen) {
 			try {
 				long mengeMetall = menge.Metal;
@@ -1441,10 +1399,6 @@ if (
 							.ToList();
 					}
 
-					// Fixed slowest speed (10%) rather than looping fastest-to-slowest by distance: with
-					// speed as the only real dial, 10% alone gets a ghost-worthy duration out of any of
-					// our own moons regardless of how close they are, so distance stops being a constraint
-					// on which moon can be used as a Ghost/Deploy target.
 					decimal[] deploySpeeds = origin.Coordinate.Type == Celestials.Moon
 						? new[] { Speeds.TenPercent }
 						: new[] { Speeds.TenPercent * 3, Speeds.TenPercent * 2, Speeds.TenPercent };
@@ -1456,7 +1410,6 @@ if (
 							&& origin.Coordinate.System == (int) _tbotInstance.InstanceSettings.Brain.Transports.Origin.System
 							&& origin.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.Transports.Origin.Position;
 					} catch {
-						// Brain.Transports.Origin nicht lesbar - dann gilt keine Sonderregel.
 					}
 
 					List<List<Coordinate>> destinationSets = new();
@@ -1475,7 +1428,6 @@ if (
 						if (targetMoon != null)
 							destinationSets.Add(new List<Coordinate> { targetMoon.Coordinate });
 					} catch {
-						// Key nicht gesetzt (aeltere Config) oder ungueltig - kein Fehler, normale Suche.
 					}
 					destinationSets.Add(possibleDestinations);
 
@@ -1497,12 +1449,9 @@ if (
 								possibleFleets.Add(fleetHypotesis);
 							}
 						}
-						// Schnellste Stufe mit mindestens einem gueltigen Ziel gefunden - langsamere nicht mehr pruefen.
 						if (possibleFleets.Count > 0)
 							break;
 					}
-					// Gueltiges Ziel in dieser Zielmenge gefunden (bei gesetztem DeployTarget: das feste Ziel) -
-					// die Fallback-Suche ueber alle Monde wird dann nicht mehr gebraucht.
 					if (possibleFleets.Count > 0)
 						break;
 					if (destinationSet != possibleDestinations)
@@ -1522,8 +1471,6 @@ if (
 			}
 		}
 
-		// wie viele ZUSAETZLICHE Gebaeude eine Lieferung mitbringen darf (Brain.Transports.MaxBundledBuildings).
-		// Fehlt der Eintrag oder ist er ungueltig, gilt 0 = nur das eine Ziel des Workers (passend zum Ledger-Anspruch).
 		private int LiesMaxGebuendelteBauten() {
 			try {
 				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.Transports, "MaxBundledBuildings"))
@@ -1542,8 +1489,6 @@ if (
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping transport: unable to parse transport origin.");
 					return 0;
 				} else {
-					// RESOURCE-LEDGER: Bedarf gegen das Konto des aktiven Workers (Kosten - gehaltener Bestand - eigene Flotten
-					// unterwegs) statt gegen den Live-Bestand, den sich andere Worker mit abziehen wuerden.
 					var missingResources = LedgerTBot.MissingForTransport(_tbotInstance, resources, destination, out bool ledgerApplied);
 					if (ledgerApplied && missingResources.Metal + missingResources.Crystal + missingResources.Deuterium <= 0) {
 						_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "[Ledger] Demand for " + destination.ToString() + " already covered by stock/own deliveries - no transport needed.");
@@ -1577,9 +1522,6 @@ if (
 							long buildTime = _calcService.CalcProductionTime(buildable, level, _tbotInstance.UserData.serverData, destination.Facilities);
 							if (maxBuildings != null && maxFacilities != null && maxLunarFacilities != null && autoMinerSettings != null) {
 								var tempCelestial = destination;
-								// Das Mitliefern der naechsten Gebaeude lief bis Schiffe oder Herkunftsbestand erschoepft waren -
-								// Plan 1/2 bekamen je ~48/75 Mio. Metall fuer Bauten von 4-13 Mio. Der Ledger-Anspruch kennt nur EIN Ziel; Mehrlieferung blieb
-								// ungenutzt auf dem Planeten liegen. Jetzt hoechstens Brain.Transports.MaxBundledBuildings zusaetzliche Gebaeude (Standard 0 = aus).
 								int gebuendelt = 0;
 								int maxGebuendelt = LiesMaxGebuendelteBauten();
 								while (flightTime * 2 >= buildTime && idealShips <= availableShips && gebuendelt < maxGebuendelt) {
@@ -1629,9 +1571,6 @@ if (
 							idealShips = _calcService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 						}
 
-						// choose the ship type by availability (SC -> LC, then optionally a mixed fleet).
-						// The reserve (KeepOnOrigin) is already subtracted in VerfuegbareTransportSchiffe. Pathfinders are never used.
-						// Without config entries (CargoFallback/KeepOnOrigin/MixFleet) the behavior stays as before.
 						Ships mischflotte = null;
 						Buildables gewaehlterTyp = WaehleTransportSchiff(origin, missingResources, preferredShip, out mischflotte);
 						if (gewaehlterTyp != preferredShip || mischflotte != null) {
@@ -1653,7 +1592,6 @@ if (
 								true:
 								false;
 
-						// kein Mehrfach-Teiltransport (doMultipleTransports) mehr - nur noch, wenn alles in EINE Flotte passt.
 						if (mischflotte != null || idealShips <= VerfuegbareTransportSchiffe(origin, preferredShip)) {
 							if (mischflotte != null) {
 									ships = mischflotte;
@@ -1663,8 +1601,6 @@ if (
 								ships.Add(preferredShip, idealShips);
 							}
 							
-							// nur senden, wenn Metall, Kristall, Deuterium (inkl. Sprit) und Laderaum
-							// die KOMPLETTE Menge abdecken - sonst kommt am Ziel nur ein Teil an. Gilt fuer alle Aufrufer dieser Methode (AutoMine/AutoResearch).
 							Coordinate pruefZiel = (differentDestination != null && differentDestination.ID != 0) ? differentDestination.Coordinate : destination.Coordinate;
 							if (!KannVollstaendigLiefern(origin, ships, pruefZiel, missingResources, resToLeave)) {
 								_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Skipping transport: partial delivery blocked - {origin.ToString()} cannot deliver {missingResources.TransportableResources} completely (resources/fuel/cargo space).");
@@ -1733,8 +1669,6 @@ if (
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping transport: unable to parse transport origin.");
 					return 0;
 				} else {
-					// RESOURCE-LEDGER: Bedarf gegen das Konto des aktiven Workers (Kosten - gehaltener Bestand - eigene Flotten
-					// unterwegs) statt gegen den Live-Bestand, den sich andere Worker mit abziehen wuerden.
 					var missingResources = LedgerTBot.MissingForTransport(_tbotInstance, resources, destination, out bool ledgerApplied);
 					if (ledgerApplied && missingResources.Metal + missingResources.Crystal + missingResources.Deuterium <= 0) {
 						_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "[Ledger] Demand for " + destination.ToString() + " already covered by stock/own deliveries - no transport needed.");
@@ -1775,9 +1709,6 @@ if (
 							int level = _calcService.GetNextLevel(destination, buildable);
 							long buildTime = _calcService.CalcProductionTime(buildable, level, _tbotInstance.UserData.serverData, destination);
 							var tempCelestial = destination;
-							// Das Mitliefern der naechsten Gebaeude lief bis Schiffe oder Herkunftsbestand erschoepft waren -
-								// Plan 1/2 bekamen je ~48/75 Mio. Metall fuer Bauten von 4-13 Mio. Der Ledger-Anspruch kennt nur EIN Ziel; Mehrlieferung blieb
-								// ungenutzt auf dem Planeten liegen. Jetzt hoechstens Brain.Transports.MaxBundledBuildings zusaetzliche Gebaeude (Standard 0 = aus).
 								int gebuendelt = 0;
 								int maxGebuendelt = LiesMaxGebuendelteBauten();
 								while (flightTime * 2 >= buildTime && idealShips <= availableShips && gebuendelt < maxGebuendelt) {
@@ -1826,9 +1757,6 @@ if (
 							idealShips = _calcService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 						}
 
-						// choose the ship type by availability (SC -> LC, then optionally a mixed fleet).
-						// The reserve (KeepOnOrigin) is already subtracted in VerfuegbareTransportSchiffe. Pathfinders are never used.
-						// Without config entries (CargoFallback/KeepOnOrigin/MixFleet) the behavior stays as before.
 						Ships mischflotte = null;
 						Buildables gewaehlterTyp = WaehleTransportSchiff(origin, missingResources, preferredShip, out mischflotte);
 						if (gewaehlterTyp != preferredShip || mischflotte != null) {
@@ -1999,8 +1927,6 @@ if (
 			}
 		}
 
-		// REVERSE-REPATRIATE (12.10.2026): connection to ReverseRepatriate.cs. The whole feature lives in that file; only the three
-		// links (transport chain, ship selection at the home celestial, SendFleet) and the preferred transporter type are here.
 		private Buildables LiesRepatriateCargo() {
 			Buildables typ = Buildables.SmallCargo;
 			try {
@@ -2012,7 +1938,6 @@ if (
 			return typ;
 		}
 
-		// Ships for the outbound leg: transport chain incl. mixed fleet and expedition reserve; null if the home celestial has too few.
 		private Ships WaehleHinflugSchiffe(Celestial origin, Resources ladung, Buildables konfiguriert) {
 			try {
 				if (!IstTransportTyp(konfiguriert))
@@ -2032,9 +1957,6 @@ if (
 			}
 		}
 
-		// the Brain workers (AutoMine, AutoResearch, LF AutoMine, LF AutoResearch) use the same
-		// transport chain as AutoRepatriate/ReverseRepatriate: SC -> LC (Brain.Transports.CargoFallback), optional mixed fleet (MixFleet)
-		// and the expedition reserve (KeepOnOrigin). Pathfinders are never used. Returns null if the origin cannot carry the payload.
 		private Buildables LiesBrainCargo() {
 			Buildables typ = Buildables.SmallCargo;
 			try {
@@ -2046,9 +1968,6 @@ if (
 			return typ;
 		}
 
-		// Switches (Brain.Transports, both optional, default false = old behavior):
-		//   UseTransportChain  true = Brain workers use the transport chain (CargoFallback, MixFleet, KeepOnOrigin reserve)
-		//   CompactSlotPlan    true = plan with fewer shipments if more than the free slots would be needed
 		private bool LiesBrainSchalter(string name) {
 			try {
 				var transports = _tbotInstance.InstanceSettings.Brain.Transports;
@@ -2060,7 +1979,6 @@ if (
 			}
 		}
 
-		// Upper limit of shipments for the planning (int.MaxValue = no compaction).
 		public int BrainMaxSendungen(int freieSlots) {
 			return LiesBrainSchalter("CompactSlotPlan") ? freieSlots : int.MaxValue;
 		}
@@ -2070,7 +1988,6 @@ if (
 				Buildables konfiguriert = LiesBrainCargo();
 				if (LiesBrainSchalter("UseTransportChain") && IstTransportTyp(konfiguriert))
 					return WaehleHinflugSchiffe(origin, payload, konfiguriert);
-				// Chain switched off or other configured type (not part of the chain): old behavior without reserve.
 				long anzahl = _calcService.CalcShipNumberForPayload(payload, konfiguriert, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(konfiguriert), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 				if (anzahl <= 0 || anzahl > origin.Ships.GetAmount(konfiguriert))
 					return null;
@@ -2083,8 +2000,6 @@ if (
 			}
 		}
 
-		// Ships of an origin that may be used for planning the Brain deliveries (after the expedition reserve).
-		// With MixFleet all chain types together, otherwise only the single type with the largest total capacity.
 		public Ships BrainQuellSchiffe(Celestial origin) {
 			Ships ergebnis = new();
 			try {
@@ -2143,10 +2058,6 @@ if (
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping autorepatriate: no custom destination");
 					return RepatriateCode.Failure;
 				}
-				// ParseCelestialsList kann Planet UND Mond derselben Koordinate liefern; dann entscheidet
-				// die Listenreihenfolge ueber das Ziel. Nach einem Neustart war das Ziel der Heimat-MOND (z. B. 1:100:8) statt der Heimatwelt,
-				// obwohl in der Config "Type": "Planet" steht. Hier nur Celestials behalten, deren Typ zum Target-Eintrag passt.
-				// Ist der Typ nicht lesbar oder bleibt der Filter leer, gilt unveraendert die Original-Liste.
 				try {
 					var zielGefiltert = new List<Celestial>();
 					foreach (var zielEintrag in _tbotInstance.InstanceSettings.Brain.AutoRepatriate.Target) {
@@ -2159,20 +2070,16 @@ if (
 					if (zielGefiltert.Count > 0)
 						tempCelestials = zielGefiltert;
 				} catch (Exception) {
-					// Typ nicht auswertbar: Original-Liste behalten.
 				}
 				_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Repatriate: target = {string.Join(", ", tempCelestials.Select(c => c.ToString()))}");
 
 				if (tempCelestials.Count() > 0) {
 					_tbotInstance.UserData.fleets = await UpdateFleets();
-					// process started pickups first (return leg on arrival). Only with
-					// Brain.AutoRepatriate.Reverse.Active = true, otherwise nothing happens here.
 					if (ReverseRepatriate.Aktiv(_tbotInstance))
 						await ReverseRepatriate.VerarbeiteOffeneAsync(_tbotInstance, _calcService, _tbotOgameBridge, ErzeugeReverseHaken(), LiesRepatriateCargo());
 					long TotalMet = 0;
 					long TotalCri = 0;
 					long TotalDeut = 0;
-					// Stoppuhr und Zaehler nur fuer die Zyklus-Logzeile am Ende.
 					DateTime rpStart = DateTime.UtcNow;
 					int rpGesendet = 0;
 					bool samePosition = (bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.TargetAssociateMoon;
@@ -2213,14 +2120,11 @@ if (
 							continue;
 						}
 
-						// die billige ExcludeMoons-Pruefung steht jetzt VOR den API-Calls
-						// (UpdatePlanet/UpdateFleets), damit ausgeschlossene Himmelskoerper keine Zeit im 45-s-Fenster des Workers kosten.
 						if (celestial.Coordinate.Type == Celestials.Moon && (bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.ExcludeMoons) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {celestial.ToString()}: celestial is a moon.");
 							continue;
 						}
 
-						// a pickup for this celestial is already running (outbound leg flying).
 						if (ReverseRepatriate.Aktiv(_tbotInstance) && ReverseRepatriate.HatOffene(_tbotInstance, celestial)) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {celestial.ToString()}: reverse pickup already running.");
 							continue;
@@ -2228,9 +2132,6 @@ if (
 
 						var tempCelestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Fast);
 
-						// UpdateFleets() pro Himmelskoerper entfernt. Die Flottenliste wird
-						// zu Zyklusbeginn geladen, SendFleet() haengt neu gestartete Flotten selbst an UserData.fleets an.
-						// Vorher kostete jeder der ~20 Himmelskoerper einen eigenen API-Call (Ursache fuer die 45-s-Abbrueche im Worker).
 						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.SkipIfIncomingTransport && _calcService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) && (!fromTelegram)) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {tempCelestial.ToString()}: there is a transport incoming.");
 							continue;
@@ -2259,13 +2160,9 @@ if (
 							}
 						}
 
-						// nur der Rest abtransportieren, den kein Ledger-Anspruch haelt. Die Mindestmenge
-						// gilt auf diesem freien Anteil - vorher wurde sie auf dem Brutto-Bestand geprueft und erst in SendFleet gekuerzt,
-						// sodass Mini-Transporter mit ein paar Millionen einen Slot fuer Hin- und Rueckflug belegten.
 						try {
 							Resources freierAnteil = LedgerTBot.FreeForExternal(_tbotInstance, tempCelestial, out string gehaltenText);
 							if (freierAnteil != null) {
-								// Neues Objekt: payload zeigt sonst auf tempCelestial.Resources.
 								payload = new Resources(
 									Math.Min(payload.Metal, freierAnteil.Metal),
 									Math.Min(payload.Crystal, freierAnteil.Crystal),
@@ -2282,9 +2179,6 @@ if (
 							continue;
 						}
 
-						// instead of keeping transporters on the celestial, they fly from the home celestial
-						// (Deploy, with deuterium) and take ALL ships plus the resources home on arrival. Only with
-						// Brain.AutoRepatriate.Reverse.Active = true. If the start does not work (NichtMoeglich), the classic path continues.
 						if (ReverseRepatriate.Aktiv(_tbotInstance)) {
 							ReverseStatus reverseStatus = await ReverseRepatriate.StarteAbholungAsync(_tbotInstance, _calcService, _tbotOgameBridge, ErzeugeReverseHaken(), tempCelestial, destinationCoordinate, payload, preferredShip);
 							if (reverseStatus == ReverseStatus.Gesendet) {
@@ -2313,10 +2207,6 @@ if (
 							payload = _calcService.CalcMaxTransportableResources(ships, payload, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, tempCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 
 							if (payload.TotalResources > 0) {
-								// Brain.Transports.MaxSlots zaehlt alle Transport-Flotten des Kontos (auch die
-								// der Rueckholung). Die Rueckholung bleibt unter diesem Limit (abzueglich optional AutoRepatriate.ReserveTransportSlots,
-								// Standard 0), damit sie den Brain-Workern (Minen/LF/Forschung) keine Slots wegnimmt. Fehlt die Einstellung oder
-								// ist MaxSlots 0, gilt wie vorher nur die Pruefung in SendFleet.
 								try {
 									int maxTransportSlots = 0;
 									if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain, "Transports") && SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.Transports, "MaxSlots"))
@@ -2339,12 +2229,9 @@ if (
 									return RepatriateCode.Stop;
 								}
 								if (fleetId == (int) SendFleetCode.NotEnoughSlots) {
-									// sichtbar machen, WO der Zyklus wegen fehlender Slots endet.
 									_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Repatriate: no free slots while sending {tempCelestial.ToString()} after {(DateTime.UtcNow - rpStart).TotalSeconds:F0} s ({rpGesendet} fleet(s) sent in this cycle) - cycle is delayed, remaining celestials are handled in the next run.");
 									return RepatriateCode.Delay;
 								}
-								// im Original zaehlte jede SendFleet-Rueckgabe ausser AfterSleepTime/NotEnoughSlots
-								// als Erfolg, auch GenericError (z.B. "not enough deuterium"). Jetzt zaehlt nur eine echte Flotten-ID (> 0).
 								if (fleetId > 0) {
 									TotalMet += payload.Metal;
 									TotalCri += payload.Crystal;

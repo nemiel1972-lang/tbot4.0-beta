@@ -24,7 +24,6 @@ import (
 
 type Os string
 
-// NowFunc allow user to override it
 var NowFunc = func() time.Time {
 	return time.Now()
 }
@@ -91,7 +90,6 @@ func (d *Device) SetClient(client *httpclient.Client) {
 	d.client = client
 }
 
-// WithClient allows to use a temporary http client for a specific call.
 func (d *Device) WithClient(tmpClient *http.Client, clb func()) {
 	_ = d.WithClientE(tmpClient, func() error {
 		clb()
@@ -106,16 +104,12 @@ func (d *Device) WithClientE(tmpClient *http.Client, clb func() error) error {
 	return clb()
 }
 
-// WithClientFn allow to change the http client until the returned function is called.
 func (d *Device) WithClientFn(tmpClient *http.Client) (restoreClientFn func()) {
 	oldClient := d.client.Client
 	d.client.Client = tmpClient
 	return func() { d.client.Client = oldClient }
 }
 
-// NewBuilder creates a new virtual device.
-// If the device already exists in ~/.ogame/devices/<name> it will be loaded from there,
-// otherwise will be created when calling Build.
 func NewBuilder(name string) *Builder {
 	return &Builder{name: name}
 }
@@ -213,8 +207,6 @@ func DefaultStoragePath() string {
 	return filepath.Join(home, ".ogame", "storage")
 }
 
-// FilePersistor default persistor for the javascript fingerprint
-// save/load the fingerprint from ~/.ogame/storage/<device_name>/fingerprint
 type FilePersistor struct {
 	deviceStorageDir string
 }
@@ -361,8 +353,6 @@ func (d *Builder) newFingerprint() (*JsFingerprint, error) {
 		MediaDevicesHash:      randFakeHash(),
 		PermissionsStatesHash: randFakeHash(),
 		WebglRenderHash:       randFakeHash(),
-		//Game1DateHeader:       game1DateHeader,
-		//CalcDeltaMs:           elapsed,
 		LastValue: 0,
 	}
 	return fprt, nil
@@ -400,7 +390,6 @@ func (d *Builder) Build() (*Device, error) {
 			return nil, err
 		}
 
-		// Ensure we remove any cookies that would set the mobile view
 		cookies := jar.AllCookies()
 		for _, c := range cookies {
 			if c.Name == "device" {
@@ -494,47 +483,47 @@ func (d *Device) GetBlackbox() (string, error) {
 
 func (f *JsFingerprint) MarshalJSON() ([]byte, error) {
 	toEnc := make([]any, 0)
-	toEnc = append(toEnc, f.ConstantVersion) // dg constant
-	toEnc = append(toEnc, f.Timezone)        // dO4 Intl.DateTimeFormat()['resolvedOptions']().timeZone
+	toEnc = append(toEnc, f.ConstantVersion)
+	toEnc = append(toEnc, f.Timezone)
 	if f.ConstantVersion == 9 {
-		toEnc = append(toEnc, f.NavigatorDoNotTrack) // ZNJG navigator.doNotTrack || false
-		toEnc = append(toEnc, f.BrowserEngineName)   // 'cOJRtSqNAQ': getBrowserRenderingEngine(browserInfo['name']),
+		toEnc = append(toEnc, f.NavigatorDoNotTrack)
+		toEnc = append(toEnc, f.BrowserEngineName)
 	}
-	toEnc = append(toEnc, f.OsName)              // 'b-I2rx-E': osInfo['name'],
-	toEnc = append(toEnc, f.BrowserName)         // 'YdFB': browserInfo['name'],
-	toEnc = append(toEnc, f.NavigatorVendor)     // 'dttJrRyO': navigator.vendor,
-	toEnc = append(toEnc, f.DeviceMemory)        // 'bdI_': navigator.deviceMemory || 0,
-	toEnc = append(toEnc, f.HardwareConcurrency) // 'Y9JA': navigator.hardwareConcurrency || 0,
-	toEnc = append(toEnc, f.Languages)           // 'bM07og': navigator.languages.join(','),
-	toEnc = append(toEnc, f.PluginsHash)         // 'cNxRuCGPAg': produceDeterministicHash(getPluginsInfo()),
-	toEnc = append(toEnc, f.WebglInfo)           // 'Z9dM': webglInfo['vendor'] + ',' + webglInfo['renderer'],
-	toEnc = append(toEnc, f.FontsHash)           // 'ZtVDtyo': produceDeterministicHash(getFontsInfo()),
-	toEnc = append(toEnc, f.AudioCtxHash)        // 'YdY6oxJV': produceDeterministicHash(getAudioContextInfo()),
-	toEnc = append(toEnc, f.ScreenWidth)         // 'd-BEuCA': window.screen.availWidth,
-	toEnc = append(toEnc, f.ScreenHeight)        // 'aM02nQV5': window.screen.availHeight,
+	toEnc = append(toEnc, f.OsName)
+	toEnc = append(toEnc, f.BrowserName)
+	toEnc = append(toEnc, f.NavigatorVendor)
+	toEnc = append(toEnc, f.DeviceMemory)
+	toEnc = append(toEnc, f.HardwareConcurrency)
+	toEnc = append(toEnc, f.Languages)
+	toEnc = append(toEnc, f.PluginsHash)
+	toEnc = append(toEnc, f.WebglInfo)
+	toEnc = append(toEnc, f.FontsHash)
+	toEnc = append(toEnc, f.AudioCtxHash)
+	toEnc = append(toEnc, f.ScreenWidth)
+	toEnc = append(toEnc, f.ScreenHeight)
 	if f.ConstantVersion == 9 {
-		toEnc = append(toEnc, f.ScreenColorDepth) // 'ZMk5rRU': window.screen.colorDepth,
+		toEnc = append(toEnc, f.ScreenColorDepth)
 	}
 	if f.ConstantVersion == 8 {
-		toEnc = append(toEnc, f.LocalStorageEnabled)   // 'bL8zohR5': Boolean(localStorage),
-		toEnc = append(toEnc, f.SessionStorageEnabled) // 'c8Y6qRuA': Boolean(sessionStorage),
+		toEnc = append(toEnc, f.LocalStorageEnabled)
+		toEnc = append(toEnc, f.SessionStorageEnabled)
 	}
-	toEnc = append(toEnc, f.VideoHash)             // 'dt9DqBc': produceDeterministicHash(getVideoPropsInfo()),
-	toEnc = append(toEnc, f.AudioHash)             // 'YdY6oxI': produceDeterministicHash(getAudioPropsInfo()),
-	toEnc = append(toEnc, f.MediaDevicesHash)      // 'bdI2nwA': produceDeterministicHash(promises[1]),
-	toEnc = append(toEnc, f.PermissionsStatesHash) // 'cNVHtB2QA2zbSbw': produceDeterministicHash(promises[0]),
-	toEnc = append(toEnc, f.OfflineAudioCtx)       // 'YdY6oxJYqA': promises[2],
-	toEnc = append(toEnc, f.WebglRenderHash)       // 'd9w-pRFXpw': getWebglRenderInfoHash(),
-	toEnc = append(toEnc, f.Canvas2DInfo)          // 'Y8QyqAl8whI': getCanvas2dInfo(),
-	toEnc = append(toEnc, f.DateIso)               // objToEncrypt['Y9U6mw9451U'] = new Date().toISOString();
-	toEnc = append(toEnc, f.XGame)                 // objToEncrypt['depTtw'] = xGame;
-	toEnc = append(toEnc, f.CalcDeltaMs)           // objToEncrypt['ZA'] = new Date().getTime() - nowTimestamp;
-	toEnc = append(toEnc, f.Version)               // 'b-I4nQ-C61rI': osInfo['version'],
-	toEnc = append(toEnc, f.XVecB64)               // objToEncrypt['dts-siGT'] = window.btoa(newXVec);
-	toEnc = append(toEnc, f.UserAgent)             // objToEncrypt['dehNvwBnzDqu'] = navigator.userAgent;
-	toEnc = append(toEnc, f.Game1DateHeader)       // objToEncrypt['c9hKwCWX61TBJm_dKn0'] = new Date(httpReq.getResponseHeader('date')).toISOString();
-	toEnc = append(toEnc, nil)                     // objToEncrypt['ctdIvSKVCQ'] = arg2;
-	toEnc = append(toEnc, f.LastValue)             // ????;
+	toEnc = append(toEnc, f.VideoHash)
+	toEnc = append(toEnc, f.AudioHash)
+	toEnc = append(toEnc, f.MediaDevicesHash)
+	toEnc = append(toEnc, f.PermissionsStatesHash)
+	toEnc = append(toEnc, f.OfflineAudioCtx)
+	toEnc = append(toEnc, f.WebglRenderHash)
+	toEnc = append(toEnc, f.Canvas2DInfo)
+	toEnc = append(toEnc, f.DateIso)
+	toEnc = append(toEnc, f.XGame)
+	toEnc = append(toEnc, f.CalcDeltaMs)
+	toEnc = append(toEnc, f.Version)
+	toEnc = append(toEnc, f.XVecB64)
+	toEnc = append(toEnc, f.UserAgent)
+	toEnc = append(toEnc, f.Game1DateHeader)
+	toEnc = append(toEnc, nil)
+	toEnc = append(toEnc, f.LastValue)
 	return json.Marshal(toEnc)
 }
 
@@ -620,7 +609,6 @@ func (d *Builder) setRandomHardwareConcurrency() {
 			2, 3, 6, 8, 12, 16, 24,
 		})
 	} else if d.osName == Android {
-		// 8, 49, 234, 127, 128, 107, 113, 412
 		d.hardwareConcurrency = utils.RandChoice([]int{
 			4, 8, 12,
 		})
@@ -892,7 +880,6 @@ func (d *Builder) setRandomUserAgent() {
 
 func (d *Builder) setRandomMemory() {
 	if d.osName == Android {
-		// 1, 2, 4, 8
 		d.memory = 8
 	}
 }
@@ -1131,7 +1118,7 @@ func ParseBlackboxV8(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse Timezone")
 	}
-	if arr2Str, ok := arr[2].(string); ok { // arr[2] can be: '1'
+	if arr2Str, ok := arr[2].(string); ok {
 		var err error
 		fingerprint.NavigatorDoNotTrack, err = strconv.ParseBool(arr2Str)
 		if err != nil {
@@ -1289,7 +1276,7 @@ func ParseBlackboxV9(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse Timezone")
 	}
-	if arr2Str, ok := arr[2].(string); ok { // arr[2] can be: '1'
+	if arr2Str, ok := arr[2].(string); ok {
 		var err error
 		fingerprint.NavigatorDoNotTrack, err = strconv.ParseBool(arr2Str)
 		if err != nil {

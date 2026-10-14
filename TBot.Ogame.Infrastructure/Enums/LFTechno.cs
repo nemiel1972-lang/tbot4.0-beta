@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 namespace TBot.Ogame.Infrastructure.Enums {
 	public enum LFTechno {
 		None = 0,
-		//Humans
 		IntergalacticEnvoys = 11201,
 		HighPerformanceExtractors = 11202,
 		FusionDrives = 11203,
@@ -27,7 +26,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		RobotAssistants = 11217,
 		Supercomputer = 11218,
 
-		//Rocktal
 		VolcanicBatteries = 12201,
 		AcousticScanning = 12202,
 		HighEnergyPumpSystems = 12203,
@@ -47,7 +45,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		RuneShields = 12217,
 		RocktalCollectorEnhancement = 12218,
 
-		//Mechas
 		CatalyserTechnology = 13201,
 		PlasmaDrive = 13202,
 		EfficiencyModule = 13203,
@@ -67,7 +64,6 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		ExperimentalWeaponsTechnology = 13217,
 		MechanGeneralEnhancement = 13218,
 
-		//Kaelesh
 		HeatRecovery = 14201,
 		SulphideProcess = 14202,
 		PsionicNetwork = 14203,

@@ -12,7 +12,6 @@ import (
 	"github.com/alaingilbert/ogame/pkg/gameforge"
 )
 
-// TBotSolver service
 func TbotSolver(apiKey string) gameforge.CaptchaSolver {
 	return func(ctx context.Context, question, icons []byte) (int64, error) {
 		body := &bytes.Buffer{}

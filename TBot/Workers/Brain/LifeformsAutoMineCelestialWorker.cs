@@ -93,7 +93,6 @@ namespace Tbot.Workers.Brain {
 				bool preventIfMoreExpensiveThanNextMine = (bool) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine.PreventIfMoreExpensiveThanNextMine;
 
 				DoLog(LogLevel.Information, $"Running Lifeform AutoMine on {celestial.ToString()}");
-				// RESOURCE-LEDGER: dieser Worker fuehrt ein eigenes Konto pro Celestial.
 				LedgerTBot.SetContext("LifeformsAutoMine", celestial.ID);
 				await LedgerTBot.SyncFleets(_tbotInstance, _fleetScheduler);
 				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Resources);
@@ -110,9 +109,6 @@ namespace Tbot.Workers.Brain {
 				}
 
 				LFBuildings maxLFBuildings = new();
-					// Zielwerte (Rasse x Slot) kommen ausschliesslich aus lifeform_targets.json.
-					// Die alten Max...-Felder der Config werden nicht mehr gelesen. Fehlt die Datei oder ist sie kaputt,
-					// wird der LF-Bau fuer diesen Planeten uebersprungen (statt mit falschen Caps zu bauen).
 					if (!LifeformTargets.TryApplyMaxLevels((object) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine, celestial, maxLFBuildings, (lvl, msg) => DoLog(lvl, msg))) {
 						DoLog(LogLevel.Warning, $"Skipping {celestial.ToString()}: LF target values not available (lifeform_targets.json missing/invalid or race unknown).");
 						stop = true;
@@ -126,10 +122,6 @@ namespace Tbot.Workers.Brain {
 						? ((long) celestial.Constructions.LFBuildingCountdown * (long) 1000) + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds)
 						: ((long) celestial.Constructions.BuildingCountdown * (long) 1000) + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds);
 				}
-				// AutoMine finanziert gerade gezielt ein Energiegebaeude (Solarkraftwerk/
-				// Fusionskraftwerk) per Transport auf diesem Celestial - nicht dazwischenfunken und die
-				// ankommenden Ressourcen fuer ein LF-Gebaeude verbrauchen. Einfach kurz warten und beim
-				// naechsten reguraeren Zyklus erneut pruefen.
 				if (!delayProduction && EnergyFundingTracker.IsEnergyFundingPending(celestial.ID)) {
 					DoLog(LogLevel.Information, $"Skipping {celestial.ToString()}: AutoMine is currently funding an energy building here, waiting to avoid stealing its resources.");
 					delayProduction = true;
@@ -168,7 +160,6 @@ namespace Tbot.Workers.Brain {
 									if (celestial.Constructions.LFBuildingID == (int) buildable) {
 										started = true;
 										DoLog(LogLevel.Information, "Building succesfully started.");
-										// RESOURCE-LEDGER: Bau gestartet - Reservierung abbuchen.
 										LedgerTBot.OnBuilt(_tbotInstance, celestial, "LifeformsAutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 									} else {
 										celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.LFBuildings);
@@ -177,7 +168,6 @@ namespace Tbot.Workers.Brain {
 										} else {
 											started = true;
 											DoLog(LogLevel.Information, "Building succesfully started.");
-											// RESOURCE-LEDGER: Bau gestartet - Reservierung abbuchen.
 											LedgerTBot.OnBuilt(_tbotInstance, celestial, "LifeformsAutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 										}
 									}
@@ -190,8 +180,6 @@ namespace Tbot.Workers.Brain {
 							} else {
 								DoLog(LogLevel.Information, $"Not enough resources to build: {buildable.ToString()} level {level.ToString()} on {celestial.ToString()}. Needed: {xCostBuildable.LFBuildingCostResources.ToString()} - Available: {celestial.Resources.LFBuildingCostResources.ToString()}");
 
-								// RESOURCE-LEDGER: Bedarf sofort anmelden, auch wenn gleich kein Transport moeglich ist (Slots, Config, Herkunft).
-								// So bleibt der vorhandene Bestand vor Rueckholung und anderen Workern geschuetzt, solange dieser Worker wartet.
 								LedgerTBot.Plan(_tbotInstance, celestial, "LifeformsAutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 								if ((bool) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
 									_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
@@ -233,15 +221,10 @@ namespace Tbot.Workers.Brain {
 									int MaxSlots = _calculationService.CalcSlotsPriority(Feature.BrainLifeformAutoMine, rankSlotsPriority, _tbotInstance.UserData.slots, _tbotInstance.UserData.fleets, (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree);
 
 									if (MaxSlots > 0) {
-										// RESOURCE-LEDGER: gedeckt = Bestand (gehalten) + EIGENE Lieferflotten; fremde Transporte zaehlen nicht.
 										LedgerTBotPlan ledgerPlan = LedgerTBot.Plan(_tbotInstance, celestial, "LifeformsAutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 										if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 											Celestial origin = new() { ID = 0 };
 											List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-											// same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
-											// candidate origin celestials instead of the whole empire when MultipleOrigins
-											// is disabled, to avoid triggering OGame's "recent activity" indicator on
-											// every single celestial regardless of Exclude settings.
 											if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 												for (int i = 0; i < allCelestials.Count(); i++) {
 													allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);
@@ -295,7 +278,6 @@ namespace Tbot.Workers.Brain {
 															preferredShip = Buildables.SmallCargo;
 														}
 														long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-														// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 														Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 														if (brainSchiffe != null) {
 															Ships ships = brainSchiffe;
@@ -460,7 +442,6 @@ namespace Tbot.Workers.Brain {
 													.Where(f => f.Destination.Type == celestial.Coordinate.Type)
 													.First().ID;
 											} else {
-												// RESOURCE-LEDGER: nur die EIGENE Lieferflotte bestimmt den naechsten Pruefzeitpunkt.
 												fleetId = ledgerPlan.OwnFleetId;
 											}
 										}
@@ -543,7 +524,6 @@ namespace Tbot.Workers.Brain {
 									float cryProductionTime = float.IsNaN(missingResources.Crystal / cryProdInASecond) ? 0.0F : missingResources.Crystal / cryProdInASecond;
 									float deutProductionTime = float.IsNaN(missingResources.Deuterium / deutProdInASecond) ? 0.0F : missingResources.Deuterium / deutProdInASecond;
 									productionTime = (long) (Math.Round(Math.Max(Math.Max(metProductionTime, cryProductionTime), deutProductionTime), 0) * 1000);
-									//DoLog(LogLevel.Debug, $"The required resources will be produced by {now.AddMilliseconds(productionTime).ToString()}");
 								}
 							}
 							interval = productionTime + RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);

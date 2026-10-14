@@ -401,7 +401,6 @@ func extractAttacksFromDoc(doc *goquery.Document, clock clockwork.Clock, ownCoor
 			attack.Missiles = utils.ParseInt(s.Find("td.detailsFleet span").First().Text())
 		}
 
-		// Get ships infos if available
 		if movement, exists := s.Find("td.icon_movement span").Attr("title"); exists {
 			root, err := html.Parse(strings.NewReader(movement))
 			if err != nil {
@@ -729,14 +728,12 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.Username = strings.TrimSpace(split[0])
 	}
 
-	// Bandit, Starlord
 	banditstarlord := doc.Find("div.detail_txt").First().Find("span")
 	if banditstarlord.HasClass("honorRank") {
 		report.IsBandit = banditstarlord.HasClass("rank_bandit1") || banditstarlord.HasClass("rank_bandit2") || banditstarlord.HasClass("rank_bandit3")
 		report.IsStarlord = banditstarlord.HasClass("rank_starlord1") || banditstarlord.HasClass("rank_starlord2") || banditstarlord.HasClass("rank_starlord3")
 	}
 
-	// IsInactive, IsLongInactive
 	inactive := doc.Find("div.detail_txt").First().Find("span")
 	if inactive.HasClass("status_abbr_longinactive") {
 		report.IsInactive = true
@@ -745,7 +742,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.IsInactive = true
 	}
 
-	// APIKey
 	apikey := doc.Find("span.icon_apikey").AttrOr("title", "")
 	apiDoc, err := goquery.NewDocumentFromReader(strings.NewReader(apikey))
 	if err != nil {
@@ -753,13 +749,11 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 	}
 	report.APIKey = apiDoc.Find("input").First().AttrOr("value", "")
 
-	// Inactivity timer
 	activity := doc.Find("div.detail_txt").Eq(1).Find("font")
 	if len(activity.Text()) == 2 {
 		report.LastActivity = utils.ParseInt(activity.Text())
 	}
 
-	// CounterEspionage
 	ceTxt := doc.Find("div.detail_txt").Eq(1).Text()
 	m1 := regexp.MustCompile(`(\d+)%`).FindStringSubmatch(ceTxt)
 	if len(m1) == 2 {
@@ -1247,7 +1241,7 @@ func extractServerTimeFromDoc(doc *goquery.Document) (time.Time, error) {
 
 	u1 := time.Now().UTC().Unix()
 	u2 := serverTime.Unix()
-	n := int(math.Round(float64(u2-u1)/900)) * 900 // u2-u1 should be close to 0, round to nearest 15min difference
+	n := int(math.Round(float64(u2-u1)/900)) * 900
 
 	serverTime = serverTime.Add(time.Duration(-n) * time.Second).In(time.FixedZone("OGT", n))
 
@@ -1592,11 +1586,6 @@ func extractUserInfos(pageHTML []byte, lang string) (ogame.UserInfos, error) {
 	case "ru":
 		infosRgx = regexp.MustCompile(`([\d\\.]+) \(\\u041c\\u0435\\u0441\\u0442\\u043e ([\d.]+) \\u0438\\u0437 ([\d.]+)\)`)
 	}
-	// pl: 0 (Miejsce 5.872 z 5.875)
-	// fr: 0 (Place 3.197 sur 3.348)
-	// de: 0 (Platz 2.979 von 2.980)
-	// jp: 0 (73人中72位)
-	// pt: 0 (Posição 1.861 de 1.862
 	infos := infosRgx.FindSubmatch(html2)
 	if len(infos) < 4 {
 		return ogame.UserInfos{}, errors.New("cannot find infos in sub html")
@@ -1840,7 +1829,6 @@ func extractPhalanx(pageHTML []byte) ([]ogame.PhalanxFleet, error) {
 	eventFleet := doc.Find("div.eventFleet")
 	if eventFleet.Size() == 0 {
 		txt := strings.TrimSpace(doc.Find("div#phalanxEventContent").Text())
-		// TODO: 'fleet' won't work in other languages
 		if strings.Contains(txt, "fleet") {
 			return res, nil
 		}
@@ -2061,8 +2049,6 @@ func extractCancelResearchInfos(pageHTML []byte) (token string, techID, listID i
 	return
 }
 
-// ExtractUniverseSpeed extract universe speed from html calculation
-// pageHTML := b.getPageContent(url.Values{"page": {"techtree"}, "tab": {"2"}, "techID": {"1"}})
 func ExtractUniverseSpeed(pageHTML []byte) (int64, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	if err != nil {
@@ -2442,15 +2428,12 @@ func ExtractEmpireJSON(pageHTML []byte) (any, error) {
 	return empireJSON, nil
 }
 
-// ExtractAuction extract auction information from page "traderAuctioneer"
 func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 	auction := ogame.Auction{}
 	auction.HasFinished = false
 
-	// Detect if Auction has already finished
 	nextAuction := doc.Find("#nextAuction")
 	if nextAuction.Size() > 0 {
-		// Find time until next auction starts
 		auction.Endtime = utils.DoParseI64(nextAuction.Text())
 		auction.HasFinished = true
 	} else {
@@ -2481,14 +2464,12 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 		return ogame.Auction{}, errors.New("failed to json parse auction multiplier: " + err.Error())
 	}
 
-	// Find auctioneer token
 	tokenRegex := regexp.MustCompile(`auctioneerToken\s?=\s?"([^"]+)";`).FindStringSubmatch(doc.Text())
 	if len(tokenRegex) != 2 {
 		return ogame.Auction{}, errors.New("failed to find auctioneer token")
 	}
 	auction.Token = tokenRegex[1]
 
-	// Find Planet / Moon resources JSON
 	planetMoonResources := regexp.MustCompile(`planetResources\s?=\s?([^;]+);`).FindStringSubmatch(doc.Text())
 	if len(planetMoonResources) != 2 {
 		return ogame.Auction{}, errors.New("failed to find planetResources")
@@ -2497,7 +2478,6 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 		return ogame.Auction{}, errors.New("failed to json unmarshal planetResources: " + err.Error())
 	}
 
-	// Find already-bid
 	m := regexp.MustCompile(`var playerBid\s?=\s?([^;]+);`).FindStringSubmatch(doc.Text())
 	if len(m) != 2 {
 		return ogame.Auction{}, errors.New("failed to get playerBid")
@@ -2508,16 +2488,10 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 	}
 	auction.AlreadyBid = alreadyBid
 
-	// Find min-bid
 	auction.MinimumBid = utils.ParseInt(doc.Find("table.table_ressources_sum tr td.auctionInfo.js_price").Text())
 
-	// Find deficit-bid
 	auction.DeficitBid = utils.ParseInt(doc.Find("table.table_ressources_sum tr td.auctionInfo.js_deficit").Text())
 
-	// Note: Don't just bid the min-bid amount. It will keep doubling the total bid and grow exponentially...
-	// DeficitBid is 1000 when another player has outbid you or if nobody has bid yet.
-	// DeficitBid seems to be filled by Javascript in the browser. We're parsing it anyway. Correct Bid calculation would be:
-	// bid = max(auction.DeficitBid, auction.MinimumBid - auction.AlreadyBid)
 
 	return auction, nil
 }

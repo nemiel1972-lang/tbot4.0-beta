@@ -150,9 +150,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.Coordinate.Type = ogame.MoonType
 	}
 	messageType := ogame.Report
-	//if doc.Find("span.espionageDefText").Size() > 0 {
-	//	messageType = ogame.Action
-	//}
 	report.Type = messageType
 
 	msgDateRaw := doc.Find("span.msg_date").Text()
@@ -190,7 +187,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.AllianceClass = ogame.NoAllianceClass
 	}
 
-	// Bandit, Starlord
 	banditstarlord := doc.Find("span.honorRank").First()
 	if banditstarlord.HasClass("honorRank") {
 		report.IsBandit = banditstarlord.HasClass("rank_bandit1") || banditstarlord.HasClass("rank_bandit2") || banditstarlord.HasClass("rank_bandit3")
@@ -199,7 +195,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 
 	report.HonorableTarget = doc.Find("span.status_abbr_honorableTarget").Length() > 0
 
-	// IsInactive, IsLongInactive
 	inactive := doc.Find("div.playerInfo").First().Find("span")
 	if inactive.HasClass("status_abbr_longinactive") {
 		report.IsInactive = true
@@ -208,7 +203,6 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 		report.IsInactive = true
 	}
 
-	// APIKey
 	apikey := doc.Find("button.icon_apikey").AttrOr("title", "")
 	apiDoc, err := goquery.NewDocumentFromReader(strings.NewReader(apikey))
 	if err != nil {
@@ -216,13 +210,11 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 	}
 	report.APIKey = apiDoc.Find("input").First().AttrOr("value", "")
 
-	// Inactivity timer
 	report.LastActivity = utils.ParseInt(rawMessageData.AttrOr("data-raw-activity", "-1"))
 	if report.LastActivity == -1 {
 		report.LastActivity = 0
 	}
 
-	// CounterEspionage
 	report.CounterEspionage = utils.ParseInt(rawMessageData.AttrOr("data-raw-counterespionagechance", "0"))
 
 	report.Metal = utils.DoParseI64(rawMessageData.AttrOr("data-raw-metal", "0"))
@@ -510,7 +502,6 @@ func extractResourcesExpeditionBonus(s *goquery.Selection, l *ogame.LfBonuses) {
 	l.LfResourceBonuses.ResourcesExpedition = extractBonusFromStringPercentage(txt)
 }
 
-// Extracts cost reduction
 func extractCostReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -524,7 +515,6 @@ func extractCostReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcate
 	}
 }
 
-// Extracts time reduction
 func extractTimeReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -538,7 +528,6 @@ func extractTimeReductionBonus(s *goquery.Selection, l *ogame.LfBonuses, subcate
 	}
 }
 
-// Extracts ships stats fixed
 func extractShipStatBonus(s *goquery.Selection, b *ogame.LfBonuses, subcategory string) {
 	i := utils.DoParseI64(subcategory)
 	id := ogame.ID(i)
@@ -566,13 +555,11 @@ func extractShipStatBonus(s *goquery.Selection, b *ogame.LfBonuses, subcategory 
 	return
 }
 
-// Extract bonus value from a string with percentage sign [ex: 1.056% -> 0.01056]
 func extractBonusFromStringPercentage(s string) float64 {
 	v := strings.Replace(s, "%", "", 1)
 	return extractBonusFromString(v) / 100.0
 }
 
-// Extract bonus value from a string [ex: 1.056]
 func extractBonusFromString(s string) float64 {
 	v := strings.TrimSpace(s)
 	v = strings.Replace(v, ",", ".", 1)
@@ -582,7 +569,7 @@ func extractBonusFromString(s string) float64 {
 
 func extractAllianceClassFromDoc(doc *goquery.Document) (ogame.AllianceClass, error) {
 	allianceClassTd := doc.Find("td.alliance_class").First()
-	if allianceClassTd.HasClass("warrior") { // TODO: untested
+	if allianceClassTd.HasClass("warrior") {
 		return ogame.Warrior, nil
 	} else if allianceClassTd.HasClass("trader") {
 		return ogame.Trader, nil

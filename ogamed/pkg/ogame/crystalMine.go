@@ -17,12 +17,10 @@ func newCrystalMine() *crystalMine {
 	return b
 }
 
-// EnergyConsumption returns the building energy consumption
 func (b *crystalMine) EnergyConsumption(level int64) int64 {
 	return int64(math.Ceil(10 * float64(level) * math.Pow(1.1, float64(level))))
 }
 
-// Production returns the crystal production of the mine
 func (b *crystalMine) Production(universeSpeed int64, productionRatio, globalRatio float64, plasmaTech, level int64) int64 {
 	basicIncome := 15.0
 	levelProduction := 20 * float64(universeSpeed) * (1 + float64(plasmaTech)*0.0066) * float64(level) * math.Pow(1.1, float64(level))

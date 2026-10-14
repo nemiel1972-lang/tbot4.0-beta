@@ -440,7 +440,7 @@ WHERE id = 1;";
 				var instancePath = ResolveInstanceSettingsPath(global, instanceAlias, Path.GetDirectoryName(globalPath));
 				if (!File.Exists(instancePath))
 					return settings;
-				var instance = SettingsService.ReadResolvedObject(instancePath); // Load-Dateien (conf.d) sind aufgeloest
+				var instance = SettingsService.ReadResolvedObject(instancePath);
 				var autoFarm = instance["AutoFarm"] as JObject;
 				if (autoFarm == null)
 					return settings;

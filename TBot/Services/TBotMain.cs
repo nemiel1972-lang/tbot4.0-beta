@@ -41,7 +41,6 @@ namespace Tbot.Services {
 		private readonly SemaphoreSlim _settingsReloadSemaphore = new SemaphoreSlim(1, 1);
 
 		private ITelegramMessenger telegramMessenger;
-		// global Discord webhook
 		private IDiscordWebhookMessenger discordWebhookMessenger;
 
 		private bool loggedIn = false;
@@ -116,7 +115,6 @@ namespace Tbot.Services {
 			_workerFactory = workerFactory;
 			_tbotOgameBridge = new TBotOgamedBridge(this, _ogameService);
 
-			// Avoid circular dependency
 			_fleetScheduler.SetTBotInstance(this);
 			_fleetScheduler.SetTBotOgameBridge(_tbotOgameBridge);
 
@@ -131,7 +129,6 @@ namespace Tbot.Services {
 		}
 
 		private Credentials GetCredentialsFromSettings() {
-			// Login-Mail und Universum sofort aus allen Logs heraushalten (Spielername folgt nach dem Login)
 			TBot.Common.Logging.LogAnonymizer.Register((string) InstanceSettings.Credentials.Email, "[Email]");
 			TBot.Common.Logging.LogAnonymizer.Register((string) InstanceSettings.Credentials.Universe, "[Universe]");
 			return new() {
@@ -299,8 +296,6 @@ namespace Tbot.Services {
 			log(LogLevel.Information, LogSender.Tbot, "Initializing data...");
 			userData.celestials = await _tbotOgameBridge.GetPlanets();
 			userData.researches = await _tbotOgameBridge.UpdateResearches();
-			// re-arm oder sofort ausloesen, was ein Neustart am
-			// AutoFleetSave/Ghost-Recall-Timer verloren hat (siehe FleetScheduler.ReconcilePendingRecalls).
 			await _fleetScheduler.ReconcilePendingRecalls();
 			userData.scheduledFleets = new();
 			userData.farmTargets = new();
@@ -312,21 +307,12 @@ namespace Tbot.Services {
 
 			ConfigureDiscordWebhook();
 
-			// SleepMode will know if features must be enabled or not
 			InitializeSleepMode();
 
-			// eigener, von SleepMode komplett unabhaengiger Zeitfenster-Scheduler
-			//. Nutzt denselben Timer-in-Dictionary-Mechanismus wie
-			// SleepMode, aber eigene Uhrzeiten (InstanceSettings.GhostSleep.GoToSleep/WakeUp) und eigenes
-			// Verhalten (Blanket-Stop ausser Expeditions/Defender statt globalem isSleeping-Flag). Bleibt
-			// technisch komplett getrennt vom manuellen Telegram-Befehl /ghost (eigener "GhostSleepTimer"
-			// in FleetScheduler.cs) - beide Mechanismen laufen unabhaengig nebeneinander her.
 			InitializeGhostSleepSchedule();
 
-			// schreibt alle 30 s sleepstatus.json fuer die Kachel im Browser (ogamed /bot/sleepstatus)
 			InitializeSleepStatusWriter();
 
-			// Up and running. Lets initialize notification for settings file
 			settingsWatcher = new SettingsFileWatcher(OnSettingsChanged, InstanceSettingsPath,
 				new[] { SettingsService.DefaultLoadDirectory + "/**/*.json", SettingsService.SecretsDirectory + "/**/*.json" });
 		}
@@ -345,7 +331,6 @@ namespace Tbot.Services {
 			}
 			discordWebhookMessenger = null;
 
-			// Deinitialize workers
 			List<Task> deInitTasks = new();
 			foreach (var worker in workers) {
 				log(LogLevel.Information, LogSender.Tbot, $"Deinitializing worker {worker.Value.GetWorkerName()}");
@@ -402,7 +387,7 @@ namespace Tbot.Services {
 
 		public async Task InitializeFeature(Feature feat) {
 			if (feat == Feature.SleepMode) {
-				return;// always enabled
+				return;
 			}
 			long dueTime = feat switch {
 				Feature.Defender => RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds),
@@ -422,7 +407,6 @@ namespace Tbot.Services {
 				_ => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds)
 			};
 
-			// Its ok to add an infinite period time, since each worker will change its period accordingly after first execution
 			if (workers.TryGetValue(feat, out var worker)) {
 				worker.RestartWorker(cts.Token, Timeout.InfiniteTimeSpan, TimeSpan.FromMilliseconds(dueTime));
 			} else {
@@ -446,7 +430,7 @@ namespace Tbot.Services {
 			if (workers.TryGetValue(feat, out var worker)) {
 				return worker.IsWorkerRunning();
 			} else if (feat == Feature.SleepMode) {
-				return true;    // Always running
+				return true;
 			} else {
 				return false;
 			}
@@ -454,7 +438,6 @@ namespace Tbot.Services {
 
 		public async Task<bool> EditSettings(Celestial celestial = null, Feature feature = Feature.Null, string recall = "", int cargo = 0) {
 			await Task.Delay(500, cts.Token);
-			// Werte werden dorthin geschrieben, wo sie stehen (Hauptdatei oder per Load eingebundene Datei in conf.d/)
 			var changes = new List<KeyValuePair<string, object>>();
 			void Set(string path, object value) => changes.Add(new KeyValuePair<string, object>(path, value));
 
@@ -511,8 +494,6 @@ namespace Tbot.Services {
 			return true;
 		}
 
-		// Telegram-Befehle haben Vorrang: kurz auf laufende Worker-Zyklen warten (Standard 20 s), danach laeuft der Befehl
-		// trotzdem. Gibt nur die Semaphoren zurueck, die wirklich erhalten wurden - nur diese werden spaeter freigegeben.
 		public async Task<List<SemaphoreSlim>> WaitFeature(TimeSpan? timeout = null) {
 			TimeSpan wait = timeout ?? TimeSpan.FromSeconds(20);
 			var semaphores = new List<SemaphoreSlim>();
@@ -520,7 +501,7 @@ namespace Tbot.Services {
 				ITBotWorker worker = _workerFactory.GetWorker(feat);
 				if (worker != null) {
 					var semaphore = worker.GetSemaphore();
-					if (!semaphores.Contains(semaphore)) // Brain-Worker teilen sich eine Semaphore
+					if (!semaphores.Contains(semaphore))
 						semaphores.Add(semaphore);
 				}
 			}
@@ -539,7 +520,6 @@ namespace Tbot.Services {
 		}
 		private DateTime _lastReloadFinished = DateTime.MinValue;
 		private async void OnSettingsChanged() {
-			// eigene Schreibvorgaenge der Kachel (Speicherwert bereits gesetzt) loesen keinen Reload aus
 			if (DateTime.UtcNow < _suppressReloadUntilUtc) {
 				log(LogLevel.Debug, LogSender.Tbot, "Settings reload suppressed (change came from the slot tile).");
 				return;
@@ -550,7 +530,6 @@ namespace Tbot.Services {
 				if (_lastReloadFinished > onSettingsLaunched) {
 					return;
 				}
-				// Erst pruefen, ob die neue Config (inkl. Load-Dateien) lesbar ist; sonst laeuft der Bot mit den alten Settings weiter
 				dynamic newSettings;
 				try {
 					newSettings = await SettingsService.GetSettings(InstanceSettingsPath);
@@ -560,7 +539,6 @@ namespace Tbot.Services {
 				}
 				log(LogLevel.Information, LogSender.Tbot, "Settings file change detected! Waiting workers to complete ongoing activities...");
 
-				// Wait on feature to be shut down
 				cts.Cancel();
 				foreach (var worker in workers) {
 					log(LogLevel.Information, LogSender.Tbot, $"Stopping feature {worker.Key.ToString()}...");
@@ -573,7 +551,6 @@ namespace Tbot.Services {
 				ConfigureDiscordWebhook();
 
 				cts = new();
-				// If wakeUp, then all features will be restored
 				await HandleSleepModeAsync(null);
 				_lastReloadFinished = DateTime.Now;
 			}
@@ -666,7 +643,6 @@ namespace Tbot.Services {
 			} finally {
 				if (cts.IsCancellationRequested) {
 					cts = new();
-					// If wakeUp, then all features will be restored
 					await HandleSleepModeAsync(null);
 				}
 				_settingsReloadSemaphore.Release();
@@ -678,7 +654,6 @@ namespace Tbot.Services {
 			await _settingsReloadSemaphore.WaitAsync();
 
 			try {
-				// Wait on feature to be shut down
 				cts.Cancel();
 				foreach (var worker in workers) {
 					log(LogLevel.Information, LogSender.Tbot, $"Stopping feature {worker.Key.ToString()}...");
@@ -699,7 +674,6 @@ namespace Tbot.Services {
 			} finally {
 				if (cts.IsCancellationRequested) {
 					cts = new();
-					// If wakeUp, then all features will be restored
 					await HandleSleepModeAsync(null);
 				}
 				_settingsReloadSemaphore.Release();
@@ -720,26 +694,11 @@ namespace Tbot.Services {
 			timers.Remove("SleepModeTimer");
 		}
 
-		// ===================== GhostSleep (Plan ) =====================
-		// Geplantes, zeitgesteuertes Aequivalent zum manuellen "/ghost Xh"-Telegram-Befehl: feste
-		// GoToSleep/WakeUp-Uhrzeiten statt Dauer. BEWUSST komplett getrennt vom manuellen /ghost
-		// (eigener "GhostSleepTimer" in FleetScheduler.cs) - kein gemeinsamer Code, keine gemeinsamen
-		// Timer/Flags, laufen unabhaengig nebeneinander. GhostSleep setzt NIE das globale
-		// userData.isSleeping (das wuerde ExpeditionsWorker.Execute()'s finally-Block lahmlegen, siehe
-		// Plan-Dokument), sondern stoppt gezielt alle Features ausser Expeditions/Defender/SleepMode.
 		private bool _ghostSleeping = false;
 		private bool? _ghostSleepPrevWaitForAllExpeditions = null;
 		private List<Feature> _ghostSleepStoppedFeatures = new();
 		private bool _ghostSleepEscalatedActive = false;
 
-		// kurz VOR dem Einschlafen sollen alle Expeditions-Slots
-		// gefuellt sein, bevor der Fleetsave die uebrigen Schiffe vom Mond mitnimmt (Expeditions-Schiffe
-		// in der Luft bleiben davon unberuehrt und kehren spaeter selbst zurueck). In der Vorphase
-		// (GhostSleep.PreSleepExpeditionMinutes vor GoToSleep, Standard 30, 0 = aus) werden
-		// WaitForAllExpeditions und WaitForMajorityOfExpeditions temporaer auf false gesetzt, damit der
-		// ExpeditionsWorker alle freien Slots sofort fuellt. Beim Einschlafen werden die Originalwerte
-		// wiederhergestellt (danach setzt Schritt 3 WaitForAll wie gehabt auf true). Gilt NUR fuer
-		// GhostSleep, nicht fuer den normalen SleepMode.
 		private bool _preSleepExpoActive = false;
 		private bool? _preSleepPrevWaitForAll = null;
 		private bool? _preSleepPrevWaitForMajority = null;
@@ -748,11 +707,10 @@ namespace Tbot.Services {
 			try {
 				return Math.Max(0, (int) InstanceSettings.GhostSleep.PreSleepExpeditionMinutes);
 			} catch {
-				return 30; // Key fehlt (aeltere Config) -> Standard
+				return 30;
 			}
 		}
 
-		// Stoesst den ExpeditionsWorker an, sofort zu laufen (statt bis zu 5 Minuten bis zum naechsten Check zu warten).
 		private void GhostSleepTriggerExpeditionsNow() {
 			try {
 				if (workers.TryGetValue(Feature.Expeditions, out var raw) && raw is ExpeditionsWorker expWorker)
@@ -764,8 +722,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Expeditions.SleepWave: {"Active": bool, "SpeedPercent": 10..100}. Returns the speed step (1-10) or 0 if the
-		// feature is off / not configured.
 		private int SleepWaveSpeedStep() {
 			try {
 				if (!SettingsService.IsSettingSet(InstanceSettings.Expeditions, "SleepWave"))
@@ -781,8 +737,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Expeditions.SleepWave.ReturnAt: optional target return time ("WakeUp", "WakeUp+15", "WakeUp-10", "HH:mm").
-		// Set = the speed/target system is calculated per expedition, SpeedPercent is only the fallback.
 		private string SleepWaveReturnAt() {
 			try {
 				if (!SettingsService.IsSettingSet(InstanceSettings.Expeditions, "SleepWave"))
@@ -801,7 +755,6 @@ namespace Tbot.Services {
 			return workers.TryGetValue(Feature.Expeditions, out var raw) ? raw as ExpeditionsWorker : null;
 		}
 
-		// Normal SleepMode: one expedition wave with the configured speed right before the fleetsave.
 		private async Task SleepWaveBeforeSleepAsync() {
 			try {
 				int step = SleepWaveSpeedStep();
@@ -834,7 +787,7 @@ namespace Tbot.Services {
 					var waveWorker = GetExpeditionsWorker();
 					waveWorker?.SetSleepWaveSpeed(waveStep);
 					waveWorker?.SetSleepWaveReturn(SleepWaveReturnAt(), (string) InstanceSettings.GhostSleep.WakeUp);
-					SleepWaveActive = true; // Bettzeit-Pruefung in SendFleet darf die Welle nicht blocken
+					SleepWaveActive = true;
 				}
 				_preSleepExpoActive = true;
 				log(LogLevel.Information, LogSender.Tbot, "GhostSleep pre-phase: expeditions are fully refilled before falling asleep (WaitForAll/WaitForMajority temporarily off).");
@@ -864,8 +817,6 @@ namespace Tbot.Services {
 			_preSleepExpoActive = false;
 		}
 
-		// Wartet kurz vor dem Fleetsave (max. 3 Minuten), bis alle Expeditions-Slots belegt sind. Fehlen am Ende
-		// welche (z.B. nicht genug Schiffe auf dem Mond), wird das gewarnt - der Fleetsave laeuft trotzdem.
 		private async Task GhostSleepExpeditionTopUpAsync() {
 			try {
 				DateTime deadline = DateTime.UtcNow.AddMinutes(3);
@@ -897,22 +848,6 @@ namespace Tbot.Services {
 			Feature.Expeditions, Feature.Defender, Feature.SleepMode
 		};
 
-		// der urspruengliche Ansatz (ein Timer, der sich per
-		// Timer.Change() nach jedem Tick selbst auf das naechst berechnete Intervall umplant - identisch
-		// zum bestehenden SleepModeTimer-Muster) hat sich als UNZUVERLAESSIG erwiesen: nach dem
-		// allerersten Tick feuerte der Timer nie wieder, weder bei einem mehrstuendigen Intervall noch
-		// (verifiziert 28.09.2026, Neustart 02:58:15, GoToSleep 3:00, immer noch nichts um 3:04) bei
-		// einem auf 3 Minuten gedeckelten. Siehe volle Herleitung in
-		// claude/ghost-recall-changeworkerduetime-bug.md - passt zum bereits bekannten
-		// "ChangeWorkerDueTime"-Bug-Muster, hier aber erstmals bei einem rohen System.Threading.Timer
-		// beobachtet, nicht nur beim WorkerBase/AsyncTimer-Wrapper. `Timer.Change()` selbst ist also
-		// offenbar in dieser Umgebung nicht zuverlaessig genug, um sich darauf zu verlassen.
-		//
-		// Fix: der Timer wird EINMALIG mit einer FESTEN Periode erstellt (60s) und `Change()` wird
-		// AB DA NIE WIEDER aufgerufen - es gibt schlicht nichts mehr umzuplanen. Jeder Tick bewertet nur
-		// noch den aktuellen Zustand (ComputeShouldBeAsleep) und wechselt bei Bedarf den Zustand; ein
-		// Uebergang wird dadurch im schlimmsten Fall bis zu 60s zu spaet erkannt, faellt aber nie mehr
-		// komplett aus. Gleichzeitig deutlich einfacher als die alte 8-Fall-Fallunterscheidung.
 		private const int GhostSleepScheduleTickMs = 60 * 1000;
 		private readonly SemaphoreSlim _ghostSleepScheduleLock = new SemaphoreSlim(1, 1);
 
@@ -934,12 +869,6 @@ namespace Tbot.Services {
 			await HandleGhostSleepScheduleAsync(state);
 		}
 
-		// Liefert true, wenn "time" (Server-Zeit) innerhalb des GhostSleep-Fensters liegt. Behandelt
-		// Mitternachts-Wraparound (goToSleep > wakeUp, z.B. 22:00 -> 6:00) genauso wie den einfachen
-		// Fall am selben Tag (goToSleep < wakeUp, z.B. 2:00 -> 10:05) - ersetzt die alte 8-Fall-
-		// Fallunterscheidung aus HandleSleepModeAsync, die hier bewusst NICHT uebernommen wurde, weil sie
-		// eigentlich nur fuer die (jetzt entfallene) Intervall-Berechnung noetig war, nicht fuer die
-		// reine Ja/Nein-Frage "bin ich gerade im Schlaffenster".
 		private static bool ComputeShouldBeAsleep(DateTime time, DateTime goToSleep, DateTime wakeUp) {
 			if (goToSleep < wakeUp) {
 				return time >= goToSleep && time < wakeUp;
@@ -949,33 +878,15 @@ namespace Tbot.Services {
 		}
 
 		private async Task HandleGhostSleepScheduleAsync(object state) {
-			// Ueberspringt diesen Tick, falls der vorherige (z.B. wegen eines langsamen GoToSleep-/
-			// WakeUp-Uebergangs mit Netzwerkaufrufen) noch laeuft - non-blocking, kein Aufstauen.
 			if (!await _ghostSleepScheduleLock.WaitAsync(0))
 				return;
 			try {
-				// der vorherige Guard rief
-				// SettingsService.IsSettingSet(InstanceSettings, "GhostSleep") auf - bisher im gesamten
-				// Codebase wird IsSettingSet aber immer nur mit einem SUB-Objekt aufgerufen (z.B.
-				// IsSettingSet(InstanceSettings.Defender, "Discord")), nie mit dem Root-Objekt selbst.
-				// Verdacht: dieser Root-Level-Aufruf verhaelt sich anders/liefert immer false, wodurch
-				// hier bei JEDEM 60s-Tick still und ohne jedes Log returned wurde (verifiziert: mehrere
-				// Testlaeufe mit Active=true, korrekt konfiguriertem GoToSleep/WakeUp, trotzdem ausser
-				// der Start-Zeile absolut kein GhostSleep-Log-Eintrag, auch mit dem festen 60s-Timer aus
-				// v2). Ersetzt durch einen direkten try/catch-Zugriff, der ohnehin schon fuer "Active"
-				// noetig ist und robust genug ist, ein komplett fehlendes GhostSleep-Objekt abzufangen.
-				// die bisherige v3/v4-Diagnose loggte
-				// bei JEDEM 60s-Tick Rohwert+Typ von GhostSleep.Active auf Info-Level, unabhaengig vom
-				// Ergebnis - eingebaut, um den (mittlerweile gefundenen und behobenen) "GhostSleep faelschlich
-				// unter SleepMode verschachtelt"-Bug zu diagnostizieren (siehe ghostsleep-plan-adr.md,
-				// WakeUp-Uebergang 28.09. 04:00:57 im Log bestaetigt). Ab jetzt nur noch bei einem
-				// tatsaechlichen Lese-/Cast-Fehler geloggt (Warning), nicht mehr bei jedem erfolgreichen Tick.
 				bool active = false;
 				try {
 					active = (bool) InstanceSettings.GhostSleep.Active;
 				} catch (Exception ex) {
 					object rawActive = null;
-					try { rawActive = InstanceSettings.GhostSleep.Active; } catch { /* bleibt null */ }
+					try { rawActive = InstanceSettings.GhostSleep.Active; } catch {  }
 					log(LogLevel.Warning, LogSender.Tbot,
 						$"GhostSleep: could not read/cast Active (raw={(rawActive?.ToString() ?? "null")}, type {(rawActive?.GetType().FullName ?? "null")}): {ex.Message}");
 				}
@@ -1000,8 +911,6 @@ namespace Tbot.Services {
 				DateTime time = await _tbotOgameBridge.GetDateTime();
 				bool shouldBeAsleep = ComputeShouldBeAsleep(time, goToSleep, wakeUp);
 
-				// Vorphase: innerhalb von PreSleepExpeditionMinutes vor GoToSleep (Tageszeit-Vergleich, damit auch
-				// ueber Mitternacht korrekt).
 				int preMinutes = GhostSleepPreSleepMinutes();
 				double minutesUntilSleep = (goToSleep.TimeOfDay - time.TimeOfDay).TotalMinutes;
 				if (minutesUntilSleep < 0)
@@ -1019,7 +928,6 @@ namespace Tbot.Services {
 				} else if (!shouldBeAsleep && _ghostSleeping) {
 					await GhostSleepWakeUpAsync(goToSleep);
 				}
-				// sonst: Zustand stimmt bereits - naechster Tick (spaetestens in 60s) prueft erneut.
 			} catch (Exception e) {
 				log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: An error has occurred while handling the schedule: {e.Message}");
 				log(LogLevel.Warning, LogSender.Tbot, $"Stacktrace: {e.StackTrace}");
@@ -1028,12 +936,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// GoToSleep-Uebergang (siehe Plan, Abschnitt "Ablauf bei GhostSleep-Start"):
-		// 1) Fleetsave vom Heimatmond, 2) Blanket-Stop aller Features ausser Expeditions/Defender/SleepMode,
-		// 3) Expeditions.WaitForAllExpeditions auf true erzwingen (nativer Batch-Rhythmus),
-		// 4) Defender auf PASSIV + ersten zufaelligen Anker aus den gerade laufenden Expeditionsrueckkehrern.
-		// Offener Punkt aus dem Plan (Nr. 1): kein Pre-Check auf laufenden Angriff vor dem Start - das
-		// Fleetsave in Schritt 1 deckt das Risiko ausreichend ab, siehe Plan-Dokument.
 		private async Task GhostSleepGoToSleepAsync(DateTime? wakeUpEta) {
 			try {
 				_ghostSleeping = true;
@@ -1041,33 +943,11 @@ namespace Tbot.Services {
 				if (wakeUpEta.HasValue)
 					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: next schedule check/wake-up window at {wakeUpEta.Value.ToString()}");
 
-				// 0) Vorphase abschliessen: Expeditions-Slots auffuellen, dann Originaleinstellungen zurueck
-				// (Schritt 3 unten setzt WaitForAll danach wie gehabt auf true).
 				if (_preSleepExpoActive) {
 					await GhostSleepExpeditionTopUpAsync();
 					GhostSleepPreSleepRestore("falling asleep");
 				}
 
-				// 1) Fleetsave ALLER Celestials (dieselbe Methode, die DefenderWorker fuer Angriffs-Fleetsaves
-				// nutzt). PATCH GhostSleep (konfigurierbare Prioritaets-Include-Liste, 28.09.2026 - Nutzer-
-				// Vorgabe: "heimatmond und planet sollten IMMER bei jedem save rausgehn", danach generalisiert
-				// zu einer Config-Liste statt nur einer festen Koordinate): Origin
-				// (InstanceSettings.Brain.Transports.Origin - dasselbe explizit konfigurierte Home-Celestial,
-				// das an anderer Stelle im Code bereits als kanonisches "Zuhause" verwendet wird, siehe
-				// TelegramGetCurrentCelestial()) bleibt automatisch immer priorisiert. Zusaetzlich kann der
-				// Nutzer beliebig viele weitere G:S:P-Koordinaten ueber den neuen, optionalen Config-Key
-				// InstanceSettings.GhostSleep.PriorityFleetsaveCelestials hinterlegen (Array von
-				// {"Galaxy":.., "System":.., "Position":..}) - an JEDER dieser Koordinaten werden automatisch
-				// BEIDE dort vorhandenen Celestials (Mond UND Planet, falls beide existieren) IMMER zuerst
-				// gefleetsaved, unabhaengig vom jeweils konfigurierten Type. Aeltere Configs ohne diesen Key
-				// verhalten sich unveraendert (nur Origin-Paar priorisiert). Danach ALLE uebrigen Celestials
-				// der Reihe nach - AutoFleetSave() ist laut den Kommentaren in FleetScheduler.cs bereits ein
-				// sicherer No-Op, wenn ein Celestial keine Flotte zum Verschicken hat (loggt nur, tut sonst
-				// nichts), Kolonien ohne stationierte Flotte kosten also nur einen billigen API-Call, keinen
-				// verschwendeten Flottenslot. Jeder Celestial einzeln try/catch-abgesichert, damit ein
-				// Fehlschlag bei einem die uebrigen nicht verhindert. Bewusst unconditional (wie schon zuvor) -
-				// ignoriert Defender.Autofleet.Active, das nur die ANGRIFFS-Fleetsave-Logik in DefenderWorker
-				// steuert, nicht GhostSleep.
 				List<(int Galaxy, int System, int Position)> priorityCoords = new();
 				try {
 					int originGalaxy = (int) InstanceSettings.Brain.Transports.Origin.Galaxy;
@@ -1093,8 +973,6 @@ namespace Tbot.Services {
 						}
 					}
 				} catch {
-					// GhostSleep.PriorityFleetsaveCelestials nicht konfiguriert (aeltere Config-Datei) - kein
-					// Fehler, es zaehlt dann einfach nur die Origin-Koordinate oben als Prioritaet.
 				}
 
 				var allCelestials = userData.celestials.Unique().ToList();
@@ -1103,7 +981,7 @@ namespace Tbot.Services {
 					var atCoord = allCelestials
 						.Where(c => c.Coordinate.Galaxy == g && c.Coordinate.System == s && c.Coordinate.Position == p)
 						.Where(c => c.Coordinate.Type == Celestials.Moon || c.Coordinate.Type == Celestials.Planet)
-						.OrderBy(c => c.Coordinate.Type == Celestials.Moon ? 0 : 1) // Mond zuerst, dann Planet - reine Log-Kosmetik
+						.OrderBy(c => c.Coordinate.Type == Celestials.Moon ? 0 : 1)
 						.ToList();
 					if (atCoord.Count == 0) {
 						log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: no moon/planet found at prioritized coordinate {g}:{s}:{p}.");
@@ -1121,15 +999,6 @@ namespace Tbot.Services {
 				foreach (var celestial in orderedCelestials) {
 					try {
 						if (celestial.Coordinate.Type == Celestials.Planet) {
-							// Planeten sind phalanxbar - wenn ALLE eigenen
-							// Celestials im selben Moment eine Fleetsave-Flotte verschicken, ist schon
-							// der SENDEZEITPUNKT selbst ein erkennbares Bulk-Muster (unabhaengig von der
-							// unterschiedlichen Speed aus GetFleetSaveDestination). Planeten-Fleetsave
-							// laeuft deshalb als Fire-and-Forget-Task mit 0-20 Minuten Zufalls-Delay -
-							// Monde (nicht phalanxbar) speichern weiterhin sofort, und der Rest von
-							// GhostSleep (Feature-Stop, Defender-PASSIV unten) wartet nicht auf die
-							// verzoegerten Planeten. Eigenes try/catch im Task, damit ein Fehlschlag
-							// hier nicht mit der aeusseren Schleife kollidiert bzw. verloren geht.
 							Celestial planetSnapshot = celestial;
 							int delayMs = new Random().Next(0, 20 * 60 * 1000 + 1);
 							_ = Task.Run(async () => {
@@ -1151,14 +1020,12 @@ namespace Tbot.Services {
 					}
 				}
 
-				// 2) Blanket-Stop: alle Features ausser Expeditions/Defender/SleepMode
 				_ghostSleepStoppedFeatures = Features.AllFeatures.Where(f => !GhostSleepNeverStopFeatures.Contains(f)).ToList();
 				foreach (var feat in _ghostSleepStoppedFeatures) {
 					await StopFeature(feat);
 				}
 				log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: {_ghostSleepStoppedFeatures.Count} feature(s) stopped, Expeditions and Defender keep running.");
 
-				// 3) Expeditions.WaitForAllExpeditions temporaer erzwingen
 				try {
 					_ghostSleepPrevWaitForAllExpeditions = (bool) InstanceSettings.Expeditions.WaitForAllExpeditions;
 					InstanceSettings.Expeditions.WaitForAllExpeditions = true;
@@ -1167,7 +1034,6 @@ namespace Tbot.Services {
 					log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: could not set Expeditions.WaitForAllExpeditions: {e.Message}");
 				}
 
-				// 4) Defender auf PASSIV, erster zufaelliger Anker aus aktuell laufenden Expeditionsrueckkehrern
 				_ghostSleepEscalatedActive = false;
 				SetDefenderGhostSleepPassive(true);
 				RearmGhostSleepDefenderAnchor();
@@ -1177,11 +1043,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// WakeUp-Uebergang: wartet bis das aktuelle Expeditions-Batch komplett zurueck ist PLUS 10-15min
-		// Puffer, dann alle zuvor gestoppten Features wieder starten und Expeditions/Defender-Zustand
-		// zuruecksetzen. Aus dem regulaeren Schedule-Check heraus (Zeitfenster vorbei) oder von aussen
-		// (Settings-Reload/Profilwechsel wuerde GhostSleep sonst inkonsistent stehen lassen - siehe Aufruf
-		// in HandleGhostSleepScheduleAsync).
 		private async Task GhostSleepWakeUpAsync(DateTime? nextGoToSleepEta) {
 			try {
 				log(LogLevel.Information, LogSender.Tbot, "GhostSleep: Waking up...");
@@ -1192,12 +1053,7 @@ namespace Tbot.Services {
 					var returningExpeditions = userData.fleets.Where(f => f.Mission == Missions.Expedition && f.ReturnFlight).ToList();
 					if (runningExpeditions.Count > 0 || returningExpeditions.Count > 0) {
 						double maxBackIn = returningExpeditions.Count > 0 ? returningExpeditions.Max(f => f.BackIn ?? 0) : 0;
-						// ArriveIn ist (anders als BackIn) nicht nullable in diesem
-						// Codebase (siehe z.B. GoToSleepAsync oben: "f.ArriveIn <= timeToWakeup" ohne ??) -
-						// "?? 0" darauf war ein Compile-Error (CS0019).
-						double maxArriveThenBack = runningExpeditions.Count > 0 ? runningExpeditions.Max(f => (double) f.ArriveIn + 3600) : 0; // grobe Schaetzung falls noch keine Rueckflugdaten
-						// IntervalType kennt kein "SomeMinutes" (CS0117) - AMinuteOrTwo
-						// ist der naechstliegende bereits vorhandene Wert fuer diesen Zweck.
+						double maxArriveThenBack = runningExpeditions.Count > 0 ? runningExpeditions.Max(f => (double) f.ArriveIn + 3600) : 0;
 						long waitMs = (long) (Math.Max(maxBackIn, maxArriveThenBack) * 1000) + RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo) + 10 * 60 * 1000;
 						if (waitMs > 0) {
 							log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: still waiting {TimeSpan.FromMilliseconds(waitMs)} for the current expedition batch to return (+ buffer) before features are restarted.");
@@ -1208,7 +1064,6 @@ namespace Tbot.Services {
 					log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: waiting for the expeditions to return before waking up failed, continuing anyway: {e.Message}");
 				}
 
-				// Defender wieder in den normalen Takt, Expeditions-Setting zuruecksetzen
 				SetDefenderGhostSleepPassive(false);
 				_ghostSleepEscalatedActive = false;
 				if (_ghostSleepPrevWaitForAllExpeditions.HasValue) {
@@ -1220,7 +1075,6 @@ namespace Tbot.Services {
 					_ghostSleepPrevWaitForAllExpeditions = null;
 				}
 
-				// Alle zuvor gestoppten Features wieder starten
 				foreach (var feat in _ghostSleepStoppedFeatures) {
 					await InitializeFeature(feat);
 				}
@@ -1235,10 +1089,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Waehlt aus den aktuell laufenden/rueckkehrenden Expeditionsflotten EINE zufaellige als neuen
-		// Weck-Anker fuer Defender und plant den Defender-Worker per ChangeWorkerPeriod exakt dorthin um
-		// (bewusst NICHT ChangeWorkerDueTime - siehe ghost-recall-changeworkerduetime-bug.md; der Worker
-		// bleibt dieselbe laufende Instanz, es wird nur seine naechste Ausfuehrung verschoben).
 		private void RearmGhostSleepDefenderAnchor() {
 			try {
 				if (!workers.TryGetValue(Feature.Defender, out var defenderWorkerRaw) || defenderWorkerRaw is not DefenderWorker defenderWorker) {
@@ -1253,12 +1103,9 @@ namespace Tbot.Services {
 				DateTime anchorUtc;
 				if (candidates.Count > 0) {
 					var chosen = candidates[new Random().Next(candidates.Count)];
-					// kleiner Vorlauf, damit Defender VOR der Landung schon einen Check macht, nicht erst danach
 					anchorUtc = DateTime.UtcNow.AddSeconds(Math.Max(0, (chosen.BackIn ?? 0) - 60));
 					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: next Defender PASSIVE wake anchor on fleet {chosen.ID} (return in {chosen.BackIn}s) - check at {anchorUtc.ToLocalTime()}.");
 				} else {
-					// Keine rueckkehrende Expedition bekannt (z.B. gerade erst verschickt) - Standard-Fallback,
-					// verhindert dauerhaftes Schlafen ohne jeden Check.
 					anchorUtc = DateTime.UtcNow.AddMinutes(30);
 					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: no returning expedition known, fallback check at {anchorUtc.ToLocalTime()}.");
 				}
@@ -1273,15 +1120,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// oeffentlicher Wrapper um die private
-		// RearmGhostSleepDefenderAnchor(), damit DefenderWorker (ueber ITBotMain) selbst um einen frischen
-		// Anker bitten kann, sobald der zuletzt gesetzte GhostSleepNextAnchorUtc erreicht/ueberschritten ist.
-		// Ohne diesen Aufruf blieb der Anker fuer immer auf dem alten, jetzt vergangenen Wert stehen - jeder
-		// weitere Execute()-Zyklus in DefenderWorker berechnete daraus ein negatives, auf 1000ms gedecktes
-		// Intervall und der Worker feuerte praktisch im Sekundentakt weiter (Log-Spam "GhostSleep PASSIV:
-		// naechster kurzer Wach-Check um <alter, laengst verstrichener Zeitpunkt>", siehe
-		// ghostsleep-plan-adr.md). No-Op, wenn GhostSleep gerade gar nicht laeuft (RearmGhostSleepDefenderAnchor
-		// selbst faengt "kein Defender-Worker gefunden" bereits ab).
 		public void GhostSleepRearmDefenderAnchor() {
 			RearmGhostSleepDefenderAnchor();
 		}
@@ -1294,9 +1132,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Von DefenderWorker aufgerufen (HandleAttack), wenn waehrend GhostSleep-PASSIV ein echter Angriff
-		// erkannt wird (active=true, Eskalation - siehe Plan) bzw. wenn keine Angriffswelle mehr aussteht
-		// (active=false, Deeskalation zurueck auf PASSIV mit neuem Anker).
 		public async void GhostSleepEscalate(bool active) {
 			if (!_ghostSleeping)
 				return;
@@ -1327,12 +1162,6 @@ namespace Tbot.Services {
 				log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: error during escalation (active={active}): {e.Message}");
 			}
 		}
-		// =================== Angriffs-Lockdown ===================
-		// Sobald der Defender einen Angriff erkannt und ein Fleetsave registriert hat, laufen ALLE anderen
-		// Worker nicht mehr (auch Expeditions): der Fleetsave hat hoechste Prioritaet - keine konkurrierenden
-		// Flottenslots, kein AutoFarm/Expedition, das Flotten vom angegriffenen Himmelskoerper abzieht. Der
-		// Defender selbst bleibt IMMER an (wird bei Bedarf sogar neu gestartet). Nach Ende der Angriffswelle
-		// (DefenderWorker: keine offenen Fleetsaves mehr) werden genau die Worker wieder gestartet, die zuvor liefen.
 		private readonly SemaphoreSlim _attackLockdownLock = new SemaphoreSlim(1, 1);
 		private bool _attackLockdownActive = false;
 		private List<Feature> _attackLockdownStoppedFeatures = new();
@@ -1345,7 +1174,6 @@ namespace Tbot.Services {
 						return;
 					_attackLockdownActive = true;
 
-					// Defender darf nie ausgehen
 					if (!IsFeatureRunning(Feature.Defender))
 						await InitializeFeature(Feature.Defender);
 
@@ -1369,7 +1197,6 @@ namespace Tbot.Services {
 					_attackLockdownStoppedFeatures = new();
 					int restarted = 0;
 					foreach (var feat in toRestart) {
-						// Waehrend GhostSleep bleiben dessen gestoppte Features weiterhin aus
 						if (_ghostSleeping && _ghostSleepStoppedFeatures.Contains(feat))
 							continue;
 						try {
@@ -1387,7 +1214,6 @@ namespace Tbot.Services {
 				_attackLockdownLock.Release();
 			}
 		}
-		// =================== Ende GhostSleep ===================
 
 		public void RemoveTelegramMessenger() {
 			if (telegramMessenger != null) {
@@ -1396,9 +1222,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// every Telegram message is also sent to the global Discord webhook
-		// (DiscordWebhook.Active). mirrorToDiscord=false is used by callers that already send their own
-		// Discord alert (DefenderWorker) to avoid duplicates.
 		public async Task SendTelegramMessage(string fmt, bool mirrorToDiscord = true) {
 			string finalStr = $"<code>[{userData?.userInfo?.PlayerName ?? "Unknown"}@{userData?.serverData?.Name ?? "Unknown"}]</code>\n" + fmt;
 			if (telegramMessenger != null)
@@ -1407,8 +1230,6 @@ namespace Tbot.Services {
 				await SendDiscordInternal(finalStr, NotificationKind.Information);
 		}
 
-		// Sends only to the global Discord webhook (no Telegram). Returns false if the webhook is
-		// not configured/active, so callers can fall back to something else.
 		public async Task<bool> SendDiscordMessage(string fmt, NotificationKind kind = NotificationKind.Information) {
 			if (discordWebhookMessenger == null)
 				return false;
@@ -1507,9 +1328,6 @@ namespace Tbot.Services {
 
 
 		public async Task TelegramCollect(bool noLimit = false) {
-			// this was previously "void" and the async Collect() call was fired-and-forgotten
-			// (never awaited), so /collect and /collectall appeared unresponsive: the method returned
-			// immediately, before the repatriate cycle - and its Telegram result message - ever ran.
 			await SendTelegramMessage("Collecting...");
 			await _fleetScheduler.Collect(noLimit);
 		}
@@ -1643,9 +1461,6 @@ namespace Tbot.Services {
 			return;
 		}
 
-		// Telegram /debrissave <Dauer> [x:y:z[:planet|moon]]: Flotte(n) immer mit 10 % Speed zum naechsten Truemmerfeld,
-		// Rueckruf nach der halben Dauer (Rueckkehr ca. nach <Dauer>). Ohne Koordinate: alle Himmelskoerper aus
-		// DebrisSave.Celestials der Config (Array von { Galaxy, System, Position, Type? }).
 		public async Task TelegramDebrisSave(long durationSeconds, Coordinate specific) {
 			var all = userData.celestials.Unique().ToList();
 			List<Celestial> targets = new();
@@ -1655,7 +1470,7 @@ namespace Tbot.Services {
 					.Where(c => c.Coordinate.Galaxy == g && c.Coordinate.System == sys && c.Coordinate.Position == pos)
 					.Where(c => c.Coordinate.Type == Celestials.Moon || c.Coordinate.Type == Celestials.Planet)
 					.Where(c => type == null || c.Coordinate.Type == type)
-					.OrderBy(c => c.Coordinate.Type == Celestials.Moon ? 0 : 1) // Mond zuerst
+					.OrderBy(c => c.Coordinate.Type == Celestials.Moon ? 0 : 1)
 					.FirstOrDefault();
 				if (match == null)
 					log(LogLevel.Warning, LogSender.Tbot, $"[DebrisSave] no celestial found at {g}:{sys}:{pos}.");
@@ -1709,7 +1524,7 @@ namespace Tbot.Services {
 			if (attacked == null) {
 				celestial = await TelegramGetCurrentCelestial();
 			} else {
-				celestial = attacked; //for autofleetsave func when under attack, last option if no other destination found.
+				celestial = attacked;
 			}
 
 			if (celestial.Coordinate.Type == Celestials.Planet) {
@@ -1754,11 +1569,6 @@ namespace Tbot.Services {
 			FleetPrediction fleetPrediction = _helpersService.CalcFleetPrediction(celestial.Coordinate, dest, celestial.Ships, Missions.Deploy, speed, userData.researches, userData.serverData, celestial.LFBonuses, userData.userInfo.Class, userData.allianceClass);
 			int fleetId = await _fleetScheduler.SendFleet(celestial, celestial.Ships, dest, Missions.Deploy, speed, payload, userData.userInfo.Class, true);
 
-			// De Morgan bug - "!=" combined with "||" was always true (fleetId can never equal
-			// more than one of these codes at once, so at least one "!=" is always true), meaning even a
-			// failed SendFleet was reported as a successful switch. This matters here in particular because
-			// TelegramSwitch is also used as the AutoFleetSave fallback in FleetScheduler.cs (~line 395),
-			// where a false-positive AlreadySent=true could suppress the "you gonna get hit" warning.
 			if (fleetId != (int) SendFleetCode.GenericError &&
 				fleetId != (int) SendFleetCode.AfterSleepTime &&
 				fleetId != (int) SendFleetCode.NotEnoughSlots) {
@@ -1774,7 +1584,6 @@ namespace Tbot.Services {
 		public async void TelegramSetCurrentCelestial(Coordinate coord, string celestialType, Feature updateType = Feature.Null, bool editsettings = false) {
 			userData.celestials = await _tbotOgameBridge.UpdateCelestials();
 
-			//check if no error in submitted celestial (belongs to the current player)
 			telegramUserData.CurrentCelestial = userData.celestials
 				.Unique()
 				.Where(c => c.Coordinate.Galaxy == (int) coord.Galaxy)
@@ -1846,13 +1655,6 @@ namespace Tbot.Services {
 			await _fleetScheduler.CollectDeut(MinAmount);
 		}
 
-		// /trans <speed> - bulk version of /switch. From every Planet that has its own Moon,
-		// deploy Brain.AutoCargo.CargoType ships plus Deuterium to that Moon, topping each Moon up to
-		// two target values: Brain.AutoCargo.MaxCargosToKeep ships and Brain.Transports.DeutToLeaveOnMoons
-		// Deuterium. Only the missing difference is sent (capped by what's available on the Planet); a
-		// Moon already at both targets is skipped, and a Moon with enough ships but not enough Deuterium
-		// is also skipped (no ships available to carry the top-up, and we don't send extra ships purely
-		// to ferry Deuterium).
 		public async Task TelegramTransportToMoon(decimal speed) {
 			Buildables cargoType = Buildables.LargeCargo;
 			if (!Enum.TryParse<Buildables>((string) InstanceSettings.Brain.AutoCargo.CargoType, true, out cargoType)) {
@@ -1947,25 +1749,9 @@ namespace Tbot.Services {
 			await SendTelegramMessage($"Going to sleep, Waking Up at {WakeUpTime.ToString()}");
 			log(LogLevel.Information, LogSender.SleepMode, $"Going to sleep..., Waking Up at {WakeUpTime.ToString()}");
 			if (userData.isSleeping == false) {
-				/* remove?
-				if (
-					SettingsService.IsSettingSet(InstanceSettings, "SleepMode") &&
-					SettingsService.IsSettingSet(InstanceSettings.SleepMode, "LogoutOnSleep") &&
-					(bool) InstanceSettings.SleepMode.LogoutOnSleep
-				) {
-					loggedIn = false;
-					await _ogameService.Logout();
-					log(LogLevel.Information, LogSender.SleepMode, $"Logged out from ogamed.");
-				}
-				*/
 				userData.isSleeping = true;
 			}
 		}
-		// ===== PATCH Sleep-Statuskachel (03.10.2026) =====
-		// Schreibt alle 30 s /home/tbot/tbot/sleepstatus.json (neben TBot.dll). ogamed liefert die Datei unter
-		// /bot/sleepstatus aus, die Kachel unter dem "Manual mode"-Button im Browser liest sie.
-		// Alle Zeiten sind Spielzeit (Server-Zeit); Restsekunden werden beim Schreiben berechnet, der Browser
-		// zaehlt anhand updatedMs weiter - so gibt es keine Zeitzonen-Probleme.
 		private const int SleepStatusTickMs = 30 * 1000;
 
 		private void InitializeSleepStatusWriter() {
@@ -1975,7 +1761,6 @@ namespace Tbot.Services {
 			}
 			timers.Add("SleepStatusTimer", new Timer(HandleSleepStatusWrite, null, 5000, SleepStatusTickMs));
 
-			// alle 3 s nach Befehlsdateien (slotcmd_*.json) von ogamed suchen
 			if (timers.TryGetValue("SlotCmdTimer", out Timer oldCmd)) {
 				oldCmd.Dispose();
 				timers.Remove("SlotCmdTimer");
@@ -1983,15 +1768,9 @@ namespace Tbot.Services {
 			timers.Add("SlotCmdTimer", new Timer(HandleSlotCmd, null, 7000, 3000));
 		}
 
-		// ===== PATCH Slot-Kachel (08.10.2026) =====
-		// Die Kachel im Browser zeigt belegte/freie Slots und erlaubt, Slot-Limits live zu aendern.
-		// ogamed schreibt dafuer eine Datei slotcmd_<zeit>.json ({"key":..,"value":..}) neben die Binary;
-		// hier wird sie ausgewertet, im laufenden Speicher UND in instance_settings.json gesetzt.
-		// Der Datei-Watcher wuerde sonst einen kompletten Worker-Neustart ausloesen -> kurzes Sperrfenster.
 		private DateTime _suppressReloadUntilUtc = DateTime.MinValue;
 		private int _slotCmdBusy = 0;
 
-		// erlaubte Schluessel (Whitelist) -> Pfad in der Config
 		private static readonly Dictionary<string, string> SlotCmdPaths = new() {
 			{ "leaveFree", "General.SlotsToLeaveFree" },
 			{ "autofarm", "AutoFarm.MaxSlots" },
@@ -2006,7 +1785,6 @@ namespace Tbot.Services {
 			{ "p_brain", "General.SlotPriorityLevel.Brain" }
 		};
 
-		// Worker-Schalter der Slot-Kachel: Schluessel -> Config-Pfad (Active-Flag)
 		private static readonly Dictionary<string, string> WorkerTogglePaths = new() {
 			{ "w_autofarm", "AutoFarm.Active" },
 			{ "w_expeditions", "Expeditions.Active" },
@@ -2015,7 +1793,6 @@ namespace Tbot.Services {
 			{ "w_brain", "Brain.Active" }
 		};
 
-		// Zu einem Schalter gehoerende Features (Brain = alle Brain*-Features)
 		private static List<Feature> FeaturesForToggle(string key) {
 			switch (key) {
 				case "w_autofarm": return new List<Feature> { Feature.AutoFarm };
@@ -2027,8 +1804,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Liest einen Bool-Wert aus den laufenden Settings (null, wenn nicht lesbar).
-		// InstanceSettings ist kein JToken, daher ueber dynamic (wie im Rest des Codes).
 		private bool? ReadBoolSetting(string path) {
 			try {
 				switch (path) {
@@ -2044,7 +1819,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Setzt einen Bool-Wert im laufenden Speicher (true bei Erfolg)
 		private bool SetBoolSettingInMemory(string path, bool v) {
 			try {
 				switch (path) {
@@ -2061,7 +1835,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Setzt einen Int-Wert im laufenden Speicher (true bei Erfolg)
 		private bool SetIntSettingInMemory(string path, int v) {
 			try {
 				switch (path) {
@@ -2084,7 +1857,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Liest einen Int-Wert aus den laufenden Settings (null, wenn nicht lesbar)
 		private int? ReadIntSetting(string path) {
 			try {
 				switch (path) {
@@ -2143,7 +1915,6 @@ namespace Tbot.Services {
 			int? old = ReadIntSetting(path);
 			bool inMemory = SetIntSettingInMemory(path, value);
 
-			// In die Config-Datei schreiben; bei erfolgreichem Speicher-Update den Reload (alle Worker neu) unterdruecken
 			if (inMemory)
 				_suppressReloadUntilUtc = DateTime.UtcNow.AddSeconds(10);
 			try {
@@ -2156,9 +1927,6 @@ namespace Tbot.Services {
 
 			try { await WriteSleepStatusAsync(); } catch { }
 		}
-		// Schaltet einen Worker live an/aus: Active-Flag in Speicher + Config setzen (ohne Reload) und das
-		// Feature sofort starten bzw. stoppen. Waehrend Sleep/GhostSleep/Angriffs-Lockdown wird nur das Flag
-		// gesetzt - die jeweilige Wiederaufnahme startet den Worker dann gemaess Config.
 		private async Task ApplyWorkerToggleAsync(string key, bool on) {
 			string path = WorkerTogglePaths[key];
 			bool? old = ReadBoolSetting(path);
@@ -2179,14 +1947,13 @@ namespace Tbot.Services {
 				foreach (Feature feat in FeaturesForToggle(key)) {
 					if (on) {
 						if (_attackLockdownActive && !_attackLockdownStoppedFeatures.Contains(feat))
-							_attackLockdownStoppedFeatures.Add(feat); // nach dem Lockdown mitstarten
+							_attackLockdownStoppedFeatures.Add(feat);
 						if (pausiert || (_ghostSleeping && _ghostSleepStoppedFeatures.Contains(feat))) {
 							hinweis = " (starts only after sleep/lockdown)";
 							continue;
 						}
 						try { await InitializeFeature(feat); } catch (Exception e) { log(LogLevel.Warning, LogSender.Tbot, $"Slot tile: {feat} could not be started: {e.Message}"); }
 					} else {
-						// Stoppen im Hintergrund: ein laufender Zyklus soll die Kachel nicht blockieren
 						Feature f2 = feat;
 						_ = Task.Run(async () => {
 							try { await StopFeature(f2); } catch (Exception e) { log(LogLevel.Warning, LogSender.Tbot, $"Slot tile: {f2} could not be stopped: {e.Message}"); }
@@ -2198,7 +1965,6 @@ namespace Tbot.Services {
 
 			try { await WriteSleepStatusAsync(); } catch { }
 		}
-		// ===== Ende PATCH Slot-Kachel =====
 
 		private async void HandleSleepStatusWrite(object state) {
 			try {
@@ -2208,7 +1974,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Liest GoToSleep/WakeUp des aktiven Schlafmodus (ghost=true -> GhostSleep, sonst SleepMode).
 		private bool ReadSleepSchedule(bool ghost, out DateTime goToSleep, out DateTime wakeUp) {
 			goToSleep = default;
 			wakeUp = default;
@@ -2222,7 +1987,6 @@ namespace Tbot.Services {
 			}
 		}
 
-		// Sekunden bis zur naechsten Uhrzeit (heute oder morgen) relativ zur Spielzeit.
 		private static double SecondsUntilNext(DateTime nowGame, DateTime timeOfDay) {
 			DateTime next = nowGame.Date.Add(timeOfDay.TimeOfDay);
 			if (next <= nowGame)
@@ -2230,7 +1994,6 @@ namespace Tbot.Services {
 			return (next - nowGame).TotalSeconds;
 		}
 
-		// --- Angriffs-Snapshot fuer die Statuskachel (vom DefenderWorker nach jedem Check veroeffentlicht) ---
 		private readonly object _attackSnapshotLock = new();
 		private List<AttackerFleet> _attackSnapshot = new();
 		private DateTime _attackSnapshotFetchedUtc = DateTime.MinValue;
@@ -2240,7 +2003,6 @@ namespace Tbot.Services {
 				_attackSnapshot = attacks?.Where(a => a != null).ToList() ?? new List<AttackerFleet>();
 				_attackSnapshotFetchedUtc = fetchedUtc;
 			}
-			// Datei sofort aktualisieren, damit die Kachel nicht bis zum naechsten 30-s-Tick wartet
 			_ = Task.Run(async () => {
 				try { await WriteSleepStatusAsync(); } catch { }
 			});
@@ -2258,8 +2020,6 @@ namespace Tbot.Services {
 			bool normal = userData != null && userData.isSleeping;
 			bool sleeping = ghost || normal;
 
-			// Offene Recalls aus der Pending-Recall-Datei (gleicher Pfad wie FleetScheduler). RecallAtUtc enthaelt
-			// in Wahrheit Spielzeit - deshalb nur die ersten 19 Zeichen (ohne Offset/Z) parsen.
 			var recalls = new List<object>();
 			int more = 0;
 			try {
@@ -2277,7 +2037,7 @@ namespace Tbot.Services {
 						if (!DateTime.TryParse(raw.Substring(0, 19), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime at))
 							continue;
 						if (at < gameNow.AddMinutes(-10))
-							continue; // lange ueberfaellig/veraltet -> nicht anzeigen
+							continue;
 						list.Add((at, (string) e["OriginCoordinate"] ?? "?"));
 					}
 					list = list.OrderBy(x => x.at).ToList();
@@ -2289,8 +2049,6 @@ namespace Tbot.Services {
 				log(LogLevel.Debug, LogSender.Tbot, $"Pending recalls for the status tile not readable: {e.Message}");
 			}
 
-			// Eingehende ECHTE Angriffe (Attack, ACS-Angriff, Mondzerstoerung, Raketen) - Spionage wird bewusst ausgelassen.
-			// Restzeit = ArriveIn zum Abrufzeitpunkt minus seither vergangene Zeit; Eintraege nach Einschlag fallen raus.
 			var attacks = new List<object>();
 			int attacksMore = 0;
 			try {
@@ -2319,7 +2077,6 @@ namespace Tbot.Services {
 				log(LogLevel.Debug, LogSender.Tbot, $"Attacks for the status tile not readable: {e.Message}");
 			}
 
-			// Aufwachzeit (wenn schlafend) bzw. Zeit bis zum naechsten Schlafengehen (wenn wach)
 			long? wakeInSec = null;
 			long? sleepInSec = null;
 			if (sleeping) {
@@ -2335,7 +2092,6 @@ namespace Tbot.Services {
 					sleepInSec = (long) best;
 			}
 
-			// Slot-Belegung und Limits fuer die Slot-Kachel
 			object slotsInfo = null;
 			try {
 				var sl = userData?.slots;
@@ -2366,7 +2122,6 @@ namespace Tbot.Services {
 				exp = ReadIntSetting("Expeditions.MaxExpeditionsPerOrigin")
 			};
 
-			// Slot-Prioritaeten (General.SlotPriorityLevel; kleiner = wichtiger) fuer die Worker-Zeilen der Kachel
 			var priorities = new {
 				autofarm = ReadIntSetting("General.SlotPriorityLevel.AutoFarm"),
 				expeditions = ReadIntSetting("General.SlotPriorityLevel.Expeditions"),
@@ -2400,13 +2155,11 @@ namespace Tbot.Services {
 				updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			};
 
-			// atomar schreiben (tmp + Move), damit ogamed nie eine halbe Datei liest
 			string target = Path.Combine(AppContext.BaseDirectory, "sleepstatus.json");
 			string tmp = target + ".tmp";
 			File.WriteAllText(tmp, Newtonsoft.Json.JsonConvert.SerializeObject(payload));
 			File.Move(tmp, target, true);
 		}
-		// ===== Ende PATCH Sleep-Statuskachel =====
 
 		private async void HandleSleepMode(object state) {
 			await HandleSleepModeAsync(state);
@@ -2438,9 +2191,6 @@ namespace Tbot.Services {
 					if (time >= goToSleep) {
 						if (time >= wakeUp) {
 							if (goToSleep >= wakeUp) {
-								// YES YES YES
-								// ASLEEP
-								// WAKE UP NEXT DAY
 								interval = (long) wakeUp.AddDays(1).Subtract(time).TotalMilliseconds + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								if (interval <= 0)
@@ -2448,9 +2198,6 @@ namespace Tbot.Services {
 								DateTime newTime = time.AddMilliseconds(interval);
 								await GoToSleepAsync(newTime);
 							} else {
-								// YES YES NO
-								// AWAKE
-								// GO TO SLEEP NEXT DAY
 								interval = (long) goToSleep.AddDays(1).Subtract(time).TotalMilliseconds + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								if (interval <= 0)
@@ -2460,8 +2207,6 @@ namespace Tbot.Services {
 							}
 						} else {
 							if (goToSleep >= wakeUp) {
-								// YES NO YES
-								// THIS SHOULDNT HAPPEN
 								interval = RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								if (interval <= 0)
 									interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
@@ -2469,9 +2214,6 @@ namespace Tbot.Services {
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								log(LogLevel.Information, LogSender.SleepMode, $"Next check at {newTime.ToString()}");
 							} else {
-								// YES NO NO
-								// ASLEEP
-								// WAKE UP SAME DAY
 								interval = (long) wakeUp.Subtract(time).TotalMilliseconds + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								if (interval <= 0)
@@ -2483,9 +2225,6 @@ namespace Tbot.Services {
 					} else {
 						if (time >= wakeUp) {
 							if (goToSleep >= wakeUp) {
-								// NO YES YES
-								// AWAKE
-								// GO TO SLEEP SAME DAY
 								interval = (long) goToSleep.Subtract(time).TotalMilliseconds + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								if (interval <= 0)
@@ -2493,8 +2232,6 @@ namespace Tbot.Services {
 								DateTime newTime = time.AddMilliseconds(interval);
 								await WakeUpAsync(newTime);
 							} else {
-								// NO YES NO
-								// THIS SHOULDNT HAPPEN
 								interval = RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								if (interval <= 0)
 									interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
@@ -2504,9 +2241,6 @@ namespace Tbot.Services {
 							}
 						} else {
 							if (goToSleep >= wakeUp) {
-								// NO NO YES
-								// ASLEEP
-								// WAKE UP SAME DAY
 								interval = (long) wakeUp.Subtract(time).TotalMilliseconds + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								if (interval <= 0)
@@ -2514,9 +2248,6 @@ namespace Tbot.Services {
 								DateTime newTime = time.AddMilliseconds(interval);
 								await GoToSleepAsync(newTime);
 							} else {
-								// NO NO NO
-								// AWAKE
-								// GO TO SLEEP SAME DAY
 								interval = (long) goToSleep.Subtract(time).TotalMilliseconds + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 								timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);
 								if (interval <= 0)
@@ -2557,12 +2288,10 @@ namespace Tbot.Services {
 
 						List<Fleet> tempFleets = new();
 						var timeToWakeup = wakeUp.Subtract(time).TotalSeconds;
-						// All Deployment Missions that will arrive during sleep
 						tempFleets.AddRange(userData.fleets
 							.Where(f => f.Mission == Missions.Deploy)
 							.Where(f => f.ArriveIn <= timeToWakeup)
 						);
-						// All other Fleets.Mission
 						tempFleets.AddRange(userData.fleets
 							.Where(f => f.Mission != Missions.Discovery)
 							.Where(f => f.BackIn <= timeToWakeup)
@@ -2600,7 +2329,6 @@ namespace Tbot.Services {
 					log(LogLevel.Information, LogSender.SleepMode, "Going to sleep...");
 					log(LogLevel.Information, LogSender.SleepMode, $"Waking Up at {state.ToString()}");
 
-					// Optional extra expedition wave with its own speed, before the fleetsave takes the remaining ships
 					await SleepWaveBeforeSleepAsync();
 
 					if ((bool) InstanceSettings.SleepMode.AutoFleetSave.Active) {
@@ -2620,17 +2348,6 @@ namespace Tbot.Services {
 						await SendTelegramMessage($"Going to sleep, Waking Up at {state.ToString()}");
 					}
 					if (userData.isSleeping == false) {
-						/* remove?
-						if (
-							SettingsService.IsSettingSet(InstanceSettings, "SleepMode") &&
-							SettingsService.IsSettingSet(InstanceSettings.SleepMode, "LogoutOnSleep") &&
-							(bool) InstanceSettings.SleepMode.LogoutOnSleep
-						) {
-							loggedIn = false;
-							await _ogameService.Logout();
-							log(LogLevel.Information, LogSender.SleepMode, $"Logged out from ogamed.");
-						}
-						*/
 						userData.isSleeping = true;
 					}
 				}
@@ -2665,17 +2382,6 @@ namespace Tbot.Services {
 
 			if (userData.isSleeping) {
 				userData.isSleeping = false;
-				/* remove?
-				if (
-					SettingsService.IsSettingSet(InstanceSettings, "SleepMode") &&
-					SettingsService.IsSettingSet(InstanceSettings.SleepMode, "LogoutOnSleep") &&
-					(bool) InstanceSettings.SleepMode.LogoutOnSleep
-				) {
-					await _ogameService.Login();
-					loggedIn = true;
-					log(LogLevel.Information, LogSender.SleepMode, "Ogamed logged in again!");
-				}
-				*/
 			}
 			InitializeFeatures();
 		}

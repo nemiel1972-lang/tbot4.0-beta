@@ -65,7 +65,6 @@ namespace Tbot.Services {
 			Client = new TelegramBotClient(Api);
 			Channel = chatId;
 
-			// Initialize Logger
 			if (enableLogging == true) {
 				_logger.WriteLog(LogLevel.Information, LogSender.Telegram, "Initializing Logging over Telegram");
 				logger.AddTelegramLogger(api, chatId);
@@ -141,7 +140,6 @@ namespace Tbot.Services {
 				int instanceIndex = instances.IndexOf(instanceWithBridge);
 				await SendMessage($"<code>[{instance.userData.userInfo.PlayerName}@{instance.userData.serverData.Name}]</code> Instance added! (Index:{instanceIndex})");
 
-				// Set a default instance
 				if (currInstanceIndex < 0) {
 					currInstanceIndex = instanceIndex;
 				}
@@ -165,7 +163,6 @@ namespace Tbot.Services {
 		public async Task SendMessage(string message, ParseMode parseMode = ParseMode.Html, CancellationToken cancellationToken = default) {
 			try {
 				isTyping = false;
-				//await Client.SendTextMessageAsync(
 				await Client.SendMessage(
 					chatId: Channel,
 					text: message,
@@ -181,10 +178,9 @@ namespace Tbot.Services {
 			isTyping = true;
 			Task.Run(async () => {
 				while (isTyping) {
-					//await Client.SendChatActionAsync(
 					await Client.SendChatAction(
 						chatId: Channel,
-						action: ChatAction.Typing,//ChatAction.Typing,
+						action: ChatAction.Typing,
 						cancellationToken: cancellationToken);
 					await Task.Delay(3000);
 				}
@@ -195,7 +191,6 @@ namespace Tbot.Services {
 		public async Task SendReplyMarkup(string text, IEnumerable<IEnumerable<InlineKeyboardButton>> buttons, CancellationToken ct) {
 			isTyping = false;
 			var inlineKeyboard = new InlineKeyboardMarkup(buttons);
-			//await Client.SendTextMessageAsync(
 			await Client.SendMessage(
 				chatId: Channel,
 				text: text,
@@ -207,8 +202,6 @@ namespace Tbot.Services {
 		public async Task SendMessage(ITelegramBotClient client, Chat chat, string message, ParseMode parseMode = ParseMode.Html) {
 			try {
 				isTyping = false;
-				//await client.SendTextMessageAsync(chat, message, parseMode);
-				//await client.SendTextMessageAsync(chat, message, null, parseMode);
 				await client.SendMessage(chat, message, parseMode);
 			} catch (Exception e) {
 				_logger.WriteLog(LogLevel.Error, LogSender.Tbot, $"Could not send Telegram message: an exception has occurred: {e.Message}");
@@ -216,8 +209,6 @@ namespace Tbot.Services {
 		}
 
 		public Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken) {
-			// Handler im Hintergrund ausfuehren, damit langlaufende Befehle (/collect, /collectall, ...)
-			// die Empfangsschleife nicht blockieren (ReceiveAsync arbeitet Updates sonst strikt nacheinander ab).
 			_ = Task.Run(async () => {
 				try {
 					await HandleUpdateCoreAsync(botClient, update, cancellationToken);
@@ -229,7 +220,6 @@ namespace Tbot.Services {
 		}
 
 		public async Task HandleUpdateCoreAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken) {
-			// Commands targeting TBot process
 			List<string> core_cmds = new List<string>()
 			{
 				"/setmain",
@@ -243,7 +233,6 @@ namespace Tbot.Services {
 				"/startautoping",
 				"/help"
 			};
-			// Commands targeting specific TBotMain instance
 			List<string> commands = new List<string>()
 			{
 				"/ghostsleep",
@@ -482,12 +471,10 @@ namespace Tbot.Services {
 							return;
 					}
 				}
-				// Check if instance is correct
 				else if (currInstanceIndex < 0 || currInstanceIndex >= instances.Count()) {
 					await SendMessage(botClient, message.Chat, "Select an instance with /setmain !");
 					return;
 				} else if (commands.Any(x => message.Text.ToLower().Contains(x))) {
-					//Handle /commands@botname in string if exist
 					if (message.Text.Contains("@") && message.Text.Split(" ").Length == 1)
 						message.Text = message.Text.ToLower().Split(' ')[0].Split('@')[0];
 
@@ -513,12 +500,11 @@ namespace Tbot.Services {
 
 							case "/debrissave":
 								if (args.Length == 2 || args.Length == 3) {
-									// /debrissave <duration> [x:y:z[:planet|moon]] - always 10% speed, nearest debris field
 									Coordinate dsOrigin = null;
 									try {
 										string dur = args[1];
 										if (System.Text.RegularExpressions.Regex.IsMatch(dur, @"^\d+h\d+$") || System.Text.RegularExpressions.Regex.IsMatch(dur, @"^\d+$"))
-											dur += "m"; // 1h20 -> 1h20m, 80 -> 80m
+											dur += "m";
 										duration = FormattingHelper.ParseDurationFromString(dur);
 										if (duration <= 0) throw new FormatException("duration");
 										if (args.Length == 3) {
@@ -527,7 +513,7 @@ namespace Tbot.Services {
 											if (parts.Length > 3) {
 												dsOrigin.Type = parts[3].StartsWith("p") ? Celestials.Planet : Celestials.Moon;
 											} else {
-												dsOrigin.Type = Celestials.Debris; // Marker: Typ nicht angegeben (Mond bevorzugt)
+												dsOrigin.Type = Celestials.Debris;
 											}
 										}
 									} catch {
@@ -615,7 +601,6 @@ namespace Tbot.Services {
 									foreach (Celestial moon in myMoons) {
 										await SendMessage(botClient, message.Chat, $"Enqueueign FleetSave for {moon.ToString()}...");
 										await currInstance.FleetScheduler.AutoFleetSave(moon, false, duration, false, mission_to_do, true);
-										// Let's sleep a bit :)
 										fleetSaved++;
 										if (fleetSaved != myMoons.Count)
 											await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds), cancellationToken);
@@ -674,9 +659,6 @@ namespace Tbot.Services {
 								speed = decimal.Parse(test);
 
 								if (1 <= speed && speed <= 10) {
-									// fromTelegram:true was missing, so /switch never sent any chat
-									// confirmation or error message back (all SendTelegramMessage calls inside
-									// TelegramSwitch are gated behind "if (fromTelegram)").
 									await currInstance.TelegramSwitch(speed, null, true);
 									return;
 								}
@@ -755,7 +737,6 @@ namespace Tbot.Services {
 									return;
 								}
 
-								// Parse Origin
 								try {
 									coord.Galaxy = int.Parse(args[1].Split(':')[0]);
 									coord.System = int.Parse(args[1].Split(':')[1]);
@@ -766,7 +747,6 @@ namespace Tbot.Services {
 									return;
 								}
 
-								// Parse destination
 								try {
 									target = new();
 									target.Galaxy = int.Parse(args[2].Split(':')[0]);
@@ -778,7 +758,6 @@ namespace Tbot.Services {
 									return;
 								}
 
-								// Check if Origin is a valid moon
 								myCelestials = currInstance.userData.celestials.Where(p => p.Coordinate.IsSame(coord)).ToList();
 								if (myCelestials.Count > 0) {
 									await SendMessage(botClient, message.Chat, $"Phalanx from \"{myCelestials[0].Coordinate.ToString()}\" to \"{target.ToString()}\"");
@@ -977,8 +956,6 @@ namespace Tbot.Services {
 								return;
 
 
-							// bulk /switch - deploys Brain.AutoCargo.CargoType ships + Deuterium
-							// from every Planet to its own Moon, topping each Moon up to its configured targets.
 							case "/trans":
 								if (message.Text.Split(' ').Length != 2) {
 									await SendMessage(botClient, message.Chat, "Speed argument required! Format: <code>5 for 50%</code>", ParseMode.Html);
@@ -1179,7 +1156,6 @@ namespace Tbot.Services {
 									return;
 								} else if (args.Length == 2) {
 									myCelestials = currInstance.userData.celestials.ToList();
-									// Try celestial ID first
 									try {
 										celestialID = int.Parse(args[1]);
 										celestial = myCelestials.Single(c => c.ID == celestialID);
@@ -1193,7 +1169,6 @@ namespace Tbot.Services {
 									return;
 								} else if (args.Length == 3) {
 									myCelestials = currInstance.userData.celestials.ToList();
-									// Try format Galaxy:System:Position (Moon|Planet)
 									try {
 										coord = Coordinate.FromString(string.Join(' ', args.Skip(1)));
 										celestial = myCelestials.Single(c => c.Coordinate.IsSame(coord));
@@ -1413,7 +1388,6 @@ namespace Tbot.Services {
 		async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken) {
 			try {
 				if (exception is ApiRequestException apiRequestException) {
-					//await botClient.SendTextMessageAsync(Channel, apiRequestException.ToString());
 					await botClient.SendMessage(Channel, apiRequestException.ToString());
 				}
 			} catch { }
@@ -1428,7 +1402,6 @@ namespace Tbot.Services {
 				var receiverOptions = new ReceiverOptions {
 					AllowedUpdates = Array.Empty<UpdateType>(),
 					DropPendingUpdates = false,
-					//ThrowPendingUpdates = true
 				};
 
 				receivingTask = Client.ReceiveAsync(HandleUpdateAsync, HandleErrorAsync, receiverOptions, ct);
@@ -1448,7 +1421,6 @@ namespace Tbot.Services {
 				instanceSem.Release();
 			}
 
-			// First of all, remove from any instance
 			if (Client != null) {
 				cts.Cancel();
 				try {
@@ -1461,7 +1433,6 @@ namespace Tbot.Services {
 				}
 
 			}
-			// We should wait for ReceiveAsync to be dismissed
 			_logger.RemoveTelegramLogger();
 		}
 	}

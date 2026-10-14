@@ -87,19 +87,8 @@ namespace Tbot.Workers.Brain {
 			long delayTime = 0;
 			long interval = 0;
 			_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
-			// removed a dead "List<Celestial> planets = new(); foreach (var p in
-			// _tbotInstance.UserData.celestials) { ... }" block that used to sit here. It refreshed
-			// Facilities/Buildings/LFBonuses for every single owned Planet - excluded or not - on every cycle
-			// of every LifeformAutoResearch celestial-worker instance, completely bypassing
-			// Brain.LifeformAutoResearch.Exclude (that Exclude list is only checked in LifeformsAutoResearchWorker.cs,
-			// which decides which celestials get a worker in the first place - this per-celestial file never
-			// re-checked it). The resulting "planets" list was never read anywhere afterwards in this method
-			// (verified: no other reference to it below), so this was pure dead weight - the sole effect was
-			// switching the in-game context into every planet in the empire, which is exactly what triggers
-			// OGame's "recent activity" indicator in the galaxy view on all of them, regardless of Exclude.
 			try {
 				DoLog(LogLevel.Information, $"Running Lifeform AutoResearch on {celestial.ToString()}");
-				// RESOURCE-LEDGER: dieser Worker fuehrt ein eigenes Konto pro Celestial.
 				LedgerTBot.SetContext("LifeformsAutoResearch", celestial.ID);
 				await LedgerTBot.SyncFleets(_tbotInstance, _fleetScheduler);
 				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Fast);
@@ -156,10 +145,6 @@ namespace Tbot.Workers.Brain {
 					delayTime = (long) celestial.Constructions.LFResearchCountdown * (long) 1000 + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds);
 					return;
 				}
-				// AutoMine finanziert gerade gezielt ein Energiegebaeude (Solarkraftwerk/
-				// Fusionskraftwerk) per Transport auf diesem Celestial - nicht dazwischenfunken und die
-				// ankommenden Ressourcen fuer LF-Forschung verbrauchen. Einfach kurz warten und beim
-				// naechsten regulaeren Zyklus erneut pruefen.
 				if (EnergyFundingTracker.IsEnergyFundingPending(celestial.ID)) {
 					DoLog(LogLevel.Information, $"Skipping {celestial.ToString()}: AutoMine is currently funding an energy building here, waiting to avoid stealing its resources.");
 					delayProduction = true;
@@ -167,7 +152,6 @@ namespace Tbot.Workers.Brain {
 					return;
 				}
 				if (celestial is Planet) {
-					// Prioritaets-Slots zuerst, danach normale Auswahl
 					buildable = PickNextLFTech(celestial, maxLFTechs, ReadPriorityTechs(), out level);
 
 					if (buildable != LFTechno.None) {
@@ -183,7 +167,6 @@ namespace Tbot.Workers.Brain {
 								if (celestial.Constructions.LFResearchID == (int) buildable) {
 									started = true;
 									DoLog(LogLevel.Information, "Lifeform Research succesfully started.");
-									// RESOURCE-LEDGER: Forschung gestartet - Reservierung abbuchen.
 									LedgerTBot.OnBuilt(_tbotInstance, celestial, "LifeformsAutoResearch", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 								} else {
 									celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.LFTechs);
@@ -192,7 +175,6 @@ namespace Tbot.Workers.Brain {
 									else {
 										started = true;
 										DoLog(LogLevel.Information, "Lifeform Research succesfully started.");
-										// RESOURCE-LEDGER: Forschung gestartet - Reservierung abbuchen.
 										LedgerTBot.OnBuilt(_tbotInstance, celestial, "LifeformsAutoResearch", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 									}
 								}
@@ -203,8 +185,6 @@ namespace Tbot.Workers.Brain {
 						} else {
 							DoLog(LogLevel.Information, $"Not enough resources to build: {buildable.ToString()} level {level.ToString()} on {celestial.ToString()}. Needed: {xCostBuildable.LFBuildingCostResources.ToString()} - Available: {celestial.Resources.LFBuildingCostResources.ToString()}");
 
-							// RESOURCE-LEDGER: Bedarf sofort anmelden, auch wenn gleich kein Transport moeglich ist (Slots, Config, Herkunft).
-							// So bleibt der vorhandene Bestand vor Rueckholung und anderen Workern geschuetzt, solange dieser Worker wartet.
 							LedgerTBot.Plan(_tbotInstance, celestial, "LifeformsAutoResearch", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 							if ((bool) _tbotInstance.InstanceSettings.Brain.LifeformAutoResearch.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
 								_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
@@ -246,15 +226,10 @@ namespace Tbot.Workers.Brain {
 								int MaxSlots = _calculationService.CalcSlotsPriority(Feature.BrainLifeformAutoResearch, rankSlotsPriority, _tbotInstance.UserData.slots, _tbotInstance.UserData.fleets, (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree);
 
 								if (MaxSlots > 0) {
-									// RESOURCE-LEDGER: gedeckt = Bestand (gehalten) + EIGENE Lieferflotten; fremde Transporte zaehlen nicht.
 									LedgerTBotPlan ledgerPlan = LedgerTBot.Plan(_tbotInstance, celestial, "LifeformsAutoResearch", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 									if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 										Celestial origin = new() { ID = 0 };
 										List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-										// same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
-										// candidate origin celestials instead of the whole empire when MultipleOrigins
-										// is disabled, to avoid triggering OGame's "recent activity" indicator on
-										// every single celestial regardless of Exclude settings.
 										if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 											for (int i = 0; i < allCelestials.Count(); i++) {
 												allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);
@@ -308,7 +283,6 @@ namespace Tbot.Workers.Brain {
 														preferredShip = Buildables.SmallCargo;
 													}
 													long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-													// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 													Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 													if (brainSchiffe != null) {
 														Ships ships = brainSchiffe;
@@ -473,7 +447,6 @@ namespace Tbot.Workers.Brain {
 												.Where(f => f.Destination.Type == celestial.Coordinate.Type)
 												.First().ID;
 										} else {
-											// RESOURCE-LEDGER: nur die EIGENE Lieferflotte bestimmt den naechsten Pruefzeitpunkt.
 											fleetId = ledgerPlan.OwnFleetId;
 										}
 									}
@@ -548,12 +521,6 @@ namespace Tbot.Workers.Brain {
 		}
 
 
-		// Optionale Prioritaetsforschung. Brain.LifeformAutoResearch.PriorityTechs ist eine Liste von
-		// Slotnummern (11..16, 21..26, 31..36), z. B. [15, 25]. Diese Techs werden auf jedem Planeten zuerst erforscht (in der
-		// Reihenfolge der Liste), bis sie ihr MaxTechsXX-Level erreicht haben. Danach laeuft alles wie bisher.
-		// Ausgebaut werden nur bereits vorhandene Techs (Level >= 1, die Stufen 1/2 baut der Spieler selbst). Der Bot beginnt keine neue Tech
-		// und entscheidet nur, in welcher Reihenfolge die vorhandenen Techs bis zu ihrem MaxTechsXX-Level ausgebaut werden.
-		// Fehlt das Feld oder ist die Liste leer, aendert sich nichts.
 		private List<int> ReadPriorityTechs() {
 			List<int> result = new();
 			try {
@@ -572,8 +539,6 @@ namespace Tbot.Workers.Brain {
 			return result;
 		}
 
-		// Waehlt die naechste Forschung: erst die Prioritaets-Slots der Reihe nach (jeweils die vorhandene Tech des Slots),
-		// danach unveraendert ueber alle Slots mit ihren MaxTechsXX-Werten.
 		private LFTechno PickNextLFTech(Celestial cel, LFTechs maxLFTechs, List<int> priorityTechs, out int level) {
 			level = 0;
 			LFTechs existing = RestrictToExisting(cel, maxLFTechs);
@@ -597,7 +562,6 @@ namespace Tbot.Workers.Brain {
 					nextLevel = _calculationService.GetNextLevel(cel, cheaper);
 					next = cheaper;
 				}
-				// Sicherheitsnetz: die gewaehlte Forschung muss zum Prioritaets-Slot gehoeren
 				if (!slotNames.Contains(next.ToString())) {
 					DoLog(LogLevel.Warning, $"PriorityTechs: slot {slot} returned {next.ToString()}, which does not belong to this slot. Priority for this slot ignored.");
 					continue;
@@ -620,7 +584,6 @@ namespace Tbot.Workers.Brain {
 			return normal;
 		}
 
-		// Slot -> Tech je Rasse, je Rasse eine Tech (Humans, Rocktal, Mechas, Kaelesh)
 		private static readonly Dictionary<int, string[]> PrioSlotTechNames = new() {
 			{ 11, new[] { "IntergalacticEnvoys", "VolcanicBatteries", "CatalyserTechnology", "HeatRecovery" } },
 			{ 12, new[] { "HighPerformanceExtractors", "AcousticScanning", "PlasmaDrive", "SulphideProcess" } },
@@ -642,7 +605,6 @@ namespace Tbot.Workers.Brain {
 			{ 36, new[] { "Supercomputer", "RocktalCollectorEnhancement", "MechanGeneralEnhancement", "KaeleshDiscovererEnhancement" } },
 		};
 
-		// Kopie von maxLFTechs, in der nur Techs stehen, die auf dem Planeten bereits Level >= 1 haben; alle anderen bleiben 0.
 		private LFTechs RestrictToExisting(Celestial cel, LFTechs full) {
 			LFTechs result = new();
 			foreach (string name in PrioSlotTechNames.Values.SelectMany(n => n)) {
@@ -659,7 +621,6 @@ namespace Tbot.Workers.Brain {
 			return result;
 		}
 
-		// Erlaubt die vier Techs (je Rasse eine) des Slots mit dem Level aus maxLFTechs; alles andere bleibt 0.
 		private static LFTechs BuildStageMax(int slot, LFTechs full, out string[] slotNames) {
 			slotNames = new string[0];
 			if (!PrioSlotTechNames.TryGetValue(slot, out string[] names)) {

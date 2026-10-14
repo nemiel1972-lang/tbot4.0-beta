@@ -11,7 +11,7 @@ func TestExtractProduction1(t *testing.T) {
 	pageHTMLBytes, _ := os.ReadFile("../../../samples/v11.9.0/en/shipyard.html")
 	prods, secs, _ := NewExtractor().ExtractProduction(pageHTMLBytes)
 	assert.Equal(t, 4, len(prods))
-	assert.Equal(t, int64(402), secs) //6m40
+	assert.Equal(t, int64(402), secs)
 	assert.Equal(t, ogame.LightFighterID, prods[0].ID)
 	assert.Equal(t, int64(1), prods[0].Nbr)
 	assert.Equal(t, ogame.SmallCargoID, prods[1].ID)
