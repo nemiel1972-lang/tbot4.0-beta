@@ -6,7 +6,6 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace TBot.Model {
 	public static class AutoFarmAttackPolicy {
-		// PATCH 119: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 139
 		// excludeFleetId: schliesst eine bestimmte Flotten-ID vom Duplicate-Check aus.
 		// Noetig, weil die Truemmerfeld-Trigger-Sonde (siehe AutoFarmWorker.cs) selbst als
 		// Missions.Attack zum selben Ziel unterwegs ist - ohne den Ausschluss erkennt dieser

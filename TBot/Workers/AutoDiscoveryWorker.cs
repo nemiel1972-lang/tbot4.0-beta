@@ -246,7 +246,7 @@ namespace Tbot.Workers {
 					continue;
 				}
 
-				// PATCH 37 (supersedes PATCH 28/35): the manual randomized delay before every SendDiscovery
+				// the manual randomized delay before every SendDiscovery
 				// call is no longer needed. Rapid-fire consecutive sends (Patch 26's burst-until-slots-
 				// exhausted behaviour) triggered an empty "400 BadRequest" from OGame/ogamed - confirmed via
 				// server log correlation to be genuine server-side rate limiting. Ported from TBot
@@ -407,7 +407,7 @@ namespace Tbot.Workers {
 
 					var cursor = GetOrInitCursor(origin);
 
-					// PATCH 26: this used to call ProcessOneSystemForOrigin exactly once per
+					// this used to call ProcessOneSystemForOrigin exactly once per
 					// origin per Execute() cycle, i.e. at most one system's worth of positions
 					// (<=15) per run - regardless of how many fleet slots (ctx.FleetsToSend)
 					// were actually still free. With few configured origins (often just one)

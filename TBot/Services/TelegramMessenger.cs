@@ -216,7 +216,7 @@ namespace Tbot.Services {
 		}
 
 		public Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken) {
-			// PATCH TG-ASYNC: Handler im Hintergrund ausfuehren, damit langlaufende Befehle (/collect, /collectall, ...)
+			// Handler im Hintergrund ausfuehren, damit langlaufende Befehle (/collect, /collectall, ...)
 			// die Empfangsschleife nicht blockieren (ReceiveAsync arbeitet Updates sonst strikt nacheinander ab).
 			_ = Task.Run(async () => {
 				try {
@@ -674,7 +674,7 @@ namespace Tbot.Services {
 								speed = decimal.Parse(test);
 
 								if (1 <= speed && speed <= 10) {
-									// PATCH 11: fromTelegram:true was missing, so /switch never sent any chat
+									// fromTelegram:true was missing, so /switch never sent any chat
 									// confirmation or error message back (all SendTelegramMessage calls inside
 									// TelegramSwitch are gated behind "if (fromTelegram)").
 									await currInstance.TelegramSwitch(speed, null, true);
@@ -977,7 +977,7 @@ namespace Tbot.Services {
 								return;
 
 
-							// PATCH 12: bulk /switch - deploys Brain.AutoCargo.CargoType ships + Deuterium
+							// bulk /switch - deploys Brain.AutoCargo.CargoType ships + Deuterium
 							// from every Planet to its own Moon, topping each Moon up to its configured targets.
 							case "/trans":
 								if (message.Text.Split(' ').Length != 2) {

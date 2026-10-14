@@ -69,7 +69,7 @@ namespace Tbot.Workers.Brain {
 				maxDeuteriumTank = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxDeuteriumTank;
 			}
 
-			// PATCH ColonyOverrides: Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
+			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -97,7 +97,7 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// PATCH 31/34: analog zu GetMaxBuildingsForCelestial, aber fuer RoboticsFactory/Shipyard/
+		// analog zu GetMaxBuildingsForCelestial, aber fuer RoboticsFactory/Shipyard/
 		// ResearchLab/MissileSilo/NaniteFactory/Terraformer/SpaceDock.
 		private Facilities GetMaxFacilitiesForCelestial(Celestial cel) {
 			bool isHomeWorld =
@@ -126,7 +126,7 @@ namespace Tbot.Workers.Brain {
 				maxSpaceDock = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxSpaceDock;
 			}
 
-			// PATCH ColonyOverrides: Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
+			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -152,7 +152,7 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// PATCH 33: fixer Crawler-Zielwert statt ROI-Berechnung, falls Brain.AutoMine.FixedCrawlerTarget > 0
+		// fixer Crawler-Zielwert statt ROI-Berechnung, falls Brain.AutoMine.FixedCrawlerTarget > 0
 		// gesetzt ist. Dann wird einfach bis min(FixedCrawlerTarget, CalcMaxCrawlers) hochgebaut, ohne
 		// DOIR-Vergleich gegen die nächste Mine. Ist FixedCrawlerTarget nicht gesetzt oder 0, unverändertes
 		// bisheriges Verhalten (CalcOptimalCrawlers/ROI-basiert).
@@ -219,7 +219,7 @@ namespace Tbot.Workers.Brain {
 				List<Celestial> celestialsToMine = new();
 				List<ConstructionCandidate> constructionCandidates = new();
 				foreach (Celestial celestial in _tbotInstance.UserData.celestials.Where(p => p is Planet)) {
-					// PATCH 18: celestialsToExclude was only applied later (right before spawning the
+					// celestialsToExclude was only applied later (right before spawning the
 					// per-celestial AutoMine worker), so every excluded planet still got its Buildings/
 					// LFBuildings/LFBonuses/Fast data refreshed here for the account-wide "next mine to
 					// build" ranking - switching the in-game context into it and triggering OGame's

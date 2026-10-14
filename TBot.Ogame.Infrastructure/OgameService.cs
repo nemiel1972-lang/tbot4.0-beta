@@ -204,7 +204,7 @@ namespace TBot.Ogame.Infrastructure {
 		}
 
 		private void handle_ogamedProcess_Exited(object? sender, EventArgs e) {
-			// PATCH: reading StartTime/ExitTime here used to throw InvalidOperationException
+			// reading StartTime/ExitTime here used to throw InvalidOperationException
 			// ("Cannot process request because the process has exited") whenever this handler
 			// raced with the process already being reaped (common on a deliberate `systemctl
 			// stop`/KillOgamedExecutable, and apparently also possible on an unexpected exit) -
@@ -319,7 +319,7 @@ namespace TBot.Ogame.Infrastructure {
 			return await ManageResponse<T>(response);
 		}
 
-		// PATCH 39: JSON-body POST helper, needed because /bot/simulate-battle takes a nested
+		// JSON-body POST helper, needed because /bot/simulate-battle takes a nested
 		// JSON payload (attacker/defender fleets) that doesn't fit the form-encoded
 		// KeyValuePair<string,string> shape every other PostAsync* helper uses. No-retry for
 		// the same reason as the other no-retry endpoints: a stale retry of a pure local computation
@@ -1020,7 +1020,7 @@ namespace TBot.Ogame.Infrastructure {
 		}
 
 
-		// PATCH 39: local combat simulation, see SimulateBattleRequest/SimulatorResult.
+		// local combat simulation, see SimulateBattleRequest/SimulatorResult.
 		public async Task<SimulatorResult> SimulateBattle(SimulateBattleRequest request) {
 			return await PostJsonAsyncNoRetry<SimulatorResult>("/bot/simulate-battle", request);
 		}

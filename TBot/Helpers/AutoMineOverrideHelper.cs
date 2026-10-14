@@ -5,7 +5,7 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Helpers {
 	/// <summary>
-	/// PATCH ColonyOverrides (ported idea from tbot_beta AutoMineRoleHelper): einzelne Planeten koennen
+	/// einzelne Planeten koennen
 	/// ueber Brain.AutoMine.ColonyOverrides (Liste von {Galaxy, System, Position, Type, Max*...},
 	/// Zuordnung per exakter Koordinate) nur die Felder ueberschreiben, die sie wirklich setzen. Alle
 	/// anderen Felder kommen vom Colony-Block (Fallback: globale Max*-Werte). Ohne Eintrag

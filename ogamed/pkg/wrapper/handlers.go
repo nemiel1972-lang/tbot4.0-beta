@@ -1720,7 +1720,7 @@ func removeCookiesBanner(pageHTML []byte) []byte {
 }
 
 // SimulateBattleHandler ...
-// PATCH 39: local combat simulator, no bot/session needed, no quota. Wired to pkg/simulator's
+// local combat simulator, no bot/session needed, no quota. Wired to pkg/simulator's
 // exported Simulate() function. Reconstructed 2026-09 after the original handler source was lost
 // during a server migration - logic re-derived from the still-running production binary's behaviour
 // (bash history curl examples) and the surviving simulator.go/C# model files.

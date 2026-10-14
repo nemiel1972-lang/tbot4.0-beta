@@ -560,7 +560,6 @@ namespace Tbot.Includes {
 				.First()
 				.Key;
 			} else if (speedPredictions.Any(p => p.Value.Time < maxFlightTime)) {
-				// PATCH 115: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 135
 				// MinLootFuelRatio ist bei KEINER Geschwindigkeit erreichbar (Fuel >= maxFuel ueberall),
 				// aber das Zeitlimit waere bei mind. einer Geschwindigkeit eingehalten. Bisher wurde in
 				// diesem Fall pauschal Speeds.HundredPercent (teuerste Option) zurueckgegeben - das
@@ -3273,7 +3272,7 @@ namespace Tbot.Includes {
 				researches = new() { PlasmaTechnology = 0 };
 			if (planet.LFBonuses == null || planet.LFBonuses.Production == null)
 				planet.LFBonuses = new() { Production = new() { Metal = 0, Crystal = 0, Deuterium = 0 } };
-			// PATCH 5: planet.Buildings can be null (e.g. celestial not yet fully refreshed at this
+			// planet.Buildings can be null (e.g. celestial not yet fully refreshed at this
 			// point in the call chain), which crashed every access below. Default it to an empty
 			// Buildings instance instead.
 			if (planet.Buildings == null)
@@ -4463,7 +4462,7 @@ namespace Tbot.Includes {
 			return ShouldResearchEnergyTech(planets, researches.EnergyTechnology, maxEnergyTech, playerClass, hasEngineer, hasStaff);
 		}
 
-		// PATCH 32: generische Prioritize*-Schalter f r alle bisher nicht priorisierbaren Forschungen
+		// generische Prioritize*-Schalter f r alle bisher nicht priorisierbaren Forschungen
 		// (Energie/Plasma/Astrophysik/IGRN werden weiterhin extern in AutoResearchWorker.cs per DOIR-
 		// Vergleich priorisiert, unver ndert). Alle neuen Parameter defaulten auf false = kein Verhaltensunterschied,
 		// solange sie nicht explizit in instance_settings.json gesetzt werden.
@@ -4651,7 +4650,7 @@ namespace Tbot.Includes {
 			if (dic.Count == 0)
 				return Buildables.Null;
 
-			// PATCH 32: falls eine der neuen Prioritize*-Forschungen f llig UND deren Schalter aktiv ist,
+			// falls eine der neuen Prioritize*-Forschungen f llig UND deren Schalter aktiv ist,
 			// wird sie unabh ngig vom Deuterium-Preis bevorzugt statt der g nstigsten Forschung insgesamt.
 			// Feste Reihenfolge bei mehreren aktiven Schaltern gleichzeitig: Computertechnik zuerst
 			// (Flottenslots sind der kritischste Engpass), danach Antriebe, danach Kampf-/Sonstige-Techs.
@@ -4991,7 +4990,7 @@ namespace Tbot.Includes {
 		}
 
 		public List<Dictionary<Celestial, Resources>> CalcMultipleOrigin(Celestial celestialToBuild, List<Celestial> allCelestials, Resources missingResources, TransportSettings transportSettings, List<Fleet> fleets, UserData userData, Func<Celestial, Ships> quellSchiffe = null, int maxShipments = int.MaxValue) {
-			// PATCH Brain transport chain (14.10.2026): quellSchiffe liefert pro Celestial die nutzbaren Transporter (nach Expeditions-Reserve,
+			// quellSchiffe liefert pro Celestial die nutzbaren Transporter (nach Expeditions-Reserve,
 			// ggf. KT+GT gemischt). Ohne Callback gilt wie bisher nur der konfigurierte CargoType.
 			Ships SchiffeVon(Celestial c) {
 				if (quellSchiffe != null) {
@@ -5088,7 +5087,7 @@ namespace Tbot.Includes {
 				new[] { new ResourceDemand(destination.ID, roundRes ? missingResources.Round() : missingResources) },
 				shipmentSources,
 				minimumShipmentResources: transportSettings.MultipleOrigin.MinimumResourcesToSend);
-			// PATCH Brain transport chain (14.10.2026): braucht der Plan mehr Sendungen als freie Slots, wird einmal mit den Quellen mit der
+			// braucht der Plan mehr Sendungen als freie Slots, wird einmal mit den Quellen mit der
 			// groessten Transportmenge zuerst neu geplant (weniger Sendungen). Passt es dann in die Slots, wird dieser Plan genommen,
 			// sonst bleibt der erste Plan und der Aufrufer wartet wie bisher (Delay).
 			if (shipmentPlan.IsComplete && shipmentPlan.Shipments.Count > maxShipments) {

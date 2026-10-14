@@ -39,7 +39,7 @@ namespace Tbot.Workers.Brain {
 					if (result == RepatriateCode.Delay) {
 						DoLog(LogLevel.Information, $"Delaying...");
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
-						// PATCH Repatriate-Guard (11.10.2026): First() warf bei leerer Flottenliste eine Exception. Jetzt: naechste zurueckkehrende
+						// First() warf bei leerer Flottenliste eine Exception. Jetzt: naechste zurueckkehrende
 						// Transport-Flotte (sie gibt Slots und Limit frei), sonst die naechste Flotte ueberhaupt, sonst kurze Pause.
 						var flottenListe = _tbotInstance.UserData.fleets.ToList();
 						var naechsteFlotte = flottenListe.Where(f => f.Mission == Missions.Transport && f.BackIn.HasValue).OrderBy(f => f.BackIn).FirstOrDefault()
@@ -48,7 +48,7 @@ namespace Tbot.Workers.Brain {
 					}
 					if (interval <= 0)
 						interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
-					// PATCH Reverse-Repatriate (12.10.2026): while a pickup is running (outbound leg flying), the worker wakes up at the arrival
+					// while a pickup is running (outbound leg flying), the worker wakes up at the arrival
 					// time (+2.5 to 4 s) so that the return leg starts right away. Without Reverse.Active the query returns -1 and nothing changes.
 					try {
 						long bisAnkunft = ReverseRepatriate.SekundenBisNaechsteAnkunft(_tbotInstance);

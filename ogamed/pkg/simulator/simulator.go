@@ -840,7 +840,7 @@ func (simulator *combatSimulator) removeDestroyedUnits() {
 			if isShip(unit) {
 				simulator.Debris.Metal += int(simulator.FleetToDebris * float64(unitPrice.Metal))
 				simulator.Debris.Crystal += int(simulator.FleetToDebris * float64(unitPrice.Crystal))
-				// PATCH 135: Server rechnet Deuterium ins Truemmerfeld mit
+				// Server rechnet Deuterium ins Truemmerfeld mit
 				simulator.Debris.Deuterium += int(simulator.FleetToDebris * float64(unitPrice.Deuterium))
 			}
 			simulator.Defender.Losses.add(unitPrice)
@@ -860,7 +860,7 @@ func (simulator *combatSimulator) removeDestroyedUnits() {
 			if isShip(unit) {
 				simulator.Debris.Metal += int(simulator.FleetToDebris * float64(unitPrice.Metal))
 				simulator.Debris.Crystal += int(simulator.FleetToDebris * float64(unitPrice.Crystal))
-				// PATCH 135: Server rechnet Deuterium ins Truemmerfeld mit
+				// Server rechnet Deuterium ins Truemmerfeld mit
 				simulator.Debris.Deuterium += int(simulator.FleetToDebris * float64(unitPrice.Deuterium))
 			}
 			simulator.Attacker.Losses.add(unitPrice)
@@ -1044,7 +1044,7 @@ func printResult(result SimulatorResult) {
 			"Debris",
 			fmt.Sprintf("%d", result.Debris.Metal),
 			fmt.Sprintf("%d", result.Debris.Crystal),
-			fmt.Sprintf("%d", result.Debris.Deuterium), // PATCH 135
+			fmt.Sprintf("%d", result.Debris.Deuterium),
 			fmt.Sprintf("%d", result.Recycler),
 			fmt.Sprintf("%d", result.Moonchance)},
 	}
@@ -1094,7 +1094,7 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	debris := price{}
 	rounds := 0
 	moonchance := 0
-	// PATCH 54: cargo-specific survival tracking, summed across runs like attackerLosses etc, averaged at the end.
+	// cargo-specific survival tracking, summed across runs like attackerLosses etc, averaged at the end.
 	attackerCargoSurvivedTotal := 0
 
 	attacker := newEntity()
@@ -1115,7 +1115,7 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	attacker.Destroyer = int(attackerParam.Destroyer)
 	attacker.Deathstar = int(attackerParam.Deathstar)
 	attacker.Battlecruiser = int(attackerParam.Battlecruiser)
-	// PATCH 135: Reaper/Pathfinder/Crawler wurden nicht uebernommen und fehlten komplett im Kampf
+	// Reaper/Pathfinder/Crawler wurden nicht uebernommen und fehlten komplett im Kampf
 	attacker.Reaper = int(attackerParam.Reaper)
 	attacker.Pathfinder = int(attackerParam.Pathfinder)
 	attacker.Crawler = int(attackerParam.Crawler)
@@ -1148,7 +1148,7 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	defender.Destroyer = int(defenderParam.Destroyer)
 	defender.Deathstar = int(defenderParam.Deathstar)
 	defender.Battlecruiser = int(defenderParam.Battlecruiser)
-	// PATCH 135: Reaper/Pathfinder/Crawler des Verteidigers (1:34:6: Pfadfinder fehlten -> TF zu klein)
+	// Reaper/Pathfinder/Crawler des Verteidigers (1:34:6: Pfadfinder fehlten -> TF zu klein)
 	defender.Reaper = int(defenderParam.Reaper)
 	defender.Pathfinder = int(defenderParam.Pathfinder)
 	defender.Crawler = int(defenderParam.Crawler)
@@ -1184,10 +1184,10 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 		debris.add(cs.Debris)
 		rounds += cs.Rounds
 		moonchance += cs.getMoonchance()
-		// PATCH 54: count surviving cargo units this run by scanning cs.Attacker.Units the same way
+		// count surviving cargo units this run by scanning cs.Attacker.Units the same way
 		// cs.Attacker.Losses is already relied on above - Units[] is populated sequentially by type in
 		// entity.init(), each slot carrying a packed unit ID.
-		// PATCH 135: Pathfinder zaehlt als Cargo (AutoFarm nutzt Pfadfinder). Ausserdem nur die
+		// Pathfinder zaehlt als Cargo (AutoFarm nutzt Pfadfinder). Ausserdem nur die
 		// lebenden Slots [0, TotalUnits) zaehlen - removeDestroyedUnits() kopiert die letzte Einheit in
 		// die Luecke, die alte Kopie bleibt hinter TotalUnits stehen und wurde doppelt gezaehlt.
 		for _, unit := range cs.Attacker.Units[:cs.Attacker.TotalUnits] {
@@ -1215,11 +1215,11 @@ func Simulate(attackerParam Attacker, defenderParam Defender, params SimulatorPa
 	result.Debris = price{}
 	result.Debris.Metal = int(float64(debris.Metal) / float64(nbSimulations))
 	result.Debris.Crystal = int(float64(debris.Crystal) / float64(nbSimulations))
-	// PATCH 135: Deuterium im TF und in der Recycler-Anzahl
+	// Deuterium im TF und in der Recycler-Anzahl
 	result.Debris.Deuterium = int(float64(debris.Deuterium) / float64(nbSimulations))
 	result.Recycler = int(math.Ceil((float64(debris.Metal+debris.Crystal+debris.Deuterium) / float64(nbSimulations)) / 20000.0))
 	result.Moonchance = int(float64(moonchance) / float64(nbSimulations))
-	// PATCH 135: Pathfinder als Cargo mitzaehlen
+	// Pathfinder als Cargo mitzaehlen
 	result.AttackerCargoSent = int(attackerParam.SmallCargo) + int(attackerParam.LargeCargo) + int(attackerParam.Pathfinder)
 	result.AttackerCargoSurvived = float64(attackerCargoSurvivedTotal) / float64(nbSimulations)
 

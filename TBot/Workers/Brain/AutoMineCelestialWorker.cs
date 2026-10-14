@@ -23,7 +23,7 @@ namespace Tbot.Workers.Brain {
 		private readonly IOgameService _ogameService;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
 
-		// PATCH 13: remembers the buildable a resource transport was specifically sent to fund, so that
+		// remembers the buildable a resource transport was specifically sent to fund, so that
 		// once those resources arrive we finish paying for it instead of letting a freshly (and cheaper)
 		// re-evaluated "best building" spend them first. Without this, GetNextBuildingToBuild() is
 		// recomputed from scratch every cycle with no memory of in-flight funding, so a big transport
@@ -78,7 +78,7 @@ namespace Tbot.Workers.Brain {
 				maxDeuteriumTank = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxDeuteriumTank;
 			}
 
-			// PATCH ColonyOverrides: Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
+			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -106,7 +106,7 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// PATCH 31/34: siehe AutoMineWorker.cs.
+		// siehe AutoMineWorker.cs.
 		private Facilities GetMaxFacilitiesForCelestial(Celestial cel) {
 			bool isHomeWorld =
 				cel.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Galaxy &&
@@ -134,7 +134,7 @@ namespace Tbot.Workers.Brain {
 				maxSpaceDock = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.Colony.MaxSpaceDock;
 			}
 
-			// PATCH ColonyOverrides: Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
+			// Eintrag mit exakter Koordinate ersetzt die Gruppenwerte feldweise.
 			if (!isHomeWorld) {
 				dynamic colonyOverride = AutoMineOverrideHelper.FindOverride(cel, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				if (colonyOverride != null) {
@@ -160,7 +160,7 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
-		// PATCH 33: siehe AutoMineWorker.cs.
+		// siehe AutoMineWorker.cs.
 		private int GetCrawlerAmountToBuild(Planet planet) {
 			bool fixedTargetSet = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "FixedCrawlerTarget") && (int) _tbotInstance.InstanceSettings.Brain.AutoMine.FixedCrawlerTarget > 0;
 			if (fixedTargetSet) {
@@ -172,7 +172,7 @@ namespace Tbot.Workers.Brain {
 			return _calculationService.CalcOptimalCrawlers(planet, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData);
 		}
 
-		// PATCH 35: liefert das aktuell konfigurierte Cap fuer einen gegebenen Buildable-Typ, damit
+		// liefert das aktuell konfigurierte Cap fuer einen gegebenen Buildable-Typ, damit
 		// Patch 13 (Pending-Funded-Building) sein Memo gegen den GERADE GUELTIGEN Cap validieren kann,
 		// statt ihn zu umgehen. Buildables ohne bekanntes Cap-Feld (z.B. Deposit) sind ungedeckelt.
 		private int GetCapForBuildable(Buildables b, Buildings maxBuildings, Facilities maxFacilities) {
@@ -196,7 +196,7 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
-		// PATCH Teillieferung-Sperre (07.10.2026): Alles-oder-nichts-Pruefung fuer Funding-Transporte. Liefert nur dann true,
+		// Alles-oder-nichts-Pruefung fuer Funding-Transporte. Liefert nur dann true,
 		// wenn die Herkunft die komplette Menge senden kann: Metall und Kristall vorhanden, Deuterium vorhanden PLUS Sprit
 		// (der Spritverbrauch wird vom Deuterium der Herkunft abgezogen, die Ladung wird sonst von OGame gekuerzt) und der
 		// Laderaum der Schiffe reicht fuer alles. Bei jedem Zweifel/Fehler false = lieber nichts senden als zu wenig.
@@ -367,7 +367,7 @@ namespace Tbot.Workers.Brain {
 						buildable = _calculationService.GetNextBuildingToBuild(celestial as Planet, _tbotInstance.UserData.researches, maxBuildings, maxFacilities, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.serverData, autoMinerSettings);
 						level = _calculationService.GetNextLevel(celestial as Planet, buildable, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
 
-						// PATCH 13: if we're still owed a building we previously sent a transport to fund,
+						// if we're still owed a building we previously sent a transport to fund,
 						// and it's still the correct next level (i.e. nothing else already built it in the
 						// meantime) and we can now afford it, prefer it over the freshly computed "best
 						// building" - that's what the incoming resources were actually for.
@@ -379,7 +379,7 @@ namespace Tbot.Workers.Brain {
 								_pendingFundedLevel = 0;
 								EnergyFundingTracker.Clear(celestial.ID);
 							} else if (_pendingFundedLevel > GetCapForBuildable(_pendingFundedBuildable, maxBuildings, maxFacilities)) {
-								// PATCH 35: the memoized target level now exceeds the currently configured cap
+								// the memoized target level now exceeds the currently configured cap
 								// for this celestial (e.g. Colony-Cap wurde nachtraeglich gesenkt,
 								// nachdem der finanzierende Transport bereits unterwegs war). Das Memo darf
 								// diesen Cap nicht mehr umgehen - verwerfen und normal mit dem frisch
@@ -390,7 +390,7 @@ namespace Tbot.Workers.Brain {
 								EnergyFundingTracker.Clear(celestial.ID);
 							} else {
 								bool pendingIsEnergySource = _pendingFundedBuildable == Buildables.SolarPlant || _pendingFundedBuildable == Buildables.FusionReactor;
-								// PATCH 38: GetNextBuildingToBuild() hat oben bereits die Energie-Prioritaet
+								// GetNextBuildingToBuild() hat oben bereits die Energie-Prioritaet
 								// beruecksichtigt (ShouldBuildEnergySource) - das Pending-Funded-Override durfte
 								// das bisher ungeprueft ueberschreiben, wodurch bei aktivem Energiedefizit trotzdem
 								// die alte Finanzierung (z.B. eine Mine) durchgezogen wurde, statt dem frisch
@@ -479,14 +479,14 @@ namespace Tbot.Workers.Brain {
 						if (result) {
 						// RESOURCE-LEDGER: Bau gestartet - Anspruch/Reservierung dieses Workers wird abgebucht.
 						LedgerTBot.OnBuilt(_tbotInstance, celestial, "AutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
-							// PATCH 13: a build just actually started - whatever it was, our funding memo is
+							// a build just actually started - whatever it was, our funding memo is
 							// no longer needed (if it was the pending target, it's done; if it was something
 							// else, buildable/level here already IS that override from the check above).
 							if (buildable == _pendingFundedBuildable && level == _pendingFundedLevel) {
 								_pendingFundedBuildable = Buildables.Null;
 								_pendingFundedLevel = 0;
 							}
-							// PATCH 37: der Bau ist tatsaechlich gestartet - egal was es war, eine evtl.
+							// der Bau ist tatsaechlich gestartet - egal was es war, eine evtl.
 							// laufende Energie-Finanzierungssperre fuer LifeformAutoMine/-Research ist damit
 							// hinfaellig (entweder war es die Energiequelle selbst, oder etwas anderes hat
 							// die Ressourcen schon verbraucht - so oder so gibt es nichts mehr zu schuetzen).
@@ -550,14 +550,14 @@ namespace Tbot.Workers.Brain {
 						// So bleibt der vorhandene Bestand vor Rueckholung und anderen Workern geschuetzt, solange dieser Worker wartet.
 						LedgerTBot.Plan(_tbotInstance, celestial, "AutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable, ledgerRoi);
 						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
-							// PATCH 13: about to (try to) fund this exact buildable/level with a transport -
+							// about to (try to) fund this exact buildable/level with a transport -
 							// remember it so that once resources arrive, we build it before re-evaluating
 							// "best building" from scratch (see the override check where buildable/level are
 							// first computed above).
 							if (buildable != Buildables.SolarSatellite && buildable != Buildables.Crawler) {
 								_pendingFundedBuildable = buildable;
 								_pendingFundedLevel = level;
-								// PATCH 37: falls es sich um eine Energiequelle handelt, LifeformAutoMine und
+								// falls es sich um eine Energiequelle handelt, LifeformAutoMine und
 								// LifeformAutoResearch fuer diesen Celestial sperren, bis die Ressourcen
 								// entweder verbaut oder das Memo verworfen wurden (siehe Clear-Aufrufe oben).
 								EnergyFundingTracker.SetPending(celestial.ID, buildable);
@@ -624,7 +624,7 @@ namespace Tbot.Workers.Brain {
 								if (!incomingTransport) {
 									Celestial origin = new() { ID = 0 };
 									List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-									// PATCH 14: refreshing every single celestial here (planets AND moons) switches
+									// refreshing every single celestial here (planets AND moons) switches
 									// the in-game context into each of them, which triggers OGame's "recent activity"
 									// indicator in the galaxy view - on ALL celestials, every time a funding transport
 									// is evaluated (i.e. very often), completely independent of AutoMine/LifeformAutoMine/
@@ -701,11 +701,11 @@ namespace Tbot.Workers.Brain {
 													preferredShip = Buildables.SmallCargo;
 												}
 												long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-												// PATCH Brain transport chain (14.10.2026): ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
+												// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 												Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 												if (brainSchiffe != null) {
 													Ships ships = brainSchiffe;
-													// PATCH Teillieferung-Sperre (07.10.2026): nur senden, wenn Metall, Kristall, Deuterium (inkl. Sprit) und Laderaum die KOMPLETTE Menge abdecken.
+													// nur senden, wenn Metall, Kristall, Deuterium (inkl. Sprit) und Laderaum die KOMPLETTE Menge abdecken.
 													if (!KannVollstaendigLiefern(origin, ships, celestial.Coordinate, missingResources, resToLeave)) {
 														DoLog(LogLevel.Warning, $"Partial delivery blocked: {origin.ToString()} cannot deliver {missingResources.TransportableResources} for {celestial.ToString()} completely (resources/fuel/cargo space).");
 													} else {
@@ -718,7 +718,7 @@ namespace Tbot.Workers.Brain {
 														}
 													}
 												} else {
-													// PATCH Teillieferung-Sperre (07.10.2026): DoMultipleTransportIsNotEnoughShipButSamePosition (absichtlicher Teiltransport bei zu wenig Frachtern) ist fuer AutoMine-Funding gesperrt.
+													// DoMultipleTransportIsNotEnoughShipButSamePosition (absichtlicher Teiltransport bei zu wenig Frachtern) ist fuer AutoMine-Funding gesperrt.
 													DoLog(LogLevel.Warning, $"Not enough Cargo available. Teillieferung unterbunden, skipping CheckMoonOrPlanetFirst.");
 												}
 											} else {
@@ -793,7 +793,7 @@ namespace Tbot.Workers.Brain {
 												return;
 											}
 
-											// PATCH Teillieferung-Sperre (07.10.2026): erst ALLE Lieferungen planen und pruefen, dann senden - alles oder nichts.
+											// erst ALLE Lieferungen planen und pruefen, dann senden - alles oder nichts.
 											// Vorher wurde Herkunft fuer Herkunft verschickt; reichten die Quellen zusammen nicht, kam nur ein Teil an.
 											var geplanteLieferungen = new List<(Celestial Herkunft, Ships Schiffe, Resources Menge, Coordinate Ziel)>();
 											Resources gesamtMenge = new();

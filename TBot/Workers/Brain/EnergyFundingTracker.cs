@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using TBot.Ogame.Infrastructure.Enums;
 
 namespace Tbot.Workers.Brain {
-	// PATCH 37: AutoMine, LifeformAutoMine und LifeformAutoResearch laufen als drei komplett unabhaengige
+	// AutoMine, LifeformAutoMine und LifeformAutoResearch laufen als drei komplett unabhaengige
 	// Worker pro Celestial und wissen nichts voneinander. Wenn AutoMine gezielt einen Transport losschickt,
 	// um ein Energiegebaeude (Solarkraftwerk/Fusionskraftwerk) zu finanzieren (siehe Patch 13:
 	// _pendingFundedBuildable), koennen LifeformAutoMine oder LifeformAutoResearch in der Zwischenzeit auf

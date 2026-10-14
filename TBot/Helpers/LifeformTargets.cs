@@ -14,7 +14,7 @@ using TBot.Ogame.Infrastructure;
 
 namespace Tbot.Helpers {
 	/// <summary>
-	/// PATCH LF-TARGETS: reads the lifeform target levels (race x slot) from a separate JSON file
+	/// reads the lifeform target levels (race x slot) from a separate JSON file
 	/// (default: lifeform_targets.json in the process working directory, i.e. next to instance_settings.json)
 	/// instead of the race-independent position caps in the config.
 	///
@@ -126,7 +126,7 @@ namespace Tbot.Helpers {
 					source += " |" + limits;
 				}
 
-				// PATCH LF-RESEARCH-BOOST (14.10.2026): staged build order T2 -> research -> T3 (see ApplyResearchBoost).
+				// staged build order T2 -> research -> T3 (see ApplyResearchBoost).
 				string boost = ApplyResearchBoost(root, race, celestial, levels, baseLevels, ReadCap(lfSettings, 3));
 				if (boost != "") {
 					source += " |" + boost;

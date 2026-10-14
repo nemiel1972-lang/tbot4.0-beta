@@ -110,7 +110,7 @@ namespace Tbot.Workers.Brain {
 				}
 
 				LFBuildings maxLFBuildings = new();
-					// PATCH LF-TARGETS (v2): Zielwerte (Rasse x Slot) kommen ausschliesslich aus lifeform_targets.json.
+					// Zielwerte (Rasse x Slot) kommen ausschliesslich aus lifeform_targets.json.
 					// Die alten Max...-Felder der Config werden nicht mehr gelesen. Fehlt die Datei oder ist sie kaputt,
 					// wird der LF-Bau fuer diesen Planeten uebersprungen (statt mit falschen Caps zu bauen).
 					if (!LifeformTargets.TryApplyMaxLevels((object) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine, celestial, maxLFBuildings, (lvl, msg) => DoLog(lvl, msg))) {
@@ -126,7 +126,7 @@ namespace Tbot.Workers.Brain {
 						? ((long) celestial.Constructions.LFBuildingCountdown * (long) 1000) + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds)
 						: ((long) celestial.Constructions.BuildingCountdown * (long) 1000) + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds);
 				}
-				// PATCH 37: AutoMine finanziert gerade gezielt ein Energiegebaeude (Solarkraftwerk/
+				// AutoMine finanziert gerade gezielt ein Energiegebaeude (Solarkraftwerk/
 				// Fusionskraftwerk) per Transport auf diesem Celestial - nicht dazwischenfunken und die
 				// ankommenden Ressourcen fuer ein LF-Gebaeude verbrauchen. Einfach kurz warten und beim
 				// naechsten reguraeren Zyklus erneut pruefen.
@@ -238,7 +238,7 @@ namespace Tbot.Workers.Brain {
 										if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 											Celestial origin = new() { ID = 0 };
 											List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-											// PATCH 15: same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
+											// same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
 											// candidate origin celestials instead of the whole empire when MultipleOrigins
 											// is disabled, to avoid triggering OGame's "recent activity" indicator on
 											// every single celestial regardless of Exclude settings.
@@ -295,7 +295,7 @@ namespace Tbot.Workers.Brain {
 															preferredShip = Buildables.SmallCargo;
 														}
 														long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-														// PATCH Brain transport chain (14.10.2026): ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
+														// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 														Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 														if (brainSchiffe != null) {
 															Ships ships = brainSchiffe;

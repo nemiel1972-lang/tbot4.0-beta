@@ -66,7 +66,7 @@ namespace Tbot.Workers {
 					List<Celestial> newCelestials = _tbotInstance.UserData.celestials.ToList();
 					var dic = new Dictionary<Coordinate, Celestial>();
 
-					// PATCH 29: this used to touch every single owned planet (UpdatePlanet ->
+					// this used to touch every single owned planet (UpdatePlanet ->
 					// in-game context switch -> triggers OGame's "recent activity" indicator) every
 					// single Colonize cycle, regardless of AutoMine.Exclude - even though a planet
 					// that's already excluded from active mining (i.e. deliberately left alone) is
@@ -155,7 +155,7 @@ namespace Tbot.Workers {
 						};
 						int MaxSlots = _calculationService.CalcSlotsPriority(Feature.Colonize, rankSlotsPriority, _tbotInstance.UserData.slots, _tbotInstance.UserData.fleets, (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree);
 
-						// PATCH 22: previously, with IntensiveResearch.Active, a single in-flight colonize
+						// previously, with IntensiveResearch.Active, a single in-flight colonize
 						// mission (> 0) blocked all further sends, making IntensiveResearch.MaxSlots
 						// completely ineffective - the bot only ever sent one colony ship at a time,
 						// waited for it to arrive, then sent the next one, serially instead of the

@@ -415,14 +415,14 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/attacks", wrapper.GetAttacksHandler)
 	e.GET("/bot/get-auction", wrapper.GetAuctionHandler)
 	e.POST("/bot/do-auction", wrapper.DoAuctionHandler)
-	e.POST("/bot/simulate-battle", wrapper.SimulateBattleHandler) // PATCH: local combat simulator, no bot/session needed, no quota
+	e.POST("/bot/simulate-battle", wrapper.SimulateBattleHandler) // local combat simulator, no bot/session needed, no quota
 	e.GET("/bot/galaxy-infos/:galaxy/:system", wrapper.GalaxyInfosHandler)
 	e.GET("/bot/get-research", wrapper.GetResearchHandler)
 	e.GET("/bot/buy-offer-of-the-day", wrapper.BuyOfferOfTheDayHandler)
 	e.GET("/bot/price/:ogameID/:nbr", wrapper.GetPriceHandler)
 	e.GET("/bot/requirements/:ogameID", wrapper.GetRequirementsHandler)
 	e.GET("/bot/moons", wrapper.GetMoonsHandler)
-	e.GET("/bot/sleepstatus", SleepStatusHandler) // PATCH Sleep-Kachel
+	e.GET("/bot/sleepstatus", SleepStatusHandler)
 	e.GET("/bot/moons/:moonID", wrapper.GetMoonHandler)
 	e.GET("/bot/moons/:galaxy/:system/:position", wrapper.GetMoonByCoordHandler)
 	e.GET("/bot/celestials/:celestialID/items", wrapper.GetCelestialItemsHandler)
@@ -470,7 +470,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/planets/:planetID/lifeform-bonuses", GetLfBonusesTbotHandler)
 	e.GET("/bot/expedition-messages", GetExpeditionMessagesHandler)
 	e.POST("/bot/toggle-manual-mode", PostToggleManualModeHandler)
-	e.POST("/bot/slot-limit", PostSlotLimitHandler) // PATCH Slot-Kachel
+	e.POST("/bot/slot-limit", PostSlotLimitHandler)
 	e.GET("/bot/lfbonuses", GetLfBonusesHandler)
 
 	// Get/Post Page Content

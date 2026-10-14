@@ -33,7 +33,7 @@ namespace Tbot.Services {
 		Task StopFeature(Feature feat);
 		bool IsFeatureRunning(Feature feat);
 		Task SendTelegramMessage(string fmt, bool mirrorToDiscord = true);
-		// PATCH Discord mirror: send only to the global Discord webhook; false if not active
+		// send only to the global Discord webhook; false if not active
 		Task<bool> SendDiscordMessage(string fmt, NotificationKind kind = NotificationKind.Information);
 		Task<bool> TelegramSwitch(decimal speed, Celestial attacked = null, bool fromTelegram = false);
 		Task SleepNow(DateTime WakeUpTime);
@@ -41,7 +41,7 @@ namespace Tbot.Services {
 		Task LoadProfile(List<string> profileName);
 		Task ResetProfile();
 
-		// PATCH GhostSleep: von DefenderWorker aufgerufen (HandleAttack/Execute), wenn waehrend
+		// von DefenderWorker aufgerufen (HandleAttack/Execute), wenn waehrend
 		// GhostSleep-PASSIV ein echter Angriff erkannt wird (active=true, Eskalation auf AKTIV) bzw.
 		// wenn keine Angriffswelle mehr aussteht (active=false, Deeskalation zurueck auf PASSIV mit
 		// neuem Zufalls-Anker). Siehe TBotMain.cs, Abschnitt "GhostSleep", und
@@ -57,11 +57,11 @@ namespace Tbot.Services {
 		// gefunden wird.
 		void GhostSleepRearmDefenderAnchor();
 
-		// PATCH Angriffs-Lockdown (01.10.2026): stoppt (active=true) alle Worker ausser Defender/SleepMode bzw.
+		// stoppt (active=true) alle Worker ausser Defender/SleepMode bzw.
 		// startet sie nach Ende der Angriffswelle wieder (active=false). Siehe TBotMain.cs.
 		Task AttackLockdown(bool active);
 
-		// PATCH Statuskachel: DefenderWorker meldet nach jedem Check die aktuelle Angriffsliste (leer = sicher),
+		// DefenderWorker meldet nach jedem Check die aktuelle Angriffsliste (leer = sicher),
 		// damit die Kachel im Browser eingehende Angriffe anzeigen kann. fetchedUtc = Abrufzeitpunkt (ArriveIn gilt dazu).
 		void PublishAttackSnapshot(List<AttackerFleet> attacks, DateTime fetchedUtc);
 	}

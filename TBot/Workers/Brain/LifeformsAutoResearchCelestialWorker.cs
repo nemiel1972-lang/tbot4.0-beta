@@ -87,7 +87,7 @@ namespace Tbot.Workers.Brain {
 			long delayTime = 0;
 			long interval = 0;
 			_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
-			// PATCH (activity-allcelestials): removed a dead "List<Celestial> planets = new(); foreach (var p in
+			// removed a dead "List<Celestial> planets = new(); foreach (var p in
 			// _tbotInstance.UserData.celestials) { ... }" block that used to sit here. It refreshed
 			// Facilities/Buildings/LFBonuses for every single owned Planet - excluded or not - on every cycle
 			// of every LifeformAutoResearch celestial-worker instance, completely bypassing
@@ -156,7 +156,7 @@ namespace Tbot.Workers.Brain {
 					delayTime = (long) celestial.Constructions.LFResearchCountdown * (long) 1000 + (long) RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds);
 					return;
 				}
-				// PATCH 37: AutoMine finanziert gerade gezielt ein Energiegebaeude (Solarkraftwerk/
+				// AutoMine finanziert gerade gezielt ein Energiegebaeude (Solarkraftwerk/
 				// Fusionskraftwerk) per Transport auf diesem Celestial - nicht dazwischenfunken und die
 				// ankommenden Ressourcen fuer LF-Forschung verbrauchen. Einfach kurz warten und beim
 				// naechsten regulaeren Zyklus erneut pruefen.
@@ -167,7 +167,7 @@ namespace Tbot.Workers.Brain {
 					return;
 				}
 				if (celestial is Planet) {
-					// PATCH LF-PRIO: Prioritaets-Slots zuerst, danach normale Auswahl
+					// Prioritaets-Slots zuerst, danach normale Auswahl
 					buildable = PickNextLFTech(celestial, maxLFTechs, ReadPriorityTechs(), out level);
 
 					if (buildable != LFTechno.None) {
@@ -251,7 +251,7 @@ namespace Tbot.Workers.Brain {
 									if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 										Celestial origin = new() { ID = 0 };
 										List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-										// PATCH 16: same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
+										// same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
 										// candidate origin celestials instead of the whole empire when MultipleOrigins
 										// is disabled, to avoid triggering OGame's "recent activity" indicator on
 										// every single celestial regardless of Exclude settings.
@@ -308,7 +308,7 @@ namespace Tbot.Workers.Brain {
 														preferredShip = Buildables.SmallCargo;
 													}
 													long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-													// PATCH Brain transport chain (14.10.2026): ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
+													// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 													Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 													if (brainSchiffe != null) {
 														Ships ships = brainSchiffe;
@@ -548,7 +548,7 @@ namespace Tbot.Workers.Brain {
 		}
 
 
-		// PATCH LF-PRIO: Optionale Prioritaetsforschung. Brain.LifeformAutoResearch.PriorityTechs ist eine Liste von
+		// Optionale Prioritaetsforschung. Brain.LifeformAutoResearch.PriorityTechs ist eine Liste von
 		// Slotnummern (11..16, 21..26, 31..36), z. B. [15, 25]. Diese Techs werden auf jedem Planeten zuerst erforscht (in der
 		// Reihenfolge der Liste), bis sie ihr MaxTechsXX-Level erreicht haben. Danach laeuft alles wie bisher.
 		// Ausgebaut werden nur bereits vorhandene Techs (Level >= 1, die Stufen 1/2 baut der Spieler selbst). Der Bot beginnt keine neue Tech

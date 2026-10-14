@@ -38,7 +38,7 @@ namespace TBot.Model {
 			if (fleet.Mission == Missions.Spy)
 				return fleet.Ships.IsOnlyProbes();
 
-			// PATCH 85: Vorher wurde per IsOnlyShip() verlangt, dass die Flotte AUSSCHLIESSLICH
+			// Vorher wurde per IsOnlyShip() verlangt, dass die Flotte AUSSCHLIESSLICH
 			// aus dem konfigurierten CargoType besteht. Echte AutoFarm-Angriffe auf verteidigte
 			// Ziele kombinieren aber Cargo-Schiffe MIT Eskorte (Cruiser/Battlecruiser/Pathfinder
 			// je nach EscortShipTypes/EscortFallbackShipTypes/SpeedFleetCargoTypes) in DERSELBEN

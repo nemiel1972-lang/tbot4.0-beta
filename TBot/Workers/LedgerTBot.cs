@@ -310,7 +310,7 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// PATCH Repatriate-Frei (11.10.2026): freier Anteil eines Celestials fuer Nicht-Worker-Versender (Rueckholung, Sammeln):
+		// freier Anteil eines Celestials fuer Nicht-Worker-Versender (Rueckholung, Sammeln):
 		// Live-Bestand minus ALLE gehaltenen Mengen der Ansprueche. Rueckgabe null = Ledger aus, kein gehaltener Bestand oder
 		// Fehler -> der Aufrufer rechnet wie vorher mit dem Live-Bestand. Damit kann die Mindestmenge von AutoRepatriate auf
 		// dem wirklich abtransportierbaren Rest laufen und nicht erst nach dem Kuerzen in CheckOrigin.
@@ -363,7 +363,7 @@ namespace Tbot.Workers {
 					Warn(inst, "Transport from " + origin.ToString() + " rejected: stock is partly reserved for other workers (free: " + free.ToString() + ").");
 					return false;
 				}
-				// PATCH Repatriate-Frei (11.10.2026): reicht das freie Deuterium nicht fuer den Flugbedarf, ging frueher die
+				// reicht das freie Deuterium nicht fuer den Flugbedarf, ging frueher die
 				// UNGEKUERZTE Ladung (samt gehaltenem Bestand) raus. Jetzt wird abgelehnt. Ebenso, wenn nach dem Kuerzen nichts
 				// mehr uebrig ist (sonst fliegt ein leerer Transporter und belegt einen Slot).
 				bool hatteLadung = payload.Metal + payload.Crystal + payload.Deuterium > 0;

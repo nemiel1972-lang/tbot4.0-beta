@@ -41,7 +41,7 @@ namespace Tbot.Services {
 		private readonly SemaphoreSlim _settingsReloadSemaphore = new SemaphoreSlim(1, 1);
 
 		private ITelegramMessenger telegramMessenger;
-		// PATCH Discord mirror (ported from ronnie32 TBot v3.5.1-beta1): global Discord webhook
+		// global Discord webhook
 		private IDiscordWebhookMessenger discordWebhookMessenger;
 
 		private bool loggedIn = false;
@@ -299,7 +299,7 @@ namespace Tbot.Services {
 			log(LogLevel.Information, LogSender.Tbot, "Initializing data...");
 			userData.celestials = await _tbotOgameBridge.GetPlanets();
 			userData.researches = await _tbotOgameBridge.UpdateResearches();
-			// PATCH (Ghost-Recall-Persistenz): re-arm oder sofort ausloesen, was ein Neustart am
+			// re-arm oder sofort ausloesen, was ein Neustart am
 			// AutoFleetSave/Ghost-Recall-Timer verloren hat (siehe FleetScheduler.ReconcilePendingRecalls).
 			await _fleetScheduler.ReconcilePendingRecalls();
 			userData.scheduledFleets = new();
@@ -315,15 +315,15 @@ namespace Tbot.Services {
 			// SleepMode will know if features must be enabled or not
 			InitializeSleepMode();
 
-			// PATCH GhostSleep: eigener, von SleepMode komplett unabhaengiger Zeitfenster-Scheduler
-			// (siehe claude/ghostsleep-plan-adr.md). Nutzt denselben Timer-in-Dictionary-Mechanismus wie
+			// eigener, von SleepMode komplett unabhaengiger Zeitfenster-Scheduler
+			//. Nutzt denselben Timer-in-Dictionary-Mechanismus wie
 			// SleepMode, aber eigene Uhrzeiten (InstanceSettings.GhostSleep.GoToSleep/WakeUp) und eigenes
 			// Verhalten (Blanket-Stop ausser Expeditions/Defender statt globalem isSleeping-Flag). Bleibt
 			// technisch komplett getrennt vom manuellen Telegram-Befehl /ghost (eigener "GhostSleepTimer"
 			// in FleetScheduler.cs) - beide Mechanismen laufen unabhaengig nebeneinander her.
 			InitializeGhostSleepSchedule();
 
-			// PATCH Sleep-Statuskachel: schreibt alle 30 s sleepstatus.json fuer die Kachel im Browser (ogamed /bot/sleepstatus)
+			// schreibt alle 30 s sleepstatus.json fuer die Kachel im Browser (ogamed /bot/sleepstatus)
 			InitializeSleepStatusWriter();
 
 			// Up and running. Lets initialize notification for settings file
@@ -539,7 +539,7 @@ namespace Tbot.Services {
 		}
 		private DateTime _lastReloadFinished = DateTime.MinValue;
 		private async void OnSettingsChanged() {
-			// PATCH Slot-Kachel: eigene Schreibvorgaenge der Kachel (Speicherwert bereits gesetzt) loesen keinen Reload aus
+			// eigene Schreibvorgaenge der Kachel (Speicherwert bereits gesetzt) loesen keinen Reload aus
 			if (DateTime.UtcNow < _suppressReloadUntilUtc) {
 				log(LogLevel.Debug, LogSender.Tbot, "Settings reload suppressed (change came from the slot tile).");
 				return;
@@ -720,7 +720,7 @@ namespace Tbot.Services {
 			timers.Remove("SleepModeTimer");
 		}
 
-		// ===================== GhostSleep (Plan siehe claude/ghostsleep-plan-adr.md) =====================
+		// ===================== GhostSleep (Plan ) =====================
 		// Geplantes, zeitgesteuertes Aequivalent zum manuellen "/ghost Xh"-Telegram-Befehl: feste
 		// GoToSleep/WakeUp-Uhrzeiten statt Dauer. BEWUSST komplett getrennt vom manuellen /ghost
 		// (eigener "GhostSleepTimer" in FleetScheduler.cs) - kein gemeinsamer Code, keine gemeinsamen
@@ -732,7 +732,7 @@ namespace Tbot.Services {
 		private List<Feature> _ghostSleepStoppedFeatures = new();
 		private bool _ghostSleepEscalatedActive = false;
 
-		// PATCH GhostSleep-Vorphase (03.10.2026): kurz VOR dem Einschlafen sollen alle Expeditions-Slots
+		// kurz VOR dem Einschlafen sollen alle Expeditions-Slots
 		// gefuellt sein, bevor der Fleetsave die uebrigen Schiffe vom Mond mitnimmt (Expeditions-Schiffe
 		// in der Luft bleiben davon unberuehrt und kehren spaeter selbst zurueck). In der Vorphase
 		// (GhostSleep.PreSleepExpeditionMinutes vor GoToSleep, Standard 30, 0 = aus) werden
@@ -897,7 +897,7 @@ namespace Tbot.Services {
 			Feature.Expeditions, Feature.Defender, Feature.SleepMode
 		};
 
-		// PATCH GhostSleep-Fix v2 (28.09.2026): der urspruengliche Ansatz (ein Timer, der sich per
+		// der urspruengliche Ansatz (ein Timer, der sich per
 		// Timer.Change() nach jedem Tick selbst auf das naechst berechnete Intervall umplant - identisch
 		// zum bestehenden SleepModeTimer-Muster) hat sich als UNZUVERLAESSIG erwiesen: nach dem
 		// allerersten Tick feuerte der Timer nie wieder, weder bei einem mehrstuendigen Intervall noch
@@ -954,7 +954,7 @@ namespace Tbot.Services {
 			if (!await _ghostSleepScheduleLock.WaitAsync(0))
 				return;
 			try {
-				// PATCH GhostSleep-Fix v3 (28.09.2026): der vorherige Guard rief
+				// der vorherige Guard rief
 				// SettingsService.IsSettingSet(InstanceSettings, "GhostSleep") auf - bisher im gesamten
 				// Codebase wird IsSettingSet aber immer nur mit einem SUB-Objekt aufgerufen (z.B.
 				// IsSettingSet(InstanceSettings.Defender, "Discord")), nie mit dem Root-Objekt selbst.
@@ -964,7 +964,7 @@ namespace Tbot.Services {
 				// der Start-Zeile absolut kein GhostSleep-Log-Eintrag, auch mit dem festen 60s-Timer aus
 				// v2). Ersetzt durch einen direkten try/catch-Zugriff, der ohnehin schon fuer "Active"
 				// noetig ist und robust genug ist, ein komplett fehlendes GhostSleep-Objekt abzufangen.
-				// PATCH GhostSleep-Fix v5 (Log-Spam-Cleanup, 28.09.2026): die bisherige v3/v4-Diagnose loggte
+				// die bisherige v3/v4-Diagnose loggte
 				// bei JEDEM 60s-Tick Rohwert+Typ von GhostSleep.Active auf Info-Level, unabhaengig vom
 				// Ergebnis - eingebaut, um den (mittlerweile gefundenen und behobenen) "GhostSleep faelschlich
 				// unter SleepMode verschachtelt"-Bug zu diagnostizieren (siehe ghostsleep-plan-adr.md,
@@ -1121,7 +1121,7 @@ namespace Tbot.Services {
 				foreach (var celestial in orderedCelestials) {
 					try {
 						if (celestial.Coordinate.Type == Celestials.Planet) {
-							// PATCH Phalanx-Fix (Teil 2): Planeten sind phalanxbar - wenn ALLE eigenen
+							// Planeten sind phalanxbar - wenn ALLE eigenen
 							// Celestials im selben Moment eine Fleetsave-Flotte verschicken, ist schon
 							// der SENDEZEITPUNKT selbst ein erkennbares Bulk-Muster (unabhaengig von der
 							// unterschiedlichen Speed aus GetFleetSaveDestination). Planeten-Fleetsave
@@ -1192,11 +1192,11 @@ namespace Tbot.Services {
 					var returningExpeditions = userData.fleets.Where(f => f.Mission == Missions.Expedition && f.ReturnFlight).ToList();
 					if (runningExpeditions.Count > 0 || returningExpeditions.Count > 0) {
 						double maxBackIn = returningExpeditions.Count > 0 ? returningExpeditions.Max(f => f.BackIn ?? 0) : 0;
-						// PATCH GhostSleep-Fix: ArriveIn ist (anders als BackIn) nicht nullable in diesem
+						// ArriveIn ist (anders als BackIn) nicht nullable in diesem
 						// Codebase (siehe z.B. GoToSleepAsync oben: "f.ArriveIn <= timeToWakeup" ohne ??) -
 						// "?? 0" darauf war ein Compile-Error (CS0019).
 						double maxArriveThenBack = runningExpeditions.Count > 0 ? runningExpeditions.Max(f => (double) f.ArriveIn + 3600) : 0; // grobe Schaetzung falls noch keine Rueckflugdaten
-						// PATCH GhostSleep-Fix: IntervalType kennt kein "SomeMinutes" (CS0117) - AMinuteOrTwo
+						// IntervalType kennt kein "SomeMinutes" (CS0117) - AMinuteOrTwo
 						// ist der naechstliegende bereits vorhandene Wert fuer diesen Zweck.
 						long waitMs = (long) (Math.Max(maxBackIn, maxArriveThenBack) * 1000) + RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo) + 10 * 60 * 1000;
 						if (waitMs > 0) {
@@ -1273,7 +1273,7 @@ namespace Tbot.Services {
 			}
 		}
 
-		// PATCH GhostSleep-Fix (Anker-Refresh, 28.09.2026): oeffentlicher Wrapper um die private
+		// oeffentlicher Wrapper um die private
 		// RearmGhostSleepDefenderAnchor(), damit DefenderWorker (ueber ITBotMain) selbst um einen frischen
 		// Anker bitten kann, sobald der zuletzt gesetzte GhostSleepNextAnchorUtc erreicht/ueberschritten ist.
 		// Ohne diesen Aufruf blieb der Anker fuer immer auf dem alten, jetzt vergangenen Wert stehen - jeder
@@ -1327,7 +1327,7 @@ namespace Tbot.Services {
 				log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: error during escalation (active={active}): {e.Message}");
 			}
 		}
-		// =================== Angriffs-Lockdown (PATCH 01.10.2026) ===================
+		// =================== Angriffs-Lockdown ===================
 		// Sobald der Defender einen Angriff erkannt und ein Fleetsave registriert hat, laufen ALLE anderen
 		// Worker nicht mehr (auch Expeditions): der Fleetsave hat hoechste Prioritaet - keine konkurrierenden
 		// Flottenslots, kein AutoFarm/Expedition, das Flotten vom angegriffenen Himmelskoerper abzieht. Der
@@ -1396,7 +1396,7 @@ namespace Tbot.Services {
 			}
 		}
 
-		// PATCH Discord mirror: every Telegram message is also sent to the global Discord webhook
+		// every Telegram message is also sent to the global Discord webhook
 		// (DiscordWebhook.Active). mirrorToDiscord=false is used by callers that already send their own
 		// Discord alert (DefenderWorker) to avoid duplicates.
 		public async Task SendTelegramMessage(string fmt, bool mirrorToDiscord = true) {
@@ -1507,7 +1507,7 @@ namespace Tbot.Services {
 
 
 		public async Task TelegramCollect(bool noLimit = false) {
-			// PATCH 10: this was previously "void" and the async Collect() call was fired-and-forgotten
+			// this was previously "void" and the async Collect() call was fired-and-forgotten
 			// (never awaited), so /collect and /collectall appeared unresponsive: the method returned
 			// immediately, before the repatriate cycle - and its Telegram result message - ever ran.
 			await SendTelegramMessage("Collecting...");
@@ -1754,7 +1754,7 @@ namespace Tbot.Services {
 			FleetPrediction fleetPrediction = _helpersService.CalcFleetPrediction(celestial.Coordinate, dest, celestial.Ships, Missions.Deploy, speed, userData.researches, userData.serverData, celestial.LFBonuses, userData.userInfo.Class, userData.allianceClass);
 			int fleetId = await _fleetScheduler.SendFleet(celestial, celestial.Ships, dest, Missions.Deploy, speed, payload, userData.userInfo.Class, true);
 
-			// PATCH 11: De Morgan bug - "!=" combined with "||" was always true (fleetId can never equal
+			// De Morgan bug - "!=" combined with "||" was always true (fleetId can never equal
 			// more than one of these codes at once, so at least one "!=" is always true), meaning even a
 			// failed SendFleet was reported as a successful switch. This matters here in particular because
 			// TelegramSwitch is also used as the AutoFleetSave fallback in FleetScheduler.cs (~line 395),
@@ -1846,7 +1846,7 @@ namespace Tbot.Services {
 			await _fleetScheduler.CollectDeut(MinAmount);
 		}
 
-		// PATCH 12: /trans <speed> - bulk version of /switch. From every Planet that has its own Moon,
+		// /trans <speed> - bulk version of /switch. From every Planet that has its own Moon,
 		// deploy Brain.AutoCargo.CargoType ships plus Deuterium to that Moon, topping each Moon up to
 		// two target values: Brain.AutoCargo.MaxCargosToKeep ships and Brain.Transports.DeutToLeaveOnMoons
 		// Deuterium. Only the missing difference is sent (capped by what's available on the Planet); a
@@ -1975,7 +1975,7 @@ namespace Tbot.Services {
 			}
 			timers.Add("SleepStatusTimer", new Timer(HandleSleepStatusWrite, null, 5000, SleepStatusTickMs));
 
-			// PATCH Slot-Kachel: alle 3 s nach Befehlsdateien (slotcmd_*.json) von ogamed suchen
+			// alle 3 s nach Befehlsdateien (slotcmd_*.json) von ogamed suchen
 			if (timers.TryGetValue("SlotCmdTimer", out Timer oldCmd)) {
 				oldCmd.Dispose();
 				timers.Remove("SlotCmdTimer");

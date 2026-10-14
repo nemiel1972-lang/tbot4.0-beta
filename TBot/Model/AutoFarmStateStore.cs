@@ -29,7 +29,6 @@ namespace TBot.Model {
 
 	public sealed record AutoFarmScanCursor(int RangeIndex, int Galaxy, int System);
 
-	// PATCH 140: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 158 - Verlusterfassung pro AutoFarm-Angriff
 	public sealed class AutoFarmFleetLossRecord {
 		public int FleetId { get; init; }
 		public Coordinate Target { get; init; }
@@ -52,7 +51,7 @@ namespace TBot.Model {
 	public sealed class AutoFarmStateStore : IDisposable {
 		private readonly string _connectionString;
 		private bool _enabled = true;
-		// PATCH 140: Verlusterfassung separat abschaltbar (falls die Tabelle nicht angelegt werden konnte)
+		// Verlusterfassung separat abschaltbar (falls die Tabelle nicht angelegt werden konnte)
 		private bool _lossTrackingEnabled = true;
 
 		static AutoFarmStateStore() {
@@ -180,7 +179,6 @@ ON CONFLICT(galaxy, system, position, celestial_type) DO UPDATE SET
 					? target.ConsumedReportId.Value
 					: DBNull.Value);
 				command.Parameters.AddWithValue("$updated_at_utc", FormatUtc(updatedAtUtc));
-				// PATCH 117: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 137
 				command.Parameters.AddWithValue("$held_for_manual_review", target.HeldForManualReview ? 1 : 0);
 				command.ExecuteNonQuery();
 			} catch {
@@ -216,7 +214,6 @@ FROM targets;";
 						: JsonConvert.DeserializeObject<EspionageReport>(reader.GetString(6));
 					targets.Add(new FarmTarget(celestial, (FarmState) reader.GetInt32(5), report) {
 						ConsumedReportId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-						// PATCH 117: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 137
 						HeldForManualReview = !reader.IsDBNull(8) && reader.GetInt32(8) != 0
 					});
 				}
@@ -342,7 +339,6 @@ LIMIT $limit;";
 			return attacks;
 		}
 
-		// PATCH 107: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 127
 		// Persistiert, ob seit Prozessstart (genauer: irgendwann, ueberhaupt schonmal) ein voller
 		// Scan-Durchlauf ueber alle konfigurierten Ranges/Bloecke abgeschlossen wurde. Bisher war das
 		// (_mainScanCompletedSinceStart in AutoFarmWorker.cs) reiner In-Memory-Zustand - jeder
@@ -477,7 +473,6 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 						? target.ConsumedReportId.Value
 						: DBNull.Value);
 					insert.Parameters.AddWithValue("$updated_at_utc", FormatUtc(updatedAtUtc));
-					// PATCH 117: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 137
 					insert.Parameters.AddWithValue("$held_for_manual_review", target.HeldForManualReview ? 1 : 0);
 					insert.ExecuteNonQuery();
 				}
@@ -488,7 +483,6 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 			}
 		}
 
-		// PATCH 140: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 158 - Verlusterfassung
 		public bool RecordFleetDispatch(int fleetId, Coordinate target, Coordinate origin, DateTime dispatchedAtUtc, DateTime expectedArrivalUtc, DateTime expectedReturnUtc, Dictionary<string, long> sent, Resources plannedLoot) {
 			if (!_enabled || !_lossTrackingEnabled || fleetId <= 0 || target == null || origin == null)
 				return false;
@@ -683,7 +677,6 @@ CREATE TABLE IF NOT EXISTS main_scan_state (
 					// Existing AutoFarm databases already have the new column.
 				}
 
-				// PATCH 117: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 137
 				try {
 					using var migration = connection.CreateCommand();
 					migration.CommandText = "ALTER TABLE targets ADD COLUMN held_for_manual_review INTEGER NOT NULL DEFAULT 0;";
@@ -717,7 +710,7 @@ FROM targets
 WHERE consumed_report_id IS NOT NULL AND consumed_report_id > 0;";
 				backfill.ExecuteNonQuery();
 
-				// PATCH 140: Verlusterfassung - eigener try, ein Fehler hier darf den Rest nicht abschalten
+				// Verlusterfassung - eigener try, ein Fehler hier darf den Rest nicht abschalten
 				try {
 					using var lossTable = connection.CreateCommand();
 					lossTable.CommandText = @"

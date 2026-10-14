@@ -20,8 +20,8 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public EspionageReport Report { get; set; }
 		public int? ConsumedReportId { get; set; }
 
-		// PATCH 86: Zeitpunkt (Server-Zeit), zu dem State zuletzt auf AttackSent gesetzt wurde.
-		// PruneOldReports() fragt bei jedem Interleaving-Pass (PATCH 68) die Flottenliste neu ab
+		// Zeitpunkt (Server-Zeit), zu dem State zuletzt auf AttackSent gesetzt wurde.
+		// PruneOldReports() fragt bei jedem Interleaving-Pass die Flottenliste neu ab
 		// und prueft per AutoFarmAttackPolicy.IsAttackInProgress(), ob die Angriffsflotte noch
 		// unterwegs ist. Direkt nach dem Versand kann die frisch abgefragte Flottenliste die
 		// gerade erst losgeschickte Flotte aber noch nicht enthalten (API-/ogamed-Verzoegerung) -
@@ -33,7 +33,6 @@ namespace TBot.Ogame.Infrastructure.Models {
 		// Flottenliste gerade zeigt.
 		public DateTime? AttackSentAt { get; set; }
 
-		// PATCH 117: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 137
 		// Markiert Ziele, die schon beim ALLERERSTEN Check (AutoFarm.MaxDefensePoints ueberschritten,
 		// noch bevor irgendeine Eskorten-Simulation laeuft) als "zu stark verteidigt" erkannt wurden.
 		// KEINE Blacklist: das Ziel/der Spionagebericht bleibt normal in der Zielliste sichtbar

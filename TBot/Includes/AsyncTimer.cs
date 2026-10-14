@@ -89,7 +89,7 @@ namespace Tbot.Includes {
 					IsRunning = true;
 
 					try {
-						// PATCH (Stop-Hang-Fix): pruefte vorher ct (das urspruengliche, nie von StopAsync()
+						// pruefte vorher ct (das urspruengliche, nie von StopAsync()
 						// abgebrochene Token) statt _cts.Token (das linked Token, das StopAsync() tatsaechlich
 						// cancelt). Meist folgenlos, weil Task.Delay(..., _cts.Token) sauber eine
 						// OperationCanceledException wirft und die Schleife per catch verlaesst - aber die
@@ -125,7 +125,7 @@ namespace Tbot.Includes {
 			}
 		}
 
-		// PATCH (Stop-Hang-Fix, 17.09.2026): Cancel() bricht nur die Task.Delay-Wartezeiten zwischen
+		// Cancel() bricht nur die Task.Delay-Wartezeiten zwischen
 		// den Zyklen ab. Laeuft der Worker gerade mitten in "await _callback(_cts.Token)" - also mitten
 		// in einem HTTP-Call an ogamed - passiert nichts, weil OgameService das Token nicht auswertet.
 		// Beobachtet 17.09.2026: nach systemctl stop liefen AutoMine-Zyklen noch >30s unbeirrt weiter

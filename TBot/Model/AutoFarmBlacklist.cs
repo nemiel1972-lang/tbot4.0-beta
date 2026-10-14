@@ -11,7 +11,7 @@ namespace TBot.Model {
 		HasDefense,
 		LowResources,
 		ManuallyAdded,
-		// PATCH 83: Ziel ist grundsaetzlich schlagbar, aber strukturell nicht profitabel
+		// Ziel ist grundsaetzlich schlagbar, aber strukturell nicht profitabel
 		// (Spritkosten + geschaetzte Eskortenverluste >= Beute) - typischerweise bei sehr
 		// grosser Distanz und/oder sehr grosser benoetigter Eskorte. Anders als HasDefense
 		// bewusst automatisch gesetzt, weil sich Distanz und Eskortenbedarf fuer ein Ziel

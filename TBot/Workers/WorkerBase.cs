@@ -139,13 +139,13 @@ namespace Tbot.Workers {
 		public abstract Feature GetFeature();
 		public abstract LogSender GetLogSender();
 
-		// PATCH (Execute-Timeout-Absicherung, 17.09.2026): Default fuer alle Worker, die keine
+		// Default fuer alle Worker, die keine
 		// eigenen legitimen Langzeit-Wartezeiten in Execute() haben (siehe ExecutionWrapper). Ein
 		// Worker mit einer solchen Wartezeit (z.B. AutoFarm) ueberschreibt das mit einem groesseren
 		// Wert oder Timeout.InfiniteTimeSpan.
 		protected virtual TimeSpan ExecuteTimeout => TimeSpan.FromSeconds(45);
 
-		// PATCH (Heartbeat-Haenger-Erkennung, 22.09.2026): siehe Kommentar bei Heartbeat()/
+		// siehe Kommentar bei Heartbeat()/
 		// LastHeartbeatUtc unten und in der ExecutionWrapper()-Abandon-Verzweigung fuer den
 		// Hintergrund. Ersetzt die vorherige starre "Hard-Ceiling" (ExecuteTimeout + 5 Minuten
 		// seit Zyklusstart), die bei Workern mit legitim sehr langen, aber aktiv fortschreitenden
@@ -197,7 +197,7 @@ namespace Tbot.Workers {
 				return;
 			}
 
-			// PATCH (Execute-Timeout-Absicherung, 17.09.2026): steuert, ob der finally-Block unten
+			// steuert, ob der finally-Block unten
 			// ReleaseWorker() aufruft. Siehe Kommentar bei der Abandon-Verzweigung weiter unten -
 			// im Timeout-Fall wird die Freigabe bewusst NICHT hier ausgeloest, sondern an das
 			// tatsaechliche Ende des haengenden Execute()-Aufrufs gehaengt.
@@ -286,7 +286,7 @@ namespace Tbot.Workers {
 			} catch(OperationCanceledException) {
 				// OK
 			} catch (Exception ex) {
-				// PATCH (Silent-Death-Fix, 17.09.2026): VORHER wurde hier nur OperationCanceledException
+				// VORHER wurde hier nur OperationCanceledException
 				// gefangen. Jede andere Exception (z.B. eine unerwartete Antwort/Fehlerform von ogamed, die
 				// Execute() nicht selbst abfaengt) lief ungefangen durch ExecutionWrapper() UND durch die
 				// while-Schleife in AsyncTimer.StartAsync() (die ebenfalls nur OperationCanceledException

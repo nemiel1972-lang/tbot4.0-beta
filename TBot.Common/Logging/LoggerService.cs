@@ -30,7 +30,7 @@ namespace TBot.Common.Logging {
 		private readonly IHubContext<WebHub, IWebHub> _hub;
 		private readonly IServiceProvider _serviceProvider;
 
-		// PATCH 14: strip account-identifying strings (player name / universe name) from every log
+		// strip account-identifying strings (player name / universe name) from every log
 		// message at the single choke point (WriteLog), before it reaches any sink (console, file,
 		// csv, SignalR/WebUI, Telegram). Set via env vars so no settings.json/Credentials wiring is
 		// needed; falls back to no-op if unset.

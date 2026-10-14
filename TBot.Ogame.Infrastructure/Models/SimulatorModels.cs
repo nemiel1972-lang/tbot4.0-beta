@@ -1,7 +1,7 @@
 using TBot.Ogame.Infrastructure.Enums;
 
 namespace TBot.Ogame.Infrastructure.Models {
-	// PATCH 39: request/response models for POST /bot/simulate-battle (ogamed Patch 38,
+	// request/response models for POST /bot/simulate-battle (ogamed Patch 38,
 	// pkg/simulator/simulator.go wired to a REST endpoint). Field names are PascalCase to
 	// match the Go structs 1:1 (ogame.ShipsInfos / ogame.DefensesInfos have no json tags, so
 	// Go's encoding/json uses the exact exported field name; Newtonsoft.Json's default
@@ -77,7 +77,7 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public SimulatorPrice Debris { get; set; }
 		public int Recycler { get; set; }
 		public int Moonchance { get; set; }
-		// PATCH 54: cargo-specific survival, separate from the aggregate AttackerLosses price
+		// cargo-specific survival, separate from the aggregate AttackerLosses price
 		// value - AttackerCargoSent is how many SmallCargo+LargeCargo went in, AttackerCargoSurvived
 		// is the average surviving count across all simulation runs (fractional - it's an average).
 		public int AttackerCargoSent { get; set; }

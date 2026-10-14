@@ -100,7 +100,7 @@ namespace Tbot.Workers.Brain {
 
 				Buildables research;
 
-				// PATCH 32: neue generische Prioritize*-Schalter, defaulten auf false wenn in der Config
+				// neue generische Prioritize*-Schalter, defaulten auf false wenn in der Config
 				// (noch) nicht gesetzt (IsSettingSet-Guard wie bei anderen optionalen Feldern im Projekt).
 				bool prioritizeComputerTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeComputerTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeComputerTechnology;
 				bool prioritizeLaserTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeLaserTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeLaserTechnology;
@@ -116,7 +116,7 @@ namespace Tbot.Workers.Brain {
 				bool prioritizeGravitonTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeGravitonTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeGravitonTechnology;
 
 				if ((bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeAstrophysics || (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizePlasmaTechnology || (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeEnergyTechnology || (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeIntergalacticResearchNetwork) {
-					// PATCH (activity-allcelestials): this DOIR calculation used to loop over EVERY owned
+					// this DOIR calculation used to loop over EVERY owned
 					// Planet (excluded or not) and call UpdatePlanet(..., Facilities/Buildings/LFBonuses) on
 					// each one, with zero Exclude filtering - AutoResearch has no Exclude setting of its own.
 					// Since PrioritizeAstrophysics/PrioritizePlasmaTechnology/PrioritizeIntergalacticResearchNetwork
@@ -203,7 +203,7 @@ namespace Tbot.Workers.Brain {
 
 				int level = _calculationService.GetNextLevel(_tbotInstance.UserData.researches, research);
 				if (research != Buildables.Null) {
-					// PATCH 8: re-check live ResearchID right before acting on it. The initial check at the
+					// re-check live ResearchID right before acting on it. The initial check at the
 					// top of this method can be stale by the time we reach here (multiple awaited calls in
 					// between), causing a race where a research that started in the meantime gets resources
 					// sent to it / a build attempted on top of it. Abort the cycle instead.
@@ -275,7 +275,7 @@ namespace Tbot.Workers.Brain {
 								if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 									Celestial origin = new() { ID = 0 };
 									List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
-									// PATCH 17: same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
+									// same fix as Patch 14 (AutoMineCelestialWorker) - only refresh
 									// candidate origin celestials instead of the whole empire when MultipleOrigins
 									// is disabled, to avoid triggering OGame's "recent activity" indicator on
 									// every single celestial regardless of Exclude settings.
@@ -340,7 +340,7 @@ namespace Tbot.Workers.Brain {
 													preferredShip = Buildables.SmallCargo;
 												}
 												long shipsNeeded = _calculationService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses.GetShipCargoBonus(preferredShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
-												// PATCH Brain transport chain (14.10.2026): ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
+												// ship selection via FleetScheduler (SC -> LC, mixed fleet, expedition reserve).
 												Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 												if (brainSchiffe != null) {
 													Ships ships = brainSchiffe;

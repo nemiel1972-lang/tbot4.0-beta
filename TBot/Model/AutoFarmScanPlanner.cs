@@ -4,7 +4,6 @@ using System.Linq;
 
 namespace TBot.Model {
 	public static class AutoFarmScanPlanner {
-		// PATCH 125: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 145
 		// resumeSystem == null -> komplette Range von vorne (startSystem..endSystem).
 		// resumeSystem gesetzt -> NUR der Rest ab resumeSystem bis endSystem, KEIN Wraparound mehr.
 		// Vorher wurde ab resumeSystem "rotiert" und danach wieder von startSystem bis resumeSystem-1
@@ -20,12 +19,11 @@ namespace TBot.Model {
 			return Enumerable.Range(from, endSystem - from + 1).ToArray();
 		}
 
-		// PATCH 104: siehe AutoFarmWorker.PATCHNOTES.md, Abschnitt 65
 		// Wie EnumerateSystems, aber die Systeme einer Range werden nach ihrem KREISFOERMIGEN Abstand
 		// zu homeSystem sortiert (Heimatwelt-/Mond-System) - naeheste Systeme zuerst.
 		// totalSystems (ServerData.Systems) wird fuer den Ring-Wraparound benoetigt (z.B. bei 499
 		// Systemen ist System 499 nur 1 System von System 1 entfernt, nicht 498).
-		// PATCH 125: resumeSystem == null -> komplette distanzsortierte Liste ab Index 0 (also ab der
+		// resumeSystem == null -> komplette distanzsortierte Liste ab Index 0 (also ab der
 		// Heimatwelt selbst). Vorher wurde auch beim Neustart einer Range "ab startSystem rotiert" -
 		// bei Range 1-499 und Heimat 100 begann ein frischer Scan dadurch bei System 1 (Distanz 99)
 		// statt bei 100. resumeSystem gesetzt -> nur der Rest der distanzsortierten Liste ab dessen

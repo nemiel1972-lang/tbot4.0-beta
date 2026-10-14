@@ -59,7 +59,7 @@ namespace Tbot.Workers {
 
 					_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 
-					// PATCH 14: _tbotInstance.UserData.celestials is a List<Celestial> shared with every
+					// _tbotInstance.UserData.celestials is a List<Celestial> shared with every
 					// other worker (AutoMine, AutoCargo, ...) running concurrently on its own thread. The
 					// two foreach loops below each contain "await" calls in their body, so control yields
 					// back to other workers mid-iteration; if one of them mutates the same shared list
@@ -69,7 +69,7 @@ namespace Tbot.Workers {
 					// touch _tbotInstance.UserData.celestials directly inside a loop with an await in it.
 					List<Celestial> celestialSnapshot = _tbotInstance.UserData.celestials.ToList();
 
-					// PATCH 25: this used to refresh Ships for every single celestial (all planets
+					// this used to refresh Ships for every single celestial (all planets
 					// AND all moons) every cycle, so any of them could in theory be considered as a
 					// harvest origin. That means every excluded colony moon got touched here on every
 					// Harvest check regardless of AutoMine/LifeformAutoMine/AutoCargo Exclude settings -
@@ -107,7 +107,7 @@ namespace Tbot.Workers {
 							updatedCelestials.Add(c);
 						}
 					}
-					// PATCH 14 (fix v2): the line below used to assign the shared field the exact same
+					// the line below used to assign the shared field the exact same
 					// List<Celestial> object we then keep iterating over locally as "updatedCelestials"
 					// (foreach at line ~86). That means other workers mutating
 					// _tbotInstance.UserData.celestials were mutating the very list our own loop was
@@ -176,7 +176,7 @@ namespace Tbot.Workers {
 					}
 					_tbotInstance.UserData.celestials = newCelestials;
 
-					// PATCH 24: HarvestForeignDF - additionally harvest debris fields sitting at a
+					// HarvestForeignDF - additionally harvest debris fields sitting at a
 					// foreign (non-own) planet's position, in the same systems as your own planets.
 					// Debris fields belong to nobody in OGame - whoever gets a Recycler there first
 					// can loot them, and flying to one does NOT notify the planet's owner (no combat
@@ -227,7 +227,7 @@ namespace Tbot.Workers {
 
 					// Any celestial (planet or moon) with idle recyclers/pathfinders can be
 					// used as an origin, e.g. a centralized fleet parked on the home moon.
-					// PATCH 25: restrict to harvestOrigins (whose Ships data we actually refreshed
+					// restrict to harvestOrigins (whose Ships data we actually refreshed
 					// above) rather than every celestial - celestials outside that list keep stale
 					// ship data and must not be selectable as a send origin based on it.
 					var origins = _tbotInstance.UserData.celestials

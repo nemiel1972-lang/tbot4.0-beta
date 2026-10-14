@@ -27,7 +27,7 @@ namespace Tbot.Workers {
 		private static readonly ConcurrentDictionary<int, DateTime> _handledAttackIds = new();
 		private static readonly TimeSpan _handledAttackTtl = TimeSpan.FromMinutes(60);
 
-		// PATCH (fleetsave-timing): root-cause fix for reports of the Defender fleetsaving too early
+		// root-cause fix for reports of the Defender fleetsaving too early
 		// (e.g. losing an expedition fleet that returned a few minutes after the save already fired,
 		// because the attack itself was still ~10 minutes out when detected) and never revisiting that
 		// decision (a second, faster attack on the same celestial did not bring the timer forward).
@@ -48,12 +48,12 @@ namespace Tbot.Workers {
 			public DateTime EarliestImpactUtc;
 			public DateTime DispatchAtUtc;
 			public long MinFlightTimeSeconds;
-			// PATCH Dispatch-Timer (01.10.2026): verhindert, dass Timer und Execute()-Zyklus gleichzeitig dispatchen
+			// verhindert, dass Timer und Execute()-Zyklus gleichzeitig dispatchen
 			public int Busy;
 		}
 		private static readonly ConcurrentDictionary<int, PendingFleetSave> _pendingFleetSaves = new();
 
-		// PATCH Dispatch-Timer (01.10.2026): Vorfall 01.10. 10:23 - der Fleetsave war fuer 10:22:17 geplant,
+		// Vorfall 01.10. 10:23 - der Fleetsave war fuer 10:22:17 geplant,
 		// wurde aber erst im naechsten Execute()-Zyklus um 10:23:15 ausgefuehrt (3 Sekunden vor dem Einschlag),
 		// weil der Dispatch nur im Check-Zyklus geprueft wurde: Timer-Jitter plus der Vorlauf des Zyklus
 		// (FakeActivity, UpdateFleets, IsUnderAttack, GetAttacks, HandleAttack mit Task.Delay) frassen die
@@ -108,7 +108,7 @@ namespace Tbot.Workers {
 					DoLog(LogLevel.Warning, $"Stacktrace: {e.StackTrace}");
 				}
 
-				// PATCH Mehrfachwellen (01.10.2026): der Eintrag wird NICHT mehr beim ersten Einschlag entfernt -
+				// der Eintrag wird NICHT mehr beim ersten Einschlag entfernt -
 				// sonst bekam eine zweite, spaetere Welle auf denselben Himmelskoerper nie ein Fleetsave
 				// (HandleAttack ueberspringt bekannte Angriffe, "already handled"). Aufgeraeumt wird im
 				// Execute()-Zyklus (keine Angriffe mehr -> abbrechen) bzw. 5 Minuten nach dem letzten bekannten Einschlag.
@@ -138,14 +138,14 @@ namespace Tbot.Workers {
 		// to send, so a spurious extra check just costs a log line, not a wasted fleet slot.
 		private const int FleetSaveFollowUpCheckSeconds = 20;
 
-		// PATCH 14: Discord attack alert. Independent of TelegramMessenger - fires an HTTP POST
+		// Discord attack alert. Independent of TelegramMessenger - fires an HTTP POST
 		// to a Discord webhook URL whenever an attack alert would also go to Telegram. Never throws
 		// out of HandleAttack: any failure (bad URL, network, Discord outage) is only logged.
 		private static readonly HttpClient _discordHttpClient = new();
 
 		private async Task SendDiscordAlert(string message) {
 			try {
-				// Own Defender.Discord block (PATCH 14) wins if present. If it is absent, fall back to
+				// Own Defender.Discord block wins if present. If it is absent, fall back to
 				// the global DiscordWebhook (ported from ronnie32 v3.5.1-beta1) as an Attack embed.
 				if (!SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Defender, "Discord")) {
 					await _tbotInstance.SendDiscordMessage(message, NotificationKind.Attack);
@@ -169,7 +169,7 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// PATCH GhostSleep (siehe claude/ghostsleep-plan-adr.md und TBotMain.cs, Abschnitt "GhostSleep"):
+		// PATCH GhostSleep:
 		// von aussen (TBotMain) gesteuerter PASSIV/AKTIV-Schalter. PASSIV = Alarm bei Angriff laeuft wie
 		// gewohnt (Telegram/Discord/Log in HandleAttack, siehe unten - unveraendert), aber
 		// RegisterOrUpdatePendingFleetSave bleibt unterdrueckt (kein automatisches Fleetsave) UND der
@@ -205,7 +205,7 @@ namespace Tbot.Workers {
 				bool isUnderAttack = await _ogameService.IsUnderAttack();
 				DateTime time = await _tbotOgameBridge.GetDateTime();
 				List<AttackerFleet> currentAttacks = new();
-				// PATCH Dispatch-Timer: ArriveIn gilt zum Abrufzeitpunkt von GetAttacks - nicht zum spaeteren "jetzt"
+				// ArriveIn gilt zum Abrufzeitpunkt von GetAttacks - nicht zum spaeteren "jetzt"
 				// (Vorlauf/Task.Delay in HandleAttack haette den Einschlag sonst um Sekunden zu spaet geschaetzt).
 				DateTime attacksFetchedUtc = DateTime.UtcNow;
 				if (isUnderAttack) {
@@ -222,18 +222,18 @@ namespace Tbot.Workers {
 					DoLog(LogLevel.Information, "Your empire is safe");
 				}
 
-				// PATCH (fleetsave-timing): dispatch any FleetSaves whose safety-margin window has arrived,
+				// dispatch any FleetSaves whose safety-margin window has arrived,
 				// and drop tracking for celestials whose attacks were recalled/resolved in the meantime.
 				// Passing an empty list when isUnderAttack is false is correct and intentional: the account
 				// is authoritatively not under attack, so every pending entry gets cancelled below.
-				// PATCH Statuskachel: aktuelle Angriffsliste (auch leer) fuer die Browser-Kachel veroeffentlichen
+				// aktuelle Angriffsliste (auch leer) fuer die Browser-Kachel veroeffentlichen
 				try { _tbotInstance.PublishAttackSnapshot(currentAttacks, attacksFetchedUtc); } catch { }
 				await ProcessPendingFleetSaves(currentAttacks, attacksFetchedUtc);
 
-				// PATCH GhostSleep: sobald eine waehrend PASSIV eskalierte Angriffswelle komplett
+				// sobald eine waehrend PASSIV eskalierte Angriffswelle komplett
 				// abgearbeitet ist (keine pending FleetSaves mehr offen), zurueck auf PASSIV und TBotMain
 				// informieren (setzt Expeditions.WaitForAllExpeditions zurueck, vergibt neuen Anker).
-				// PATCH Angriffs-Lockdown: erst wenn kein Fleetsave mehr offen ist, laufen die anderen Worker wieder.
+				// erst wenn kein Fleetsave mehr offen ist, laufen die anderen Worker wieder.
 				if (_pendingFleetSaves.IsEmpty)
 					_ = Task.Run(() => _tbotInstance.AttackLockdown(false));
 
@@ -246,7 +246,7 @@ namespace Tbot.Workers {
 
 				long interval;
 				if (GhostSleepPassiveMode && GhostSleepNextAnchorUtc.HasValue && DateTime.UtcNow >= GhostSleepNextAnchorUtc.Value) {
-					// PATCH GhostSleep-Fix (Anker-Refresh, 28.09.2026): der Anker wurde bisher nur EINMAL beim
+					// der Anker wurde bisher nur EINMAL beim
 					// Einschlafen (bzw. nach Ende einer Eskalation, siehe TBotMain.GhostSleepEscalate) gesetzt
 					// und danach nie erneuert. Sobald dieser Zeitpunkt verstrich, blieb GhostSleepNextAnchorUtc
 					// fuer immer auf dem alten, jetzt vergangenen Wert stehen - der naechste Zweig unten
@@ -262,7 +262,7 @@ namespace Tbot.Workers {
 					_tbotInstance.GhostSleepRearmDefenderAnchor();
 				}
 				if (GhostSleepPassiveMode && GhostSleepNextAnchorUtc.HasValue) {
-					// PATCH GhostSleep: PASSIV ignoriert den normalen Defender.CheckIntervalMin/Max-Takt -
+					// PASSIV ignoriert den normalen Defender.CheckIntervalMin/Max-Takt -
 					// naechster Execute()-Zyklus erst wieder am von TBotMain gesetzten Anker (kurz vor der
 					// zufaellig gewaehlten Expeditions-Rueckkehr), nicht frueher. Siehe TBotMain.cs,
 					// RearmGhostSleepDefenderAnchor().
@@ -273,7 +273,7 @@ namespace Tbot.Workers {
 					if (interval <= 0)
 						interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
 
-					// PATCH (fleetsave-timing): don't oversleep past a pending FleetSave's dispatch time - wake
+					// don't oversleep past a pending FleetSave's dispatch time - wake
 					// up in time to hit the safety window instead of waiting out the full randomized Defender
 					// check interval (which is what originally let a "detected early, dispatched immediately"
 					// save fire far earlier than necessary, and would otherwise let a delayed one fire far later
@@ -353,7 +353,7 @@ namespace Tbot.Workers {
 			return;
 		}
 
-		// PATCH (fleetsave-timing): how long before an attack's calculated impact time the FleetSave
+		// how long before an attack's calculated impact time the FleetSave
 		// should actually be dispatched. Configurable via Defender.Autofleet.SafetyMarginSeconds (falls
 		// back to DefaultFleetSaveSafetyMarginSeconds for older settings files that don't have the key).
 		private TimeSpan GetFleetSaveSafetyMargin() {
@@ -369,7 +369,7 @@ namespace Tbot.Workers {
 			return TimeSpan.FromSeconds(DefaultFleetSaveSafetyMarginSeconds);
 		}
 
-		// PATCH (fleetsave-timing): register a newly-detected attack against the pending FleetSave for its
+		// register a newly-detected attack against the pending FleetSave for its
 		// celestial, or - if one is already tracked - bring the dispatch time forward when this attack's
 		// impact is earlier than what was previously known (a second, faster wave shortening the window).
 		// A later-arriving attack on an already-tracked celestial intentionally leaves the existing,
@@ -378,7 +378,7 @@ namespace Tbot.Workers {
 			DateTime impactUtc = nowUtc.AddSeconds(attack.ArriveIn);
 			TimeSpan safetyMargin = GetFleetSaveSafetyMargin();
 			DateTime dispatchAtUtc = impactUtc - safetyMargin;
-			// PATCH Recall-nach-letzter-Welle: siehe ProcessPendingFleetSaves - 2x Restzeit + 2 Min Puffer
+			// siehe ProcessPendingFleetSaves - 2x Restzeit + 2 Min Puffer
 			long minFlightTime = 2 * attack.ArriveIn + 120 + (RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds) / 1000);
 
 			bool isNew = false;
@@ -404,7 +404,7 @@ namespace Tbot.Workers {
 					return existing;
 				});
 
-			// PATCH Dispatch-Timer: exakten Timer (neu) setzen - auch wenn ein schnellerer Angriff den Termin vorzieht
+			// exakten Timer (neu) setzen - auch wenn ein schnellerer Angriff den Termin vorzieht
 			ArmDispatchTimer(attackedCelestial.ID);
 
 			if (isNew) {
@@ -415,7 +415,7 @@ namespace Tbot.Workers {
 			}
 		}
 
-		// PATCH (fleetsave-timing): called once per Execute() cycle. For every tracked celestial: refresh
+		// called once per Execute() cycle. For every tracked celestial: refresh
 		// against the live attack list (dropping the entry entirely if nothing is incoming anymore - the
 		// attack was recalled or has already resolved), recompute the earliest impact from that live list
 		// (pulling the dispatch time forward if a newer attack is faster than what was tracked), and only
@@ -458,14 +458,14 @@ namespace Tbot.Workers {
 				}
 				pending.EarliestImpactUtc = recomputedImpact;
 				pending.DispatchAtUtc = recomputedImpact - safetyMargin;
-				// PATCH Recall-nach-letzter-Welle (01.10.2026): AutoFleetSave plant den Recall bei minDuration/2.
+				// AutoFleetSave plant den Recall bei minDuration/2.
 				// Frueher basierte minDuration auf dem FRUEHESTEN Angriff (x1,3) - die Flotte kam dadurch schon zurueck,
 				// waehrend spaetere Wellen (01.10. 10:32/10:42) noch ausstanden. Jetzt: 2x die Restzeit des SPAETESTEN
 				// bekannten Angriffs auf diesen Himmelskoerper + 2 Minuten Puffer -> Recall erst nach dessen Einschlag.
 				AttackerFleet latestAttack = stillIncoming.OrderByDescending(a => a.ArriveIn).First();
 				pending.MinFlightTimeSeconds = 2 * latestAttack.ArriveIn + 120 + (RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds) / 1000);
 
-				// PATCH Dispatch-Timer: Termin aktualisiert -> Timer neu setzen
+				// Termin aktualisiert -> Timer neu setzen
 				ArmDispatchTimer(celestialId);
 
 				if (DateTime.UtcNow < pending.DispatchAtUtc) {
@@ -692,7 +692,7 @@ namespace Tbot.Workers {
 
 			if ((bool) _tbotInstance.InstanceSettings.Defender.Autofleet.Active) {
 				try {
-					// PATCH GhostSleep: waehrend PASSIV wuerde ein automatisches Fleetsave dem Plan
+					// waehrend PASSIV wuerde ein automatisches Fleetsave dem Plan
 					// widersprechen ("nur kurz Alarm schlagen, im akuten Notfall manuell eingreifen") -
 					// der Alarm oben (Telegram/Discord/Log) ist bereits unconditional gelaufen. Stattdessen
 					// eskaliert der Angriff Defender auf AKTIV (durchgaengiger Takt, automatisches
@@ -705,10 +705,10 @@ namespace Tbot.Workers {
 						DoLog(LogLevel.Warning, "GhostSleep PASSIVE: attack detected - escalating to ACTIVE (automatic fleetsave, no more waiting for the full expedition return).");
 						_tbotInstance.GhostSleepEscalate(true);
 					}
-					// PATCH (fleetsave-timing): no longer dispatches AutoFleetSave immediately here. See the
+					// no longer dispatches AutoFleetSave immediately here. See the
 					// class-level PATCH comment, RegisterOrUpdatePendingFleetSave and ProcessPendingFleetSaves.
 					RegisterOrUpdatePendingFleetSave(attackedCelestial, attack, fetchedUtc);
-					// PATCH Angriffs-Lockdown: alle anderen Worker aus, Fleetsave hat Vorrang. Bewusst NICHT awaited,
+					// alle anderen Worker aus, Fleetsave hat Vorrang. Bewusst NICHT awaited,
 					// damit ein traeger StopWorker den Dispatch nie aufhaelt.
 					_ = Task.Run(() => _tbotInstance.AttackLockdown(true));
 				} catch (Exception e) {

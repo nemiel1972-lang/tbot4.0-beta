@@ -1227,7 +1227,7 @@ if (
 			}
 		}
 
-		// PATCH Teillieferung-Sperre (07.10.2026): Alles-oder-nichts-Pruefung fuer Transporte. true nur, wenn die Herkunft die komplette
+		// Alles-oder-nichts-Pruefung fuer Transporte. true nur, wenn die Herkunft die komplette
 		// Menge senden kann: Metall/Kristall vorhanden, Deuterium vorhanden PLUS Sprit (der Spritverbrauch kommt vom Deuterium der Herkunft,
 		// sonst kuerzt OGame die Ladung) und der Laderaum reicht. Bei Zweifel/Fehler false = lieber nichts senden als zu wenig.
 		private bool KannVollstaendigLiefern(Celestial herkunft, Ships schiffe, Coordinate ziel, Resources menge, Resources zuruecklassen) {
@@ -1522,7 +1522,7 @@ if (
 			}
 		}
 
-		// PATCH Buendel-Limit (11.10.2026): wie viele ZUSAETZLICHE Gebaeude eine Lieferung mitbringen darf (Brain.Transports.MaxBundledBuildings).
+		// wie viele ZUSAETZLICHE Gebaeude eine Lieferung mitbringen darf (Brain.Transports.MaxBundledBuildings).
 		// Fehlt der Eintrag oder ist er ungueltig, gilt 0 = nur das eine Ziel des Workers (passend zum Ledger-Anspruch).
 		private int LiesMaxGebuendelteBauten() {
 			try {
@@ -1577,7 +1577,7 @@ if (
 							long buildTime = _calcService.CalcProductionTime(buildable, level, _tbotInstance.UserData.serverData, destination.Facilities);
 							if (maxBuildings != null && maxFacilities != null && maxLunarFacilities != null && autoMinerSettings != null) {
 								var tempCelestial = destination;
-								// PATCH Buendel-Limit (11.10.2026): Das Mitliefern der naechsten Gebaeude lief bis Schiffe oder Herkunftsbestand erschoepft waren -
+								// Das Mitliefern der naechsten Gebaeude lief bis Schiffe oder Herkunftsbestand erschoepft waren -
 								// Plan 1/2 bekamen je ~48/75 Mio. Metall fuer Bauten von 4-13 Mio. Der Ledger-Anspruch kennt nur EIN Ziel; Mehrlieferung blieb
 								// ungenutzt auf dem Planeten liegen. Jetzt hoechstens Brain.Transports.MaxBundledBuildings zusaetzliche Gebaeude (Standard 0 = aus).
 								int gebuendelt = 0;
@@ -1629,7 +1629,7 @@ if (
 							idealShips = _calcService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 						}
 
-						// PATCH Transport chain (12.10.2026): choose the ship type by availability (SC -> LC, then optionally a mixed fleet).
+						// choose the ship type by availability (SC -> LC, then optionally a mixed fleet).
 						// The reserve (KeepOnOrigin) is already subtracted in VerfuegbareTransportSchiffe. Pathfinders are never used.
 						// Without config entries (CargoFallback/KeepOnOrigin/MixFleet) the behavior stays as before.
 						Ships mischflotte = null;
@@ -1653,7 +1653,7 @@ if (
 								true:
 								false;
 
-						// PATCH Teillieferung-Sperre (07.10.2026): kein Mehrfach-Teiltransport (doMultipleTransports) mehr - nur noch, wenn alles in EINE Flotte passt.
+						// kein Mehrfach-Teiltransport (doMultipleTransports) mehr - nur noch, wenn alles in EINE Flotte passt.
 						if (mischflotte != null || idealShips <= VerfuegbareTransportSchiffe(origin, preferredShip)) {
 							if (mischflotte != null) {
 									ships = mischflotte;
@@ -1663,7 +1663,7 @@ if (
 								ships.Add(preferredShip, idealShips);
 							}
 							
-							// PATCH Teillieferung-Sperre (07.10.2026): nur senden, wenn Metall, Kristall, Deuterium (inkl. Sprit) und Laderaum
+							// nur senden, wenn Metall, Kristall, Deuterium (inkl. Sprit) und Laderaum
 							// die KOMPLETTE Menge abdecken - sonst kommt am Ziel nur ein Teil an. Gilt fuer alle Aufrufer dieser Methode (AutoMine/AutoResearch).
 							Coordinate pruefZiel = (differentDestination != null && differentDestination.ID != 0) ? differentDestination.Coordinate : destination.Coordinate;
 							if (!KannVollstaendigLiefern(origin, ships, pruefZiel, missingResources, resToLeave)) {
@@ -1775,7 +1775,7 @@ if (
 							int level = _calcService.GetNextLevel(destination, buildable);
 							long buildTime = _calcService.CalcProductionTime(buildable, level, _tbotInstance.UserData.serverData, destination);
 							var tempCelestial = destination;
-							// PATCH Buendel-Limit (11.10.2026): Das Mitliefern der naechsten Gebaeude lief bis Schiffe oder Herkunftsbestand erschoepft waren -
+							// Das Mitliefern der naechsten Gebaeude lief bis Schiffe oder Herkunftsbestand erschoepft waren -
 								// Plan 1/2 bekamen je ~48/75 Mio. Metall fuer Bauten von 4-13 Mio. Der Ledger-Anspruch kennt nur EIN Ziel; Mehrlieferung blieb
 								// ungenutzt auf dem Planeten liegen. Jetzt hoechstens Brain.Transports.MaxBundledBuildings zusaetzliche Gebaeude (Standard 0 = aus).
 								int gebuendelt = 0;
@@ -1826,7 +1826,7 @@ if (
 							idealShips = _calcService.CalcShipNumberForPayload(missingResources, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 						}
 
-						// PATCH Transport chain (12.10.2026): choose the ship type by availability (SC -> LC, then optionally a mixed fleet).
+						// choose the ship type by availability (SC -> LC, then optionally a mixed fleet).
 						// The reserve (KeepOnOrigin) is already subtracted in VerfuegbareTransportSchiffe. Pathfinders are never used.
 						// Without config entries (CargoFallback/KeepOnOrigin/MixFleet) the behavior stays as before.
 						Ships mischflotte = null;
@@ -2032,7 +2032,7 @@ if (
 			}
 		}
 
-		// PATCH Brain transport chain (14.10.2026): the Brain workers (AutoMine, AutoResearch, LF AutoMine, LF AutoResearch) use the same
+		// the Brain workers (AutoMine, AutoResearch, LF AutoMine, LF AutoResearch) use the same
 		// transport chain as AutoRepatriate/ReverseRepatriate: SC -> LC (Brain.Transports.CargoFallback), optional mixed fleet (MixFleet)
 		// and the expedition reserve (KeepOnOrigin). Pathfinders are never used. Returns null if the origin cannot carry the payload.
 		private Buildables LiesBrainCargo() {
@@ -2143,7 +2143,7 @@ if (
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping autorepatriate: no custom destination");
 					return RepatriateCode.Failure;
 				}
-				// PATCH Repatriate-Ziel-Typ (09.10.2026): ParseCelestialsList kann Planet UND Mond derselben Koordinate liefern; dann entscheidet
+				// ParseCelestialsList kann Planet UND Mond derselben Koordinate liefern; dann entscheidet
 				// die Listenreihenfolge ueber das Ziel. Nach einem Neustart war das Ziel der Heimat-MOND (z. B. 1:100:8) statt der Heimatwelt,
 				// obwohl in der Config "Type": "Planet" steht. Hier nur Celestials behalten, deren Typ zum Target-Eintrag passt.
 				// Ist der Typ nicht lesbar oder bleibt der Filter leer, gilt unveraendert die Original-Liste.
@@ -2165,14 +2165,14 @@ if (
 
 				if (tempCelestials.Count() > 0) {
 					_tbotInstance.UserData.fleets = await UpdateFleets();
-					// PATCH Reverse-Repatriate (12.10.2026): process started pickups first (return leg on arrival). Only with
+					// process started pickups first (return leg on arrival). Only with
 					// Brain.AutoRepatriate.Reverse.Active = true, otherwise nothing happens here.
 					if (ReverseRepatriate.Aktiv(_tbotInstance))
 						await ReverseRepatriate.VerarbeiteOffeneAsync(_tbotInstance, _calcService, _tbotOgameBridge, ErzeugeReverseHaken(), LiesRepatriateCargo());
 					long TotalMet = 0;
 					long TotalCri = 0;
 					long TotalDeut = 0;
-					// PATCH Repatriate-Diagnose (09.10.2026): Stoppuhr und Zaehler nur fuer die Zyklus-Logzeile am Ende.
+					// Stoppuhr und Zaehler nur fuer die Zyklus-Logzeile am Ende.
 					DateTime rpStart = DateTime.UtcNow;
 					int rpGesendet = 0;
 					bool samePosition = (bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.TargetAssociateMoon;
@@ -2213,14 +2213,14 @@ if (
 							continue;
 						}
 
-						// PATCH Repatriate-Diagnose (09.10.2026): die billige ExcludeMoons-Pruefung steht jetzt VOR den API-Calls
+						// die billige ExcludeMoons-Pruefung steht jetzt VOR den API-Calls
 						// (UpdatePlanet/UpdateFleets), damit ausgeschlossene Himmelskoerper keine Zeit im 45-s-Fenster des Workers kosten.
 						if (celestial.Coordinate.Type == Celestials.Moon && (bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.ExcludeMoons) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {celestial.ToString()}: celestial is a moon.");
 							continue;
 						}
 
-						// PATCH Reverse-Repatriate (12.10.2026): a pickup for this celestial is already running (outbound leg flying).
+						// a pickup for this celestial is already running (outbound leg flying).
 						if (ReverseRepatriate.Aktiv(_tbotInstance) && ReverseRepatriate.HatOffene(_tbotInstance, celestial)) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {celestial.ToString()}: reverse pickup already running.");
 							continue;
@@ -2228,7 +2228,7 @@ if (
 
 						var tempCelestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Fast);
 
-						// PATCH Repatriate-Diagnose (09.10.2026): UpdateFleets() pro Himmelskoerper entfernt. Die Flottenliste wird
+						// UpdateFleets() pro Himmelskoerper entfernt. Die Flottenliste wird
 						// zu Zyklusbeginn geladen, SendFleet() haengt neu gestartete Flotten selbst an UserData.fleets an.
 						// Vorher kostete jeder der ~20 Himmelskoerper einen eigenen API-Call (Ursache fuer die 45-s-Abbrueche im Worker).
 						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.SkipIfIncomingTransport && _calcService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) && (!fromTelegram)) {
@@ -2259,7 +2259,7 @@ if (
 							}
 						}
 
-						// PATCH Repatriate-Frei (11.10.2026): nur der Rest abtransportieren, den kein Ledger-Anspruch haelt. Die Mindestmenge
+						// nur der Rest abtransportieren, den kein Ledger-Anspruch haelt. Die Mindestmenge
 						// gilt auf diesem freien Anteil - vorher wurde sie auf dem Brutto-Bestand geprueft und erst in SendFleet gekuerzt,
 						// sodass Mini-Transporter mit ein paar Millionen einen Slot fuer Hin- und Rueckflug belegten.
 						try {
@@ -2282,7 +2282,7 @@ if (
 							continue;
 						}
 
-						// PATCH Reverse-Repatriate (12.10.2026): instead of keeping transporters on the celestial, they fly from the home celestial
+						// instead of keeping transporters on the celestial, they fly from the home celestial
 						// (Deploy, with deuterium) and take ALL ships plus the resources home on arrival. Only with
 						// Brain.AutoRepatriate.Reverse.Active = true. If the start does not work (NichtMoeglich), the classic path continues.
 						if (ReverseRepatriate.Aktiv(_tbotInstance)) {
@@ -2313,7 +2313,7 @@ if (
 							payload = _calcService.CalcMaxTransportableResources(ships, payload, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, tempCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 
 							if (payload.TotalResources > 0) {
-								// PATCH Repatriate-Slots (11.10.2026): Brain.Transports.MaxSlots zaehlt alle Transport-Flotten des Kontos (auch die
+								// Brain.Transports.MaxSlots zaehlt alle Transport-Flotten des Kontos (auch die
 								// der Rueckholung). Die Rueckholung bleibt unter diesem Limit (abzueglich optional AutoRepatriate.ReserveTransportSlots,
 								// Standard 0), damit sie den Brain-Workern (Minen/LF/Forschung) keine Slots wegnimmt. Fehlt die Einstellung oder
 								// ist MaxSlots 0, gilt wie vorher nur die Pruefung in SendFleet.
@@ -2339,11 +2339,11 @@ if (
 									return RepatriateCode.Stop;
 								}
 								if (fleetId == (int) SendFleetCode.NotEnoughSlots) {
-									// PATCH Repatriate-Diagnose (09.10.2026): sichtbar machen, WO der Zyklus wegen fehlender Slots endet.
+									// sichtbar machen, WO der Zyklus wegen fehlender Slots endet.
 									_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Repatriate: no free slots while sending {tempCelestial.ToString()} after {(DateTime.UtcNow - rpStart).TotalSeconds:F0} s ({rpGesendet} fleet(s) sent in this cycle) - cycle is delayed, remaining celestials are handled in the next run.");
 									return RepatriateCode.Delay;
 								}
-								// PATCH Repatriate-Fehlschlag (09.10.2026): im Original zaehlte jede SendFleet-Rueckgabe ausser AfterSleepTime/NotEnoughSlots
+								// im Original zaehlte jede SendFleet-Rueckgabe ausser AfterSleepTime/NotEnoughSlots
 								// als Erfolg, auch GenericError (z.B. "not enough deuterium"). Jetzt zaehlt nur eine echte Flotten-ID (> 0).
 								if (fleetId > 0) {
 									TotalMet += payload.Metal;

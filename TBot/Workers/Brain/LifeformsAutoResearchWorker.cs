@@ -86,7 +86,7 @@ namespace Tbot.Workers.Brain {
 					List<ConstructionCandidate> constructionCandidates = new();
 
 					foreach (Celestial celestial in _tbotInstance.UserData.celestials.Where(p => p is Planet)) {
-						// PATCH 20: same fix as Patch 18 (AutoMineWorker) - Exclude was only applied much
+						// same fix as Patch 18 (AutoMineWorker) - Exclude was only applied much
 						// later, so every excluded planet still got touched here for the account-wide
 						// planning phase, triggering OGame's "recent activity" indicator regardless of
 						// LifeformAutoResearch.Exclude. Skip excluded celestials before any data is fetched.
@@ -102,7 +102,7 @@ namespace Tbot.Workers.Brain {
 							DoLog(LogLevel.Information, $"Skipping {cel.ToString()}: No Lifeform active on this planet.");
 							continue;
 						}
-						// PATCH LF-PRIO: Prioritaets-Slots zuerst, danach normale Auswahl
+						// Prioritaets-Slots zuerst, danach normale Auswahl
 						var nextLFTechToBuild = PickNextLFTech(cel, maxLFTechs, priorityTechs, out int level);
 						if (nextLFTechToBuild != LFTechno.None) {
 
@@ -144,7 +144,7 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
-		// PATCH LF-PRIO: Optionale Prioritaetsforschung. Brain.LifeformAutoResearch.PriorityTechs ist eine Liste von
+		// Optionale Prioritaetsforschung. Brain.LifeformAutoResearch.PriorityTechs ist eine Liste von
 		// Slotnummern (11..16, 21..26, 31..36), z. B. [15, 25]. Diese Techs werden auf jedem Planeten zuerst erforscht (in der
 		// Reihenfolge der Liste), bis sie ihr MaxTechsXX-Level erreicht haben. Danach laeuft alles wie bisher.
 		// Ausgebaut werden nur bereits vorhandene Techs (Level >= 1, die Stufen 1/2 baut der Spieler selbst). Der Bot beginnt keine neue Tech
