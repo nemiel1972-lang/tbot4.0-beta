@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo-banner.jpg" alt="T4BOT beta" width="520"></p>
+
 # tbot4.0-beta
 
 A modified fork of the OGame bot **TBot** (C# / .NET 9) with the Go helper **ogamed**, in one repository.
