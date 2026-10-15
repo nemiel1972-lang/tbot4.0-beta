@@ -642,7 +642,7 @@ namespace Tbot.Workers.Brain {
 													DoLog(LogLevel.Warning, $"Not enough Cargo available. Teillieferung unterbunden, skipping CheckMoonOrPlanetFirst.");
 												}
 											} else {
-												DoLog(LogLevel.Warning, $"Not enough resources available on {origin.ToString()} only to send resources to {celestial.ToString()}.");
+												DoLog(LogLevel.Debug, $"Not enough resources available on {origin.ToString()} only to send resources to {celestial.ToString()}.");
 											}
 										} else {
 											DoLog(LogLevel.Warning, $"No Moon available on {celestial.ToString()}.");

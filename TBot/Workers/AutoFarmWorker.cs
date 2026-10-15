@@ -1751,7 +1751,6 @@ namespace Tbot.Workers {
 						bestResult = midResult;
 						long midCost = CompositionCost(WithFixedBase(midComposition), midResult);
 						okPoints.Add((midComposition, midResult, midCost));
-						_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: bisection yes at {FormatComposition(WithFixedBase(midComposition))} - loss {(midResult.AttackerLosses?.Total() ?? 0):N0}, cost (loss+fuel@100%) {midCost:N0}.");
 					} else {
 						low = mid;
 					}

@@ -114,6 +114,11 @@ Sleep variant that fleetsaves everything with a ghost flight but keeps Expeditio
 | `GoToSleep`, `WakeUp` | Clock times (server time). |
 | `PreSleepExpeditionMinutes` | Minutes before `GoToSleep` in which all expedition slots are refilled first (0 = off). |
 | `PriorityFleetsaveCelestials` | Coordinates (moon and planet) that are fleetsaved first. |
+| `AnchorMode` | While asleep, the Defender only checks for attacks around expedition returns. `"LastFleet"` (default): one check shortly before the **last** returning expedition lands (random lead of 45-120 s). Once all remaining expeditions land within about 2.5 minutes, the next anchor is set after the next wave has started, so it again points at the last fleet of the new wave. `"Random"`: the old behaviour (a random returning expedition, 60 s before it lands). |
+| `ExpeditionDrain.Active` | `true` = replaces the time-based pre-phase (`PreSleepExpeditionMinutes`): shortly before `GoToSleep` no new expeditions are started if they would not be back in time. At `GoToSleep` the bot waits for stragglers, sends **one** simultaneous wave of all expeditions, fleetsaves and goes to sleep. |
+| `ExpeditionDrain.BufferMinutes` | Tolerance: an expedition may still start if it is back at most this many minutes after `GoToSleep` (default 10). |
+| `ExpeditionDrain.StragglerWaitMinutes` | At `GoToSleep`, wait at most this long for expeditions that are still out (default 20). Stragglers that are still out afterwards come home during the sleep and are included in the next wave. |
+| `ExpeditionDrain.DefaultDurationMinutes` | Expedition duration assumed until the bot has measured at least 3 real ones (default 90). The bot measures the real duration of every expedition per origin (`data/expedition_durations_*.json`) and uses the 90th percentile of the last 30 values. |
 
 ## DebrisSave
 

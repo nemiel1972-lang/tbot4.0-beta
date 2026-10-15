@@ -506,25 +506,40 @@
     function renderGhostSleep(body, d, P) {
         var timeOk = function (v) { return TIME_HM.test(v.trim()); };
         body.appendChild(sec('GhostSleep', [
+            el('div', { class: 'cfg-warnbox' }, [
+                el('b', { text: 'This is not a real sleep. ' }),
+                document.createTextNode('GhostSleep only reduces activity: the account keeps making requests (expeditions keep flying, the Defender checks around expedition returns, everything restarts at wake-up). It looks quieter than a normal bot, but not like a player who is really offline. Do not leave it on every day - use it now and then, and keep real offline time or the normal SleepMode for regular nights.')
+            ]),
             el('div', { class: 'cfg-note', text: 'GhostSleep is a second, independent sleep window (the timed version of the Telegram command /ghost). During it the bot stops everything except Expeditions, Defender and SleepMode and fleetsaves all ships with a ghost flight, so your fleet is never at home. Expeditions keep flying; the Defender only alerts (no automatic fleetsave) and polls rarely to look inactive, and switches to full defence if an attack wave is detected. Use it when you want to look inactive but keep expeditions running.' }),
             fld(d, 'GoToSleep', P, 'Go to sleep', 'Server time, HH:mm', 'text', { validate: timeOk }),
             fld(d, 'WakeUp', P, 'Wake up', 'Server time, HH:mm', 'text', { validate: timeOk }),
-            fld(d, 'PreSleepExpeditionMinutes', P, 'Refill expeditions before sleep', '0 = off', 'num', { min: 0, unit: 'minutes before' })
+            fld(d, 'PreSleepExpeditionMinutes', P, 'Refill expeditions before sleep', '0 = off', 'num', { min: 0, unit: 'minutes before' }),
+            fld(d, 'AnchorMode', P, 'Defender check while asleep', 'LastFleet = shortly before the last expedition lands; Random = a random returning expedition', 'select', { options: ['LastFleet', 'Random'] })
         ].filter(Boolean)));
+        if (d.ExpeditionDrain && typeof d.ExpeditionDrain === 'object') {
+            var DP = P.concat('ExpeditionDrain');
+            body.appendChild(sec('GhostSleep: expedition drain', [
+                el('div', { class: 'cfg-note', text: 'Replaces the time-based refill above. Shortly before sleeping no expedition is started that would not be back in time (duration is measured). At bed time the bot waits for stragglers, sends one simultaneous wave and goes to sleep.' }),
+                fld(d.ExpeditionDrain, 'Active', DP, 'Drain before sleep', null, 'toggle'),
+                fld(d.ExpeditionDrain, 'BufferMinutes', DP, 'Tolerance', 'An expedition may be back this long after go-to-sleep', 'num', { min: 0, unit: 'minutes' }),
+                fld(d.ExpeditionDrain, 'StragglerWaitMinutes', DP, 'Wait for stragglers', 'At bed time, at most', 'num', { min: 0, unit: 'minutes' }),
+                fld(d.ExpeditionDrain, 'DefaultDurationMinutes', DP, 'Duration until measured', 'Used until 3 real durations are known', 'num', { min: 1, unit: 'minutes' })
+            ].filter(Boolean)));
+        }
         if (Array.isArray(d.PriorityFleetsaveCelestials)) foldTo(body, 'GhostSleep: priority fleetsave celestials', [
             el('div', { class: 'cfg-note', text: 'Moon and planet coordinates that are fleetsaved first.' }),
             listTable(d.PriorityFleetsaveCelestials,
                 [{ key: 'Galaxy', label: 'Galaxy', min: 1, sens: true }, { key: 'System', label: 'System', min: 1, sens: true }, { key: 'Position', label: 'Position', min: 1, sens: true }],
                 function () { return { Galaxy: 1, System: 1, Position: 1 }; }, '+ Add celestial', ['PriorityFleetsaveCelestials'])
         ]);
-        var rest = Object.keys(d).filter(function (k) { return ['Active', 'GoToSleep', 'WakeUp', 'PreSleepExpeditionMinutes', 'PriorityFleetsaveCelestials'].indexOf(k) < 0; });
+        var rest = Object.keys(d).filter(function (k) { return ['Active', 'GoToSleep', 'WakeUp', 'PreSleepExpeditionMinutes', 'AnchorMode', 'ExpeditionDrain', 'PriorityFleetsaveCelestials'].indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'GhostSleep: more settings (' + rest.length + ')', [genericObject(d, rest, P)]);
     }
 
     var SLEEP_TEXT = {
         off: 'No sleep window: the bot runs around the clock.',
         sleep: 'SleepMode: in the window the bot sends no fleets at all and can fleetsave once when going to sleep.',
-        ghost: 'GhostSleep: in the window all ships are fleetsaved with a ghost flight; expeditions keep flying and the Defender stays on watch.',
+        ghost: 'GhostSleep: in the window all ships are fleetsaved with a ghost flight; expeditions keep flying and the Defender stays on watch. Warning: this is NOT a real sleep, only reduced activity - do not leave it on every day.',
         both: 'Both are switched on in the config - they should not run at the same time. Pick one.'
     };
     function sleepCur(sm, gs) { return sm.Active && gs && gs.Active ? 'both' : (gs && gs.Active ? 'ghost' : (sm.Active ? 'sleep' : 'off')); }

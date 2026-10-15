@@ -79,6 +79,8 @@
 .cfg-checks { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .cfg-checks .ok { color: var(--tb-ok); } .cfg-checks .wn { color: var(--tb-warn); } .cfg-checks .bad { color: var(--tb-bad); }
 .cfg-note { color: var(--tb-mut); font-size: 12px; margin-top: 6px; }
+.cfg-warnbox { border: 1px solid var(--tb-warn, #f5b70e); background: rgba(245, 183, 14, 0.10); color: var(--tb-warn, #f5b70e); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; margin-top: 6px; line-height: 1.45; }
+.cfg-warnbox b { font-weight: 700; }
 .cfg-placeholder-card { background: #0f1730; border: 1px dashed #34427a; border-radius: 10px; padding: 12px 16px; color: var(--tb-mut); }
 .cfg-placeholder-card h3 { margin: 0 0 4px; color: #8fb4ff; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
 

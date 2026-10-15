@@ -774,6 +774,98 @@ namespace Tbot.Services {
 			}
 		}
 
+		private readonly object _ghostSleepDrainLock = new();
+		private DateTime? _ghostNextSleepUtc = null;
+		private DateTime _ghostNextSleepStampUtc = DateTime.MinValue;
+		private DateTime? _ghostDrainWaitStartUtc = null;
+		private DateTime _ghostDrainLastWaitLogUtc = DateTime.MinValue;
+
+		private dynamic GhostSleepDrainSection() {
+			try {
+				if (SettingsService.IsSettingSet(InstanceSettings.GhostSleep, "ExpeditionDrain"))
+					return InstanceSettings.GhostSleep.ExpeditionDrain;
+			} catch {  }
+			return null;
+		}
+
+		private bool GhostSleepDrainActive() {
+			try {
+				var section = GhostSleepDrainSection();
+				if (section == null || !SettingsService.IsSettingSet(section, "Active"))
+					return false;
+				return (bool) section["Active"];
+			} catch {
+				return false;
+			}
+		}
+
+		private int GhostSleepDrainInt(string key, int defaultValue) {
+			try {
+				var section = GhostSleepDrainSection();
+				if (section != null && SettingsService.IsSettingSet(section, key))
+					return Math.Max(0, Convert.ToInt32((object) section[key]));
+			} catch {  }
+			return defaultValue;
+		}
+
+		private bool GhostSleepAnchorRandom() {
+			try {
+				if (SettingsService.IsSettingSet(InstanceSettings.GhostSleep, "AnchorMode"))
+					return string.Equals(Convert.ToString((object) InstanceSettings.GhostSleep.AnchorMode), "Random", StringComparison.OrdinalIgnoreCase);
+			} catch {  }
+			return false;
+		}
+
+		public bool GhostSleepAllowsNewExpedition(int? learnedDurationSeconds) {
+			try {
+				if (!GhostSleepDrainActive())
+					return true;
+				if (_ghostSleeping || SleepWaveActive)
+					return true;
+				DateTime? nextSleep;
+				DateTime stamp;
+				lock (_ghostSleepDrainLock) {
+					nextSleep = _ghostNextSleepUtc;
+					stamp = _ghostNextSleepStampUtc;
+				}
+				if (!nextSleep.HasValue || (DateTime.UtcNow - stamp).TotalMinutes > 5)
+					return true;
+				double remainingMin = (nextSleep.Value - DateTime.UtcNow).TotalMinutes;
+				double durationMin = (learnedDurationSeconds ?? GhostSleepDrainInt("DefaultDurationMinutes", 90) * 60) / 60.0;
+				int bufferMin = GhostSleepDrainInt("BufferMinutes", 10);
+				return durationMin <= remainingMin + bufferMin;
+			} catch {
+				return true;
+			}
+		}
+
+		private async Task<bool> GhostSleepDrainShouldWaitAsync() {
+			try {
+				if (!_ghostDrainWaitStartUtc.HasValue)
+					_ghostDrainWaitStartUtc = DateTime.UtcNow;
+				int maxWaitMin = GhostSleepDrainInt("StragglerWaitMinutes", 20);
+				double waitedMin = (DateTime.UtcNow - _ghostDrainWaitStartUtc.Value).TotalMinutes;
+				if (waitedMin >= maxWaitMin) {
+					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep drain: waited {maxWaitMin} min for stragglers, going to sleep anyway.");
+					return false;
+				}
+				userData.fleets = await _fleetScheduler.UpdateFleets();
+				int away = userData.fleets.Count(f => f.Mission == Missions.Expedition);
+				if (away == 0) {
+					log(LogLevel.Information, LogSender.Tbot, "GhostSleep drain: all expeditions are home, going to sleep.");
+					return false;
+				}
+				if ((DateTime.UtcNow - _ghostDrainLastWaitLogUtc).TotalMinutes >= 5) {
+					_ghostDrainLastWaitLogUtc = DateTime.UtcNow;
+					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep drain: waiting for {away} expedition(s) to come home (max. {maxWaitMin} min, {waitedMin:F0} min so far).");
+				}
+				return true;
+			} catch (Exception e) {
+				log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep drain: waiting check failed, going to sleep: {e.Message}");
+				return false;
+			}
+		}
+
 		private void GhostSleepPreSleepBegin() {
 			try {
 				try { _preSleepPrevWaitForAll = (bool) InstanceSettings.Expeditions.WaitForAllExpeditions; } catch { _preSleepPrevWaitForAll = null; }
@@ -915,7 +1007,14 @@ namespace Tbot.Services {
 				double minutesUntilSleep = (goToSleep.TimeOfDay - time.TimeOfDay).TotalMinutes;
 				if (minutesUntilSleep < 0)
 					minutesUntilSleep += 24 * 60;
-				bool inPreWindow = preMinutes > 0 && !shouldBeAsleep && !_ghostSleeping && minutesUntilSleep <= preMinutes;
+				bool drain = GhostSleepDrainActive();
+				lock (_ghostSleepDrainLock) {
+					_ghostNextSleepUtc = (shouldBeAsleep || _ghostSleeping) ? null : DateTime.UtcNow.AddMinutes(minutesUntilSleep);
+					_ghostNextSleepStampUtc = DateTime.UtcNow;
+				}
+				if (!shouldBeAsleep)
+					_ghostDrainWaitStartUtc = null;
+				bool inPreWindow = !drain && preMinutes > 0 && !shouldBeAsleep && !_ghostSleeping && minutesUntilSleep <= preMinutes;
 				if (inPreWindow) {
 					if (!_preSleepExpoActive)
 						GhostSleepPreSleepBegin();
@@ -924,6 +1023,8 @@ namespace Tbot.Services {
 				}
 
 				if (shouldBeAsleep && !_ghostSleeping) {
+					if (drain && await GhostSleepDrainShouldWaitAsync())
+						return;
 					await GhostSleepGoToSleepAsync(wakeUp);
 				} else if (!shouldBeAsleep && _ghostSleeping) {
 					await GhostSleepWakeUpAsync(goToSleep);
@@ -943,7 +1044,10 @@ namespace Tbot.Services {
 				if (wakeUpEta.HasValue)
 					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: next schedule check/wake-up window at {wakeUpEta.Value.ToString()}");
 
-				if (_preSleepExpoActive) {
+				_ghostDrainWaitStartUtc = null;
+				if (_preSleepExpoActive || GhostSleepDrainActive()) {
+					if (!_preSleepExpoActive)
+						GhostSleepPreSleepBegin();
 					await GhostSleepExpeditionTopUpAsync();
 					GhostSleepPreSleepRestore("falling asleep");
 				}
@@ -1096,12 +1200,43 @@ namespace Tbot.Services {
 					return;
 				}
 
+				bool randomMode = GhostSleepAnchorRandom();
+				if (!randomMode) {
+					try {
+						var refresh = Task.Run(async () => await _fleetScheduler.UpdateFleets());
+						if (refresh.Wait(TimeSpan.FromSeconds(25)))
+							userData.fleets = refresh.Result;
+					} catch (Exception refreshEx) {
+						log(LogLevel.Debug, LogSender.Tbot, $"GhostSleep: could not refresh the fleet list for the anchor, using the cached one: {refreshEx.Message}");
+					}
+				}
+
 				var candidates = userData.fleets
-					.Where(f => f.Mission == Missions.Expedition && f.ReturnFlight && (f.BackIn ?? 0) > 0)
+					.Where(f => f.Mission == Missions.Expedition && (randomMode ? f.ReturnFlight : true) && (f.BackIn ?? 0) > 0)
 					.ToList();
 
 				DateTime anchorUtc;
-				if (candidates.Count > 0) {
+				if (!randomMode) {
+					const int minBackInSeconds = 150;
+					var last = candidates.Where(f => (f.BackIn ?? 0) > minBackInSeconds).OrderByDescending(f => f.BackIn).FirstOrDefault();
+					if (last != null) {
+						int leadSeconds = new Random().Next(45, 121);
+						anchorUtc = DateTime.UtcNow.AddSeconds((last.BackIn ?? 0) - leadSeconds);
+						log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: next Defender PASSIVE wake anchor on the last returning expedition {last.ID} (return in {last.BackIn}s) - check at {anchorUtc.ToLocalTime()}.");
+					} else if (candidates.Count > 0) {
+						int maxBack = candidates.Max(f => f.BackIn ?? 0);
+						int restartWait = 240;
+						try {
+							if (SettingsService.IsSettingSet(InstanceSettings.Expeditions, "MaxWaitNextRound"))
+								restartWait = Convert.ToInt32((object) InstanceSettings.Expeditions.MaxWaitNextRound) + 90;
+						} catch {  }
+						anchorUtc = DateTime.UtcNow.AddSeconds(maxBack + restartWait);
+						log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: all expeditions land within {maxBack}s - re-evaluating the anchor after the next wave has started, check at {anchorUtc.ToLocalTime()}.");
+					} else {
+						anchorUtc = DateTime.UtcNow.AddMinutes(30);
+						log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: no returning expedition known, fallback check at {anchorUtc.ToLocalTime()}.");
+					}
+				} else if (candidates.Count > 0) {
 					var chosen = candidates[new Random().Next(candidates.Count)];
 					anchorUtc = DateTime.UtcNow.AddSeconds(Math.Max(0, (chosen.BackIn ?? 0) - 60));
 					log(LogLevel.Information, LogSender.Tbot, $"GhostSleep: next Defender PASSIVE wake anchor on fleet {chosen.ID} (return in {chosen.BackIn}s) - check at {anchorUtc.ToLocalTime()}.");

@@ -701,19 +701,12 @@ FleetPrediction fleetPrediction = _calcService.CalcFleetPrediction(
     _tbotInstance.UserData.allianceClass
 );
 
-_tbotInstance.log(LogLevel.Debug, LogSender.FleetScheduler,
-    $"Calculated flight time (one-way): {TimeSpan.FromSeconds(fleetPrediction.Time)}");
-
 var flightTime = mission switch
 {
     Missions.Deploy => fleetPrediction.Time,
     Missions.Expedition => (long)Math.Round((double)(2 * fleetPrediction.Time) + 3600, 0, MidpointRounding.ToPositiveInfinity),
     _ => (long)Math.Round((double)(2 * fleetPrediction.Time), 0, MidpointRounding.ToPositiveInfinity)
 };
-_tbotInstance.log(LogLevel.Debug, LogSender.FleetScheduler,
-    $"Calculated flight time (full trip): {TimeSpan.FromSeconds(flightTime)}");
-_tbotInstance.log(LogLevel.Debug, LogSender.FleetScheduler,
-    $"Calculated flight fuel: {fleetPrediction.Fuel}");
 
 origin = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
 

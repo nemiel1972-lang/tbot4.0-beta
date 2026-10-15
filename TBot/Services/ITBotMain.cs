@@ -42,6 +42,7 @@ namespace Tbot.Services {
 		void GhostSleepEscalate(bool active);
 
 		void GhostSleepRearmDefenderAnchor();
+		bool GhostSleepAllowsNewExpedition(int? learnedDurationSeconds);
 
 		Task AttackLockdown(bool active);
 

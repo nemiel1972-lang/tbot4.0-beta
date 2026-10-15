@@ -76,6 +76,13 @@
         "GoToSleep": "1:30",
         "WakeUp": "11:05",
         "PreSleepExpeditionMinutes": 35,
+        "AnchorMode": "LastFleet",
+        "ExpeditionDrain": {
+            "Active": false,
+            "BufferMinutes": 10,
+            "StragglerWaitMinutes": 20,
+            "DefaultDurationMinutes": 90
+        },
         "PriorityFleetsaveCelestials": [
             {
                 "Galaxy": 1,

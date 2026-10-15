@@ -22,6 +22,28 @@ namespace Tbot.Workers {
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
 		private int _nextOriginIndex;
 
+		private ExpeditionDurationTracker _durationTracker;
+		private readonly object _durationTrackerLock = new();
+
+		public ExpeditionDurationTracker GetDurationTracker() {
+			lock (_durationTrackerLock) {
+				if (_durationTracker != null)
+					return _durationTracker;
+				string path = null;
+				try {
+					string playerTag = _tbotInstance?.UserData?.userInfo?.PlayerName ?? "unknown";
+					string universeTag = _tbotInstance?.UserData?.serverData?.Name ?? "unknown";
+					string dataDir = System.IO.Path.Combine(AppContext.BaseDirectory, "data");
+					System.IO.Directory.CreateDirectory(dataDir);
+					path = System.IO.Path.Combine(dataDir, $"expedition_durations_{playerTag}-{universeTag}.json");
+				} catch (Exception e) {
+					DoLog(LogLevel.Debug, $"Expedition duration file path could not be determined, measurements stay in memory only: {e.Message}");
+				}
+				_durationTracker = new ExpeditionDurationTracker(path, msg => DoLog(LogLevel.Debug, msg));
+				return _durationTracker;
+			}
+		}
+
 		public ExpeditionsWorker(
 			ITBotMain parentInstance,
 			IOgameService ogameService,
@@ -451,6 +473,7 @@ namespace Tbot.Workers {
 				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 				_tbotInstance.UserData.serverData = await _ogameService.GetServerData();
+				GetDurationTracker().Observe(_tbotInstance.UserData.fleets, DateTime.UtcNow);
 
 				var rankSlotsPriority = new List<RankSlotsPriority> {
 					new RankSlotsPriority(Feature.BrainAutoMine,
@@ -516,6 +539,12 @@ namespace Tbot.Workers {
 				}
 
 				if (expeditionsToSend <= 0) {
+					delay = true;
+					return;
+				}
+
+				if (!_tbotInstance.GhostSleepAllowsNewExpedition(GetDurationTracker().GetMaxDurationSeconds())) {
+					DoLog(LogLevel.Information, "GhostSleep drain: no new expeditions before sleeping - they would not be back in time.");
 					delay = true;
 					return;
 				}
@@ -636,6 +665,7 @@ namespace Tbot.Workers {
 							break;
 						}
 
+						GetDurationTracker().NoteSent(fleetId, origin.Coordinate, DateTime.UtcNow);
 						sentByOrigin[originIndex]++;
 						remaining--;
 						progressInPass = true;
@@ -666,6 +696,7 @@ namespace Tbot.Workers {
 			_nextOriginIndex = planningStart;
 
 				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
+				GetDurationTracker().Observe(_tbotInstance.UserData.fleets, DateTime.UtcNow);
 				var expeditionFleets = _tbotInstance.UserData.fleets
 					.Where(f => f.Mission == Missions.Expedition)
 					.OrderBy(f => f.BackIn)

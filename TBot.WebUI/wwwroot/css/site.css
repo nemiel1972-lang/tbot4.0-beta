@@ -49,3 +49,61 @@ body {
 	background-color: rgb(0,0,0,0.2);
 	display: none;
 }
+
+body {
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	margin: 0;
+}
+
+.navbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	background-color: #212529;
+	padding: 0.5rem 1rem;
+	margin-bottom: 1rem;
+}
+
+.navbar .container-fluid {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	width: 100%;
+	padding: 0;
+}
+
+.navbar .navbar-collapse {
+	display: flex;
+	flex-grow: 1;
+	align-items: center;
+}
+
+.navbar .navbar-nav {
+	display: flex;
+	flex-direction: row;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	flex-grow: 1;
+}
+
+.navbar .nav-link {
+	display: block;
+	padding: 0.5rem 1rem;
+	color: #f8f9fa;
+	text-decoration: none;
+}
+
+.navbar .nav-link:hover {
+	color: #F5B70E;
+}
+
+.navbar .navbar-toggler {
+	display: none;
+}
+
+@media (max-width: 575.98px) {
+	.navbar .navbar-nav {
+		flex-direction: column;
+	}
+}
