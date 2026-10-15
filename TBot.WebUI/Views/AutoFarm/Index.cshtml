@@ -112,6 +112,30 @@
             return `<div class="reason"><span class="reason-label reason-${statusClass(label)}">${escapeHtml(label || "No reason recorded")}</span><span class="reason-detail">${escapeHtml(maskText(detail || ""))}</span></div>`;
         }
 
+        function renderDeuteriumNotice(d) {
+            if (!d || !d.available || !d.guardEnabled) return "";
+            const low = (d.origins || []).filter(o => o.low);
+            if (!low.length) return "";
+            const list = low.map(o => `${escapeHtml(maskText(`[${o.coordinate}]`))} ${formatNumber(o.deuterium)}`).join(", ");
+            if (d.override) {
+                return `<div class="notice">Deuterium is below ${formatNumber(d.minDeuterium)} (${list}), but the guard is bridged manually (AutoFarm.DeuteriumGuardOverride).</div>`;
+            }
+            return `<div class="notice notice-warn"><strong>Deuterium too low for bigger fleets.</strong> Below ${formatNumber(d.minDeuterium)}: ${list}. Attacks on defended targets from there are paused${d.speedFleetBlocked ? " and the speed fleet is switched off" : ""}. To bridge this manually, set AutoFarm.DeuteriumGuardOverride in the config.</div>`;
+        }
+
+        function renderDeuterium(d) {
+            if (!d || !d.available) {
+                return `<section class="panel"><div class="panel-heading"><h2>Deuterium (start celestials)</h2></div><p class="empty-cell">Not available yet - AutoFarm writes the stock with its next cycle.</p></section>`;
+            }
+            const rows = (d.origins || []).map(o => `<tr><td>${escapeHtml(maskText(`[${o.coordinate}]`))}</td><td>${formatNumber(o.deuterium)}</td><td>${o.low ? (d.guardEnabled && !d.override ? "too low" : "low") : "ok"}</td></tr>`).join("") || emptyRow(3, "No start celestials.");
+            const guard = !d.guardEnabled ? "Guard off" : (d.override ? "Bridged manually" : `Guard on, minimum ${formatNumber(d.minDeuterium)}`);
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Deuterium (start celestials)</h2><span class="panel-count">${escapeHtml(guard)}</span></div>
+                <div class="table-wrap"><table><thead><tr><th>Celestial</th><th>Deuterium</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
+                <p class="reason-detail">Updated ${formatDate(d.updatedUtc)}</p>
+            </section>`;
+        }
+
         function renderWorker(worker, databaseAvailable) {
             return `<section class="panel">
                 <div class="panel-heading"><h2>Worker status</h2><span class="status status-${statusClass(worker.state)}">${escapeHtml(worker.state)}</span></div>
@@ -265,6 +289,12 @@
             return `<div class="res3">${one("Met", r.metal || 0)}${one("Kris", r.crystal || 0)}${one("Deut", r.deuterium || 0)}</div>`;
         }
 
+        function netTotal(set) {
+            const r = set || {};
+            const total = (r.metal || 0) + (r.crystal || 0) + (r.deuterium || 0);
+            return `<div class="net-total res3-line ${total >= 0 ? "net-positive" : "net-negative"}"><i>Total</i> ${formatNumber(total)}</div>`;
+        }
+
         function renderLosses(periods) {
             const list = periods || [];
             const rows = list.length ? list.map(p => {
@@ -278,13 +308,13 @@
                     <td class="resources">${res3(p.plannedRes)}</td>
                     <td class="resources">${hasLoot ? res3(p.actualRes) : "-"}<span class="coordinate">${hasLoot ? formatNumber(p.actualCount) + " returns" : "not recorded yet"}</span></td>
                     <td class="resources">${formatNumber(p.fuel)}<span class="coordinate">Deut</span></td>
-                    <td class="resources">${hasLoot ? res3(p.netRes, true) : "-"}</td>
+                    <td class="resources net-cell">${hasLoot ? res3(p.netRes, true) + netTotal(p.netRes) : "-"}</td>
                 </tr>`;
             }).join("") : emptyRow(7, "No loss data yet.");
             return `<section class="panel">
                 <div class="panel-heading"><h2>Losses and profit</h2></div>
-                <p class="panel-note">Shown per resource (Met = metal, Kris = crystal, Deut = deuterium). Net = actual loot (cargo of the returning fleet) &minus; ship losses &minus; fuel (fuel is deuterium). Fleets that were not observed are marked unknown and not counted.</p>
-                <div class="table-wrap"><table><thead><tr><th>Period</th><th>Ships lost</th><th>Ship losses</th><th>Planned loot</th><th>Actual loot</th><th>Fuel</th><th>Net</th></tr></thead><tbody>${rows}</tbody></table></div>
+                <p class="panel-note">Shown per resource (Met = metal, Kris = crystal, Deut = deuterium). Profit after losses and fuel = actual loot (cargo of the returning fleet) &minus; ship losses &minus; fuel (fuel is deuterium). Fleets that were not observed are marked unknown and not counted.</p>
+                <div class="table-wrap"><table><thead><tr><th>Period</th><th>Ships lost</th><th>Ship losses</th><th>Planned loot</th><th>Actual loot</th><th>Fuel</th><th>Profit after losses and fuel</th></tr></thead><tbody>${rows}</tbody></table></div>
             </section>`;
         }
 
@@ -332,7 +362,7 @@
         function render(data) {
             snapshot = data;
             const nextSnapshotKey = JSON.stringify(data) + "|" + maskBox.checked + "|" + activeGalaxy + "|" + activeTab;
-            notice.innerHTML = data.databaseAvailable ? "" : `<div class="notice">No AutoFarm database is available for this instance yet. The page will populate after AutoFarm has run once.</div>`;
+            notice.innerHTML = renderDeuteriumNotice(data.deuterium) + (data.databaseAvailable ? "" : `<div class="notice">No AutoFarm database is available for this instance yet. The page will populate after AutoFarm has run once.</div>`);
 
             if (nextSnapshotKey === renderedSnapshotKey) return;
 
@@ -348,7 +378,7 @@
             if (!tabs.some(t => t[0] === activeTab)) activeTab = "overview";
             const bar = `<nav class="tab-bar" role="tablist">${tabs.map(t => `<button type="button" role="tab" class="tab-button${t[0] === activeTab ? " active" : ""}" data-tab="${t[0]}">${escapeHtml(t[1])}${t[2] ? ` <span class="tab-count">${t[2]}</span>` : ""}</button>`).join("")}</nav>`;
             const panels = {
-                overview: () => [renderWorker(data.worker, data.databaseAvailable), renderSlots(data.slots), renderScan(data.scan), renderLosses(data.losses)].join(""),
+                overview: () => [renderWorker(data.worker, data.databaseAvailable), renderDeuterium(data.deuterium), renderSlots(data.slots), renderScan(data.scan), renderLosses(data.losses)].join(""),
                 targets: () => galaxyBar(data.reports, r => r.coordinate) + renderTargets(filterGalaxy(data.reports, r => r.coordinate)),
                 attacks: () => galaxyBar(data.attacks, a => a.coordinate) + renderAttacks(filterGalaxy(data.attacks, a => a.coordinate)),
                 systems: () => galaxyBar(data.systems, x => x.coordinate) + renderSystems(filterGalaxy(data.systems, x => x.coordinate)),

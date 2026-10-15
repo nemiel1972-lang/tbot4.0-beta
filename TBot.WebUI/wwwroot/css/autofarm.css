@@ -106,6 +106,12 @@
     line-height: 1.45;
 }
 
+.notice-warn {
+    border-color: #c0392b;
+    color: #6b1d14;
+    background: #fdeceb;
+}
+
 .panel {
     margin-top: 16px;
     border: 1px solid #cfcfcf;
@@ -418,6 +424,9 @@
 
 .net-positive { color: #3fb950; }
 .net-negative { color: #f85149; }
+td.net-cell { background: rgba(127, 127, 127, 0.12); border-left: 3px solid rgba(127, 127, 127, 0.5); font-size: 1.08em; font-weight: 700; }
+td.net-cell .res3-line i { font-weight: 400; }
+td.net-cell .net-total { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(127, 127, 127, 0.4); }
 
 .tab-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; border-bottom: 1px solid var(--border, #30363d); padding-bottom: 8px; }
 .tab-button { background: transparent; color: inherit; border: 1px solid var(--border, #30363d); border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }

@@ -390,6 +390,89 @@ namespace Tbot.Workers {
 			_recyclerTimers[id] = timer;
 		}
 
+		private bool _deutGuardLow;
+		private string _deutGuardLastState = "";
+
+		private bool DeuteriumGuardEnabled() {
+			return SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeuteriumGuard", true)
+				&& !SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeuteriumGuardOverride", false);
+		}
+
+		private long DeuteriumGuardMin() {
+			return SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeuteriumGuardMin", (long) 10000000);
+		}
+
+		private bool DeuteriumGuardBlocksSpeedFleet() {
+			return DeuteriumGuardEnabled() && _deutGuardLow;
+		}
+
+		private bool DeuteriumGuardBlocksOrigin(Celestial origin) {
+			return DeuteriumGuardEnabled() && (origin?.Resources?.Deuterium ?? 0) < DeuteriumGuardMin();
+		}
+
+		private async Task RefreshDeuteriumGuardAsync() {
+			try {
+				long min = DeuteriumGuardMin();
+				var rows = new List<object>();
+				long maxDeut = 0;
+				int lowCount = 0;
+				foreach (var origin in GetFarmOrigins()) {
+					var updated = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
+					long deut = updated?.Resources?.Deuterium ?? 0;
+					maxDeut = Math.Max(maxDeut, deut);
+					bool low = deut < min;
+					if (low) lowCount++;
+					rows.Add(new { Coordinate = $"{origin.Coordinate.Type}:{origin.Coordinate.Galaxy}:{origin.Coordinate.System}:{origin.Coordinate.Position}", Deuterium = deut, Low = low });
+				}
+				_deutGuardLow = rows.Count > 0 && maxDeut < min;
+				bool enabled = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeuteriumGuard", true);
+				bool overridden = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeuteriumGuardOverride", false);
+				string dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
+				Directory.CreateDirectory(dataDir);
+				File.WriteAllText(Path.Combine(dataDir, Path.GetFileName($"autofarm_deut_{_tbotInstance.InstanceAlias}.json")), JsonConvert.SerializeObject(new {
+					UpdatedUtc = DateTime.UtcNow,
+					MinDeuterium = min,
+					GuardEnabled = enabled,
+					Override = overridden,
+					SpeedFleetBlocked = DeuteriumGuardBlocksSpeedFleet(),
+					Origins = rows
+				}));
+				string state = $"{enabled}|{overridden}|{_deutGuardLow}|{lowCount}";
+				if (state != _deutGuardLastState) {
+					_deutGuardLastState = state;
+					if (lowCount > 0 && enabled && !overridden) {
+						_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Deuterium too low for bigger fleets: {lowCount} of {rows.Count} start celestial(s) below {min:N0} deuterium - attacks on defended targets from there are paused{(_deutGuardLow ? ", speed fleet is switched off" : "")}.");
+					} else if (lowCount > 0 && overridden) {
+						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Deuterium below {min:N0} on {lowCount} start celestial(s), but the low-deuterium guard is overridden manually (DeuteriumGuardOverride).");
+					} else {
+						_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, "Deuterium on the start celestials is sufficient for bigger fleets.");
+					}
+				}
+			} catch (Exception e) {
+				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Deuterium check failed: {e.Message}");
+			}
+		}
+
+		private bool ReduceDeuteriumActive() {
+			return SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "ReduceDeuterium", false);
+		}
+
+		private decimal FindLowestRecyclerSpeed(Celestial origin, Coordinate debris, Ships recyclers, decimal fastestSpeed, double factor, long lowerSec, long upperSec) {
+			decimal minSpeed = ReduceDeuteriumMinSpeed();
+			foreach (decimal candidate in _calculationService.GetValidSpeedsForClass(_tbotInstance.UserData.userInfo.Class).Where(sp => sp >= minSpeed && sp < fastestSpeed).OrderBy(sp => sp)) {
+				long t = (long) Math.Round(_calculationService.CalcFleetPrediction(origin.Coordinate, debris, recyclers, Missions.Harvest, candidate, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time * factor);
+				if (t >= lowerSec && t <= upperSec) {
+					return candidate;
+				}
+			}
+			return 0;
+		}
+
+		private decimal ReduceDeuteriumMinSpeed() {
+			int percent = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "ReduceDeuteriumMinSpeedPercent", 30);
+			return Math.Max(30, percent) / 10m;
+		}
+
 		private static decimal NormalizeSpeed(decimal speed) {
 			return decimal.Parse(speed.ToString("0.#####", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 		}
@@ -1296,7 +1379,7 @@ namespace Tbot.Workers {
 		}
 
 		private Buildables GetConfiguredCargoType() {
-			bool useSpeedFleet = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "UseSpeedFleet", false);
+			bool useSpeedFleet = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "UseSpeedFleet", false) && !DeuteriumGuardBlocksSpeedFleet();
 			if (useSpeedFleet) {
 				string speedFleetTypesSetting = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "SpeedFleetCargoTypes", "Pathfinder");
 				foreach (string typeName in speedFleetTypesSetting.Split(',')) {
@@ -2202,6 +2285,7 @@ namespace Tbot.Workers {
 
 		protected override async Task Execute() {
 			await RefreshAllianceWhitelistAsync();
+			await RefreshDeuteriumGuardAsync();
 			if (!_pendingRecyclersReconciled) {
 				_pendingRecyclersReconciled = true;
 				try {
@@ -3124,6 +3208,10 @@ namespace Tbot.Workers {
 									_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Skipping defended target {target.Celestial.Coordinate}: AutoFarm.AttackDefendedTargets is disabled (target likely became AttackPending while it was still enabled).");
 									continue;
 								}
+								if (DeuteriumGuardBlocksOrigin(fromCelestial)) {
+									_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Pausing defended target {target.Celestial.Coordinate}: deuterium on {fromCelestial.Coordinate} is below {DeuteriumGuardMin():N0} (low-deuterium guard).");
+									continue;
+								}
 								if (AutoFarmIsEscortPoolLow(fromCelestial)) {
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Pausing defended target {target.Celestial.Coordinate} this cycle: escort ship pool too low (tied up in earlier targets) - retrying next cycle instead of blacklisting.");
 									continue;
@@ -3218,6 +3306,21 @@ namespace Tbot.Workers {
 									}
 								} else {
 									speed = Speeds.HundredPercent;
+								}
+							}
+
+							if (ReduceDeuteriumActive()) {
+								long maxFlightReduce = !SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MaxFlightTime")
+									? 86400
+									: ((long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime == 0 ? long.MaxValue : (long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime);
+								decimal minReduceSpeed = ReduceDeuteriumMinSpeed();
+								foreach (decimal reduceCandidate in _calculationService.GetValidSpeedsForClass(_tbotInstance.UserData.userInfo.Class).Where(sp => sp >= minReduceSpeed && sp < speed).OrderBy(sp => sp)) {
+									FleetPrediction reducePrediction = _calculationService.CalcFleetPrediction(fromCelestial.Coordinate, target.Celestial.Coordinate, attackingShips, Missions.Attack, reduceCandidate, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
+									if (reducePrediction.Time <= maxFlightReduce) {
+										_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: ReduceDeuterium - attack fleet flies at {reduceCandidate * 10}% instead of {speed * 10}% (fuel {reducePrediction.Fuel:N0}, flight time {TimeSpan.FromSeconds(reducePrediction.Time)}).");
+										speed = reduceCandidate;
+										break;
+									}
 								}
 							}
 
@@ -3392,9 +3495,17 @@ namespace Tbot.Workers {
 												var flightCal = GetFlightCalibration();
 												long recT = (long) Math.Round(recyclerAtFastest.Time * flightCal.RecyclerFactor);
 												long atkT = (long) Math.Round(atkPredictionForRecycler.Time * flightCal.AttackFactor);
+												recyclerSpeed = fastestRecyclerSpeed;
+												if (ReduceDeuteriumActive()) {
+													decimal reducedRecSpeed = FindLowestRecyclerSpeed(fromCelestial, recyclerDebrisCoordinate, recyclerFleetToSend, fastestRecyclerSpeed, flightCal.RecyclerFactor, 0, atkT + gapMax);
+													if (reducedRecSpeed > 0) {
+														recyclerSpeed = reducedRecSpeed;
+														recT = (long) Math.Round(_calculationService.CalcFleetPrediction(fromCelestial.Coordinate, recyclerDebrisCoordinate, recyclerFleetToSend, Missions.Harvest, reducedRecSpeed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time * flightCal.RecyclerFactor);
+														_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: ReduceDeuterium - recycler flies at {reducedRecSpeed * 10}% instead of {fastestRecyclerSpeed * 10}%.");
+													}
+												}
 												recyclerGapTargetSec = gapTarget;
 												recyclerCorrectedFlightSec = recT;
-												recyclerSpeed = fastestRecyclerSpeed;
 
 												if (atkT + gapMin > recT) {
 													recyclerDelaySec = atkT + gapTarget - recT;
@@ -3412,7 +3523,7 @@ namespace Tbot.Workers {
 														}
 													}
 													if (bestAttackSpeed != speed) {
-														_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: attack slowed from {speed * 10}% to {bestAttackSpeed * 10}% so the recycler (100%, {TimeSpan.FromSeconds(recT)}) arrives just behind it.");
+														_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: attack slowed from {speed * 10}% to {bestAttackSpeed * 10}% so the recycler ({recyclerSpeed * 10}%, {TimeSpan.FromSeconds(recT)}) arrives just behind it.");
 														speed = bestAttackSpeed;
 														atkT = bestAttackT;
 													}
@@ -3424,10 +3535,18 @@ namespace Tbot.Workers {
 														}
 													}
 												}
-												_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: Ankunftsplan - Hauptflotte {speed * 10}% ({TimeSpan.FromSeconds(atkT)}{(attackDelaySec > 0 ? $", Start +{attackDelaySec}s" : "")}), Recycler 100% ({TimeSpan.FromSeconds(recT)}{(recyclerDelaySec > 0 ? $", Start +{TimeSpan.FromSeconds(recyclerDelaySec)}" : "")}), Zielabstand {gapTarget}s.");
+												_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: Ankunftsplan - Hauptflotte {speed * 10}% ({TimeSpan.FromSeconds(atkT)}{(attackDelaySec > 0 ? $", Start +{attackDelaySec}s" : "")}), Recycler {recyclerSpeed * 10}% ({TimeSpan.FromSeconds(recT)}{(recyclerDelaySec > 0 ? $", Start +{TimeSpan.FromSeconds(recyclerDelaySec)}" : "")}), Zielabstand {gapTarget}s.");
 												recyclerPlannedAttackFlightSec = atkT;
 											} else if (recyclerAtFastest.Time >= atkPredictionForRecycler.Time) {
 												recyclerSpeed = fastestRecyclerSpeed;
+												if (ReduceDeuteriumActive()) {
+													long gapMaxPlain = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "RecyclerArrivalGapMaxSec", (long) 120);
+													decimal reducedRecSpeed = FindLowestRecyclerSpeed(fromCelestial, recyclerDebrisCoordinate, recyclerFleetToSend, fastestRecyclerSpeed, 1.0, (long) atkPredictionForRecycler.Time, (long) atkPredictionForRecycler.Time + gapMaxPlain);
+													if (reducedRecSpeed > 0) {
+														recyclerSpeed = reducedRecSpeed;
+														_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{target.Celestial.Coordinate}: ReduceDeuterium - recycler flies at {reducedRecSpeed * 10}% instead of {fastestRecyclerSpeed * 10}%.");
+													}
+												}
 											} else {
 												recyclerSpeed = 0;
 												foreach (decimal candidateSpeed in _calculationService.GetValidSpeedsForClass(_tbotInstance.UserData.userInfo.Class).OrderByDescending(s => s)) {

@@ -35,6 +35,7 @@ namespace TBot.WebUI.Services {
 			storage.Slots = BuildSlotStatus(logs, settings.MaxSlots);
 
 			ReadBlacklist(instanceAlias, storage);
+			storage.Deuterium = ReadDeuterium(instanceAlias);
 			storage.PendingCommands = CountPendingCommands(instanceAlias);
 
 			var databasePath = GetDatabasePath(instanceAlias);
@@ -632,6 +633,33 @@ WHERE id = 1;";
 			}
 		}
 
+		private static AutoFarmDeuteriumStatus ReadDeuterium(string instanceAlias) {
+			try {
+				var path = Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"autofarm_deut_{instanceAlias}.json"));
+				if (!File.Exists(path))
+					return new AutoFarmDeuteriumStatus();
+				var o = JObject.Parse(File.ReadAllText(path));
+				var status = new AutoFarmDeuteriumStatus {
+					Available = true,
+					UpdatedUtc = o["UpdatedUtc"] != null ? o["UpdatedUtc"].ToObject<DateTime>().ToUniversalTime() : null,
+					MinDeuterium = o["MinDeuterium"]?.ToObject<long>() ?? 0,
+					GuardEnabled = o["GuardEnabled"]?.ToObject<bool>() ?? true,
+					Override = o["Override"]?.ToObject<bool>() ?? false,
+					SpeedFleetBlocked = o["SpeedFleetBlocked"]?.ToObject<bool>() ?? false
+				};
+				foreach (var item in (o["Origins"] as JArray ?? new JArray()).OfType<JObject>()) {
+					status.Origins.Add(new AutoFarmDeuteriumOrigin {
+						Coordinate = item["Coordinate"]?.ToString() ?? string.Empty,
+						Deuterium = item["Deuterium"]?.ToObject<long>() ?? 0,
+						Low = item["Low"]?.ToObject<bool>() ?? false
+					});
+				}
+				return status;
+			} catch {
+				return new AutoFarmDeuteriumStatus();
+			}
+		}
+
 		private static string GetDatabasePath(string instanceAlias) {
 			return Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"autofarm_{instanceAlias}.db"));
 		}
@@ -678,6 +706,7 @@ WHERE id = 1;";
 		public int CachedSystemCount { get; set; }
 		public DateTime? LastSystemObservedAtUtc { get; set; }
 		public AutoFarmWorkerStatus Worker { get; set; } = new();
+		public AutoFarmDeuteriumStatus Deuterium { get; set; } = new();
 		public AutoFarmSlotStatus Slots { get; set; } = new();
 		public AutoFarmScanStatus Scan { get; set; } = new();
 		public List<AutoFarmSystemRow> Systems { get; } = new();

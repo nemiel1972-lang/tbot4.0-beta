@@ -19,8 +19,25 @@ namespace TBot.WebUI.Models {
 		public IReadOnlyList<AutoFarmLossPeriod> Losses { get; init; } = Array.Empty<AutoFarmLossPeriod>();
 		public IReadOnlyList<AutoFarmBlacklistRow> Blacklist { get; init; } = Array.Empty<AutoFarmBlacklistRow>();
 		public int PendingCommands { get; init; }
+		public AutoFarmDeuteriumStatus Deuterium { get; init; } = new();
 
 		public int PendingAttackCount => Reports.Count(report => report.State == "AttackPending");
+	}
+
+	public sealed class AutoFarmDeuteriumOrigin {
+		public string Coordinate { get; init; } = string.Empty;
+		public long Deuterium { get; init; }
+		public bool Low { get; init; }
+	}
+
+	public sealed class AutoFarmDeuteriumStatus {
+		public bool Available { get; init; }
+		public DateTime? UpdatedUtc { get; init; }
+		public long MinDeuterium { get; init; }
+		public bool GuardEnabled { get; init; }
+		public bool Override { get; init; }
+		public bool SpeedFleetBlocked { get; init; }
+		public List<AutoFarmDeuteriumOrigin> Origins { get; init; } = new();
 	}
 
 	public sealed class AutoFarmBlacklistRow {

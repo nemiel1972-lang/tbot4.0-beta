@@ -333,6 +333,11 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `DebrisCreditPercent` | Share of the debris field that counts as profit in the profit calculation, minus recycler fuel (default 80). |
 | `MinDebrisToHarvest` | Minimum debris after recycler fuel before recyclers are sent (default 0). |
 | `MinSpeedPercentForProfitRetry` | Lowest fleet speed (%) the profit re-check may fall back to (default 50). |
+| `ReduceDeuterium` | `true` = save deuterium: the attack fleet (cargo + escort) and the recyclers fly at the lowest sensible speed. Sensible means: `MaxFlightTime` is kept, and the recycler arrives at most `RecyclerArrivalGapMaxSec` after the main fleet (it waits at home if it would arrive too early). Never faster than the normal calculation, never below `ReduceDeuteriumMinSpeedPercent` (default `false`). |
+| `ReduceDeuteriumMinSpeedPercent` | Lowest speed (%) `ReduceDeuterium` may use. Values below 30 are treated as 30 (default 30). |
+| `DeuteriumGuard` | `true` = low-deuterium guard: if a start celestial has less than `DeuteriumGuardMin` deuterium, attacks on defended targets (escort) from it are paused; if no start celestial has enough, the speed fleet (`UseSpeedFleet`) is switched off too. The AutoFarm page shows the stock and the warning "Deuterium too low for bigger fleets" (default `true`). |
+| `DeuteriumGuardMin` | Deuterium threshold for the guard (default 10000000). |
+| `DeuteriumGuardOverride` | `true` = bridge the guard manually and keep working with low deuterium (default `false`). |
 | `GlobalSpacing` | Spreads several bot instances over different start points of the scan range. With one instance leave it `false`: every pass then starts at the first `ScanRange` entry. |
 | `ReportQueryLimitForNonActionable` | Limits how many reports of non-attackable targets are queried per run (default 3). |
 | `RepeatedLogIntervalMinutes` | Repeated identical log messages appear at most this often (default 360; 0 = every time). |

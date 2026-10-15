@@ -80,7 +80,8 @@ namespace TBot.WebUI.Controllers {
 				Errors = storage.Errors,
 				Losses = storage.Losses,
 				Blacklist = storage.Blacklist,
-				PendingCommands = storage.PendingCommands
+				PendingCommands = storage.PendingCommands,
+				Deuterium = storage.Deuterium
 			};
 		}
 

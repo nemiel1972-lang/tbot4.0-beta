@@ -827,6 +827,16 @@
             { k: 'ReportQueryLimitForNonActionable', label: 'Report query limit (not attackable)', hint: 'Per run', kind: 'num', o: { min: 0 }, def: 3 },
             { k: 'RepeatedLogIntervalMinutes', label: 'Repeat log interval', hint: 'Identical log lines at most this often (0 = always)', kind: 'num', o: { min: 0, unit: 'minutes' }, def: 360 }
         ];
+        var DEUT_DEFAULTS = { ReduceDeuterium: false, ReduceDeuteriumMinSpeedPercent: 30, DeuteriumGuard: true, DeuteriumGuardMin: 10000000, DeuteriumGuardOverride: false };
+        Object.keys(DEUT_DEFAULTS).forEach(function (k) { if (!has(d, k)) d[k] = DEUT_DEFAULTS[k]; });
+        body.appendChild(sec('Deuterium', [
+            el('div', { class: 'cfg-note', text: 'Save deuterium: attack fleet and recyclers fly as slowly as sensible (never below the lowest speed). Low-deuterium guard: when a start celestial has less deuterium than the minimum, attacks on defended targets from there are paused and the speed fleet is switched off. The AutoFarm page shows the stock and a warning.' }),
+            fld(d, 'ReduceDeuterium', P, 'Save deuterium', 'Attack fleet and recyclers fly as slowly as sensible (flight time limit kept, recycler arrives right behind the fleet)', 'toggle'),
+            fld(d, 'ReduceDeuteriumMinSpeedPercent', P, 'Lowest speed when saving deuterium', 'Never below 30 %', 'num', { min: 30, max: 100, step: 10, unit: '%' }),
+            fld(d, 'DeuteriumGuard', P, 'Low-deuterium guard', 'Below the minimum on the start celestial: no speed fleet, no attacks on defended targets', 'toggle'),
+            fld(d, 'DeuteriumGuardMin', P, 'Guard: minimum deuterium', null, 'num', { min: 0 }),
+            fld(d, 'DeuteriumGuardOverride', P, 'Guard: bridge manually', 'On = ignore the guard and keep farming with low deuterium', 'toggle')
+        ].filter(Boolean)));
         var optRows = AF_OPT.map(function (x) { return fld(d, x.k, P, x.label, x.hint, x.kind, x.o); });
         var missingOpt = AF_OPT.filter(function (x) { return !has(d, x.k); }).map(function (x) { return { k: x.k, label: x.label, def: x.def }; });
         if (missingOpt.length) {
@@ -859,7 +869,26 @@
             fld(d, 'EscortBisectionIterations', P, 'Search: bisection iterations', null, 'num', { min: 1 }),
             fld(d, 'EscortFineTuneMaxSims', P, 'Search: fine-tune simulations', null, 'num', { min: 1 })
         ];
-        if (d.EscortShipCaps && typeof d.EscortShipCaps === 'object') esc.push(row('Absolute cap per ship', 'EscortShipCaps', genericObject(d.EscortShipCaps, Object.keys(d.EscortShipCaps), ['EscortShipCaps'])));
+        (function () {
+            var capTypes = [];
+            [d.EscortShipTypes, d.EscortFallbackShipTypes].forEach(function (lst) {
+                String(lst || '').split(',').forEach(function (t) { t = t.trim(); if (t && capTypes.indexOf(t) < 0) capTypes.push(t); });
+            });
+            Object.keys(d.EscortShipCaps && typeof d.EscortShipCaps === 'object' ? d.EscortShipCaps : {}).forEach(function (t) { if (capTypes.indexOf(t) < 0) capTypes.push(t); });
+            capTypes.forEach(function (t) {
+                var have = d.EscortShipCaps && typeof d.EscortShipCaps === 'object' && d.EscortShipCaps[t] != null;
+                var i = el('input', { type: 'number', min: 0, step: 1, value: have ? d.EscortShipCaps[t] : '', placeholder: 'default' });
+                var cpath = P.concat('EscortShipCaps', t);
+                i.addEventListener('input', function () {
+                    if (!d.EscortShipCaps || typeof d.EscortShipCaps !== 'object') d.EscortShipCaps = {};
+                    if (i.value === '') delete d.EscortShipCaps[t]; else d.EscortShipCaps[t] = Number(i.value);
+                    if (!Object.keys(d.EscortShipCaps).length && origAt(P.concat('EscortShipCaps')) === undefined) delete d.EscortShipCaps;
+                    i.classList.toggle('cfg-changed', JSON.stringify(i.value === '' ? undefined : Number(i.value)) !== JSON.stringify(origAt(cpath)));
+                    update();
+                });
+                esc.push(row('Cap: ' + t, 'Absolute cap for this ship type (empty = Max escort ships)', i));
+            });
+        })();
         var escDet = el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: 'Escort and simulation (defended targets only)' })].concat(esc.filter(Boolean)));
         if (escOpen) escDet.open = true;
         escDet.addEventListener('toggle', function () { escOpen = escDet.open; });
@@ -870,7 +899,7 @@
             fld(d, 'CheckIntervalMax', P, 'Run interval, max', null, 'num', { min: 0, unit: 'minutes' })
         ]);
 
-        var known = ['Active', 'Origin', 'ScanRange', 'SystemRange', 'Exclude', 'ExcludeMoons', 'DistanceBasedScanOrder', 'ScanBlockSize', 'TargetsProbedBeforeAttack', 'SequentialMode', 'SequentialModeProbesPerCycle', 'StopAfterFullScan', 'MinimumResources', 'MinimumResourcesDefended', 'MinimumPlayerRank', 'MaxFlightTime', 'MinLootFuelRatio', 'PreferedResource', 'AttackDefendedTargets', 'MaxDefensePoints', 'MinLootPerDefensePoint', 'KeepReportFor', 'MaxReportAgeMinutesForAttack', 'MaxAttackDelaySec', 'DebrisCreditPercent', 'MinDebrisToHarvest', 'MinSpeedPercentForProfitRetry', 'GlobalSpacing', 'ReportQueryLimitForNonActionable', 'RepeatedLogIntervalMinutes', 'Blacklist', 'AllianceWhitelist', 'NumProbes', 'BuildProbes', 'FillSlots', 'FillSlotsMaxProbeWaitSec', 'MaxSlots', 'SlotsToLeaveFree', 'FleetSpeed', 'CargoType', 'MinCargosToSend', 'MinCargosToKeep', 'CargoSurplusPercentage', 'CargoReservePercent', 'RecyclerReservePercent', 'BuildCargos', 'UseSpeedFleet', 'SpeedFleetCargoTypes', 'MaxCargoLossPercent', 'FleetToDebrisPercent', 'AutoHarvestDebrisAfterAttack', 'TargetCombatTechBonus', 'EscortShipTypes', 'EscortFallbackShipTypes', 'EscortShipCaps', 'EscortShipsStep', 'MaxEscortShips', 'MaxEscortFleetPercent', 'EscortReservePercent', 'EscortMaxIterations', 'EscortBisectionIterations', 'EscortFineTuneMaxSims', 'MaxEscortLossPercent', 'EscortLossWeight', 'MinWinRate', 'SimulationRuns', 'CheckIntervalMin', 'CheckIntervalMax'];
+        var known = ['Active', 'Origin', 'ScanRange', 'SystemRange', 'Exclude', 'ExcludeMoons', 'DistanceBasedScanOrder', 'ScanBlockSize', 'TargetsProbedBeforeAttack', 'SequentialMode', 'SequentialModeProbesPerCycle', 'StopAfterFullScan', 'MinimumResources', 'MinimumResourcesDefended', 'MinimumPlayerRank', 'MaxFlightTime', 'MinLootFuelRatio', 'PreferedResource', 'AttackDefendedTargets', 'MaxDefensePoints', 'MinLootPerDefensePoint', 'KeepReportFor', 'MaxReportAgeMinutesForAttack', 'MaxAttackDelaySec', 'DebrisCreditPercent', 'MinDebrisToHarvest', 'MinSpeedPercentForProfitRetry', 'ReduceDeuterium', 'ReduceDeuteriumMinSpeedPercent', 'DeuteriumGuard', 'DeuteriumGuardMin', 'DeuteriumGuardOverride', 'GlobalSpacing', 'ReportQueryLimitForNonActionable', 'RepeatedLogIntervalMinutes', 'Blacklist', 'AllianceWhitelist', 'NumProbes', 'BuildProbes', 'FillSlots', 'FillSlotsMaxProbeWaitSec', 'MaxSlots', 'SlotsToLeaveFree', 'FleetSpeed', 'CargoType', 'MinCargosToSend', 'MinCargosToKeep', 'CargoSurplusPercentage', 'CargoReservePercent', 'RecyclerReservePercent', 'BuildCargos', 'UseSpeedFleet', 'SpeedFleetCargoTypes', 'MaxCargoLossPercent', 'FleetToDebrisPercent', 'AutoHarvestDebrisAfterAttack', 'TargetCombatTechBonus', 'EscortShipTypes', 'EscortFallbackShipTypes', 'EscortShipCaps', 'EscortShipsStep', 'MaxEscortShips', 'MaxEscortFleetPercent', 'EscortReservePercent', 'EscortMaxIterations', 'EscortBisectionIterations', 'EscortFineTuneMaxSims', 'MaxEscortLossPercent', 'EscortLossWeight', 'MinWinRate', 'SimulationRuns', 'CheckIntervalMin', 'CheckIntervalMax'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) {
             var det = el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: 'More settings (' + rest.length + ')' }), genericObject(d, rest, [])]);
