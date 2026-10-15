@@ -520,9 +520,9 @@
         ].filter(Boolean)));
         if (d.ExpeditionDrain && typeof d.ExpeditionDrain === 'object') {
             var DP = P.concat('ExpeditionDrain');
-            body.appendChild(sec('GhostSleep: expedition drain', [
+            body.appendChild(sec('GhostSleep: expeditions before sleep', [
                 el('div', { class: 'cfg-note', text: 'Replaces the time-based refill above. Shortly before sleeping no expedition is started that would not be back in time (duration is measured). At bed time the bot waits for stragglers, sends one simultaneous wave and goes to sleep.' }),
-                fld(d.ExpeditionDrain, 'Active', DP, 'Drain before sleep', null, 'toggle'),
+                fld(d.ExpeditionDrain, 'Active', DP, 'Let expeditions finish before sleep', null, 'toggle'),
                 fld(d.ExpeditionDrain, 'BufferMinutes', DP, 'Tolerance', 'An expedition may be back this long after go-to-sleep', 'num', { min: 0, unit: 'minutes' }),
                 fld(d.ExpeditionDrain, 'StragglerWaitMinutes', DP, 'Wait for stragglers', 'At bed time, at most', 'num', { min: 0, unit: 'minutes' }),
                 fld(d.ExpeditionDrain, 'DefaultDurationMinutes', DP, 'Duration until measured', 'Used until 3 real durations are known', 'num', { min: 1, unit: 'minutes' })
