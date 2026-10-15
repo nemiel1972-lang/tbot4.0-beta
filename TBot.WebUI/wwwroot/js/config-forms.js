@@ -505,6 +505,8 @@
 
     function renderGhostSleep(body, d, P) {
         var timeOk = function (v) { return TIME_HM.test(v.trim()); };
+        if (!has(d, 'AnchorMode')) d.AnchorMode = 'LastFleet';
+        if (!d.ExpeditionDrain || typeof d.ExpeditionDrain !== 'object') d.ExpeditionDrain = { Active: false, BufferMinutes: 10, StragglerWaitMinutes: 20, DefaultDurationMinutes: 90 };
         body.appendChild(sec('GhostSleep', [
             el('div', { class: 'cfg-warnbox' }, [
                 el('b', { text: 'This is not a real sleep. ' }),
