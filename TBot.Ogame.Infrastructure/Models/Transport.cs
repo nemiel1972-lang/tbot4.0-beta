@@ -25,6 +25,7 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public bool Active { get; set; }
         public Buildables CargoType { get; set; }
         public long DeutToLeave { get; set; }
+        public long DeutToLeaveOnPlanets { get; set; } = -1;
         public bool RoundResources { get; set; }
         public bool SendToTheMoonIfPossible { get; set; }
         public Celestial Origin { get; set; }

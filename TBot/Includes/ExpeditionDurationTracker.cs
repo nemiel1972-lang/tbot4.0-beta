@@ -85,14 +85,6 @@ namespace Tbot.Includes {
 				Save();
 		}
 
-		public int? GetDurationSeconds(Coordinate origin) {
-			lock (_lock) {
-				if (_samples.TryGetValue(OriginKey(origin), out var own) && own.Count >= MinSamplesForEstimate)
-					return Percentile90(own);
-				return PooledPercentile();
-			}
-		}
-
 		public int? GetMaxDurationSeconds() {
 			lock (_lock) {
 				var perOrigin = _samples.Values.Where(v => v.Count >= MinSamplesForEstimate).Select(Percentile90).ToList();

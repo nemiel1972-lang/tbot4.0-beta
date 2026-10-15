@@ -105,13 +105,6 @@ namespace TBot.Model {
 			SaveToFile();
 		}
 
-		public int GetBlacklistedCount() {
-			lock (_lock) {
-				CleanupExpiredTargets();
-				return _blacklistedTargets.Count;
-			}
-		}
-
 		public List<BlacklistedTarget> GetAllBlacklisted() {
 			lock (_lock) {
 				CleanupExpiredTargets();
@@ -123,11 +116,6 @@ namespace TBot.Model {
 			_blacklistedTargets.RemoveAll(t => t.IsExpired());
 		}
 
-		public void ManualCleanup() {
-			lock (_lock) {
-				CleanupExpiredTargets();
-			}
-		}
 	private void LoadFromFile() {
 		if (string.IsNullOrEmpty(_filePath) || !File.Exists(_filePath)) {
 			return;

@@ -20,9 +20,7 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int MaxSlots { get; set; }
 		public int SlotsUsed { get; set; }
 		public Feature Feature { get; set; }
-        public bool HasPriorityOn(RankSlotsPriority feature) {
-			return this.Rank < feature.Rank;
-		}
+
 		public override string ToString() {
 			return $"Rank {Rank} -- {Feature.ToString()} is {Active}, using {SlotsUsed}/{MaxSlots}";
 		}

@@ -123,15 +123,6 @@ namespace Tbot.Common.Settings {
 			return full;
 		}
 
-		public static List<string> GetLoadedFiles(string settingsPath) {
-			var result = new List<string>();
-			if (!File.Exists(settingsPath))
-				return result;
-			string baseDir = Path.GetDirectoryName(Path.GetFullPath(settingsPath));
-			CollectLoadedFiles(ParseObject(File.ReadAllText(settingsPath)), baseDir, result, 0);
-			return result;
-		}
-
 		private static void CollectLoadedFiles(JContainer token, string baseDir, List<string> result, int depth) {
 			if (depth > 8)
 				return;

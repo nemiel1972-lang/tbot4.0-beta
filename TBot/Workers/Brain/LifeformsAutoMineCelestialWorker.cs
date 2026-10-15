@@ -1,3 +1,4 @@
+using Tbot.Common.Settings;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -281,7 +282,7 @@ namespace Tbot.Workers.Brain {
 														Ships brainSchiffe = _fleetScheduler.WaehleBrainSchiffe(origin, missingResources);
 														if (brainSchiffe != null) {
 															Ships ships = brainSchiffe;
-															fleetId = await _fleetScheduler.SendFleet(origin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, deutToLeave: (origin.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0));
+															fleetId = await _fleetScheduler.SendFleet(origin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, deutToLeave: (TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, origin.Coordinate.Type)));
 															if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 																stop = true;
 															}
@@ -293,7 +294,7 @@ namespace Tbot.Workers.Brain {
 															Ships ships = new();
 															ships = _fleetScheduler.BrainQuellSchiffe(origin);
 															Resources transportableResources = _calculationService.CalcMaxTransportableResources(ships, missingResources, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, 0, _tbotInstance.UserData.serverData.ProbeCargo);
-															fleetId = await _fleetScheduler.SendFleet(origin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, transportableResources, deutToLeave: (origin.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0));
+															fleetId = await _fleetScheduler.SendFleet(origin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, transportableResources, deutToLeave: (TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, origin.Coordinate.Type)));
 															if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 																stop = true;
 															}
@@ -340,7 +341,7 @@ namespace Tbot.Workers.Brain {
 															(long) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.MinimumResourcesToSend,
 															(bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.PriorityToProximityOverQuantity,
 															celestialsToExclude)
-														);
+														) { DeutToLeaveOnPlanets = SettingsService.GetSetting<long>(_tbotInstance.InstanceSettings.Brain.Transports, "DeutToLeaveOnPlanets", -1L) };
 
 													Celestial destination;
 													if ((bool) transportsSettings.SendToTheMoonIfPossible && _calculationService.IsThereMoonHere(allCelestials, celestial)) {
@@ -379,9 +380,9 @@ namespace Tbot.Workers.Brain {
 															return;
 														}
 														if (shipmentOrigin.Coordinate.IsSame(destination.Coordinate) && transportsSettings.SendToTheMoonIfPossible && destination.Coordinate.Type == Celestials.Moon)
-															fleetId = await _fleetScheduler.SendFleet(shipmentOrigin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, shipmentAmount, deutToLeave: (shipmentOrigin.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0));
+															fleetId = await _fleetScheduler.SendFleet(shipmentOrigin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, shipmentAmount, deutToLeave: (TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, shipmentOrigin.Coordinate.Type)));
 														else
-															fleetId = await _fleetScheduler.SendFleet(shipmentOrigin, ships, destination.Coordinate, Missions.Transport, Speeds.HundredPercent, shipmentAmount, deutToLeave: (shipmentOrigin.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0));
+															fleetId = await _fleetScheduler.SendFleet(shipmentOrigin, ships, destination.Coordinate, Missions.Transport, Speeds.HundredPercent, shipmentAmount, deutToLeave: (TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, shipmentOrigin.Coordinate.Type)));
 
 														if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 															stop = true;

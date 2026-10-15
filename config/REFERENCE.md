@@ -47,10 +47,8 @@ relevant once you farm *defended* targets; start with undefended targets only:
 Leave everything else on its default. The escort fields (`Escort…`, `MinWinRate`, `SimulationRuns`,
 `TargetCombatTechBonus`) are ignored while `AttackDefendedTargets` is `false`.
 
-**SpeedFleet.** `UseSpeedFleet: true` makes AutoFarm use the first valid ship type of `SpeedFleetCargoTypes`
-(default `Pathfinder`) as its cargo ship instead of `CargoType`. Pathfinders are fast and carry cargo, which helps with
-far targets, but you need to have researched and built them. Without Pathfinders the setting does nothing useful
-(or logs a warning and falls back to `CargoType`), so a new account should keep it `false`.
+**SpeedFleet.** `UseSpeedFleet: true` makes AutoFarm use Pathfinders as its cargo ship instead of `CargoType`. Pathfinders are fast and carry cargo, which helps with
+far targets, but you need to have researched and built them. A new account should keep it `false`.
 
 ---
 
@@ -166,6 +164,7 @@ Shared settings for all Brain workers that move resources.
 | `MixFleet` | As a last step mix small and large cargo (flies at the speed of the slowest). |
 | `UseTransportChain`, `CompactSlotPlan` | Plan transports as a chain; replan with fewer shipments if slots are short. |
 | `DeutToLeaveOnMoons` | Deuterium that stays on moons. Transports leaving a moon only go out if payload deuterium + this reserve + the flight's own fuel fit into the stock, so the reserve is never eaten by fuel. |
+| `DeutToLeaveOnPlanets` | The same reserve for transports leaving a planet (default 0 = nothing kept back). |
 | `RoundResources` | Round the amount sent so fleets are not sent for tiny differences. |
 | `SendToTheMoonIfPossible` | Deliver to the moon instead of the planet when one exists. |
 | `MaxSlots` | Slots Brain transports may use at the same time. |
@@ -355,7 +354,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `CargoSurplusPercentage` | Extra cargo on top of the calculated amount. |
 | `CargoReservePercent`, `RecyclerReservePercent` | Share of ships held back as a reserve. |
 | `BuildCargos` | Build missing cargo ships. |
-| `UseSpeedFleet`, `SpeedFleetCargoTypes` | Use fast ships (default Pathfinder) as cargo; new accounts: `false`. |
+| `UseSpeedFleet` | Use Pathfinders as cargo; new accounts: `false`. |
 | `MaxCargoLossPercent` | Maximum accepted loss of cargo value. |
 | `FleetToDebrisPercent` | Expected share of fleet losses that becomes debris (used to plan recyclers). |
 | `AutoHarvestDebrisAfterAttack` | Send recyclers to the debris field of the attack. |
@@ -366,7 +365,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `EscortShipsStep`, `MaxEscortShips`, `MaxEscortFleetPercent` | Step size, absolute and relative cap for the escort. |
 | `EscortReservePercent` | Share of escort ships held back. |
 | `EscortMaxIterations`, `EscortBisectionIterations`, `EscortFineTuneMaxSims` | Search effort for the best escort size. |
-| `MaxEscortLossPercent` | Maximum accepted escort loss (0 = unlimited). |
+| `MaxEscortLossPercent` | Highest simulated loss, in % of the value of the whole attack fleet. Escort compositions above it are rejected. `0` = limit OFF (any loss is accepted). |
 | `EscortLossWeight` | Weight of ship losses versus fuel (1 = equal, >1 prefers a larger escort). |
 | `MinWinRate` | Minimum simulated win rate (0.9 = 90 %). |
 | `SimulationRuns` | Battles simulated per check. |

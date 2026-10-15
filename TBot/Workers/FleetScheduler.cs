@@ -38,11 +38,7 @@ namespace Tbot.Workers {
 				return timers.TryGetValue(key, out timer);
 			}
 		}
-		private bool ContainsTimer(string key) {
-			lock (_timersLock) {
-				return timers.ContainsKey(key);
-			}
-		}
+
 		private readonly object _recallDepartureLock = new();
 		private readonly Dictionary<int, DateTime> _recallDeparture = new();
 		private void AddTimer(string key, Timer timer) {
@@ -50,15 +46,7 @@ namespace Tbot.Workers {
 				if (!timers.ContainsKey(key)) timers.Add(key, timer);
 			}
 		}
-		private void ReplaceTimer(string key, Timer timer) {
-			lock (_timersLock) {
-				if (timers.TryGetValue(key, out var oldTimer)) {
-					try { oldTimer.Dispose(); } catch { }
-					timers.Remove(key);
-				}
-				timers[key] = timer;
-			}
-		}
+
 		private void DisposeAndRemoveTimer(string key) {
 			lock (_timersLock) {
 				if (timers.TryGetValue(key, out var t)) {
@@ -67,7 +55,6 @@ namespace Tbot.Workers {
 				}
 			}
 		}
-
 
 		public FleetScheduler(
 			ICalculationService helpService,
@@ -547,8 +534,6 @@ namespace Tbot.Workers {
 				return;
 			}
 
-
-
 			if (AlreadySent)
 {
     if (fleetId > 0)
@@ -973,7 +958,6 @@ if (
 			}
 		}
 
-
 		private async void GhostandSleepAfterFleetsReturnAll(object state) {
 			try {
 				DisposeAndRemoveTimer("GhostSleepTimer");
@@ -1354,7 +1338,6 @@ if (
 						}
 					}
 
-
 					if (possibleDestinations.Count() > 0) {
 						foreach (var possibleDestination in possibleDestinations) {
 							foreach (var currentSpeed in validSpeeds) {
@@ -1488,8 +1471,7 @@ if (
 						return 0;
 					}
 					Resources resToLeave = new(0, 0, 0);
-					if ((long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons > 0)
-						resToLeave.Deuterium = (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons;
+					resToLeave.Deuterium = TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, origin.Coordinate.Type);
 
 					origin = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
 					if (origin.Resources.IsEnoughFor(missingResources, resToLeave)) {
@@ -1668,8 +1650,7 @@ if (
 						return 0;
 					}
 					Resources resToLeave = new(0, 0, 0);
-					if ((long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons > 0)
-						resToLeave.Deuterium = (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons;
+					resToLeave.Deuterium = TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, origin.Coordinate.Type);
 					
 					origin = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
 					if (origin.Resources.IsEnoughFor(missingResources, resToLeave)) {
@@ -2262,7 +2243,6 @@ if (
 			}
 		}
 	
-
 
 }
 }

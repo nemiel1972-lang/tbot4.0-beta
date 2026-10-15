@@ -410,8 +410,6 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.POST("/bot/delete-all-espionage-reports", wrapper.DeleteEspionageMessagesHandler)
 	e.POST("/bot/delete-all-reports/:tabIndex", wrapper.DeleteMessagesFromTabHandler)
 	e.GET("/bot/attacks", wrapper.GetAttacksHandler)
-	e.GET("/bot/get-auction", wrapper.GetAuctionHandler)
-	e.POST("/bot/do-auction", wrapper.DoAuctionHandler)
 	e.POST("/bot/simulate-battle", wrapper.SimulateBattleHandler)
 	e.GET("/bot/galaxy-infos/:galaxy/:system", wrapper.GalaxyInfosHandler)
 	e.GET("/bot/get-research", wrapper.GetResearchHandler)

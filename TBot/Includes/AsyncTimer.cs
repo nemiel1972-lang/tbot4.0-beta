@@ -14,7 +14,6 @@ namespace Tbot.Includes {
 		private readonly object _changeLock = new();
 		private SemaphoreSlim _startStopSemaphore = new SemaphoreSlim(1, 1);
 
-
 		private bool _canSetBiggerPeriod = true;
 
 		private TimeSpan _dueTime;
@@ -138,13 +137,6 @@ namespace Tbot.Includes {
 		public async Task RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
 			await StopAsync();
 			await StartAsync(ct, period, dueTime);
-		}
-
-		public void ChangeTimings(TimeSpan period, TimeSpan dueTime) {
-			lock (_changeLock) {
-				_dueTime = EnsureMaximumTimeSpan(dueTime, TimeSpan.FromDays(1));
-				_period = EnsureMaximumTimeSpan(period, TimeSpan.FromDays(1));
-			}
 		}
 
 		private bool IsLessThan(TimeSpan period, TimeSpan period2) {

@@ -15,12 +15,6 @@ namespace Tbot.Includes {
 			return new Optional<T>();
 		}
 
-		public Optional<T> Of(T value) {
-			Optional<T> obj = new Optional<T>();
-			obj.Set(value);
-			return obj;
-		}
-
 		public void Set(T value) {
 			this.value = value;
 			IsPresent = true;

@@ -119,52 +119,6 @@ namespace TBot.Model
 			}
 		}
 
-		public SuccessfulTarget GetTarget(Coordinate coordinate)
-		{
-			lock (_lock)
-			{
-				string coordStr = $"{coordinate.Galaxy}:{coordinate.System}:{coordinate.Position}";
-				return _successfulTargets.FirstOrDefault(t => t.Coordinate == coordStr);
-			}
-		}
-
-		public List<SuccessfulTarget> GetAllTargets()
-		{
-			lock (_lock)
-			{
-				return new List<SuccessfulTarget>(_successfulTargets);
-			}
-		}
-
-		public int GetTotalCount()
-		{
-			lock (_lock)
-			{
-				return _successfulTargets.Count;
-			}
-		}
-
-		public long GetTotalLootCollected()
-		{
-			lock (_lock)
-			{
-				return _successfulTargets.Sum(t =>
-					t.TotalLootCollected.Metal +
-					t.TotalLootCollected.Crystal +
-					t.TotalLootCollected.Deuterium
-				);
-			}
-		}
-
-
-		public void ForceSave()
-		{
-			lock (_lock)
-			{
-				SaveToFile_NoThrow(force: true);
-			}
-		}
-
 		private void LoadFromFile()
 		{
 			if (string.IsNullOrEmpty(_filePath) || !File.Exists(_filePath))

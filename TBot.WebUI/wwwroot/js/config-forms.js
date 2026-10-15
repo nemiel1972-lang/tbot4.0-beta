@@ -9,7 +9,7 @@
     var instance = main.dataset.instance, block = main.dataset.block;
     var SENS_RE = /host|alliance|galaxy|system|position|coord|name|url|id$/i;
     var moreOpen = false, lfOpen = false, escOpen = false, openSecs = {};
-    var mask = true;
+    var mask = false;
     var sensNodes = [];
     function setMasked(n, on) {
         if (n.tagName === 'INPUT') {
@@ -196,7 +196,7 @@
         var d = state;
         if (d.Active === undefined) d.Active = false;
         body.appendChild(sec('General', [
-            row('Expeditions active', 'Master switch for the expedition worker', toggle(d, 'Active', ['Active']))
+            withHelp(row('Expeditions active', 'Master switch for the expedition worker', toggle(d, 'Active', ['Active'])), 'Expeditions.Active')
         ]));
 
         if (!Array.isArray(d.Origin)) d.Origin = [];
@@ -273,22 +273,22 @@
                 if (total === 0) checks.appendChild(el('div', { class: 'bad', text: '✗ Fleet is empty.' }));
                 fleetBox.appendChild(checks);
             } else {
-                fleetBox.appendChild(row('Primary ship', 'Cargo type that is calculated', select(d, 'PrimaryShip', ['PrimaryShip'], PRIMARY)));
+                fleetBox.appendChild(withHelp(row('Primary ship', 'Cargo type that is calculated', select(d, 'PrimaryShip', ['PrimaryShip'], PRIMARY)), 'Expeditions.PrimaryShip'));
                 if (!d.PrimaryShip) d.PrimaryShip = 'LargeCargo';
-                fleetBox.appendChild(row('Keep at home', 'PrimaryToKeep: ships of the primary type that stay home', num(d, 'PrimaryToKeep', ['PrimaryToKeep'], { min: 0 })));
-                fleetBox.appendChild(row('Minimum to send', 'MinPrimaryToSend: no expedition if fewer primary ships are available (0 = off)', num(d, 'MinPrimaryToSend', ['MinPrimaryToSend'], { min: 0 })));
+                fleetBox.appendChild(withHelp(row('Keep at home', 'PrimaryToKeep: ships of the primary type that stay home', num(d, 'PrimaryToKeep', ['PrimaryToKeep'], { min: 0 })), 'Expeditions.PrimaryToKeep'));
+                fleetBox.appendChild(withHelp(row('Minimum to send', 'MinPrimaryToSend: no expedition if fewer primary ships are available (0 = off)', num(d, 'MinPrimaryToSend', ['MinPrimaryToSend'], { min: 0 })), 'Expeditions.MinPrimaryToSend'));
                 fleetBox.appendChild(el('div', { class: 'cfg-note', text: 'Auto: cargo count from server top score and Lifeform bonus, plus 1 probe and the strongest combat ship (Pathfinder if none).' }));
             }
         }
         drawSeg(); drawFleet();
-        body.appendChild(sec('Fleet (global)', [row('Mode', null, seg), fleetBox]));
+        body.appendChild(sec('Fleet (global)', [withHelp(row('Mode', null, seg), 'Expeditions.ManualShips.Active'), fleetBox]));
 
         if (!d.SleepWave) d.SleepWave = { Active: false, ReturnAt: '', SpeedPercent: 50 };
         var sw = d.SleepWave;
         body.appendChild(sec('Sleep wave', [
-            row('Active', 'Wave of expeditions that returns around wake-up', toggle(sw, 'Active', ['SleepWave', 'Active'])),
-            row('Return at', 'HH:mm, WakeUp or WakeUp+15 (minutes); empty = fixed speed', returnAtControl(sw)),
-            row('Speed (fallback)', 'Used when ReturnAt is empty', num(sw, 'SpeedPercent', ['SleepWave', 'SpeedPercent'], { min: 10, step: 10 }), '%')
+            withHelp(row('Active', 'Wave of expeditions that returns around wake-up', toggle(sw, 'Active', ['SleepWave', 'Active'])), 'Expeditions.SleepWave.Active'),
+            withHelp(row('Return at', 'HH:mm, WakeUp or WakeUp+15 (minutes); empty = fixed speed', returnAtControl(sw)), 'Expeditions.SleepWave.ReturnAt'),
+            withHelp(row('Speed (fallback)', 'Used when ReturnAt is empty', num(sw, 'SpeedPercent', ['SleepWave', 'SpeedPercent'], { min: 10, step: 10 }), '%'), 'Expeditions.SleepWave.SpeedPercent')
         ]));
 
         body.appendChild(lfPanel());
@@ -467,7 +467,7 @@
         var dc = sub('Discord');
         if (dc) {
             al.push(fld(dc, 'Active', ['Discord'], 'Discord alert', 'Webhook URL is not shown here (credentials)', 'toggle'));
-            al.push(row('Discord webhook', 'Set it on the Messenger page', el('span', { class: 'cfg-note', text: dc.WebhookUrl ? '✓ set' : 'not set' })));
+            al.push(withHelp(row('Discord webhook', 'Set it on the Messenger page', el('span', { class: 'cfg-note', text: dc.WebhookUrl ? '✓ set' : 'not set' })), 'Defender.Discord.WebhookUrl'));
         }
         var tg = sub('TelegramMessenger');
         if (tg) al.push(fld(tg, 'Active', ['TelegramMessenger'], 'Telegram alert', null, 'toggle'));
@@ -484,7 +484,7 @@
         var ma = sub('MessageAttacker');
         if (ma) {
             re.push(fld(ma, 'Active', ['MessageAttacker'], 'Message the attacker', 'One of the messages is sent', 'toggle'));
-            if (Array.isArray(ma.Messages)) re.push(row('Messages', 'One per line', lines(ma, 'Messages', ['MessageAttacker', 'Messages'])));
+            if (Array.isArray(ma.Messages)) re.push(withHelp(row('Messages', 'One per line', lines(ma, 'Messages', ['MessageAttacker', 'Messages'])), 'Defender.MessageAttacker.Messages'));
         }
         foldTo(body, 'Reaction to the attacker', re);
 
@@ -561,7 +561,7 @@
             btns[o[0]] = b; wrap.appendChild(b);
         });
         mark();
-        return sec('Mode', [row('Sleep mode', 'Only one of them can be active', wrap), note]);
+        return sec('Mode', [withHelp(row('Sleep mode', 'Only one of them can be active', wrap), 'SleepMode.Mode'), note]);
     }
     function renderSleepMode(body, d, P) {
         var timeOk = function (v) { return TIME_HM.test(v.trim()); };
@@ -622,7 +622,7 @@
             i.classList.toggle('cfg-changed', JSON.stringify(o[key]) !== JSON.stringify(orig)); update();
         });
         sens(i);
-        return row(label, hint, i);
+        return withHelp(row(label, hint, i), fullKey(path, key));
     }
     function renderMessengerPage(body) {
         function block1(name, title, d, build) {
@@ -660,6 +660,42 @@
     }
 
     function has(o, k) { return o && Object.prototype.hasOwnProperty.call(o, k); }
+    function fullKey(path, k) {
+        return (COMBINED ? path : [block].concat(path)).concat(k).join('.');
+    }
+    function helpFor(full) {
+        var all = window.CFG_HELP || {}, H = all[main.dataset.lang || 'en'] || all.en || {};
+        var parts = full.split('.'), k = parts[parts.length - 1], rel = parts.slice(1).join('.');
+        var bl = H[parts[0]] || {}, cm = H['*'] || {};
+        if (bl[rel]) return bl[rel];
+        var best = '';
+        Object.keys(bl).forEach(function (w) {
+            if (w.charAt(w.length - 1) === '*' && rel.indexOf(w.slice(0, -1)) === 0 && w.length > best.length) best = w;
+        });
+        if (best) return bl[best];
+        if (bl[k]) return bl[k];
+        var last2 = parts.slice(-2).join('.');
+        return cm[rel] || cm[last2] || cm[k] || null;
+    }
+    var helpAll = false;
+    function withHelp(r, full) {
+        var h = r && full ? helpFor(full) : null;
+        if (!h) return r;
+        var box = el('div', { class: 'cfg-opt-help' }, [el('span', { text: h.t }), h.e ? el('span', { class: 'eg' }, [el('b', { text: 'Example: ' }), h.e]) : null]);
+        var q = el('button', { type: 'button', class: 'cfg-q', title: 'Explain this option', text: '?' });
+        q.addEventListener('click', function () { box.classList.toggle('open'); q.classList.toggle('on', box.classList.contains('open')); });
+        var lab = r.querySelector('.cfg-lab b');
+        if (lab) lab.appendChild(q);
+        r.appendChild(box);
+        return r;
+    }
+    function helpLabel() {
+        var cb = el('input', { type: 'checkbox' });
+        cb.checked = helpAll;
+        cb.addEventListener('change', function () { helpAll = cb.checked; root.classList.toggle('cfg-help-all', helpAll); });
+        return el('label', { class: 'cfg-masklbl' }, [cb, ' Show all help']);
+    }
+
     function fld(o, k, path, label, hint, kind, opts) {
         if (!has(o, k)) return null;
         var p = path.concat(k), c;
@@ -671,7 +707,7 @@
         else if (kind === 'strlist') c = strList(o, k, p);
         else c = num(o, k, p, opts);
         if (opts.sens) sens(c);
-        return row(label, hint, c, opts.unit);
+        return withHelp(row(label, hint, c, opts.unit), fullKey(path, k));
     }
     function intList(o, k, p) {
         var i = el('input', { type: 'text', value: (o[k] || []).join(', '), placeholder: 'e.g. 12, 345' });
@@ -722,6 +758,7 @@
     function renderAutoFarm(body) {
         var d = state, P = [];
         function group(title, kids, pill) { body.appendChild(sec(title, kids.filter(Boolean), pill)); }
+        body.appendChild(el('div', { class: 'cfg-note cfg-toptip', text: 'Escort = the warships that go along with the cargo ships. The escort declares the fleet composition for attacks on defended targets (see "Escort and simulation"). Click the ? next to an option for a plain explanation, or switch on "Show all help" at the top.' }));
         function fold(title, kids) {
             var det = el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: title })].concat(kids.filter(Boolean)));
             if (openSecs[title]) det.open = true;
@@ -737,12 +774,12 @@
         group('Origins', origins.length ? [el('div', { class: 'cfg-note', text: 'Celestials the fleets start from.' })].concat(origins) : []);
 
         var scan = [];
-        if (Array.isArray(d.ScanRange)) scan.push(row('Scan range', 'Galaxy / system ranges',
+        if (Array.isArray(d.ScanRange)) scan.push(withHelp(row('Scan range', 'Galaxy / system ranges',
             listTable(d.ScanRange, [{ key: 'Galaxy', label: 'Galaxy', min: 1, sens: true }, { key: 'StartSystem', label: 'From system', min: 1, sens: true }, { key: 'EndSystem', label: 'To system', min: 1, sens: true }],
-                function () { return { Galaxy: 1, StartSystem: 1, EndSystem: 499 }; }, '+ Add range', ['ScanRange'])));
+                function () { return { Galaxy: 1, StartSystem: 1, EndSystem: 499 }; }, '+ Add range', ['ScanRange'])), 'AutoFarm.ScanRange'));
         scan.push(fld(d, 'SystemRange', P, 'System radius', 'Around the origin; replaces the scan range (0 = off)', 'num', { min: 0, sens: true }));
-        if (Array.isArray(d.Exclude)) scan.push(row('Excluded coordinates', 'Never touched',
-            listTable(d.Exclude, COORD_COLS, function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Planet' }; }, '+ Add exclusion', ['Exclude'])));
+        if (Array.isArray(d.Exclude)) scan.push(withHelp(row('Excluded coordinates', 'Never touched',
+            listTable(d.Exclude, COORD_COLS, function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Planet' }; }, '+ Add exclusion', ['Exclude'])), 'AutoFarm.Exclude'));
         scan.push(fld(d, 'ExcludeMoons', P, 'Skip moons', null, 'toggle'));
         scan.push(fld(d, 'DistanceBasedScanOrder', P, 'Nearest systems first', null, 'toggle'));
         scan.push(fld(d, 'ScanBlockSize', P, 'Scan block size', 'Stops the scan after this many scanned systems and attacks with the targets found so far; the next cycle continues where it stopped. Keeps a cycle short in dense or empty areas. 0 = off (scan the whole range first).', 'num', { min: 0 }));
@@ -810,8 +847,6 @@
             fld(d, 'CargoReservePercent', P, 'Cargo reserve', null, 'num', { min: 0, max: 100, unit: '%' }),
             fld(d, 'RecyclerReservePercent', P, 'Recycler reserve', null, 'num', { min: 0, max: 100, unit: '%' }),
             fld(d, 'BuildCargos', P, 'Build missing cargo ships', null, 'toggle'),
-            fld(d, 'UseSpeedFleet', P, 'Use fast ships as cargo', null, 'toggle'),
-            fld(d, 'SpeedFleetCargoTypes', P, 'Fast cargo types', null, 'text'),
             fld(d, 'MaxCargoLossPercent', P, 'Max accepted cargo loss', null, 'num', { min: 0, max: 100, unit: '%' }),
             fld(d, 'FleetToDebrisPercent', P, 'Fleet loss that becomes debris', null, 'num', { min: 0, max: 100, unit: '%' }),
             fld(d, 'AutoHarvestDebrisAfterAttack', P, 'Harvest debris after attack', null, 'toggle')
@@ -827,41 +862,27 @@
             { k: 'ReportQueryLimitForNonActionable', label: 'Report query limit (not attackable)', hint: 'Per run', kind: 'num', o: { min: 0 }, def: 3 },
             { k: 'RepeatedLogIntervalMinutes', label: 'Repeat log interval', hint: 'Identical log lines at most this often (0 = always)', kind: 'num', o: { min: 0, unit: 'minutes' }, def: 360 }
         ];
-        var DEUT_DEFAULTS = { ReduceDeuterium: false, ReduceDeuteriumMinSpeedPercent: 30, DeuteriumGuard: true, DeuteriumGuardMin: 10000000, DeuteriumGuardOverride: false };
+        var DEUT_DEFAULTS = { ReduceDeuterium: false, ReduceDeuteriumMinSpeedPercent: 30, DeuteriumGuard: true, DeuteriumGuardMin: 10000000, DeuteriumGuardOverride: false, UseSpeedFleet: false };
         Object.keys(DEUT_DEFAULTS).forEach(function (k) { if (!has(d, k)) d[k] = DEUT_DEFAULTS[k]; });
-        body.appendChild(sec('Deuterium', [
+        body.appendChild(sec('Deuterium and speed fleet', [
             el('div', { class: 'cfg-note', text: 'Save deuterium: attack fleet and recyclers fly as slowly as sensible (never below the lowest speed). Low-deuterium guard: when a start celestial has less deuterium than the minimum, attacks on defended targets from there are paused and the speed fleet is switched off. The AutoFarm page shows the stock and a warning.' }),
+            fld(d, 'UseSpeedFleet', P, 'Speed fleet (UseSpeedFleet)', 'Use Pathfinders as cargo ships; switched off automatically while the low-deuterium guard is active', 'toggle'),
             fld(d, 'ReduceDeuterium', P, 'Save deuterium', 'Attack fleet and recyclers fly as slowly as sensible (flight time limit kept, recycler arrives right behind the fleet)', 'toggle'),
             fld(d, 'ReduceDeuteriumMinSpeedPercent', P, 'Lowest speed when saving deuterium', 'Never below 30 %', 'num', { min: 30, max: 100, step: 10, unit: '%' }),
             fld(d, 'DeuteriumGuard', P, 'Low-deuterium guard', 'Below the minimum on the start celestial: no speed fleet, no attacks on defended targets', 'toggle'),
             fld(d, 'DeuteriumGuardMin', P, 'Guard: minimum deuterium', null, 'num', { min: 0 }),
             fld(d, 'DeuteriumGuardOverride', P, 'Guard: bridge manually', 'On = ignore the guard and keep farming with low deuterium', 'toggle')
         ].filter(Boolean)));
-        var optRows = AF_OPT.map(function (x) { return fld(d, x.k, P, x.label, x.hint, x.kind, x.o); });
-        var missingOpt = AF_OPT.filter(function (x) { return !has(d, x.k); }).map(function (x) { return { k: x.k, label: x.label, def: x.def }; });
-        if (missingOpt.length) {
-            var pick = el('select');
-            missingOpt.forEach(function (m) { pick.appendChild(el('option', { value: m.k, text: m.label })); });
-            optRows.push(row('Missing options (' + missingOpt.length + ')', 'Not in your config yet - the default is used until you add one',
-                el('span', null, [pick, ' ', el('button', { type: 'button', class: 'cfg-btn sm', text: '+ Add', onclick: function () {
-                    var m = missingOpt.filter(function (x) { return x.k === pick.value; })[0];
-                    if (!m) return;
-                    d[m.k] = JSON.parse(JSON.stringify(m.def));
-                    openSecs['Advanced options'] = true;
-                    update(); render();
-                } })])));
-        }
-        fold('Advanced options', optRows);
 
         var esc = [
             fld(d, 'TargetCombatTechBonus', P, 'Target combat tech bonus', 'Safety margin in simulations', 'num', { min: 0 }),
-            fld(d, 'EscortShipTypes', P, 'Escort ships', 'Comma separated', 'text'),
+            fld(d, 'EscortShipTypes', P, 'Escort ships', 'Comma separated, in order of preference', 'text'),
             fld(d, 'EscortFallbackShipTypes', P, 'Fallback escort ships', null, 'text'),
             fld(d, 'EscortShipsStep', P, 'Escort step size', null, 'num', { min: 1 }),
             fld(d, 'MaxEscortShips', P, 'Max escort ships', null, 'num', { min: 0 }),
             fld(d, 'MaxEscortFleetPercent', P, 'Max share of the fleet', null, 'num', { min: 0, max: 100, unit: '%' }),
             fld(d, 'EscortReservePercent', P, 'Escort reserve', null, 'num', { min: 0, max: 100, unit: '%' }),
-            fld(d, 'MaxEscortLossPercent', P, 'Max accepted escort loss', '0 = unlimited', 'num', { min: 0, max: 100, unit: '%' }),
+            fld(d, 'MaxEscortLossPercent', P, 'Max escort loss (% of fleet value)', 'Highest simulated loss, as a share of the value of the whole attack fleet. 0 = limit OFF (any loss is accepted)', 'num', { min: 0, max: 100, unit: '%' }),
             fld(d, 'EscortLossWeight', P, 'Loss weight vs. fuel', '>1 prefers a larger escort', 'num', { min: 0, step: 0.5 }),
             fld(d, 'MinWinRate', P, 'Min win rate', '0.9 = 90 %', 'num', { min: 0, max: 1, step: 0.05 }),
             fld(d, 'SimulationRuns', P, 'Battles per check', null, 'num', { min: 1 }),
@@ -886,10 +907,10 @@
                     i.classList.toggle('cfg-changed', JSON.stringify(i.value === '' ? undefined : Number(i.value)) !== JSON.stringify(origAt(cpath)));
                     update();
                 });
-                esc.push(row('Cap: ' + t, 'Absolute cap for this ship type (empty = Max escort ships)', i));
+                esc.push(withHelp(row('Cap: ' + t, 'Absolute cap for this ship type (empty = Max escort ships)', i), 'AutoFarm.EscortCap'));
             });
         })();
-        var escDet = el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: 'Escort and simulation (defended targets only)' })].concat(esc.filter(Boolean)));
+        var escDet = el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: 'Escort and simulation (defended targets only)' }), el('div', { class: 'cfg-note', text: 'The escort (warships) decides the fleet composition for attacks on defended targets: the bot simulates the fight and adds warships to the cargo ships until the attack is safe enough.' })].concat(esc.filter(Boolean)));
         if (escOpen) escDet.open = true;
         escDet.addEventListener('toggle', function () { escOpen = escDet.open; });
         body.appendChild(escDet);
@@ -899,26 +920,45 @@
             fld(d, 'CheckIntervalMax', P, 'Run interval, max', null, 'num', { min: 0, unit: 'minutes' })
         ]);
 
-        var known = ['Active', 'Origin', 'ScanRange', 'SystemRange', 'Exclude', 'ExcludeMoons', 'DistanceBasedScanOrder', 'ScanBlockSize', 'TargetsProbedBeforeAttack', 'SequentialMode', 'SequentialModeProbesPerCycle', 'StopAfterFullScan', 'MinimumResources', 'MinimumResourcesDefended', 'MinimumPlayerRank', 'MaxFlightTime', 'MinLootFuelRatio', 'PreferedResource', 'AttackDefendedTargets', 'MaxDefensePoints', 'MinLootPerDefensePoint', 'KeepReportFor', 'MaxReportAgeMinutesForAttack', 'MaxAttackDelaySec', 'DebrisCreditPercent', 'MinDebrisToHarvest', 'MinSpeedPercentForProfitRetry', 'ReduceDeuterium', 'ReduceDeuteriumMinSpeedPercent', 'DeuteriumGuard', 'DeuteriumGuardMin', 'DeuteriumGuardOverride', 'GlobalSpacing', 'ReportQueryLimitForNonActionable', 'RepeatedLogIntervalMinutes', 'Blacklist', 'AllianceWhitelist', 'NumProbes', 'BuildProbes', 'FillSlots', 'FillSlotsMaxProbeWaitSec', 'MaxSlots', 'SlotsToLeaveFree', 'FleetSpeed', 'CargoType', 'MinCargosToSend', 'MinCargosToKeep', 'CargoSurplusPercentage', 'CargoReservePercent', 'RecyclerReservePercent', 'BuildCargos', 'UseSpeedFleet', 'SpeedFleetCargoTypes', 'MaxCargoLossPercent', 'FleetToDebrisPercent', 'AutoHarvestDebrisAfterAttack', 'TargetCombatTechBonus', 'EscortShipTypes', 'EscortFallbackShipTypes', 'EscortShipCaps', 'EscortShipsStep', 'MaxEscortShips', 'MaxEscortFleetPercent', 'EscortReservePercent', 'EscortMaxIterations', 'EscortBisectionIterations', 'EscortFineTuneMaxSims', 'MaxEscortLossPercent', 'EscortLossWeight', 'MinWinRate', 'SimulationRuns', 'CheckIntervalMin', 'CheckIntervalMax'];
+        var known = ['Active', 'Origin', 'ScanRange', 'SystemRange', 'Exclude', 'ExcludeMoons', 'DistanceBasedScanOrder', 'ScanBlockSize', 'TargetsProbedBeforeAttack', 'SequentialMode', 'SequentialModeProbesPerCycle', 'StopAfterFullScan', 'MinimumResources', 'MinimumResourcesDefended', 'MinimumPlayerRank', 'MaxFlightTime', 'MinLootFuelRatio', 'PreferedResource', 'AttackDefendedTargets', 'MaxDefensePoints', 'MinLootPerDefensePoint', 'KeepReportFor', 'MaxReportAgeMinutesForAttack', 'MaxAttackDelaySec', 'DebrisCreditPercent', 'MinDebrisToHarvest', 'MinSpeedPercentForProfitRetry', 'ReduceDeuterium', 'ReduceDeuteriumMinSpeedPercent', 'DeuteriumGuard', 'DeuteriumGuardMin', 'DeuteriumGuardOverride', 'GlobalSpacing', 'ReportQueryLimitForNonActionable', 'RepeatedLogIntervalMinutes', 'Blacklist', 'AllianceWhitelist', 'NumProbes', 'BuildProbes', 'FillSlots', 'FillSlotsMaxProbeWaitSec', 'MaxSlots', 'SlotsToLeaveFree', 'FleetSpeed', 'CargoType', 'MinCargosToSend', 'MinCargosToKeep', 'CargoSurplusPercentage', 'CargoReservePercent', 'RecyclerReservePercent', 'BuildCargos', 'UseSpeedFleet', 'MaxCargoLossPercent', 'FleetToDebrisPercent', 'AutoHarvestDebrisAfterAttack', 'TargetCombatTechBonus', 'EscortShipTypes', 'EscortFallbackShipTypes', 'EscortShipCaps', 'EscortShipsStep', 'MaxEscortShips', 'MaxEscortFleetPercent', 'EscortReservePercent', 'EscortMaxIterations', 'EscortBisectionIterations', 'EscortFineTuneMaxSims', 'MaxEscortLossPercent', 'EscortLossWeight', 'MinWinRate', 'SimulationRuns', 'CheckIntervalMin', 'CheckIntervalMax'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) {
             var det = el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: 'More settings (' + rest.length + ')' }), genericObject(d, rest, [])]);
             body.appendChild(det);
         }
+
+        var optRows = [el('div', { class: 'cfg-note', text: 'Advanced options: deliberately kept at the end of the page and not part of the normal setup. The built-in default values are enough for almost everyone, so there is no need to touch these.' })].concat(AF_OPT.map(function (x) { return fld(d, x.k, P, x.label, x.hint, x.kind, x.o); }));
+        var missingOpt = AF_OPT.filter(function (x) { return !has(d, x.k); }).map(function (x) { return { k: x.k, label: x.label, def: x.def }; });
+        if (missingOpt.length) {
+            var pick = el('select');
+            missingOpt.forEach(function (m) { pick.appendChild(el('option', { value: m.k, text: m.label })); });
+            optRows.push(row('Missing options (' + missingOpt.length + ')', 'Not in your config yet - the default is used until you add one',
+                el('span', null, [pick, ' ', el('button', { type: 'button', class: 'cfg-btn sm', text: '+ Add', onclick: function () {
+                    var m = missingOpt.filter(function (x) { return x.k === pick.value; })[0];
+                    if (!m) return;
+                    d[m.k] = JSON.parse(JSON.stringify(m.def));
+                    openSecs['Advanced options'] = true;
+                    update(); render();
+                } })])));
+        }
+        fold('Advanced options', optRows);
     }
 
-    function genericObject(obj, keys, path) {
+    function genericObject(obj, keys, path, noHelp) {
+        var wh = noHelp ? function (r) { return r; } : withHelp;
         var wrap = el('div', { class: 'cfg-generic-group' });
         keys.forEach(function (k) {
             var v = obj[k], p = path.concat(k);
             var sn = SENS_RE.test(k) ? sens : function (x) { return x; };
-            if (typeof v === 'boolean') wrap.appendChild(row(k, null, toggle(obj, k, p)));
-            else if (typeof v === 'number') wrap.appendChild(row(k, null, sn(num(obj, k, p, { step: 'any' }))));
-            else if (typeof v === 'string') wrap.appendChild(row(k, null, sn(text(obj, k, p))));
+            if (typeof v === 'boolean') wrap.appendChild(wh(row(k, null, toggle(obj, k, p)), fullKey(path, k)));
+            else if (typeof v === 'number') wrap.appendChild(wh(row(k, null, sn(num(obj, k, p, { step: 'any' }))), fullKey(path, k)));
+            else if (typeof v === 'string') wrap.appendChild(wh(row(k, null, sn(text(obj, k, p))), fullKey(path, k)));
             else if (v && typeof v === 'object' && !Array.isArray(v)) {
                 wrap.appendChild(el('div', { class: 'cfg-gname', text: k }));
-                wrap.appendChild(genericObject(v, Object.keys(v), p));
-            } else wrap.appendChild(row(k, 'Array/complex - edit in the JSON tab', el('code', { text: JSON.stringify(v) })));
+                var gh = noHelp ? null : helpFor(fullKey(path, k));
+                if (gh) wrap.appendChild(el('div', { class: 'cfg-note', text: gh.t }));
+                wrap.appendChild(genericObject(v, Object.keys(v), p, noHelp || !!gh));
+            } else wrap.appendChild(wh(row(k, 'Array/complex - edit in the JSON tab', el('code', { text: JSON.stringify(v) })), fullKey(path, k)));
         });
         return wrap;
     }
@@ -937,9 +977,9 @@
             fld(o, 'Type', p, 'Type', null, 'select', { options: ['Planet', 'Moon'] })
         ].filter(Boolean);
     }
-    function coordList(o, k, label, hint, addLabel) {
+    function coordList(o, k, label, hint, addLabel, p) {
         if (!Array.isArray(o[k])) return null;
-        return row(label, hint || null, listTable(o[k], COORD_COLS, newCoord, addLabel || '+ Add celestial', [k]));
+        return withHelp(row(label, hint || null, listTable(o[k], COORD_COLS, newCoord, addLabel || '+ Add celestial', [k])), p ? fullKey(p, k) : null);
     }
     function intervalRows(o, p) {
         return [
@@ -996,14 +1036,14 @@
     }
     function lfCapRow(o, key) {
         var slot = Number(key.replace('MaxTechs', ''));
-        return row('Slot ' + slot, lfNames(slot).join(' / '), el('span', { class: 'cfg-lfrow' }, [lfImgs(slot), num(o, key, [key], { min: 0 })]));
+        return withHelp(row('Slot ' + slot, lfNames(slot).join(' / '), el('span', { class: 'cfg-lfrow' }, [lfImgs(slot), num(o, key, [key], { min: 0 })])), 'Brain.LifeformAutoResearch.MaxTechs' + slot);
     }
     function lfPriorityPreview(o) {
         var box = el('div', { class: 'cfg-lfprio' });
         (o.PriorityTechs || []).forEach(function (slot, i) {
             box.appendChild(el('span', { class: 'cfg-lfchip', title: lfNames(slot).join(' / ') }, [(i + 1) + '. ', lfImgs(slot), ' ' + slot]));
         });
-        return (o.PriorityTechs || []).length ? row('Order', 'Researched first, top to bottom', box) : null;
+        return (o.PriorityTechs || []).length ? withHelp(row('Order', 'Researched first, top to bottom', box), 'Brain.LifeformAutoResearch.PriorityTechs') : null;
     }
     var BRAIN_HELP = {
         Transports: 'Shared settings for every Brain worker that moves resources: where it collects from, which cargo ships it uses and how many slots it may take. Pathfinders are never used.',
@@ -1041,43 +1081,45 @@
         brainSub(body, 'Transports', 'Transports (shared)', function (k, o, p) {
             var mo = o.MultipleOrigins;
             k.push(gname('Origin'));
-            coordRows(o.Origin, ['Origin']).forEach(function (r) { k.push(r); });
+            coordRows(o.Origin, p.concat('Origin')).forEach(function (r) { k.push(r); });
             k.push(fld(o, 'CargoType', p, 'Cargo ship', null, 'select', { options: ['SmallCargo', 'LargeCargo'] }));
             k.push(fld(o, 'CargoFallback', p, 'Fallback cargo ships', 'Comma separated', 'strlist'));
             k.push(fld(o, 'MixFleet', p, 'Mix small and large cargo', 'Last step if one type is not enough; flies at the speed of the slowest', 'toggle'));
             k.push(fld(o, 'UseTransportChain', p, 'Plan transports as a chain', null, 'toggle'));
             k.push(fld(o, 'CompactSlotPlan', p, 'Compact slot plan', 'Replan with fewer shipments if slots are short', 'toggle'));
             k.push(fld(o, 'MaxSlots', p, 'Max slots', 'Slots Brain transports may use at the same time', 'num', { min: 0 }));
+            if (!has(o, 'DeutToLeaveOnPlanets')) o.DeutToLeaveOnPlanets = 0;
             k.push(fld(o, 'DeutToLeaveOnMoons', p, 'Deuterium left on moons', 'Transports out of a moon only go if payload + this reserve + the flight fuel fit', 'num', { min: 0 }));
+            k.push(fld(o, 'DeutToLeaveOnPlanets', p, 'Deuterium left on planets', 'Same reserve for transports out of a planet (0 = keep nothing)', 'num', { min: 0 }));
             k.push(fld(o, 'RoundResources', p, 'Round the amount sent', null, 'toggle'));
             k.push(fld(o, 'SendToTheMoonIfPossible', p, 'Deliver to the moon if there is one', null, 'toggle'));
             k.push(fld(o, 'CheckMoonOrPlanetFirst', p, 'Check moon or planet first', null, 'toggle'));
             k.push(fld(o, 'DoMultipleTransportIsNotEnoughShipButSamePosition', p, 'Several transports from one position', 'If one ship type is not enough', 'toggle'));
             if (o.KeepOnOrigin && typeof o.KeepOnOrigin === 'object')
-                k.push(inner('brain:Transports:keep', 'Ships kept on the origin', [genericObject(o.KeepOnOrigin, Object.keys(o.KeepOnOrigin), ['KeepOnOrigin'])]));
+                k.push(inner('brain:Transports:keep', 'Ships kept on the origin', [genericObject(o.KeepOnOrigin, Object.keys(o.KeepOnOrigin), p.concat('KeepOnOrigin'))]));
             if (mo && typeof mo === 'object') {
-                var mp = ['MultipleOrigins'];
+                var mp = p.concat('MultipleOrigins');
                 k.push(inner('brain:Transports:mo', 'Collect from several celestials', [
                     fld(mo, 'Active', mp, 'Active', null, 'toggle'),
                     fld(mo, 'OnlyFromMoons', mp, 'Only from moons', null, 'toggle'),
                     fld(mo, 'MinimumResourcesToSend', mp, 'Min resources to send', null, 'num', { min: 0 }),
                     fld(mo, 'PriorityToProximityOverQuantity', mp, 'Prefer near over large', null, 'toggle'),
-                    Array.isArray(mo.Exclude) ? row('Excluded', 'Never collected from', listTable(mo.Exclude, COORD_COLS, newCoord, '+ Add exclusion', ['MultipleOrigins', 'Exclude'])) : null
+                    Array.isArray(mo.Exclude) ? withHelp(row('Excluded', 'Never collected from', listTable(mo.Exclude, COORD_COLS, newCoord, '+ Add exclusion', p.concat('MultipleOrigins', 'Exclude'))), 'Brain.Transports.MultipleOrigins.Exclude') : null
                 ]));
             }
-            restRows(o, p, ['Active', 'Origin', 'CargoType', 'CargoFallback', 'MixFleet', 'UseTransportChain', 'CompactSlotPlan', 'MaxSlots', 'DeutToLeaveOnMoons', 'RoundResources', 'SendToTheMoonIfPossible', 'CheckMoonOrPlanetFirst', 'DoMultipleTransportIsNotEnoughShipButSamePosition', 'KeepOnOrigin', 'MultipleOrigins']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Origin', 'CargoType', 'CargoFallback', 'MixFleet', 'UseTransportChain', 'CompactSlotPlan', 'MaxSlots', 'DeutToLeaveOnMoons', 'DeutToLeaveOnPlanets', 'RoundResources', 'SendToTheMoonIfPossible', 'CheckMoonOrPlanetFirst', 'DoMultipleTransportIsNotEnoughShipButSamePosition', 'KeepOnOrigin', 'MultipleOrigins']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoMine', 'AutoMine', function (k, o, p) {
             k.push(transportRow(o, p));
-            if (o.HomeWorld) { k.push(gname('Home world')); coordRows(o.HomeWorld, ['HomeWorld']).forEach(function (r) { k.push(r); }); }
+            if (o.HomeWorld) { k.push(gname('Home world')); coordRows(o.HomeWorld, p.concat('HomeWorld')).forEach(function (r) { k.push(r); }); }
             k.push(inner('brain:AutoMine:home', 'Caps for the home world', autoRows(o, p, numKeys(o, /^Max/))));
             if (o.Colony && typeof o.Colony === 'object')
-                k.push(inner('brain:AutoMine:colony', 'Caps for all other planets (Colony)', autoRows(o.Colony, ['Colony'], numKeys(o.Colony, /^Max/))));
+                k.push(inner('brain:AutoMine:colony', 'Caps for all other planets (Colony)', autoRows(o.Colony, p.concat('Colony'), numKeys(o.Colony, /^Max/))));
             if (Array.isArray(o.ColonyOverrides)) {
                 var ovKids = [el('div', { class: 'cfg-note', text: 'Single planets with their own caps. Matched by exact coordinate; only the fields you set replace the Colony caps.' })];
                 o.ColonyOverrides.forEach(function (ov, idx) {
-                    var op = ['ColonyOverrides', idx];
+                    var op = p.concat('ColonyOverrides', idx);
                     var label = sens(el('span', { text: ov.Galaxy + ':' + ov.System + ':' + ov.Position + ' ' + (ov.Type || 'Planet') }));
                     var d2 = el('details', { class: 'cfg-inner' }, [el('summary', null, [label])].concat(coordRows(ov, op)).concat(autoRows(ov, op, numKeys(ov, /^Max/))).concat([
                         el('button', { type: 'button', class: 'cfg-btn sm', text: 'Remove this planet', onclick: function () { o.ColonyOverrides.splice(idx, 1); update(); render(); } })]));
@@ -1087,14 +1129,14 @@
                 k.push(inner('brain:AutoMine:ov', 'Planets with own caps (' + o.ColonyOverrides.length + ')', ovKids));
             }
             k.push(inner('brain:AutoMine:opt', 'Build options', autoRows(o, p, ['RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons'])));
-            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion'));
+            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Transports', 'HomeWorld', 'Colony', 'ColonyOverrides', 'RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^Max/))).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoResearch', 'AutoResearch', function (k, o, p) {
             k.push(transportRow(o, p));
-            if (o.Target) { k.push(gname('Research planet')); coordRows(o.Target, ['Target']).forEach(function (r) { k.push(r); }); }
+            if (o.Target) { k.push(gname('Research planet')); coordRows(o.Target, p.concat('Target')).forEach(function (r) { k.push(r); }); }
             k.push(inner('brain:AutoResearch:caps', 'Research caps (0 = do not research)', autoRows(o, p, numKeys(o, /^Max/))));
             k.push(inner('brain:AutoResearch:prio', 'Priorities (researched first)', autoRows(o, p, boolKeys(o, /^Prioritize/))));
             k.push(fld(o, 'OptimizeForStart', p, 'Early-game order', null, 'toggle'));
@@ -1112,7 +1154,7 @@
             k.push(fld(o, 'MaxBaseFoodBuilding', p, 'Max food building', null, 'num', { min: 0 }));
             k.push(fld(o, 'MaxBaseTechBuilding', p, 'Max tech building', null, 'num', { min: 0 }));
             k.push(fld(o, 'PreventIfMoreExpensiveThanNextMine', p, 'Not if dearer than the next mine upgrade', null, 'toggle'));
-            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion'));
+            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Transports', 'StartFromCrystalMineLvl', 'TargetSlot', 'MaxBasePopulationBuilding', 'MaxBaseFoodBuilding', 'MaxBaseTechBuilding', 'PreventIfMoreExpensiveThanNextMine', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
@@ -1123,7 +1165,7 @@
             k.push(fld(o, 'MaxResearchLevel', p, 'Highest level per tech', null, 'num', { min: 0 }));
             k.push(lfPriorityPreview(o));
             k.push(inner('brain:LfRes:caps', 'Level caps per slot (one tech per race in each slot)', numKeys(o, /^MaxTechs\d+$/).map(function (key) { return lfCapRow(o, key); })));
-            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion'));
+            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Transports', 'PriorityTechs', 'MaxResearchLevel', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^MaxTechs\d+$/))).forEach(function (r) { k.push(r); });
         });
@@ -1137,7 +1179,7 @@
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
-            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion'));
+            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'CargoType', 'MaxCargosToBuild', 'MaxCargosToKeep', 'LimitToCapacity', 'SupplyMoonFromPlanet', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
@@ -1146,20 +1188,20 @@
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             if (o.DefenceToReach && typeof o.DefenceToReach === 'object') {
-                var dp = ['DefenceToReach'];
+                var dp = p.concat('DefenceToReach');
                 k.push(inner('brain:AutoDefence:t', 'Target per defence type (0 = do not build)', autoRows(o.DefenceToReach, dp, Object.keys(o.DefenceToReach))));
             }
-            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion'));
+            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'ExcludeMoons', 'RandomOrder', 'DefenceToReach', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoRepatriate', 'AutoRepatriate', function (k, o, p) {
-            k.push(coordList(o, 'Target', 'Target celestials', 'Where the resources go', '+ Add target'));
+            k.push(coordList(o, 'Target', 'Target celestials', 'Where the resources go', '+ Add target', p));
             k.push(fld(o, 'TargetAssociateMoon', p, 'Deliver to the moon at the target', null, 'toggle'));
             k.push(fld(o, 'MinimumResources', p, 'Minimum to send', 'Only send if at least this much can go', 'num', { min: 0 }));
             if (o.LeaveDeut && typeof o.LeaveDeut === 'object') {
-                var lp = ['LeaveDeut'];
+                var lp = p.concat('LeaveDeut');
                 k.push(fld(o.LeaveDeut, 'DeutToLeave', lp, 'Deuterium left behind', null, 'num', { min: 0 }));
                 k.push(fld(o.LeaveDeut, 'OnlyOnMoons', lp, '... only on moons', null, 'toggle'));
             }
@@ -1168,7 +1210,7 @@
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
             if (o.Reverse && typeof o.Reverse === 'object') {
-                var rp = ['Reverse'], R = o.Reverse;
+                var rp = p.concat('Reverse'), R = o.Reverse;
                 k.push(inner('brain:AutoRepatriate:rev', 'Reverse repatriation (advanced)', [
                     el('div', { class: 'cfg-note', text: 'Fetches resources back out of the target when a build needs them.' }),
                     fld(R, 'Active', rp, 'Active', null, 'toggle'),
@@ -1178,7 +1220,7 @@
                     fld(R, 'OutboundCapacityFactor', rp, 'Outbound capacity factor', null, 'num', { min: 0, step: 0.1 })
                 ].concat(restRows(R, rp, ['Active', 'ReturnFuelFactor', 'ReturnAllShips', 'PendingTtlMinutes', 'OutboundCapacityFactor']))));
             }
-            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion'));
+            k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Target', 'TargetAssociateMoon', 'MinimumResources', 'LeaveDeut', 'CargoType', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Reverse', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
@@ -1189,10 +1231,10 @@
         });
 
         brainSub(body, 'AutoFleetJumpGate', 'AutoFleetJumpGate', function (k, o, p) {
-            k.push(coordList(o, 'Target', 'Target moons', 'Where the fleet jumps to', '+ Add target'));
+            k.push(coordList(o, 'Target', 'Target moons', 'Where the fleet jumps to', '+ Add target', p));
             k.push(fld(o, 'MinimumAmountOfShipPointsToTeleport', p, 'Min fleet points to jump', null, 'num', { min: 0 }));
             if (o.MinimumAmountOfShipsToBeLeftOnMoon && typeof o.MinimumAmountOfShipsToBeLeftOnMoon === 'object') {
-                var mp = ['MinimumAmountOfShipsToBeLeftOnMoon'], M = o.MinimumAmountOfShipsToBeLeftOnMoon;
+                var mp = p.concat('MinimumAmountOfShipsToBeLeftOnMoon'), M = o.MinimumAmountOfShipsToBeLeftOnMoon;
                 k.push(inner('brain:Jump:left', 'Ships that stay on the moon', autoRows(M, mp, Object.keys(M))));
             }
             intervalRows(o, p).forEach(function (r) { k.push(r); });
@@ -1404,7 +1446,7 @@
             tabs.appendChild(b);
         });
         root.appendChild(el('div', { class: 'cfg-head' }, [
-            el('h1', { text: COMBINED ? COMBINED_TITLE : block }), sens(el('span', { class: 'sub grow', text: file })), maskLabel(), tabs
+            el('h1', { text: COMBINED ? COMBINED_TITLE : block }), sens(el('span', { class: 'sub grow', text: file })), helpLabel(), maskLabel(), tabs
         ]));
         var body = el('div', { class: 'cfg-body' }), ta;
         if (view === 'form') {

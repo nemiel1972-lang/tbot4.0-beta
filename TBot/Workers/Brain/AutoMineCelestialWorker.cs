@@ -612,10 +612,7 @@ namespace Tbot.Workers.Brain {
 										}
 										if (origin.ID != 0) {
 											Resources resToLeave = new();
-											if (origin.Coordinate.Type == Celestials.Moon &&
-												(long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons > 0) {
-												resToLeave.Deuterium = (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons;
-											}
+											resToLeave.Deuterium = TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, origin.Coordinate.Type);
 											if (origin.Resources.IsEnoughFor(missingResources, resToLeave)) {
 												missingResources = _tbotInstance.InstanceSettings.Brain.Transports.RoundResources ? missingResources.Round() : missingResources;
 												Buildables preferredShip = Buildables.SmallCargo;
@@ -630,7 +627,7 @@ namespace Tbot.Workers.Brain {
 													if (!KannVollstaendigLiefern(origin, ships, celestial.Coordinate, missingResources, resToLeave)) {
 														DoLog(LogLevel.Warning, $"Partial delivery blocked: {origin.ToString()} cannot deliver {missingResources.TransportableResources} for {celestial.ToString()} completely (resources/fuel/cargo space).");
 													} else {
-														fleetId = await _fleetScheduler.SendFleet(origin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, deutToLeave: (origin.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0));
+														fleetId = await _fleetScheduler.SendFleet(origin, ships, celestial.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, deutToLeave: (TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, origin.Coordinate.Type)));
 														if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 															stop = true;
 														}
@@ -678,7 +675,7 @@ namespace Tbot.Workers.Brain {
 													(long) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.MinimumResourcesToSend,
 													(bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.PriorityToProximityOverQuantity,
 													celestialsToExclude)
-												);
+												) { DeutToLeaveOnPlanets = SettingsService.GetSetting<long>(_tbotInstance.InstanceSettings.Brain.Transports, "DeutToLeaveOnPlanets", -1L) };
 
 											Celestial destination;
 											if ((bool) transportsSettings.SendToTheMoonIfPossible && celestial.Coordinate.Type == Celestials.Planet && _calculationService.IsThereMoonHere(allCelestials, celestial)) {
@@ -733,14 +730,14 @@ namespace Tbot.Workers.Brain {
 												return;
 											}
 											foreach (var lieferung in geplanteLieferungen) {
-												long deutLassen = lieferung.Herkunft.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0;
+												long deutLassen = TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, lieferung.Herkunft.Coordinate.Type);
 												if (!KannVollstaendigLiefern(lieferung.Herkunft, lieferung.Schiffe, lieferung.Ziel, lieferung.Menge, new Resources { Deuterium = deutLassen })) {
 													DoLog(LogLevel.Warning, $"Partial delivery blocked: {lieferung.Herkunft.ToString()} cannot deliver {lieferung.Menge.TransportableResources} completely (resources/fuel/cargo space). Nothing is sent.");
 													return;
 												}
 											}
 											foreach (var lieferung in geplanteLieferungen) {
-												fleetId = await _fleetScheduler.SendFleet(lieferung.Herkunft, lieferung.Schiffe, lieferung.Ziel, Missions.Transport, Speeds.HundredPercent, lieferung.Menge, deutToLeave: (lieferung.Herkunft.Coordinate.Type == Celestials.Moon ? (long) _tbotInstance.InstanceSettings.Brain.Transports.DeutToLeaveOnMoons : 0));
+												fleetId = await _fleetScheduler.SendFleet(lieferung.Herkunft, lieferung.Schiffe, lieferung.Ziel, Missions.Transport, Speeds.HundredPercent, lieferung.Menge, deutToLeave: (TransportReserve.DeutToLeave(_tbotInstance.InstanceSettings.Brain.Transports, lieferung.Herkunft.Coordinate.Type)));
 												
 												if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 													stop = true;

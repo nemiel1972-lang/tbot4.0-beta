@@ -402,7 +402,6 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             { key: 'w_harvest',     id: 'harvest',     label: 'Harvest',     pkey: 'p_harvest' },
             { key: 'w_discovery',   id: 'discovery',   label: 'Discovery',   pkey: 'p_discovery' },
             { key: 'w_brain',       id: 'brain',       label: 'Brain',       pkey: 'p_brain' },
-            { key: 'w_auction',     id: 'auction',     label: 'Auction' }
         ];
         var wBtns = {};
         var wTitle = document.createElement("div");
@@ -706,7 +705,7 @@ func PostSlotLimitHandler(c echo.Context) error {
 	switch key {
 	case "leaveFree", "autofarm", "brain", "harvest", "discovery", "exp",
 		"p_autofarm", "p_expeditions", "p_harvest", "p_discovery", "p_brain",
-		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain", "w_auction":
+		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain":
 	default:
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "unbekannter Schluessel"})
 	}

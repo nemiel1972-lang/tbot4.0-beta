@@ -188,17 +188,6 @@ namespace Tbot.Services {
 			return Task.CompletedTask;
 		}
 
-		public async Task SendReplyMarkup(string text, IEnumerable<IEnumerable<InlineKeyboardButton>> buttons, CancellationToken ct) {
-			isTyping = false;
-			var inlineKeyboard = new InlineKeyboardMarkup(buttons);
-			await Client.SendMessage(
-				chatId: Channel,
-				text: text,
-				replyMarkup: inlineKeyboard,
-				cancellationToken: ct
-			);
-		}
-
 		public async Task SendMessage(ITelegramBotClient client, Chat chat, string message, ParseMode parseMode = ParseMode.Html) {
 			try {
 				isTyping = false;
@@ -389,7 +378,6 @@ namespace Tbot.Services {
 							await SendMessage(botClient, message.Chat, "TelegramAutoPing stopped!");
 							return;
 
-
 						case "/startautoping":
 							if (args.Length != 1) {
 								await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -562,7 +550,6 @@ namespace Tbot.Services {
 
 								return;
 
-
 							case "/ghostto":
 								if (args.Length != 3) {
 									await SendMessage(botClient, message.Chat, "Duration (in hours) and mission arguments required! Format: <code>/ghostto 4h3m or 3m50s or 1h Harvest</code>", ParseMode.Html);
@@ -612,7 +599,6 @@ namespace Tbot.Services {
 
 								return;
 
-
 							case "/ghostsleep":
 								if (args.Length != 3) {
 									await SendMessage(botClient, message.Chat, "Duration (in hours) argument required! Format: <code>/ghostsleep 4h3m or 3m50s or 1h Harvest</code>", ParseMode.Html);
@@ -631,7 +617,6 @@ namespace Tbot.Services {
 								await currInstance.FleetScheduler.AutoFleetSave(celestial, false, duration, true, currInstance.telegramUserData.Mission, true);
 								return;
 
-
 							case "/ghostsleepall":
 								if (args.Length != 3) {
 									await SendMessage(botClient, message.Chat, "Duration (in hours) argument required! Format: <code>/ghostsleep 4h3m or 3m50s or 1h Harvest</code>", ParseMode.Html);
@@ -649,7 +634,6 @@ namespace Tbot.Services {
 								await currInstance.FleetScheduler.AutoFleetSave(celestial, false, duration, true, mission, true, true);
 								return;
 
-
 							case "/switch":
 								if (message.Text.Split(' ').Length != 2) {
 									await SendMessage(botClient, message.Chat, "Speed argument required! Format: <code>5 for 50%</code>", ParseMode.Html);
@@ -664,7 +648,6 @@ namespace Tbot.Services {
 								}
 								await SendMessage(botClient, message.Chat, $"{test} error: Speed argument must be 1 or 2 or 3 for 10%, 20%, 30% etc.");
 								return;
-
 
 							case "/deploy":
 								if (message.Text.Split(' ').Length != 4) {
@@ -704,7 +687,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, $"{test} error: Speed argument must be 1 or 2 or 3 for 10%, 20%, 30% etc.");
 
 								return;
-
 
 							case "/jumpgate":
 								if (message.Text.Split(' ').Length != 3) {
@@ -769,8 +751,6 @@ namespace Tbot.Services {
 								return;
 							}
 
-
-
 							case "/build":
 								string listbuildables = "RocketLauncher\nLightLaser\nHeavyLaser\nGaussCannon\nPlasmaTurret\nSmallCargo\nLargeCargo\nLightFighter\nCruiser\nBattleship\nRecycler\nDestroyer\nBattlecruiser\nDeathstar\nCrawler\nPathfinder";
 								decimal number = 0;
@@ -796,7 +776,6 @@ namespace Tbot.Services {
 								}
 								return;
 
-
 							case "/cancel":
 								if (message.Text.Split(' ').Length != 2) {
 									await SendMessage(botClient, message.Chat, "Mission argument required!");
@@ -807,7 +786,6 @@ namespace Tbot.Services {
 
 								await currInstance.TelegramRetireFleet(fleetId);
 								return;
-
 
 							case "/cancelmission":
 								if (message.Text.Split(' ').Length != 2) {
@@ -820,7 +798,6 @@ namespace Tbot.Services {
 								await currInstance.TelegramRetireFleetM(mission);
 								return;
 
-
 							case "/cancelghostsleep":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -829,7 +806,6 @@ namespace Tbot.Services {
 
 								await currInstance.TelegramCancelGhostSleep();
 								return;
-
 
 							case "/recall":
 								if (message.Text.Split(' ').Length < 2) {
@@ -847,7 +823,6 @@ namespace Tbot.Services {
 									await SendMessage(botClient, message.Chat, $"Recall value updated to {recall}.");
 								return;
 
-
 							case "/sleep":
 								if (message.Text.Split(' ').Length != 2) {
 									await SendMessage(botClient, message.Chat, "Time argument required!");
@@ -862,7 +837,6 @@ namespace Tbot.Services {
 								await currInstance.SleepNow(WakeUpTime);
 								return;
 
-
 							case "/wakeup":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -870,7 +844,6 @@ namespace Tbot.Services {
 								}
 								currInstance.WakeUpNow(null);
 								return;
-
 
 							case "/msg":
 								if (message.Text.Split(' ').Length < 2) {
@@ -880,7 +853,6 @@ namespace Tbot.Services {
 								arg = message.Text.Split(new[] { ' ' }, 2).Last();
 								await currInstance.TelegramMesgAttacker(arg);
 								return;
-
 
 							case "/minexpecargo":
 								if (message.Text.Split(' ').Length < 2) {
@@ -898,7 +870,6 @@ namespace Tbot.Services {
 									await SendMessage(botClient, message.Chat, $"MinPrimaryToSend value updated to {cargo}.");
 								return;
 
-
 							case "/stopexpe":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -908,7 +879,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.Expeditions);
 								await SendMessage(botClient, message.Chat, "Expeditions stopped!");
 								return;
-
 
 							case "/startexpe":
 								if (message.Text.Split(' ').Length != 1) {
@@ -920,7 +890,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "Expeditions initialized!");
 								return;
 
-
 							case "/collect":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -930,7 +899,6 @@ namespace Tbot.Services {
 								await currInstance.TelegramCollect();
 								return;
 
-
 							case "/collectall":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -939,7 +907,6 @@ namespace Tbot.Services {
 
 								await currInstance.TelegramCollect(true);
 								return;
-
 
 							case "/collectdeut":
 								if (message.Text.Split(' ').Length != 2) {
@@ -954,7 +921,6 @@ namespace Tbot.Services {
 								long MinAmount = int.Parse(message.Text.Split(' ')[1]);
 								await currInstance.TelegramCollectDeut(MinAmount);
 								return;
-
 
 							case "/trans":
 								if (message.Text.Split(' ').Length != 2) {
@@ -971,7 +937,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, $"{test} error: Speed argument must be 1 or 2 or 3 for 10%, 20%, 30% etc.");
 								return;
 
-
 							case "/stopautoresearch":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -981,7 +946,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.BrainAutoResearch);
 								await SendMessage(botClient, message.Chat, "AutoResearch stopped!");
 								return;
-
 
 							case "/startautoresearch":
 								if (message.Text.Split(' ').Length != 1) {
@@ -993,7 +957,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "AutoResearch started!");
 								return;
 
-
 							case "/stopautomine":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -1003,7 +966,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.BrainAutoMine);
 								await SendMessage(botClient, message.Chat, "AutoMine stopped!");
 								return;
-
 
 							case "/startautomine":
 								if (message.Text.Split(' ').Length != 1) {
@@ -1015,7 +977,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "AutoMine started!");
 								return;
 
-
 							case "/stoplifeformautomine":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -1025,7 +986,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.BrainLifeformAutoMine);
 								await SendMessage(botClient, message.Chat, "Lifeform AutoMine stopped!");
 								return;
-
 
 							case "/startlifeformautomine":
 								if (message.Text.Split(' ').Length != 1) {
@@ -1037,7 +997,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "Lifeform AutoMine started!");
 								return;
 
-
 							case "/stoplifeformautoresearch":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -1047,7 +1006,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.BrainLifeformAutoResearch);
 								await SendMessage(botClient, message.Chat, "Lifeform AutoResearch stopped!");
 								return;
-
 
 							case "/startlifeformautoresearch":
 								if (message.Text.Split(' ').Length != 1) {
@@ -1059,7 +1017,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "Lifeform AutoResearch started!");
 								return;
 
-
 							case "/stopdefender":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -1069,7 +1026,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.Defender);
 								await SendMessage(botClient, message.Chat, "Defender stopped!");
 								return;
-
 
 							case "/startdefender":
 								if (message.Text.Split(' ').Length != 1) {
@@ -1081,7 +1037,6 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "Defender started!");
 								return;
 
-
 							case "/stopautofarm":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -1091,7 +1046,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.AutoFarm);
 								await SendMessage(botClient, message.Chat, "Autofarm stopped!");
 								return;
-
 
 							case "/startautofarm":
 								if (message.Text.Split(' ').Length != 1) {
@@ -1112,7 +1066,6 @@ namespace Tbot.Services {
 								await currInstance.StopFeature(Feature.AutoDiscovery);
 								await SendMessage(botClient, message.Chat, "Autodiscovery stopped!");
 								return;
-
 
 							case "/startautodiscovery":
 								if (message.Text.Split(' ').Length != 1) {
@@ -1145,7 +1098,6 @@ namespace Tbot.Services {
 									await SendMessage(botClient, message.Chat, $"Error during JumpGate execution: {ex.Message}");
 								}
 								return;
-
 
 							case "/getinfo":
 								args = message.Text.Split(' ');
@@ -1183,9 +1135,7 @@ namespace Tbot.Services {
 									await SendMessage(botClient, message.Chat, "Invalid number of argument specified for current command");
 								}
 
-
 								return;
-
 
 							case "/celestial":
 								if (message.Text.Split(' ').Length != 3) {
@@ -1212,7 +1162,6 @@ namespace Tbot.Services {
 								arg = char.ToUpper(arg[0]) + arg.Substring(1);
 								currInstance.TelegramSetCurrentCelestial(coord, arg);
 								return;
-
 
 							case "/editsettings":
 								if (message.Text.Split(' ').Length < 3) {
@@ -1268,7 +1217,6 @@ namespace Tbot.Services {
 								currInstance.TelegramSetCurrentCelestial(coord, celestialType, updateType, true);
 								return;
 
-
 							case "/spycrash":
 								if (message.Text.Split(' ').Length != 2) {
 									await SendMessage(botClient, message.Chat, "<code>auto</code> or coordinate argument needed! Format: <code>/spycrash auto/2:56:8</code>", ParseMode.Html);
@@ -1293,7 +1241,6 @@ namespace Tbot.Services {
 								await currInstance.FleetScheduler.SpyCrash(origin, target);
 								return;
 
-
 							case "/attacked":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
@@ -1307,7 +1254,6 @@ namespace Tbot.Services {
 									await SendMessage(botClient, message.Chat, "Nope! Your empire is safe.");
 								}
 								return;
-
 
 							case "/getcelestials":
 								if (message.Text.Split(' ').Length != 1) {

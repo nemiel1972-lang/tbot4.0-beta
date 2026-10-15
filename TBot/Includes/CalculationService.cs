@@ -4290,27 +4290,6 @@ namespace Tbot.Includes {
 				return false;
 		}
 
-		private bool ShouldBuildLFBasics(Celestial celestial, int maxPopuFactory = 100, int maxFoodFactory = 100) {
-			if (celestial.LFtype == LFTypes.Humans) {
-				if ((int) celestial.LFBuildings.ResidentialSector >= maxPopuFactory && (int) celestial.LFBuildings.BiosphereFarm >= maxFoodFactory) {
-					return false;
-				}
-			} else if (celestial.LFtype == LFTypes.Rocktal) {
-				if ((int) celestial.LFBuildings.MeditationEnclave >= maxPopuFactory && (int) celestial.LFBuildings.CrystalFarm >= (int) maxFoodFactory) {
-					return false;
-				}
-			} else if (celestial.LFtype == LFTypes.Mechas) {
-				if ((int) celestial.LFBuildings.AssemblyLine >= maxPopuFactory && (int) celestial.LFBuildings.FusionCellFactory >= (int) maxFoodFactory) {
-					return false;
-				}
-			} else if (celestial.LFtype == LFTypes.Kaelesh) {
-				if ((int) celestial.LFBuildings.Sanctuary >= maxPopuFactory && (int) celestial.LFBuildings.AntimatterCondenser >= (int) maxFoodFactory) {
-					return false;
-				}
-			}
-			return true;
-		}
-
 		public bool ShouldBuildSpaceDock(Planet celestial, int maxLevel = 10, Researches researches = null, int speedFactor = 1, int maxMetalMine = 100, int maxCrystalMine = 100, int maxDeuteriumSynthetizer = 100, float ratio = 1, CharacterClass playerClass = CharacterClass.NoClass, bool hasGeologist = false, bool hasStaff = false, bool optimizeForStart = true, float maxDaysOfInvestmentReturn = 36500, bool force = false) {
 			var nextMine = GetNextMineToBuild(celestial, researches, speedFactor, maxMetalMine, maxCrystalMine, maxDeuteriumSynthetizer, ratio, playerClass, hasGeologist, hasStaff, optimizeForStart, maxDaysOfInvestmentReturn);
 			var nextMineLevel = GetNextLevel(celestial, nextMine);
@@ -4986,7 +4965,8 @@ namespace Tbot.Includes {
 			var shipmentSources = sourceById.Values
 				.Where(celestial => celestial.Resources.TotalResources >= transportSettings.MultipleOrigin.MinimumResourcesToSend)
 				.Select(celestial => {
-					var available = celestial.Resources.Difference(new Resources(0, 0, transportSettings.DeutToLeave));
+					long deutLeave = celestial.Coordinate.Type == Celestials.Planet && transportSettings.DeutToLeaveOnPlanets >= 0 ? transportSettings.DeutToLeaveOnPlanets : transportSettings.DeutToLeave;
+					var available = celestial.Resources.Difference(new Resources(0, 0, deutLeave));
 					var ships = SchiffeVon(celestial);
 					var transportable = CalcMaxTransportableResources(ships, available, userData.researches.HyperspaceTechnology, userData.serverData, celestial.LFBonuses, userData.userInfo.Class, 0, userData.serverData.ProbeCargo);
 					var distance = CalcDistance(celestial.Coordinate, destination.Coordinate, userData.serverData);

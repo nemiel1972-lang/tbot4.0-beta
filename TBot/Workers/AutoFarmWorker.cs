@@ -1381,13 +1381,7 @@ namespace Tbot.Workers {
 		private Buildables GetConfiguredCargoType() {
 			bool useSpeedFleet = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "UseSpeedFleet", false) && !DeuteriumGuardBlocksSpeedFleet();
 			if (useSpeedFleet) {
-				string speedFleetTypesSetting = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "SpeedFleetCargoTypes", "Pathfinder");
-				foreach (string typeName in speedFleetTypesSetting.Split(',')) {
-					if (Enum.TryParse<Buildables>(typeName.Trim(), true, out var speedFleetCargoType) && speedFleetCargoType != Buildables.Null) {
-						return speedFleetCargoType;
-					}
-				}
-				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"AutoFarm.UseSpeedFleet is active, but AutoFarm.SpeedFleetCargoTypes (\"{speedFleetTypesSetting}\") contains no valid ship type - falling back to AutoFarm.CargoType.");
+				return Buildables.Pathfinder;
 			}
 
 			if (!Enum.TryParse<Buildables>((string) _tbotInstance.InstanceSettings.AutoFarm.CargoType, true, out var cargoType))
