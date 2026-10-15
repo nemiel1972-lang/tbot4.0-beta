@@ -29,4 +29,4 @@ secrets/
 backups/
 
 # Windows-Paket
-dist/
+/dist/
