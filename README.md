@@ -10,6 +10,9 @@ Beta software: changes are made on a live account and not every combination is t
 - **Config page in the web UI:** form view for the `Expeditions` block (more blocks can be enabled in `settings.json`), with a "Hide data" switch for screenshots.
 - **Expeditions:** return time for sleep waves (`SleepWave.ReturnAt`), minimum primary ships, per-origin expedition limit with round-robin slot split, lifeform bonus panel.
 - **AutoFarm:** alliance whitelist (`AutoFarm.AllianceWhitelist`) that excludes members from scans, spying and attacks.
+- **AutoFarm, deuterium:** `AutoFarm.ReduceDeuterium` lets the attack fleet and the recyclers fly as slowly as sensible (never below 30 %, flight time limit kept). A low-deuterium guard (`DeuteriumGuard`, default 10M) pauses attacks on defended targets and switches the speed fleet off when a start celestial runs low; it can be bridged manually (`DeuteriumGuardOverride`). The AutoFarm page shows the deuterium stock, a warning, and profit after losses and fuel.
+- **AutoFarm escorts:** absolute cap per ship type, editable for every type of the escort lists in the web UI.
+- **GhostSleep:** optional expedition drain before sleep (`GhostSleep.ExpeditionDrain`, measured expedition duration), Defender check anchored on the last returning fleet (`GhostSleep.AnchorMode`). GhostSleep only reduces activity; it is not a real sleep and should not run every day.
 - **Brain / transports:** transport chain, compact slot plan, `DeutToLeaveOnMoons`, home planet protection in the abandon checks.
 - **Discord webhook** mirror for all notifications.
 - **Packages:** `tools/build-windows.sh` and `tools/build-linux.sh` pack ready-to-use archives without any config, secrets or data.
