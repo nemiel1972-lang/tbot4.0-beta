@@ -25,6 +25,40 @@ namespace TBot.WebUI.Controllers {
 			return Json(BuildModel(instances, instance));
 		}
 
+		private static readonly object CommandLock = new();
+		private static readonly HashSet<string> AllowedCommands = new() { "clearBlacklist", "removeBlacklist", "removeTarget", "clearSystems", "resetDb" };
+
+		[HttpPost]
+		public async Task<IActionResult> Command(string instance, string cmd, string? coord) {
+			try {
+				var instances = await GetInstanceAliases();
+				var selected = instances.FirstOrDefault(alias => string.Equals(alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (selected == null)
+					return Json(new { success = false, error = "Unknown instance." });
+				if (!AllowedCommands.Contains(cmd ?? string.Empty))
+					return Json(new { success = false, error = "Unknown command." });
+				if ((cmd == "removeBlacklist" || cmd == "removeTarget") && !System.Text.RegularExpressions.Regex.IsMatch(coord ?? string.Empty, @"^\d{1,2}:\d{1,3}:\d{1,2}$"))
+					return Json(new { success = false, error = "Invalid coordinate." });
+
+				string path = AutoFarmDashboardReader.GetCommandPath(selected);
+				Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+				lock (CommandLock) {
+					var list = new List<Dictionary<string, string>>();
+					if (System.IO.File.Exists(path)) {
+						try { list = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(System.IO.File.ReadAllText(path)) ?? list; } catch { }
+					}
+					var entry = new Dictionary<string, string> { ["cmd"] = cmd! };
+					if (!string.IsNullOrEmpty(coord))
+						entry["coord"] = coord;
+					list.Add(entry);
+					System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(list));
+				}
+				return Json(new { success = true });
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
+		}
+
 		private AutoFarmDashboardModel BuildModel(IReadOnlyList<string> instances, string instance) {
 			var selected = instances.FirstOrDefault(alias => string.Equals(alias, instance, StringComparison.OrdinalIgnoreCase))
 				?? instances.First();
@@ -43,7 +77,10 @@ namespace TBot.WebUI.Controllers {
 				Scan = storage.Scan,
 				Systems = storage.Systems,
 				Logs = storage.Logs,
-				Errors = storage.Errors
+				Errors = storage.Errors,
+				Losses = storage.Losses,
+				Blacklist = storage.Blacklist,
+				PendingCommands = storage.PendingCommands
 			};
 		}
 

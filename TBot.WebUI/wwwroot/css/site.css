@@ -13,11 +13,11 @@ html {
   min-height: 100%;
 }
 body {
-	/*background: #000 url("../img/bg4.jpeg") no-repeat 50% 0;*/
+	
 	color:white;
-	/*background: linear-gradient(to top, #051937, #171228, #190a1a, #12040d, #000000);*/
+	
 	background-image: linear-gradient(to top, #051937, #041732, #04152d, #041329, #031124, #070e20, #090a1c, #0a0718, #0d0412, #0c020b, #070104, #000000);
-	/*background-color: black;*/
+	
 }
 
 .btn-light {

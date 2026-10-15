@@ -34,6 +34,9 @@ namespace TBot.WebUI.Services {
 			storage.Worker = BuildWorkerStatus(logs);
 			storage.Slots = BuildSlotStatus(logs, settings.MaxSlots);
 
+			ReadBlacklist(instanceAlias, storage);
+			storage.PendingCommands = CountPendingCommands(instanceAlias);
+
 			var databasePath = GetDatabasePath(instanceAlias);
 			if (!File.Exists(databasePath)) {
 				storage.Scan = BuildScanStatus(storage, settings, null, null);
@@ -52,6 +55,7 @@ namespace TBot.WebUI.Services {
 				if (HasTable(connection, "targets"))
 					ReadTargets(connection, storage, instanceAlias, logs);
 				ReadAttacks(connection, storage);
+				ReadLosses(connection, storage);
 				var cursor = HasTable(connection, "scan_cursor") ? ReadCursor(connection) : null;
 
 				storage.DatabaseAvailable = true;
@@ -175,6 +179,82 @@ ORDER BY updated_at_utc DESC;";
 			while (reader.Read())
 				result.Add(reader.GetInt32(0));
 			return result;
+		}
+
+		private static void ReadLosses(SqliteConnection connection, AutoFarmDashboardStorage storage) {
+			if (!HasTable(connection, "fleet_losses"))
+				return;
+			try {
+				bool hasGot = false;
+				using (var info = connection.CreateCommand()) {
+					info.CommandText = "PRAGMA table_info(fleet_losses);";
+					using var r = info.ExecuteReader();
+					while (r.Read())
+						if (string.Equals(r.GetString(1), "got_known", StringComparison.OrdinalIgnoreCase))
+							hasGot = true;
+				}
+				var rows = new List<(DateTime At, string Status, string Sent, string Returned, long[] Loss, long[] Planned, bool GotKnown, long[] Got, long Fuel)>();
+				using (var cmd = connection.CreateCommand()) {
+					cmd.CommandText = "SELECT dispatched_at_utc, status, sent_json, returned_json, loss_metal, loss_crystal, loss_deuterium, loot_metal, loot_crystal, loot_deuterium, "
+						+ (hasGot ? "got_known, got_metal, got_crystal, got_deuterium, fuel_deuterium" : "0, 0, 0, 0, 0")
+						+ " FROM fleet_losses WHERE dispatched_at_utc >= $since;";
+					cmd.Parameters.AddWithValue("$since", DateTime.UtcNow.AddDays(-30).ToString("O", CultureInfo.InvariantCulture));
+					using var r = cmd.ExecuteReader();
+					while (r.Read()) {
+						if (!DateTime.TryParse(r.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var at))
+							continue;
+						rows.Add((at, r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3),
+							new[] { r.GetInt64(4), r.GetInt64(5), r.GetInt64(6) }, new[] { r.GetInt64(7), r.GetInt64(8), r.GetInt64(9) },
+							r.GetInt64(10) != 0, new[] { r.GetInt64(11), r.GetInt64(12), r.GetInt64(13) }, r.GetInt64(14)));
+					}
+				}
+				var now = DateTime.UtcNow;
+				foreach (var (label, days) in new[] { ("24 hours", 1), ("7 days", 7), ("30 days", 30) }) {
+					var since = now.AddDays(-days);
+					var ships = new Dictionary<string, long>();
+					int attacks = 0, destroyed = 0, unknown = 0, pending = 0, gotCount = 0;
+					long fuel = 0;
+					var loss = new long[3]; var planned = new long[3]; var got = new long[3];
+					foreach (var row in rows.Where(x => x.At >= since)) {
+						if (row.Status == "unknown") { unknown++; continue; }
+						if (row.Status == "pending") { pending++; continue; }
+						attacks++;
+						Dictionary<string, long> sent, returned = null;
+						try {
+							sent = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, long>>(row.Sent) ?? new();
+							if (row.Returned != null)
+								returned = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, long>>(row.Returned);
+						} catch { continue; }
+						if (row.Status == "destroyed") {
+							destroyed++;
+							foreach (var kv in sent) ships[kv.Key] = ships.GetValueOrDefault(kv.Key) + kv.Value;
+						} else if (returned != null) {
+							foreach (var kv in sent) {
+								long diff = kv.Value - returned.GetValueOrDefault(kv.Key);
+								if (diff > 0) ships[kv.Key] = ships.GetValueOrDefault(kv.Key) + diff;
+							}
+						}
+						for (int i = 0; i < 3; i++) {
+							loss[i] += row.Loss[i];
+							planned[i] += row.Planned[i];
+						}
+						fuel += row.Fuel;
+						if (row.GotKnown) {
+							for (int i = 0; i < 3; i++) got[i] += row.Got[i];
+							gotCount++;
+						}
+					}
+					storage.Losses.Add(new AutoFarmLossPeriod {
+						Label = label, Attacks = attacks, Destroyed = destroyed, Unknown = unknown, Pending = pending,
+						Ships = ships.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).Select(kv => new AutoFarmLossShip { Ship = kv.Key, Count = kv.Value }).ToList(),
+						LossValue = loss.Sum(), PlannedLoot = planned.Sum(), ActualCount = gotCount, ActualLoot = got.Sum(), Fuel = fuel,
+						LossRes = new AutoFarmResourceSet { Metal = loss[0], Crystal = loss[1], Deuterium = loss[2] },
+						PlannedRes = new AutoFarmResourceSet { Metal = planned[0], Crystal = planned[1], Deuterium = planned[2] },
+						ActualRes = new AutoFarmResourceSet { Metal = got[0], Crystal = got[1], Deuterium = got[2] }
+					});
+				}
+			} catch {
+			}
 		}
 
 		private static void ReadAttacks(SqliteConnection connection, AutoFarmDashboardStorage storage) {
@@ -512,6 +592,46 @@ WHERE id = 1;";
 			return $"[{code}:{galaxy}:{system}:{position}]";
 		}
 
+		public static string GetCommandPath(string instanceAlias) {
+			return Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"autofarm_cmd_{instanceAlias}.json"));
+		}
+
+		private static int CountPendingCommands(string instanceAlias) {
+			try {
+				var path = GetCommandPath(instanceAlias);
+				return File.Exists(path) ? JArray.Parse(File.ReadAllText(path)).Count : 0;
+			} catch {
+				return 0;
+			}
+		}
+
+		private static void ReadBlacklist(string instanceAlias, AutoFarmDashboardStorage storage) {
+			try {
+				var path = Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"autofarm_blacklist_{instanceAlias}.json"));
+				if (!File.Exists(path))
+					return;
+				var now = DateTime.UtcNow;
+				string[] reasons = { "HasFleet", "HasDefense", "LowResources", "ManuallyAdded", "Unprofitable" };
+				foreach (var item in JArray.Parse(File.ReadAllText(path)).OfType<JObject>()) {
+					var c = item["Coordinate"] as JObject;
+					if (c == null)
+						continue;
+					DateTime? expires = item["ExpiresAt"] != null && DateTime.TryParse(item["ExpiresAt"].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var e) ? e : null;
+					if (expires.HasValue && expires.Value <= now)
+						continue;
+					DateTime? added = item["BlacklistedAt"] != null && DateTime.TryParse(item["BlacklistedAt"].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var a) ? a : null;
+					string reason = item["Reason"]?.ToString() ?? string.Empty;
+					if (int.TryParse(reason, out var idx) && idx >= 0 && idx < reasons.Length)
+						reason = reasons[idx];
+					storage.Blacklist.Add(new AutoFarmBlacklistRow {
+						Coordinate = $"{c["Galaxy"]}:{c["System"]}:{c["Position"]}",
+						Reason = reason, BlacklistedAtUtc = added, ExpiresAtUtc = expires
+					});
+				}
+			} catch {
+			}
+		}
+
 		private static string GetDatabasePath(string instanceAlias) {
 			return Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"autofarm_{instanceAlias}.db"));
 		}
@@ -565,5 +685,8 @@ WHERE id = 1;";
 		public List<AutoFarmAttackRow> Attacks { get; } = new();
 		public List<AutoFarmLogRow> Logs { get; } = new();
 		public List<AutoFarmLogRow> Errors { get; } = new();
+		public List<AutoFarmLossPeriod> Losses { get; } = new();
+		public List<AutoFarmBlacklistRow> Blacklist { get; } = new();
+		public int PendingCommands { get; set; }
 	}
 }

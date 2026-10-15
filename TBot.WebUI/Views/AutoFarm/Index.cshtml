@@ -13,14 +13,15 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/autofarm.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
 }
 
-<div class="autofarm-page" id="autofarm-dashboard" data-instance="@Model.SelectedInstance">
+<div class="autofarm-page tbot-dark" id="autofarm-dashboard" data-instance="@Model.SelectedInstance">
     <div class="autofarm-shell">
         <header class="autofarm-header">
             <div>
                 <h1>AutoFarm</h1>
-                <p class="intro">Read-only diagnostic information about scans, decisions and fleets sent by AutoFarm.</p>
+                <p class="intro">Diagnostics for scans, decisions and fleets sent by AutoFarm, plus blacklist and database maintenance.</p>
             </div>
             <form method="get" class="instance-picker">
                 <label for="instance">Instance</label>
@@ -46,6 +47,7 @@
         <div class="dashboard-toolbar" role="status" aria-live="polite">
             <span id="poll-status">Loading current data...</span>
             <span id="last-updated"></span>
+            <label class="mask-toggle"><input type="checkbox" id="af-mask" checked /> Hide data</label>
             <button type="button" class="plain-button" id="copy-logs">Copy logs</button>
         </div>
 
@@ -62,11 +64,22 @@
         const pollStatus = document.getElementById("poll-status");
         const lastUpdated = document.getElementById("last-updated");
         const copyLogsButton = document.getElementById("copy-logs");
+        const maskBox = document.getElementById("af-mask");
+        const MASK = "*****";
+        const COORD_IN_TEXT = /\[?[A-Za-z]+:\d+:\d+:\d+\]?/g;
+        function maskText(text) {
+            return maskBox.checked ? String(text ?? "").replace(COORD_IN_TEXT, `[${MASK}]`) : String(text ?? "");
+        }
         const instance = root.dataset.instance;
         const snapshotUrl = '@Url.Action("Snapshot", "AutoFarm")';
         let snapshot = @Html.Raw(initialSnapshot);
         let renderedSnapshotKey = "";
         let requestInProgress = false;
+        const commandUrl = '@Url.Action("Command", "AutoFarm")';
+        let activeTab = "overview";
+        let activeGalaxy = "all";
+        try { activeGalaxy = localStorage.getItem("af-galaxy") || "all"; } catch { }
+        try { activeTab = localStorage.getItem("af-tab") || "overview"; } catch { }
 
         function escapeHtml(value) {
             return String(value ?? "")
@@ -96,7 +109,7 @@
         }
 
         function reasonHtml(label, detail) {
-            return `<div class="reason"><span class="reason-label reason-${statusClass(label)}">${escapeHtml(label || "No reason recorded")}</span><span class="reason-detail">${escapeHtml(detail || "")}</span></div>`;
+            return `<div class="reason"><span class="reason-label reason-${statusClass(label)}">${escapeHtml(label || "No reason recorded")}</span><span class="reason-detail">${escapeHtml(maskText(detail || ""))}</span></div>`;
         }
 
         function renderWorker(worker, databaseAvailable) {
@@ -143,18 +156,77 @@
             </section>`;
         }
 
-        function renderReports(reports) {
-            const rows = reports.length ? reports.map(report => `<tr>
+        function coordParts(text) {
+            const m = /(\d+):(\d+):(\d+)/.exec(String(text || ""));
+            return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0];
+        }
+
+        function galaxyOf(text) {
+            const m = /(\d+):\d+/.exec(String(text || ""));
+            return m ? Number(m[1]) : 0;
+        }
+
+        function galaxyBar(items, getCoord) {
+            const counts = new Map();
+            items.forEach(item => { const g = galaxyOf(getCoord(item)); if (g) counts.set(g, (counts.get(g) || 0) + 1); });
+            const galaxies = Array.from(counts.keys()).sort((a, b) => a - b);
+            if (activeGalaxy !== "all" && !counts.has(Number(activeGalaxy))) activeGalaxy = "all";
+            const btn = (value, label, count) => `<button type="button" class="galaxy-button${String(value) === String(activeGalaxy) ? " active" : ""}" data-galaxy="${value}">${label} <span class="tab-count">${count}</span></button>`;
+            return `<nav class="galaxy-bar">${btn("all", "All", items.length)}${galaxies.map(g => btn(g, "Galaxy " + g, counts.get(g))).join("")}</nav>`;
+        }
+
+        function filterGalaxy(items, getCoord) {
+            return activeGalaxy === "all" ? items : items.filter(item => galaxyOf(getCoord(item)) === Number(activeGalaxy));
+        }
+
+        function removeButton(cmd, coordinate) {
+            const c = coordParts(coordinate);
+            if (!c[0]) return "";
+            return `<button type="button" class="plain-button af-cmd" data-cmd="${cmd}" data-coord="${c.join(":")}">Remove</button>`;
+        }
+
+        function renderTargets(reports) {
+            const sorted = reports.map(report => ({ report, c: coordParts(report.coordinate) }))
+                .sort((a, b) => a.c[0] - b.c[0] || a.c[1] - b.c[1] || a.c[2] - b.c[2])
+                .map(item => item.report);
+            const rows = sorted.length ? sorted.map(report => `<tr>
                 <td><strong>${escapeHtml(report.targetName || "Unnamed target")}</strong><span class="coordinate">${escapeHtml(report.coordinate)}</span></td>
                 <td><span class="status status-${statusClass(report.state)}">${escapeHtml(report.state)}</span><span class="coordinate">Report #${formatNumber(report.reportId)}</span></td>
                 <td class="resources">${formatNumber(report.totalResources)}</td>
                 <td>${reasonHtml(report.reason, report.reasonDetail)}</td>
                 <td class="muted">${formatDate(report.updatedAtUtc)}</td>
-            </tr>`).join("") : emptyRow(5, "No reports are currently stored.");
+                <td>${removeButton("removeTarget", report.coordinate)}</td>
+            </tr>`).join("") : emptyRow(6, "No reports for this selection.");
             return `<section class="panel panel-primary">
-                <div class="panel-heading"><h2>Targets and decisions</h2><span class="panel-count">${formatNumber(reports.length)}</span></div>
-                <p class="panel-note">The reason column explains why AutoFarm sent, postponed or ignored each target.</p>
-                <div class="table-wrap"><table><thead><tr><th>Target</th><th>State</th><th>Reported resources</th><th>Reason</th><th>Updated</th></tr></thead><tbody>${rows}</tbody></table></div>
+                <div class="panel-heading"><h2>Targets and decisions</h2><span class="panel-count">${formatNumber(sorted.length)}</span></div>
+                <p class="panel-note">Sorted by galaxy, system and position. The reason column explains why AutoFarm sent, postponed or ignored each target. Remove deletes the target (and its blacklist entry) at the next AutoFarm cycle.</p>
+                <div class="table-wrap"><table><thead><tr><th>Target</th><th>State</th><th>Reported resources</th><th>Reason</th><th>Updated</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+            </section>`;
+        }
+
+        function renderMaintenance(data) {
+            const list = data.blacklist || [];
+            const rows = list.length ? list.map(b => `<tr>
+                <td class="mono">${escapeHtml(b.coordinate)}</td>
+                <td>${escapeHtml(b.reason)}</td>
+                <td>${formatDate(b.blacklistedAtUtc)}</td>
+                <td>${formatDate(b.expiresAtUtc)}</td>
+                <td><button type="button" class="plain-button af-cmd" data-cmd="removeBlacklist" data-coord="${escapeHtml(b.coordinate)}">Remove</button></td>
+            </tr>`).join("") : emptyRow(5, "The blacklist is empty.");
+            const pending = data.pendingCommands > 0 ? `<div class="notice">${formatNumber(data.pendingCommands)} command(s) waiting - AutoFarm runs them at the start of its next cycle.</div>` : "";
+            return `${pending}<section class="panel">
+                <div class="panel-heading"><h2>Blacklist</h2><span class="panel-count">${formatNumber(list.length)}</span></div>
+                <div class="table-wrap"><table><thead><tr><th>Target</th><th>Reason</th><th>Added</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+            </section>
+            <section class="panel">
+                <div class="panel-heading"><h2>Maintenance</h2></div>
+                <p class="panel-note">Commands are handed to the AutoFarm worker and run at the start of its next cycle (the bot keeps these data in memory). The worker must be active.</p>
+                <div class="maint-actions">
+                    <button type="button" class="plain-button af-cmd" data-cmd="clearBlacklist">Clear blacklist</button>
+                    <button type="button" class="plain-button af-cmd" data-cmd="clearSystems">Clear system cache and restart scan</button>
+                    <button type="button" class="plain-button af-cmd danger" data-cmd="resetDb">Reset whole database</button>
+                </div>
+                <p class="panel-note">Reset whole database deletes scanned systems, targets, attack history, scan position and the loss/profit list, and clears the blacklist. This cannot be undone.</p>
             </section>`;
         }
 
@@ -175,7 +247,7 @@
         function renderAttacks(attacks) {
             const rows = attacks.length ? attacks.map(attack => `<tr>
                 <td>${formatDate(attack.dispatchedAtUtc)}</td>
-                <td><strong>${escapeHtml(attack.origin)}</strong><span class="coordinate">${escapeHtml(attack.mission)}</span></td>
+                <td><strong>${maskBox.checked ? MASK : escapeHtml(attack.origin)}</strong><span class="coordinate">${escapeHtml(attack.mission)}</span></td>
                 <td><strong>${escapeHtml(attack.targetName || "Unnamed target")}</strong><span class="coordinate">${escapeHtml(attack.coordinate)}</span></td>
                 <td class="mono">#${formatNumber(attack.reportId)}</td>
                 <td class="resources">${formatNumber(attack.totalResources)}</td>
@@ -187,8 +259,37 @@
             </section>`;
         }
 
+        function res3(set, signed) {
+            const one = (label, value) => `<span class="res3-line${signed ? (value >= 0 ? " net-positive" : " net-negative") : ""}"><i>${label}</i> ${formatNumber(value)}</span>`;
+            const r = set || {};
+            return `<div class="res3">${one("Met", r.metal || 0)}${one("Kris", r.crystal || 0)}${one("Deut", r.deuterium || 0)}</div>`;
+        }
+
+        function renderLosses(periods) {
+            const list = periods || [];
+            const rows = list.length ? list.map(p => {
+                const ships = (p.ships || []).length ? p.ships.map(s => `${formatNumber(s.count)}&times; ${escapeHtml(s.ship)}`).join(", ") : "none";
+                const share = p.plannedLoot > 0 ? `${Math.round(p.lossValue * 100 / p.plannedLoot)}%` : "-";
+                const hasLoot = p.actualCount > 0;
+                return `<tr>
+                    <td><strong>${escapeHtml(p.label)}</strong><span class="coordinate">${formatNumber(p.attacks)} attacks${p.destroyed ? `, ${formatNumber(p.destroyed)} destroyed` : ""}${p.unknown ? `, ${formatNumber(p.unknown)} unknown` : ""}${p.pending ? `, ${formatNumber(p.pending)} open` : ""}</span></td>
+                    <td>${ships}</td>
+                    <td class="resources">${res3(p.lossRes)}<span class="coordinate">${share} of planned loot</span></td>
+                    <td class="resources">${res3(p.plannedRes)}</td>
+                    <td class="resources">${hasLoot ? res3(p.actualRes) : "-"}<span class="coordinate">${hasLoot ? formatNumber(p.actualCount) + " returns" : "not recorded yet"}</span></td>
+                    <td class="resources">${formatNumber(p.fuel)}<span class="coordinate">Deut</span></td>
+                    <td class="resources">${hasLoot ? res3(p.netRes, true) : "-"}</td>
+                </tr>`;
+            }).join("") : emptyRow(7, "No loss data yet.");
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Losses and profit</h2></div>
+                <p class="panel-note">Shown per resource (Met = metal, Kris = crystal, Deut = deuterium). Net = actual loot (cargo of the returning fleet) &minus; ship losses &minus; fuel (fuel is deuterium). Fleets that were not observed are marked unknown and not counted.</p>
+                <div class="table-wrap"><table><thead><tr><th>Period</th><th>Ships lost</th><th>Ship losses</th><th>Planned loot</th><th>Actual loot</th><th>Fuel</th><th>Net</th></tr></thead><tbody>${rows}</tbody></table></div>
+            </section>`;
+        }
+
         function renderErrors(errors) {
-            const rows = errors.length ? errors.map(log => `<tr><td>${formatDate(log.dateTimeUtc)}</td><td>${escapeHtml(log.sender)}</td><td class="log-message">${escapeHtml(log.message)}</td></tr>`).join("") : emptyRow(3, "No recent AutoFarm errors or warnings.");
+            const rows = errors.length ? errors.map(log => `<tr><td>${formatDate(log.dateTimeUtc)}</td><td>${escapeHtml(log.sender)}</td><td class="log-message">${escapeHtml(maskText(log.message))}</td></tr>`).join("") : emptyRow(3, "No recent AutoFarm errors or warnings.");
             return `<section class="panel">
                 <div class="panel-heading"><h2>Recent errors</h2><button type="button" class="plain-button copy-errors" id="copy-errors">Copy errors</button></div>
                 <div class="table-wrap"><table><thead><tr><th>When</th><th>Source</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -196,7 +297,7 @@
         }
 
         function renderLogs(logs) {
-            const text = logs.map(log => log.copyText).join("\n");
+            const text = maskText(logs.map(log => log.copyText).join("\n"));
             return `<section class="panel">
                 <details class="logs-details" id="autofarm-log-details">
                     <summary id="autofarm-log-summary">Recent AutoFarm logs (${formatNumber(logs.length)})</summary>
@@ -230,22 +331,31 @@
 
         function render(data) {
             snapshot = data;
-            const nextSnapshotKey = JSON.stringify(data);
+            const nextSnapshotKey = JSON.stringify(data) + "|" + maskBox.checked + "|" + activeGalaxy + "|" + activeTab;
             notice.innerHTML = data.databaseAvailable ? "" : `<div class="notice">No AutoFarm database is available for this instance yet. The page will populate after AutoFarm has run once.</div>`;
 
             if (nextSnapshotKey === renderedSnapshotKey) return;
 
             const uiState = captureUiState();
-            content.innerHTML = [
-                renderWorker(data.worker, data.databaseAvailable),
-                renderSlots(data.slots),
-                renderScan(data.scan),
-                renderReports(data.reports),
-                renderSystems(data.systems),
-                renderAttacks(data.attacks),
-                renderErrors(data.errors),
-                renderLogs(data.logs)
-            ].join("");
+            const tabs = [
+                ["overview", "Overview", ""],
+                ["targets", "Targets", formatNumber(data.reports.length)],
+                ["attacks", "Attacks", formatNumber(data.attacks.length)],
+                ["systems", "Systems", formatNumber(data.systems.length)],
+                ["maintenance", "Blacklist & maintenance", formatNumber((data.blacklist || []).length)],
+                ["logs", "Logs & errors", formatNumber(data.errors.length)]
+            ];
+            if (!tabs.some(t => t[0] === activeTab)) activeTab = "overview";
+            const bar = `<nav class="tab-bar" role="tablist">${tabs.map(t => `<button type="button" role="tab" class="tab-button${t[0] === activeTab ? " active" : ""}" data-tab="${t[0]}">${escapeHtml(t[1])}${t[2] ? ` <span class="tab-count">${t[2]}</span>` : ""}</button>`).join("")}</nav>`;
+            const panels = {
+                overview: () => [renderWorker(data.worker, data.databaseAvailable), renderSlots(data.slots), renderScan(data.scan), renderLosses(data.losses)].join(""),
+                targets: () => galaxyBar(data.reports, r => r.coordinate) + renderTargets(filterGalaxy(data.reports, r => r.coordinate)),
+                attacks: () => galaxyBar(data.attacks, a => a.coordinate) + renderAttacks(filterGalaxy(data.attacks, a => a.coordinate)),
+                systems: () => galaxyBar(data.systems, x => x.coordinate) + renderSystems(filterGalaxy(data.systems, x => x.coordinate)),
+                maintenance: () => galaxyBar(data.blacklist || [], b => b.coordinate) + renderMaintenance({ ...data, blacklist: filterGalaxy(data.blacklist || [], b => b.coordinate) }),
+                logs: () => renderErrors(data.errors) + renderLogs(data.logs)
+            };
+            content.innerHTML = bar + panels[activeTab]();
             renderedSnapshotKey = nextSnapshotKey;
             restoreUiState(uiState);
         }
@@ -267,11 +377,52 @@
             }
         }
 
-        copyLogsButton.addEventListener("click", () => copyText(snapshot.logs.map(log => log.copyText).join("\n"), copyLogsButton));
+        document.addEventListener("click", async event => {
+            const tab = event.target.closest(".tab-button");
+            if (tab) {
+                activeTab = tab.dataset.tab;
+                try { localStorage.setItem("af-tab", activeTab); } catch { }
+                renderedSnapshotKey = "";
+                render(snapshot);
+                return;
+            }
+            const galaxy = event.target.closest(".galaxy-button");
+            if (galaxy) {
+                activeGalaxy = galaxy.dataset.galaxy;
+                try { localStorage.setItem("af-galaxy", activeGalaxy); } catch { }
+                renderedSnapshotKey = "";
+                render(snapshot);
+                return;
+            }
+            const button = event.target.closest(".af-cmd");
+            if (!button) return;
+            const cmd = button.dataset.cmd;
+            const coord = button.dataset.coord || "";
+            const texts = {
+                clearBlacklist: "Clear the whole blacklist?",
+                removeBlacklist: `Remove ${coord} from the blacklist?`,
+                removeTarget: `Remove target ${coord} (and its blacklist entry)?`,
+                clearSystems: "Clear the system cache and restart the scan from the beginning?",
+                resetDb: "Reset the whole AutoFarm database and the blacklist? This cannot be undone."
+            };
+            if (!window.confirm(texts[cmd] || "Run this command?")) return;
+            if (cmd === "resetDb" && window.prompt('Type DELETE to confirm.') !== "DELETE") return;
+            try {
+                const body = new URLSearchParams({ instance, cmd, coord });
+                const response = await fetch(commandUrl, { method: "POST", body });
+                const result = await response.json();
+                pollStatus.textContent = result.success ? "Command queued - AutoFarm runs it at its next cycle." : `Command failed: ${result.error}`;
+                refresh();
+            } catch (error) {
+                pollStatus.textContent = `Command failed: ${error.message}`;
+            }
+        });
+
+        copyLogsButton.addEventListener("click", () => copyText(maskText(snapshot.logs.map(log => log.copyText).join("\n")), copyLogsButton));
         document.addEventListener("click", event => {
             const button = event.target.closest(".copy-errors");
             if (!button) return;
-            copyText(snapshot.errors.map(log => log.copyText).join("\n"), button);
+            copyText(maskText(snapshot.errors.map(log => log.copyText).join("\n")), button);
         });
 
         async function refresh() {
@@ -290,6 +441,10 @@
                 requestInProgress = false;
             }
         }
+
+        maskBox.addEventListener("change", () => {
+            render(snapshot);
+        });
 
         render(snapshot);
         refresh();

@@ -77,7 +77,6 @@
         const filterBox = document.getElementById("ab-filter");
         const sortNameBtn = document.getElementById("ab-sort-name");
         const sortCoordsBtn = document.getElementById("ab-sort-coords");
-        // Sortierung: "coords" (Standard, kleinste Koordinate zuerst) oder "name" (A-Z, Zahlen aufsteigend); wird im Browser gemerkt.
         let sortMode = "coords";
         try {
             const savedSort = localStorage.getItem("autobuilds.sort");
@@ -90,11 +89,6 @@
         let renderedKey = "";
         let requestInProgress = false;
 
-        // "Hide data" is ON by default; the choice is remembered in the browser.
-        try {
-            const saved = localStorage.getItem("autobuilds.mask");
-            if (saved !== null) maskBox.checked = saved === "1";
-        } catch { }
 
         function esc(value) {
             return String(value ?? "")
@@ -102,14 +96,12 @@
                 .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
         }
 
-        // Namen / Koordinaten werden bei aktivem Schalter durch ***** ersetzt.
         function sens(value) {
             return maskBox.checked ? `<span class="ab-masked">${MASK}</span>` : esc(value);
         }
 
         function num(value) { return Number(value || 0).toLocaleString("en-US"); }
 
-        // Short notation for large numbers: 1.2 M / 3.4 B
         function short(value) {
             const v = Number(value || 0);
             const a = Math.abs(v);
@@ -207,7 +199,6 @@
             return `<span class="status status-${slug(n.status)}">${esc(n.status)}</span>${fleet}`;
         }
 
-        // "1:100:8" -> Zahlen fuer den Vergleich (Galaxie, System, Position)
         function coordParts(c) {
             const p = String(c || "").split(":").map(x => parseInt(x, 10));
             return [p[0] || 0, p[1] || 0, p[2] || 0];
@@ -218,8 +209,6 @@
             return (x[0] - y[0]) || (x[1] - y[1]) || (x[2] - y[2]);
         }
 
-        // Sortiert nach ECHTEN Werten (auch wenn die Anzeige verborgen ist). Planet und Mond bleiben zusammen:
-        // der Mond steht immer direkt unter seinem Planeten, sortiert wird nach dem Planeten.
         function sortBodies(bodies) {
             const groups = new Map();
             for (const b of bodies) {
@@ -313,7 +302,6 @@
                 notice.innerHTML = `<p class="panel-count" style="margin:8px 0">Source: ${src} · File updated: ${esc(fmtDate(data.updatedUtc))}</p>`;
             }
 
-            // geöffnete Verlauf-Ansicht und Scrollposition beim Neuzeichnen behalten
             const prev = document.getElementById("ab-history");
             const histOpen = prev ? prev.open : false;
             const scroll = window.scrollY;
@@ -329,7 +317,6 @@
         }
 
         maskBox.addEventListener("change", () => {
-            try { localStorage.setItem("autobuilds.mask", maskBox.checked ? "1" : "0"); } catch { }
             render(snapshot, true);
         });
         filterBox.addEventListener("change", () => render(snapshot, true));

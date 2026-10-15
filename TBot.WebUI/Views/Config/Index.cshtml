@@ -29,18 +29,21 @@
                         var cls = "cfg-block" + (b.Name == Model.Selected ? " sel" : "") + " mode-" + b.Mode;
                         <li class="@cls" data-name="@b.Name">
                             <a asp-action="Index" asp-route-instance="@Model.Instance" asp-route-block="@b.Name">
-                                <span class="nm">@b.Name</span>
-                                @if (b.Mode == "secret") { <span class="lock" title="Credentials: JSON editor only">🔒</span> }
+                                <span class="nm">@(string.IsNullOrEmpty(b.Label) ? b.Name : b.Label)</span>
+                                @if (b.Mode == "secret") { <span class="lock" title="Credentials: edit the config file directly">🔒</span> }
                                 else if (b.Mode == "placeholder") { <span class="ph" title="Placeholder - enable in settings.json">soon</span> }
-                                @if (b.Active.HasValue) { <span class="sw @(b.Active.Value ? "on" : "")"></span> }
+                                @if (b.Active.HasValue) {
+                                    var fixedSw = b.Name == "SleepMode" || b.Name == "GhostSleep" || b.Name == "Messenger" || b.Mode == "secret";
+                                    <span class="sw @(b.Active.Value ? "on" : "") @(fixedSw ? "" : "click")" data-block="@b.Name" title="@(fixedSw ? "Use the switch on the page" : "Click to switch on/off")"></span>
+                                }
                             </a>
                         </li>
                     }
                 </ul>
-                <div class="cfg-hint">Enable more form pages in <code>settings.json</code>:<br /><code>"WebUI": { "FormPages": ["Expeditions", "AutoFarm"] }</code> or <code>"*"</code> for all. Other blocks stay in the <a asp-controller="Settings" asp-action="Index">JSON editor</a>.</div>
+                <div class="cfg-hint">All blocks have their own form. Credentials (login, passwords, own alliance ID, captcha key, proxy login) are not shown or editable here - set them directly in the config file. Every block also has a JSON tab.</div>
             </aside>
             <main class="cfg-card cfg-main" id="cfg-main" data-instance="@Model.Instance" data-block="@Model.Selected" data-mode="@Model.SelectedMode"
-                  data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-save="@Url.Action("SaveBlock", "Config")">
+                  data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-aflosses="@Url.Action("AfLosses", "Config")" data-allynames="@Url.Action("AllyNames", "Config")" data-lfimg="@Url.Content("~/img/lf/")" data-save="@Url.Action("SaveBlock", "Config")" data-setactive="@Url.Action("SetActive", "Config")">
                 @if (Model.SelectedMode == "placeholder")
                 {
                     <div class="cfg-placeholder">
@@ -48,14 +51,14 @@
                         <p>The form view for this block is a placeholder and not enabled yet.</p>
                         <p>Enable it in <code>settings.json</code>:</p>
                         <pre>"WebUI": { "FormPages": ["@Model.Selected"] }</pre>
-                        <p>Until then, edit it in the <a asp-controller="Settings" asp-action="Index">JSON editor</a>.</p>
+                        <p>Until then, edit the file directly on the server.</p>
                     </div>
                 }
                 else if (Model.SelectedMode == "secret")
                 {
                     <div class="cfg-placeholder">
                         <h1>@Model.Selected</h1>
-                        <p>🔒 This block contains credentials and is only available (masked) in the <a asp-controller="Settings" asp-action="Index">JSON editor</a>.</p>
+                        <p>🔒 This block contains credentials (login, password, user name). It is neither shown nor editable in the web UI - change it only directly in the config file (<code>secrets/credentials.json</code>) on the server.</p>
                     </div>
                 }
                 else

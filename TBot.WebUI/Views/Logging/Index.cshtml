@@ -3,9 +3,10 @@
 @model LogJson
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
 <script src="~/js/logging.js" asp-append-version="true"></script>
+<link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/logging.css" asp-append-version="true" />
 
-<div class="container">
+<div class="container log-page">
     <div class="filters-box w-100 mb-2 mb-md-0" style="overflow:hidden">
         <div class="row">
             <div class="col-12 col-md-4">
@@ -43,7 +44,7 @@
         </div>
 
         <div style="width: 100%; text-align:center">
-            <button id='loadMore' class='btn btn-light' style='margin:10px;' onclick='loadMore()'>Load more logs</button>
+            <button id='loadMore' class='btn log-more' style='margin:10px;' onclick='loadMore()'>Load more logs</button>
         </div>
     </div>
 </div>

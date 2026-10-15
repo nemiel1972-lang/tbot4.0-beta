@@ -2,6 +2,7 @@ namespace TBot.WebUI.Models {
 	public class ConfigBlockInfo {
 		public string Name { get; set; } = "";
 		public bool? Active { get; set; }
+		public string Label { get; set; } = "";
 		public string Mode { get; set; } = "placeholder";
 	}
 

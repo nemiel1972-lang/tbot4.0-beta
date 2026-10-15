@@ -42,6 +42,9 @@ namespace TBot.Model {
 		public int MissCount { get; init; }
 		public Resources LossValue { get; init; } = new();
 		public Resources PlannedLoot { get; init; } = new();
+		public bool GotKnown { get; init; }
+		public Resources ActualLoot { get; init; } = new();
+		public long FuelDeuterium { get; init; }
 	}
 
 	public sealed class AutoFarmStateStore : IDisposable {
@@ -215,6 +218,42 @@ FROM targets;";
 			}
 
 			return targets;
+		}
+
+		public void DeleteTarget(int galaxy, int system, int position) {
+			if (!_enabled)
+				return;
+			try {
+				using var connection = OpenConnection();
+				using var command = connection.CreateCommand();
+				command.CommandText = "DELETE FROM targets WHERE galaxy = $g AND system = $s AND position = $p;";
+				command.Parameters.AddWithValue("$g", galaxy);
+				command.Parameters.AddWithValue("$s", system);
+				command.Parameters.AddWithValue("$p", position);
+				command.ExecuteNonQuery();
+			} catch {
+			}
+		}
+
+		public void ClearSystems() {
+			ExecuteMaintenance("DELETE FROM systems; DELETE FROM scan_cursor;");
+		}
+
+		public void ResetAll() {
+			ExecuteMaintenance("DELETE FROM systems; DELETE FROM targets; DELETE FROM consumed_reports; DELETE FROM attacks; DELETE FROM scan_cursor; DELETE FROM main_scan_state;");
+			ExecuteMaintenance("DELETE FROM fleet_losses;");
+		}
+
+		private void ExecuteMaintenance(string sql) {
+			if (!_enabled)
+				return;
+			try {
+				using var connection = OpenConnection();
+				using var command = connection.CreateCommand();
+				command.CommandText = sql;
+				command.ExecuteNonQuery();
+			} catch {
+			}
 		}
 
 		public bool HasConsumedReport(int reportId) {
@@ -466,7 +505,7 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 			}
 		}
 
-		public bool RecordFleetDispatch(int fleetId, Coordinate target, Coordinate origin, DateTime dispatchedAtUtc, DateTime expectedArrivalUtc, DateTime expectedReturnUtc, Dictionary<string, long> sent, Resources plannedLoot) {
+		public bool RecordFleetDispatch(int fleetId, Coordinate target, Coordinate origin, DateTime dispatchedAtUtc, DateTime expectedArrivalUtc, DateTime expectedReturnUtc, Dictionary<string, long> sent, Resources plannedLoot, long fuelDeuterium = 0) {
 			if (!_enabled || !_lossTrackingEnabled || fleetId <= 0 || target == null || origin == null)
 				return false;
 			try {
@@ -477,11 +516,11 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 		fleet_id, galaxy, system, position, celestial_type,
 		origin_galaxy, origin_system, origin_position, origin_celestial_type,
 		dispatched_at_utc, expected_arrival_utc, expected_return_utc, sent_json, status, miss_count,
-		loot_metal, loot_crystal, loot_deuterium)
+		loot_metal, loot_crystal, loot_deuterium, fuel_deuterium)
 		VALUES ($fleet_id, $galaxy, $system, $position, $celestial_type,
 		$og, $os, $op, $ot,
 		$dispatched, $arrival, $return, $sent, 'pending', 0,
-		$lm, $lc, $ld);";
+		$lm, $lc, $ld, $fuel);";
 				command.Parameters.AddWithValue("$fleet_id", fleetId);
 				command.Parameters.AddWithValue("$galaxy", target.Galaxy);
 				command.Parameters.AddWithValue("$system", target.System);
@@ -498,6 +537,7 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 				command.Parameters.AddWithValue("$lm", plannedLoot?.Metal ?? 0);
 				command.Parameters.AddWithValue("$lc", plannedLoot?.Crystal ?? 0);
 				command.Parameters.AddWithValue("$ld", plannedLoot?.Deuterium ?? 0);
+				command.Parameters.AddWithValue("$fuel", fuelDeuterium);
 				command.ExecuteNonQuery();
 				return true;
 			} catch {
@@ -516,7 +556,8 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 		SELECT fleet_id, galaxy, system, position, celestial_type,
 		origin_galaxy, origin_system, origin_position, origin_celestial_type,
 		dispatched_at_utc, expected_arrival_utc, expected_return_utc, sent_json, returned_json, status, miss_count,
-		loss_metal, loss_crystal, loss_deuterium, loot_metal, loot_crystal, loot_deuterium
+		loss_metal, loss_crystal, loss_deuterium, loot_metal, loot_crystal, loot_deuterium,
+		got_known, got_metal, got_crystal, got_deuterium, fuel_deuterium
 		FROM fleet_losses
 		WHERE ($status IS NULL OR status = $status) AND ($since IS NULL OR dispatched_at_utc >= $since);";
 				command.Parameters.AddWithValue("$status", (object) status ?? DBNull.Value);
@@ -535,7 +576,10 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 						Status = reader.GetString(14),
 						MissCount = reader.GetInt32(15),
 						LossValue = new Resources(reader.GetInt64(16), reader.GetInt64(17), reader.GetInt64(18)),
-						PlannedLoot = new Resources(reader.GetInt64(19), reader.GetInt64(20), reader.GetInt64(21))
+						PlannedLoot = new Resources(reader.GetInt64(19), reader.GetInt64(20), reader.GetInt64(21)),
+						GotKnown = reader.GetInt32(22) != 0,
+						ActualLoot = new Resources(reader.GetInt64(23), reader.GetInt64(24), reader.GetInt64(25)),
+						FuelDeuterium = reader.GetInt64(26)
 					});
 				}
 			} catch {
@@ -565,7 +609,7 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 			}
 		}
 
-		public void ResolveFleetLoss(int fleetId, string status, Dictionary<string, long> returned, Resources lossValue, DateTime resolvedAtUtc) {
+		public void ResolveFleetLoss(int fleetId, string status, Dictionary<string, long> returned, Resources lossValue, DateTime resolvedAtUtc, Resources actualLoot = null) {
 			if (!_enabled || !_lossTrackingEnabled)
 				return;
 			try {
@@ -574,7 +618,8 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 				command.CommandText = @"
 		UPDATE fleet_losses SET
 		status = $status, returned_json = $returned, resolved_at_utc = $resolved,
-		loss_metal = $lm, loss_crystal = $lc, loss_deuterium = $ld
+		loss_metal = $lm, loss_crystal = $lc, loss_deuterium = $ld,
+		got_known = $gk, got_metal = $gm, got_crystal = $gc, got_deuterium = $gd
 		WHERE fleet_id = $fleet_id AND status = 'pending';";
 				command.Parameters.AddWithValue("$fleet_id", fleetId);
 				command.Parameters.AddWithValue("$status", status);
@@ -583,6 +628,10 @@ VALUES ($galaxy, $system, $position, $celestial_type, $name, $state, $report_jso
 				command.Parameters.AddWithValue("$lm", lossValue?.Metal ?? 0);
 				command.Parameters.AddWithValue("$lc", lossValue?.Crystal ?? 0);
 				command.Parameters.AddWithValue("$ld", lossValue?.Deuterium ?? 0);
+				command.Parameters.AddWithValue("$gk", actualLoot == null ? 0 : 1);
+				command.Parameters.AddWithValue("$gm", actualLoot?.Metal ?? 0);
+				command.Parameters.AddWithValue("$gc", actualLoot?.Crystal ?? 0);
+				command.Parameters.AddWithValue("$gd", actualLoot?.Deuterium ?? 0);
 				command.ExecuteNonQuery();
 			} catch {
 			}
@@ -719,6 +768,13 @@ WHERE consumed_report_id IS NOT NULL AND consumed_report_id > 0;";
 			CREATE INDEX IF NOT EXISTS ix_fleet_losses_status ON fleet_losses(status);
 			CREATE INDEX IF NOT EXISTS ix_fleet_losses_dispatched ON fleet_losses(dispatched_at_utc);";
 					lossTable.ExecuteNonQuery();
+					foreach (var col in new[] { "got_known INTEGER NOT NULL DEFAULT 0", "got_metal INTEGER NOT NULL DEFAULT 0", "got_crystal INTEGER NOT NULL DEFAULT 0", "got_deuterium INTEGER NOT NULL DEFAULT 0", "fuel_deuterium INTEGER NOT NULL DEFAULT 0" }) {
+						try {
+							using var alter = connection.CreateCommand();
+							alter.CommandText = "ALTER TABLE fleet_losses ADD COLUMN " + col + ";";
+							alter.ExecuteNonQuery();
+						} catch { }
+					}
 				} catch {
 					_lossTrackingEnabled = false;
 				}

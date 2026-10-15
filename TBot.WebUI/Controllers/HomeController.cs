@@ -12,7 +12,7 @@ namespace TBot.WebUI.Controllers {
 		}
 
 		public IActionResult Index() {
-			return RedirectToAction("Index", "Settings");
+			return RedirectToAction("Index", "Config");
 		}
 
 		[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

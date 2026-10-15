@@ -3,13 +3,20 @@
 	overflow-y: scroll;
 	overflow-x: hidden;
 	background-color: transparent;
-	color: white;
+	color: var(--tb-txt, #e8ecf5);
 }
 
 	#logsDiv .row {
 		padding: 5px;
-		margin-bottom: 5px;
-		background-color: #212529;
+		margin-bottom: 4px;
+		background-color: var(--tb-panel, #12182b);
+		border: 1px solid var(--tb-line, #273050);
+		border-left: 3px solid var(--tb-line, #273050);
+		border-radius: 6px;
+	}
+
+	#logsDiv .row:hover {
+		background-color: var(--tb-panel2, #171f36);
 	}
 
 #loglevelfilter {
@@ -22,24 +29,47 @@
 	margin-top: 1px;
 }
 
-.loglevel.Debug {
-	color: lightgreen;
-}
+.loglevel { font-weight: 600; }
 
-.loglevel.Information {
-	color: lightblue;
-}
+.loglevel.Trace { color: var(--tb-mut, #8d98b8); }
 
-.loglevel.Warning {
-	color: orange;
-}
+.loglevel.Debug { color: #7fd6b0; }
 
-.loglevel.Error {
-	color: palevioletred;
+.loglevel.Information { color: #7fb4ff; }
+
+.loglevel.Warning { color: var(--tb-warn, #f5b70e); }
+
+.loglevel.Error, .loglevel.Critical { color: var(--tb-bad, #ff6b6b); }
+
+#logsDiv .row:has(.loglevel.Warning) { border-left-color: var(--tb-warn, #f5b70e); }
+#logsDiv .row:has(.loglevel.Error), #logsDiv .row:has(.loglevel.Critical) { border-left-color: var(--tb-bad, #ff6b6b); background-color: #2a1620; }
+#logsDiv .row:has(.loglevel.Information) { border-left-color: #3b5fa8; }
+#logsDiv .row:has(.loglevel.Debug) { border-left-color: #2c6b57; }
+
+.timestamp { color: var(--tb-mut, #8d98b8); }
+.logsender { color: #cfd6ea; }
+
+.filters-box input, .filters-box select {
+	color: #fff;
+	background: var(--tb-input, #0c1224);
+	border: 1px solid var(--tb-line, #273050);
+	border-radius: 7px;
+	padding: 4px 8px;
 }
+.filters-box input::placeholder { color: var(--tb-mut, #8d98b8); }
+.filters-box input[type="date"] { color-scheme: dark; }
+
+.log-more {
+	color: #222;
+	background: var(--tb-gold, #F5B70E);
+	border: 1px solid var(--tb-gold, #F5B70E);
+	font-weight: 700;
+	border-radius: 8px;
+}
+.log-more:hover { background: #fbe29e; color: #222; }
 
 .logmessage {
-	/*font-family: Courier New, Consolas;*/
+	
 }
 
 .vrow {
@@ -66,7 +96,6 @@
 
 @media (max-width: 768px) {
 
-
 	.main-container {
 		padding-left: 0px;
 		padding-right: 0px;
@@ -77,12 +106,9 @@
 	}
 }
 
-
-
 .text-center {
 	width: 100%;
 	position: relative;
 	height: 100%;
 }
-
 

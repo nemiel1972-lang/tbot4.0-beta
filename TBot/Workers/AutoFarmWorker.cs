@@ -161,9 +161,10 @@ namespace Tbot.Workers {
 
 		private void RecordFleetForLossTracking(int fleetId, Celestial origin, Coordinate target, Ships ships, decimal speed, Resources plannedLoot) {
 			try {
-				long outboundSec = (long) _calculationService.CalcFleetPrediction(origin.Coordinate, target, ships, Missions.Attack, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time;
+				var prediction = _calculationService.CalcFleetPrediction(origin.Coordinate, target, ships, Missions.Attack, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
+				long outboundSec = (long) prediction.Time;
 				var nowUtc = DateTime.UtcNow;
-				if (!_stateStore.RecordFleetDispatch(fleetId, target, origin.Coordinate, nowUtc, nowUtc.AddSeconds(outboundSec), nowUtc.AddSeconds(2 * outboundSec), ShipsToLossDict(ships), plannedLoot))
+				if (!_stateStore.RecordFleetDispatch(fleetId, target, origin.Coordinate, nowUtc, nowUtc.AddSeconds(outboundSec), nowUtc.AddSeconds(2 * outboundSec), ShipsToLossDict(ships), plannedLoot, (long) prediction.Fuel))
 					_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Loss tracking: fleet {fleetId} to {target} could not be stored.");
 			} catch (Exception e) {
 				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Loss tracking: fleet {fleetId} not recorded ({e.Message}).");
@@ -233,7 +234,8 @@ namespace Tbot.Workers {
 							var resolved = new AutoFarmFleetLossRecord { Sent = rec.Sent, Returned = returned, Status = "returned" };
 							var lost = LostShips(resolved);
 							var value = LossValueOf(lost);
-							_stateStore.ResolveFleetLoss(rec.FleetId, "returned", returned, value, nowUtc);
+							var actual = fleet.Resources ?? new Resources();
+							_stateStore.ResolveFleetLoss(rec.FleetId, "returned", returned, value, nowUtc, actual);
 							if (lost.Count > 0)
 								_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Attack losses {rec.Target}: {FormatLostShips(lost)} (value {value.TotalResources:N0}).");
 							else
@@ -284,7 +286,7 @@ namespace Tbot.Workers {
 					continue;
 				}
 				var total = new Dictionary<string, long>();
-				long lossValue = 0, loot = 0;
+				long lossValue = 0, loot = 0, got = 0, fuel = 0, gotCount = 0;
 				int counted = 0, destroyedCount = 0;
 				foreach (var rec in records.Where(r => r.Status == "returned" || r.Status == "destroyed")) {
 					counted++;
@@ -293,12 +295,20 @@ namespace Tbot.Workers {
 						total[kv.Key] = total.GetValueOrDefault(kv.Key) + kv.Value;
 					lossValue += rec.LossValue.TotalResources;
 					loot += rec.PlannedLoot.TotalResources;
+					fuel += rec.FuelDeuterium;
+					if (rec.GotKnown) {
+						got += rec.ActualLoot.TotalResources;
+						gotCount++;
+					}
 				}
 				int unknown = records.Count(r => r.Status == "unknown");
 				int open = records.Count(r => r.Status == "pending");
 				string ratio = loot > 0 ? $"{lossValue * 100.0 / loot:F0}% of planned loot {loot:N0}" : "no loot";
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
 					$"AutoFarm losses {label}: {counted} attacks evaluated ({destroyedCount} destroyed), lost {FormatLostShips(total)} = {lossValue:N0} ({ratio}) | unknown {unknown}, pending {open}.");
+				if (gotCount > 0)
+					_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
+						$"AutoFarm profit {label}: actual loot {got:N0} ({gotCount} returns) - ship losses {lossValue:N0} - fuel {fuel:N0} = net {got - lossValue - fuel:N0}.");
 			}
 		}
 		private async Task<long?> GetActualArriveInAsync(int fleetId) {
@@ -724,6 +734,68 @@ namespace Tbot.Workers {
 			_stateLoaded = true;
 		}
 
+		private void ProcessWebCommands() {
+			try {
+				string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", $"autofarm_cmd_{_tbotInstance.InstanceAlias}.json");
+				if (!File.Exists(path))
+					return;
+				string text = File.ReadAllText(path);
+				File.Delete(path);
+				var commands = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(text) ?? new List<Dictionary<string, string>>();
+				foreach (var command in commands) {
+					string name = command.GetValueOrDefault("cmd") ?? string.Empty;
+					string coord = command.GetValueOrDefault("coord");
+					int g = 0, s = 0, p = 0;
+					bool hasCoord = false;
+					if (!string.IsNullOrEmpty(coord)) {
+						var parts = coord.Split(':');
+						hasCoord = parts.Length == 3 && int.TryParse(parts[0], out g) && int.TryParse(parts[1], out s) && int.TryParse(parts[2], out p);
+					}
+					_tbotInstance.UserData.farmTargets ??= new List<FarmTarget>();
+					switch (name) {
+						case "clearBlacklist":
+							_blacklist.ClearAll();
+							_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "[WebUI] Blacklist cleared.");
+							break;
+						case "removeBlacklist":
+						case "removeTarget":
+							if (!hasCoord)
+								break;
+							foreach (var entry in _blacklist.GetAllBlacklisted().Where(b => b.Coordinate.Galaxy == g && b.Coordinate.System == s && b.Coordinate.Position == p))
+								_blacklist.RemoveTarget(entry.Coordinate);
+							if (name == "removeTarget") {
+								_tbotInstance.UserData.farmTargets.RemoveAll(t => t.Celestial.Coordinate.Galaxy == g && t.Celestial.Coordinate.System == s && t.Celestial.Coordinate.Position == p);
+								_stateStore.DeleteTarget(g, s, p);
+							}
+							_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"[WebUI] {(name == "removeTarget" ? "Target" : "Blacklist entry")} {g}:{s}:{p} removed.");
+							break;
+						case "clearSystems":
+							_stateStore.ClearSystems();
+							_tbotInstance.UserData.autoFarmLastRangeIndex = 0;
+							_tbotInstance.UserData.autoFarmLastGalaxy = 0;
+							_tbotInstance.UserData.autoFarmLastSystem = 0;
+							_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "[WebUI] System cache cleared, scan restarts from the beginning.");
+							break;
+						case "resetDb":
+							_stateStore.ResetAll();
+							_blacklist.ClearAll();
+							_tbotInstance.UserData.farmTargets.Clear();
+							_tbotInstance.UserData.autoFarmLastRangeIndex = 0;
+							_tbotInstance.UserData.autoFarmLastGalaxy = 0;
+							_tbotInstance.UserData.autoFarmLastSystem = 0;
+							_mainScanCompletedSinceStart = false;
+							_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, "[WebUI] AutoFarm database and blacklist reset.");
+							break;
+						default:
+							_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"[WebUI] Unknown command '{name}' ignored.");
+							break;
+					}
+				}
+			} catch (Exception e) {
+				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"[WebUI] Command file could not be processed: {e.Message}");
+			}
+		}
+
 		private void PersistTargets() {
 			_stateStore.ReplaceTargets(_tbotInstance.UserData.farmTargets, DateTime.UtcNow);
 		}
@@ -1021,6 +1093,17 @@ namespace Tbot.Workers {
 								if (pid.HasValue)
 									members.Add(pid.Value);
 							}
+						}
+						try {
+							int ownAllianceId = SettingsService.IsSettingSet(wl, "AllianceId") ? Convert.ToInt32(wl.AllianceId) : 0;
+							var names = ids.Distinct().Select(id => {
+								XElement a = doc.Descendants("alliance").FirstOrDefault(x => (int?) x.Attribute("id") == id);
+								return new { id, name = (string) a?.Attribute("name"), tag = (string) a?.Attribute("tag"), own = id == ownAllianceId };
+							}).Where(x => x.name != null).ToList();
+							string allyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
+							Directory.CreateDirectory(allyDir);
+							File.WriteAllText(Path.Combine(allyDir, $"ally_names_{_tbotInstance.InstanceAlias}.json"), JsonConvert.SerializeObject(names));
+						} catch {
 						}
 						_allyPlayerIds = members;
 						_allyCacheTime = DateTime.UtcNow;
@@ -2139,6 +2222,7 @@ namespace Tbot.Workers {
 			try {
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "Running autofarm...");
 				LoadPersistedTargets();
+				ProcessWebCommands();
 				DeduplicateFarmTargets();
 				EnsureActiveScanLoopStarted();
 				stopAfterFullScan = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "StopAfterFullScan")
@@ -2772,7 +2856,7 @@ namespace Tbot.Workers {
 						return false;
 					}).ToList();
 					if (deferredDefendedCount > 0) {
-						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{deferredDefendedCount} defended targets postponed this cycle (other half, {(activeHalf ? "A" : "B")} is up) - they come up next cycle.");
+						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"PATCH 96: {deferredDefendedCount} defended targets postponed this cycle (other half, {(activeHalf ? "A" : "B")} is up) - they come up next cycle.");
 					}
 
 					if (attackTargets.Count() > 0) {

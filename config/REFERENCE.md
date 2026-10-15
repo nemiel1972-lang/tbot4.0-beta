@@ -132,8 +132,8 @@ Detects incoming attacks and reacts.
 | `DefendFromMissiles` | React to missile attacks too. |
 | `IgnoreWeakAttack`, `WeakAttackRatio` | Ignore attackers whose fleet points are less than your fleet points divided by the ratio. |
 | `IgnoreAttackIfIHave.*` | Ignore the attack if you have less than `MinResourcesToSave` resources and less than `MinFleetToSave` fleet points on the target (nothing worth saving). |
-| `RandomActivity` | Simulate activity on random pages. |
-| `Home` | Your home celestial. |
+| `RandomActivity` | On: each defender check opens the defences page of a random celestial; off: always of `Home`. Only generates normal-looking activity. |
+| `Home` | Home celestial: used for the activity call when `RandomActivity` is off, and as default AutoHarvest origin (the moon at these coordinates) when AutoHarvest has no `Origin`. |
 | `Autofleet.Active` | Fleetsave the attacked celestial automatically. |
 | `Autofleet.SafetyMarginSeconds` | Seconds before impact at which the fleet must be gone. |
 | `Autofleet.TelegramMessenger.Active` | Message when a fleetsave happens. |
@@ -323,6 +323,14 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `MaxDefensePoints` | Skip targets above this defence value. |
 | `MinLootPerDefensePoint` | Skip defended targets whose loot per defence point is too low. |
 | `KeepReportFor` | Minutes a spy report stays valid. |
+| `MaxReportAgeMinutesForAttack` | Hard limit for the age of a spy report right before the defence check (default 120, 0 = off). Older reports are not attacked; the target is queued for a fresh probe. |
+| `MaxAttackDelaySec` | Maximum delay an attack may be postponed to fit the timing (default 600). |
+| `DebrisCreditPercent` | Share of the debris field that counts as profit in the profit calculation, minus recycler fuel (default 80). |
+| `MinDebrisToHarvest` | Minimum debris after recycler fuel before recyclers are sent (default 0). |
+| `MinSpeedPercentForProfitRetry` | Lowest fleet speed (%) the profit re-check may fall back to (default 50). |
+| `GlobalSpacing` | Spreads several bot instances over different start points of the scan range. With one instance leave it `false`: every pass then starts at the first `ScanRange` entry. |
+| `ReportQueryLimitForNonActionable` | Limits how many reports of non-attackable targets are queried per run (default 3). |
+| `RepeatedLogIntervalMinutes` | Repeated identical log messages appear at most this often (default 360; 0 = every time). |
 | `Blacklist.*` | Temporary blacklist: `Active`, `ResetAfterHours`, `UnprofitableResetAfterHours`, `PermanentResetAfterHours`. |
 | `AllianceWhitelist.*` | Never spy or attack members of your own alliance (and optional partners): `Active`; `ServerHost` = host of your universe (e.g. `sNNN-xx.ogame.gameforge.com` (NNN = universe number, xx = language code of your server)); `AllianceId` = **your alliance ID** (the `id` of your alliance in `https://<ServerHost>/api/alliances.xml`); `AdditionalAllianceIds` = further alliance IDs to protect, e.g. NAP partners (list). The member lists come from OGame's public API (reloaded about every 20 h, the API itself updates once a day). The check runs in the shared target filter, so it covers scanning, spying and attacking; known targets of members are removed from the farm list. Moons are skipped when their planet belongs to a member. Both `ServerHost` and a valid `AllianceId` are required when `Active` is true (otherwise a warning is logged and nothing is filtered). |
 | **Probes and slots** | |
@@ -387,4 +395,4 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 
 ## WebUI.FormPages (settings.json)
 
-The WebUI page **Config** shows form views per block. By default only `Expeditions` is a form; other blocks are placeholders (JSON editor). Enable more in `settings.json`: `"WebUI": { "FormPages": ["Expeditions", "AutoFarm"] }` or `"*"` for all (generic form). Blocks with credentials are never shown as a form.
+The WebUI page **Config** shows a form view per block (each block also has a JSON tab). Blocks with credentials are never shown as a form. The former Settings page (raw JSON editor) has been removed.

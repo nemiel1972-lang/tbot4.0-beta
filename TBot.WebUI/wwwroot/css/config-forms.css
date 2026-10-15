@@ -1,4 +1,4 @@
-/* Config-Formularseite (Farben aus tbot-theme.css) */
+
 .cfg-page { color: var(--tb-txt); font-size: 14px; }
 .cfg-grid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 992px) { .cfg-grid { grid-template-columns: 1fr; } }
@@ -95,3 +95,34 @@
 
 .cfg-more > summary { cursor: pointer; font-size: 13px; letter-spacing: 1px; color: var(--tb-gold); text-transform: uppercase; }
 .cfg-more[open] > summary { margin-bottom: 8px; }
+.cfg-page textarea { box-sizing: border-box; }
+
+.cfg-seg { display: inline-flex; border: 1px solid var(--tb-line); border-radius: 9px; overflow: hidden; }
+.cfg-seg button { color: var(--tb-mut); background: var(--tb-input); border: 0; border-right: 1px solid var(--tb-line); padding: 7px 18px; cursor: pointer; font: inherit; }
+.cfg-seg button:last-child { border-right: 0; }
+.cfg-seg button:hover { color: var(--tb-txt); background: #1a2342; }
+.cfg-seg button.on { color: #222; background: var(--tb-gold); font-weight: 700; }
+.cfg-seg.cfg-changed { border-color: var(--tb-gold); }
+
+.cfg-helplist { margin: 4px 0 6px 18px; padding: 0; color: var(--tb-txt); line-height: 1.5; }
+.cfg-helplist li { margin: 4px 0; }
+.cfg-helplist b { color: var(--tb-gold); font-weight: 600; }
+
+.cfg-inner { border: 1px solid var(--tb-line, rgba(255,255,255,.12)); border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+.cfg-inner > summary { cursor: pointer; font-size: 12px; letter-spacing: 1px; color: var(--tb-gold); text-transform: uppercase; }
+.cfg-inner[open] > summary { margin-bottom: 8px; }
+
+.cfg-block .sw.click { cursor: pointer; }
+.cfg-block .sw.click:hover { box-shadow: 0 0 0 2px #34427a; }
+.cfg-block .sw.busy { opacity: .4; pointer-events: none; }
+
+.cfg-examples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.cfg-chip { background: #1a2342; border: 1px solid #34427a; color: #cfd6ea; border-radius: 12px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+.cfg-chip:hover { background: #24305a; color: #fff; }
+
+.cfg-lfimgs { display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 8px; }
+.cfg-lfimg { width: 26px; height: 26px; border-radius: 4px; border: 1px solid var(--tb-line, #273050); background: #0c1224; object-fit: cover; }
+.cfg-lfrow { display: inline-flex; align-items: center; }
+.cfg-lfprio { display: flex; flex-wrap: wrap; gap: 6px; }
+.cfg-lfchip { display: inline-flex; align-items: center; gap: 4px; background: #1a2342; border: 1px solid #34427a; border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+.cfg-lfchip .cfg-lfimgs { margin-right: 2px; }

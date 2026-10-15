@@ -46,6 +46,8 @@ The main file then contains only switches and references:
 - The watcher observes `conf.d/` and `secrets/`: changes there trigger a reload as before.
 - If the bot writes values itself (origin, slot tiles, worker switches), they end up in the file where the value lives.
 
+**Web UI access:** passwords, user names/e-mail (`Credentials`, `BasicAuth`, proxy login), the captcha API key and your own alliance ID are neither shown nor editable in the web UI (Config page); change them only on the console or by editing the files directly. The Config page's Messenger form is the one exception: it can show/edit the Telegram token and chat ID and the Discord webhook URL (hidden while "Hide data" is on).
+
 `secrets/` (permissions 700, files 600) holds credentials: `credentials` (email, password, BasicAuth), `proxy`, `captcha`, `discord`, `defender-discord`, `alliance`, `telegram` (for `settings.json`).
 In the WebUI these files are read-only (masked); changes are made via SSH.
 ogamed receives credentials through environment variables, never on the command line.

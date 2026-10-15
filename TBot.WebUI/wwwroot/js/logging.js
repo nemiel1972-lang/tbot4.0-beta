@@ -8,21 +8,11 @@ let _loadMoreButton;
 let typingTimer;
 let doneTypingInterval = 1000;
 
-// PATCH (WebUI-Log, 24.09.2026): Schluesselwoerter, die eine Zeile als "finale, tatsaechlich
-// ausgefuehrte Aktion" markieren (z.B. wirklich gesendete Flotte, abgeschlossener/abgebrochener
-// Befehl) - unabhaengig vom Log-Level (die meisten davon sind ganz normal LogLevel.Information,
-// unterscheiden sich farblich also bisher NICHT von reinem Status-/Fortschritts-Text). Bewusst
-// als eigene, leicht erweiterbare Liste statt hart im Code verteilt - bei Bedarf hier einfach
-// weitere Substrings ergaenzen (Gross-/Kleinschreibung ist egal, siehe isFinalAction()).
-// ACHTUNG: diese Liste ist eine erste, aus den in dieser Session tatsaechlich gesehenen Log-
-// Zeilen abgeleitete Auswahl (u.a. PATCH-95-Zeile "Attack sent: ...") - nicht gegen den
-// kompletten restlichen TBot-Sourcecode verifiziert. Bitte pruefen/ergaenzen, falls Aktionen
-// fehlen oder zu viel/zu wenig gruen markiert wird.
 const FINAL_ACTION_KEYWORDS = [
 	"attack sent",
 	"fleet sent",
-	"recycler",          // "Recycler (...) gesendet" / "... im zweiten Versuch gesendet"
-	"gesendet",          // deutsche Gegenstuecke ("Flotte gesendet", "Recycler ... gesendet", ...)
+	"recycler",
+	"gesendet",
 	"cancelled",
 	"canceled",
 	"abgebrochen",
@@ -39,7 +29,6 @@ function isFinalAction(message) {
 	return FINAL_ACTION_KEYWORDS.some(keyword => lower.includes(keyword));
 }
 
-//Initialize variables
 function Initialize(logsUrl, getLogsUrl) {
 	showLoading();
 	_logsUrl = logsUrl;
@@ -47,7 +36,6 @@ function Initialize(logsUrl, getLogsUrl) {
 	_loadMoreButton = $("#loadMore").parent();
 	logsDiv = $("#logsDiv");
 
-	//Event when user types on search textbox. It uses a timer to avoid re-rendering at every letter typed
 	$('#logsearch').on('input propertychange paste', function () {
 		clearTimeout(typingTimer);
 		typingTimer = setTimeout(applyFilter, doneTypingInterval);
@@ -87,7 +75,6 @@ function updateGrid(url, callback) {
 	showLoading();
 	$.get(url,
 		function (data) {
-			//logData = data.content.sort((a, b) => (a.position > b.position)).map(x => new LogEntry(x.datetime, x.type, x.message, x.sender, x.position));
 			logData = data.content.map(x => new LogEntry(x.datetime, x.type, x.message, x.sender, x.position));
 			_maxElements = logData.length > 100 ? logData.length : 100;
 			renderGrid(logData);
@@ -115,7 +102,6 @@ function formatDate(date) {
 	].join('/');
 }
 
-//LogEntry class
 function LogEntry(timestamp, level, message, sender, position) {
 	this.date = new Date(timestamp);
 	this.timestamp = this.date.toLocaleString();
@@ -136,18 +122,15 @@ function getFilterParameters() {
 	return filterParameters;
 }
 
-//Function to apply the current filters
 function applyFilter() {
 	let urlWithFilters = _getLogsUrl + getFilterParameters();
 	updateGrid(urlWithFilters);
 }
 
-//Cleans the grid
 function cleanGrid() {
 	logsDiv.find(".row").remove();
 }
 
-//Renders a single row in the grid
 function renderRow(row) {
 	logsDiv.append(row);
 }
@@ -156,7 +139,6 @@ function renderRowTop(row) {
 	logsDiv.prepend(row);
 }
 
-//Renders the grid with the LogEntry array passed by the parameter "data"
 function renderGrid(data) {
 	cleanGrid();
 	for (let i = 0; i < data.length; i++) {
@@ -198,7 +180,6 @@ function loadMore() {
 		});
 }
 
-//Function to map the Log Level string to a number to be filtered
 function getLogLevelNum(logLevel) {
 	switch (logLevel) {
 		case "Trace":
@@ -214,7 +195,6 @@ function getLogLevelNum(logLevel) {
 	}
 }
 
-//Creates the row to draw
 function createLogElement(timestamp, level, message, sender) {
 	let row = $("<div class='row logEntry'></div>");
 	let colTs = $("<div class='col-5 col-lg-3 col-xl-2 log-ts'></div>").text(timestamp)
@@ -235,14 +215,6 @@ function createLogElement(timestamp, level, message, sender) {
 		.append(colLevel)
 		.append(colMsg);
 
-	// PATCH (WebUI-Log, 24.09.2026): finale Aktionen (Flotte wirklich gesendet, Befehl wirklich
-	// abgeschlossen/abgebrochen, ...) unabhaengig vom Log-Level gruen markieren, damit sie beim
-	// schnellen Ueberfliegen des Logs klar von reinem Status-/Zwischentext (auch wenn der zufaellig
-	// ebenfalls LogLevel.Information ist) zu unterscheiden sind. NUR die Nachrichten-Spalte
-	// (colMsg) wird eingefaerbt, nicht die ganze Zeile/die Level-Spalte - Timestamp/Sender/Level
-	// bleiben unveraendert in ihrer bisherigen Farbe. Klasse "final-action" zusaetzlich zum Inline-
-	// Style gesetzt, falls es dazu schon eine site.css gibt und die Farbe lieber dort gepflegt
-	// werden soll (dann die naechste Zeile durch colMsg.addClass("final-action") ersetzen).
 	if (isFinalAction(message)) {
 		colMsg.addClass("final-action");
 		colMsg.css({ "color": "#2ecc71", "font-weight": "600" });
@@ -251,7 +223,6 @@ function createLogElement(timestamp, level, message, sender) {
 	return row;
 }
 
-//Function that is called for every log received by the hub
 function renderLogEntry(timestamp, level, message, sender) {
 	let lastPosition = 0;
 	if (logData.length > 0)
@@ -260,7 +231,6 @@ function renderLogEntry(timestamp, level, message, sender) {
 
 	logData.unshift(logEntry);
 
-	//check if has to be drawn
 	let logLevelSelected = getLogLevelNum($("#loglevelfilter option:selected").val());
 	let render = true;
 
@@ -278,7 +248,6 @@ function renderLogEntry(timestamp, level, message, sender) {
 	if (render)
 		renderRowTop(logEntry.row);
 
-	//if we reached the maximum log messages, delete the last
 	let elementsCount = logsDiv.find(".row").length;
 	if (elementsCount > _maxElements) {
 		let elementsToDelete = elementsCount - _maxElements;
@@ -288,25 +257,21 @@ function renderLogEntry(timestamp, level, message, sender) {
 }
 
 function defineConnection() {
-	//Definition of the connection to the SignalR hub that pushes the logs
 	_connection = new signalR.HubConnectionBuilder()
 		.withUrl(_logsUrl)
 		.configureLogging(signalR.LogLevel.Information)
 		.withAutomaticReconnect()
 		.build();
 
-	//If the connection closes unexpectedly, start again
 	_connection.onclose(async () => {
 		await start();
 	});
 
-	//Event that receives each message from the hub
 	_connection.on("SendLogAsObject", (data) => {
 		renderLogEntry(data.timestamp, data.level, data.message, data.LogSender);
 	});
 
 }
-//Function to start the connection
 async function start() {
 	try {
 		await _connection.start();

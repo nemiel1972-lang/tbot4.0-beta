@@ -1,4 +1,4 @@
-/* Dunkles TBot-Farbschema (gleiche Farben wie die Config-Seite). Wird per Klasse "tbot-dark" auf .autofarm-page aktiviert. */
+
 :root {
     --tb-gold: #F5B70E;
     --tb-bg: #0b1020;
@@ -57,7 +57,6 @@
 .tbot-dark .logs-details summary { color: var(--tb-txt); }
 .tbot-dark .logs-details pre { color: #cdd5ee; background: var(--tb-input); }
 
-/* Status-Marken */
 .tbot-dark .status, .tbot-dark .reason-label { color: #cfd6ea; background: #1a2342; border-color: var(--tb-line); border-radius: 8px; }
 .tbot-dark .status-active, .tbot-dark .status-attackpending, .tbot-dark .reason-attack-pending { color: #8be9b0; background: #10231f; border-color: #3a5f4a; }
 .tbot-dark .status-attacksent, .tbot-dark .reason-attack-sent { color: #9ec5ff; background: #14213f; border-color: #34427a; }
@@ -68,10 +67,29 @@
 .tbot-dark .status-disabled, .tbot-dark .status-stale, .tbot-dark .status-unknown, .tbot-dark .status-cached-empty,
 .tbot-dark .status-cached-no-targets, .tbot-dark .reason-report-already-processed, .tbot-dark .reason-no-suitable-origin { color: var(--tb-mut); background: #151c33; border-color: var(--tb-line); }
 
-/* Autobuilds-Zusatzstyles */
 .tbot-dark tr.ab-cel td { border-top: 2px solid var(--tb-line); background: #1a2342; color: #fff; }
 .tbot-dark tr.ab-cel.ab-moon td { border-top: 1px solid var(--tb-line); background: #151d38; }
 .tbot-dark .ab-cel .ab-coord, .tbot-dark .ab-sub { color: var(--tb-mut); }
 .tbot-dark .ab-badge { color: #b7c3ee; background: #26305a; border-color: #34427a; border-radius: 8px; }
 .tbot-dark tr.ab-wk td:first-child { color: #cfd6ea; }
 .tbot-dark .ab-none { color: #56608a; }
+
+.tbot-dark .tab-bar { border-bottom-color: var(--tb-line); }
+.tbot-dark .tab-button { color: var(--tb-mut); background: var(--tb-panel); border-color: var(--tb-line); border-radius: 8px; }
+.tbot-dark .tab-button:hover { color: var(--tb-txt); background: #1a2342; }
+.tbot-dark .tab-button.active { color: #222; background: var(--tb-gold); border-color: var(--tb-gold); font-weight: 700; }
+.tbot-dark .tab-count { opacity: 0.8; }
+.tbot-dark .galaxy-group > summary { color: var(--tb-gold); padding: 8px 14px; background: var(--tb-panel2); border-top: 1px solid var(--tb-line); }
+.tbot-dark .plain-button.danger { color: var(--tb-bad); border-color: #a8404b; background: #2a1318; }
+.tbot-dark .plain-button.danger:hover { background: #3a1a21; }
+.tbot-dark .net-positive { color: var(--tb-ok); }
+.tbot-dark .net-negative { color: var(--tb-bad); }
+.tbot-dark .maint-actions { padding: 0 14px; }
+.tbot-dark .panel > .panel-note { padding-left: 14px; padding-right: 14px; }
+.tbot-dark .mask-toggle { color: #cfd6ea; margin-right: 12px; cursor: pointer; }
+.tbot-dark .galaxy-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.tbot-dark .galaxy-button { color: var(--tb-mut); background: var(--tb-panel); border: 1px solid var(--tb-line); border-radius: 8px; padding: 4px 11px; cursor: pointer; font: inherit; font-size: 13px; }
+.tbot-dark .galaxy-button:hover { color: var(--tb-txt); background: #1a2342; }
+.tbot-dark .galaxy-button.active { color: var(--tb-gold); background: #3b2f0a; border-color: #6b5517; font-weight: 700; }
+.res3 { display: grid; gap: 1px; }
+.res3-line i { display: inline-block; min-width: 34px; font-style: normal; color: var(--tb-mut); }
