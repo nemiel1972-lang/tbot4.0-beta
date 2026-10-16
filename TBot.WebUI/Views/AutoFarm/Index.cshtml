@@ -44,10 +44,59 @@
             </form>
         </header>
 
+        @if (ViewBag.FastFarmAvailable == true && ViewBag.FastFarmActive == true)
+        {
+            <div class="notice notice-warn">
+                <strong>FastFarm mode is on.</strong>
+                You are looking at the AutoFarm report; the other workers are off while FastFarm runs.
+                <a class="plain-button" href="@Url.Action("Index", "AutoFarm", new { instance = Model.SelectedInstance })">Open the FastFarm overview</a>
+            </div>
+        }
+        else if (ViewBag.FastFarmAvailable == true)
+        {
+            <div class="notice" id="fastfarm-switch-box">
+                <strong>FastFarm mode is off.</strong>
+                When it is on, this menu entry shows the FastFarm overview instead of this report, and all other workers except the Defender stop.
+                <button type="button" class="plain-button" id="fastfarm-switch">Switch FastFarm on</button>
+            </div>
+            <script>
+                document.getElementById("fastfarm-switch").addEventListener("click", async (ev) => {
+                    if (!window.confirm("Switch FastFarm ON? All other workers except the Defender stop.\nIt is saved right away and takes effect when the bot re-reads the config.")) return;
+                    const button = ev.currentTarget;
+                    button.disabled = true;
+                    try {
+                        const body = new URLSearchParams({ instance: document.getElementById("autofarm-dashboard").dataset.instance, block: "FastFarm", active: "true" });
+                        const r = await (await fetch('@Url.Action("SetActive", "Config")', { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })).json();
+                        if (!r.success) { alert("Could not switch: " + r.error); button.disabled = false; return; }
+                        window.location.reload();
+                    } catch (e) { alert("Could not switch: " + e); button.disabled = false; }
+                });
+            </script>
+        }
+        else if (ViewBag.FastFarmCompiled == true)
+        {
+            <div class="notice" id="fastfarm-create-box">
+                <strong>FastFarm is built in, but your config has no FastFarm block yet.</strong>
+                <button type="button" class="plain-button" id="fastfarm-create">Add FastFarm block (switched off)</button>
+            </div>
+            <script>
+                document.getElementById("fastfarm-create").addEventListener("click", async (ev) => {
+                    const button = ev.currentTarget;
+                    button.disabled = true;
+                    try {
+                        const body = new URLSearchParams({ instance: document.getElementById("autofarm-dashboard").dataset.instance });
+                        const r = await (await fetch('@Url.Action("CreateFastFarm", "Config")', { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })).json();
+                        if (!r.success) { alert("Could not add the block: " + r.error); button.disabled = false; return; }
+                        window.location.reload();
+                    } catch (e) { alert("Could not add the block: " + e); button.disabled = false; }
+                });
+            </script>
+        }
+
         <div class="dashboard-toolbar" role="status" aria-live="polite">
             <span id="poll-status">Loading current data...</span>
             <span id="last-updated"></span>
-            <label class="mask-toggle"><input type="checkbox" id="af-mask" checked /> Hide data</label>
+            <label class="mask-toggle"><input type="checkbox" id="af-mask" /> Hide data</label>
             <button type="button" class="plain-button" id="copy-logs">Copy logs</button>
         </div>
 
@@ -66,6 +115,7 @@
         const copyLogsButton = document.getElementById("copy-logs");
         const maskBox = document.getElementById("af-mask");
         const MASK = "*****";
+        maskBox.checked = window.tbotHideData.get();
         const COORD_IN_TEXT = /\[?[A-Za-z]+:\d+:\d+:\d+\]?/g;
         function maskText(text) {
             return maskBox.checked ? String(text ?? "").replace(COORD_IN_TEXT, `[${MASK}]`) : String(text ?? "");
@@ -472,6 +522,7 @@
             }
         }
 
+        maskBox.addEventListener("change", () => window.tbotHideData.set(maskBox.checked));
         maskBox.addEventListener("change", () => {
             render(snapshot);
         });

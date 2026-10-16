@@ -13,11 +13,8 @@ html {
   min-height: 100%;
 }
 body {
-	
 	color:white;
-	
-	background-image: linear-gradient(to top, #051937, #041732, #04152d, #041329, #031124, #070e20, #090a1c, #0a0718, #0d0412, #0c020b, #070104, #000000);
-	
+	background-color: #1c1c1e;
 }
 
 .btn-light {

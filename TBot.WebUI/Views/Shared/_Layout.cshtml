@@ -63,6 +63,13 @@
                 </div>
             </div>
         </div>
+        @if (TBot.WebUI.Services.LegacyConfigCheck.IsLegacy())
+        {
+            <div style="background:#b3261e;color:#fff;padding:10px 16px;margin:0 0 8px;font-weight:600">
+                Old config detected - only the Defender is running. Stop the bot, run MigrateConfig (main folder), check the config and restart.
+                Already migrated by hand? Add "ConfigVersion": 4 at the top of instance_settings.json.
+            </div>
+        }
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

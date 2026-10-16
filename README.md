@@ -43,6 +43,12 @@ Config page of the web UI, shown with the anonymised template as sample data.
 
 Never commit or post your real `instance_settings.json`, `secrets/` or `data/`.
 
+## Updating
+- **Old or original config:** run `MigrateConfig` (it sits next to the bot) in the folder of your old config. It makes a backup, keeps all your values, adds the new settings (new workers switched off) and tells you what to check. A config without `"ConfigVersion": 4` that still uses the old Lifeform fields only starts Defender and SleepMode (red banner in the web UI).
+- **From the web UI (Windows package):** Config page -> "Start" -> card "Version". If a newer release exists, "Install update" downloads the package, verifies its SHA-256 sum, stops the bot, replaces the files (config, data, logs, logins and `lifeform_targets.json` stay), runs `MigrateConfig` and restarts the bot. If the new version does not start, the old one is restored. The old files stay in `backups/update-<time>`, details in `update/updater.log`.
+- **Linux:** the card shows new releases and their notes; installing is manual for now.
+- `tools/update-testfeed/make_fake_feed.py` creates a fake release to try the update function without GitHub.
+
 ## Build
 Requirements: .NET 9 SDK and Go 1.23.
 ```bash

@@ -50,6 +50,9 @@ namespace Tbot.Workers {
 				Feature.BrainAutoResearch => new AutoResearchWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
 				Feature.Colonize => new ColonizeWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
 				Feature.AutoFarm => new AutoFarmWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
+#if FASTFARM
+				Feature.FastFarm => new FastFarmWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
+#endif
 				Feature.BrainLifeformAutoMine => new LifeformsAutoMineWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge, this),
 				Feature.BrainLifeformAutoResearch => new LifeformsAutoResearchWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge, this),
 				Feature.AutoDiscovery => new AutoDiscoveryWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),

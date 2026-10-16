@@ -385,7 +385,32 @@ namespace Tbot.Services {
 			}
 		}
 
+		private bool _legacyConfigLogged;
+
+		private bool IsLegacyConfigBlocked() {
+			try {
+				if (SettingsService.IsSettingSet(InstanceSettings, "ConfigVersion") && (int) InstanceSettings.ConfigVersion >= 4)
+					return false;
+				if (!SettingsService.IsSettingSet(InstanceSettings, "Brain") || !SettingsService.IsSettingSet(InstanceSettings.Brain, "LifeformAutoMine"))
+					return false;
+				var lf = InstanceSettings.Brain.LifeformAutoMine;
+				return SettingsService.IsSettingSet(lf, "MaxT2Building") || SettingsService.IsSettingSet(lf, "MaxT3Building")
+					|| SettingsService.IsSettingSet(lf, "MaxBuilding6") || SettingsService.IsSettingSet(lf, "MaxBuilding12");
+			} catch {
+				return false;
+			}
+		}
+
 		public async Task InitializeFeature(Feature feat) {
+			if (feat != Feature.Defender && feat != Feature.SleepMode && IsLegacyConfigBlocked()) {
+				if (!_legacyConfigLogged) {
+					_legacyConfigLogged = true;
+					log(LogLevel.Error, LogSender.Tbot, "OLD CONFIG DETECTED (no \"ConfigVersion\": 4, old lifeform fields present). Only the Defender runs. " +
+						"Stop the bot, run MigrateConfig (it is in the main folder), check the config and restart. " +
+						"Already migrated by hand? Then add \"ConfigVersion\": 4 at the top of instance_settings.json.");
+				}
+				return;
+			}
 			if (feat == Feature.SleepMode) {
 				return;
 			}
@@ -400,6 +425,9 @@ namespace Tbot.Services {
 				Feature.BrainOfferOfTheDay => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
 				Feature.BrainAutoResearch => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
 				Feature.AutoFarm => RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo),
+#if FASTFARM
+				Feature.FastFarm => RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds),
+#endif
 				Feature.Expeditions => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
 				Feature.Harvest => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
 				Feature.Colonize => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
@@ -2273,6 +2301,42 @@ namespace Tbot.Services {
 				brain = ReadBoolSetting("Brain.Active")
 			};
 
+			object modeOverride = null;
+#if FASTFARM
+			try {
+				if (SettingsService.IsSettingSet(InstanceSettings, "FastFarm") && SettingsService.IsSettingSet(InstanceSettings.FastFarm, "Active") && (bool) InstanceSettings.FastFarm.Active
+					&& !(SettingsService.IsSettingSet(InstanceSettings.FastFarm, "OnlyWorker") && !(bool) InstanceSettings.FastFarm.OnlyWorker))
+					modeOverride = new { name = "FastFarm" };
+			} catch { modeOverride = null; }
+#endif
+
+			object account = null;
+			try {
+				var ui = userData?.userInfo;
+				var cel = userData?.celestials;
+				if (ui != null) {
+					long m = 0, k = 0, d = 0, dm = 0;
+					int planets = 0, moons = 0;
+					if (cel != null) {
+						foreach (var c in cel) {
+							if (c?.Coordinate?.Type == Celestials.Moon) moons++; else planets++;
+							if (c?.Resources != null) {
+								m += c.Resources.Metal; k += c.Resources.Crystal; d += c.Resources.Deuterium;
+								dm = Math.Max(dm, c.Resources.Darkmatter);
+							}
+						}
+					}
+					account = new {
+						name = ui.PlayerName,
+						universe = userData?.serverData?.Name,
+						playerClass = ui.Class.ToString(),
+						rank = ui.Rank, total = ui.Total, points = ui.Points,
+						planets, moons,
+						metal = m, crystal = k, deuterium = d, darkmatter = dm
+					};
+				}
+			} catch { account = null; }
+
 			var payload = new {
 				sleeping,
 				mode = ghost ? "GhostSleep" : (normal ? "Sleep" : ""),
@@ -2287,6 +2351,8 @@ namespace Tbot.Services {
 				slotLimits,
 				workers = workerStates,
 				priorities,
+				modeOverride,
+				account,
 				updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			};
 
@@ -2294,6 +2360,13 @@ namespace Tbot.Services {
 			string tmp = target + ".tmp";
 			File.WriteAllText(tmp, Newtonsoft.Json.JsonConvert.SerializeObject(payload));
 			File.Move(tmp, target, true);
+
+			try {
+				string dataDir = Path.Combine(AppContext.BaseDirectory, "data");
+				Directory.CreateDirectory(dataDir);
+				string perInstance = Path.Combine(dataDir, Path.GetFileName($"status_{InstanceAlias}.json"));
+				File.Copy(target, perInstance, true);
+			} catch {  }
 		}
 
 		private async void HandleSleepMode(object state) {

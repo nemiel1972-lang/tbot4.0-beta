@@ -3,20 +3,20 @@
 	overflow-y: scroll;
 	overflow-x: hidden;
 	background-color: transparent;
-	color: var(--tb-txt, #e8ecf5);
+	color: var(--tb-txt, #e4e4e6);
 }
 
 	#logsDiv .row {
 		padding: 5px;
 		margin-bottom: 4px;
-		background-color: var(--tb-panel, #12182b);
-		border: 1px solid var(--tb-line, #273050);
-		border-left: 3px solid var(--tb-line, #273050);
+		background-color: var(--tb-panel, #2b2b2d);
+		border: 1px solid var(--tb-line, #414046);
+		border-left: 3px solid var(--tb-line, #414046);
 		border-radius: 6px;
 	}
 
 	#logsDiv .row:hover {
-		background-color: var(--tb-panel2, #171f36);
+		background-color: var(--tb-panel2, #323135);
 	}
 
 #loglevelfilter {
@@ -31,32 +31,32 @@
 
 .loglevel { font-weight: 600; }
 
-.loglevel.Trace { color: var(--tb-mut, #8d98b8); }
+.loglevel.Trace { color: var(--tb-mut, #92999f); }
 
-.loglevel.Debug { color: #7fd6b0; }
+.loglevel.Debug { color: #6fd3b0; }
 
-.loglevel.Information { color: #7fb4ff; }
+.loglevel.Information { color: #7cb7e1; }
 
 .loglevel.Warning { color: var(--tb-warn, #f5b70e); }
 
-.loglevel.Error, .loglevel.Critical { color: var(--tb-bad, #ff6b6b); }
+.loglevel.Error, .loglevel.Critical { color: var(--tb-bad, #dc5252); }
 
 #logsDiv .row:has(.loglevel.Warning) { border-left-color: var(--tb-warn, #f5b70e); }
-#logsDiv .row:has(.loglevel.Error), #logsDiv .row:has(.loglevel.Critical) { border-left-color: var(--tb-bad, #ff6b6b); background-color: #2a1620; }
+#logsDiv .row:has(.loglevel.Error), #logsDiv .row:has(.loglevel.Critical) { border-left-color: var(--tb-bad, #dc5252); background-color: #3a1f22; }
 #logsDiv .row:has(.loglevel.Information) { border-left-color: #3b5fa8; }
 #logsDiv .row:has(.loglevel.Debug) { border-left-color: #2c6b57; }
 
-.timestamp { color: var(--tb-mut, #8d98b8); }
-.logsender { color: #cfd6ea; }
+.timestamp { color: var(--tb-mut, #92999f); }
+.logsender { color: #e0e0e2; }
 
 .filters-box input, .filters-box select {
 	color: #fff;
-	background: var(--tb-input, #0c1224);
-	border: 1px solid var(--tb-line, #273050);
+	background: var(--tb-input, #232325);
+	border: 1px solid var(--tb-line, #414046);
 	border-radius: 7px;
 	padding: 4px 8px;
 }
-.filters-box input::placeholder { color: var(--tb-mut, #8d98b8); }
+.filters-box input::placeholder { color: var(--tb-mut, #92999f); }
 .filters-box input[type="date"] { color-scheme: dark; }
 
 .log-more {
@@ -69,7 +69,6 @@
 .log-more:hover { background: #fbe29e; color: #222; }
 
 .logmessage {
-	
 }
 
 .vrow {
@@ -96,6 +95,7 @@
 
 @media (max-width: 768px) {
 
+
 	.main-container {
 		padding-left: 0px;
 		padding-right: 0px;
@@ -106,9 +106,12 @@
 	}
 }
 
+
+
 .text-center {
 	width: 100%;
 	position: relative;
 	height: 100%;
 }
+
 

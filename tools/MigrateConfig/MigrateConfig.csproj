@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Eigenstaendiges Werkzeug: uebernimmt eine alte instance_settings.json in die aktuelle Vorlage.
+       Vorlage und LF-Zieltabelle sind in die EXE eingebettet (keine weiteren Dateien noetig).
+       Eigenes Projekt, nicht Teil von TBot.sln; gebaut wird es von tools/build-windows.sh und tools/build-linux.sh. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MigrateConfig</AssemblyName>
+    <RootNamespace>MigrateConfig</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Standard: Vorlage aus dem Repo. Die Paketskripte uebergeben die fuer das Paket bereinigte Vorlage (ohne Auktions-Block). -->
+    <TemplatePath Condition="'$(TemplatePath)' == ''">$(MSBuildThisFileDirectory)../../config/config.vorlage.json</TemplatePath>
+    <TargetsPath Condition="'$(TargetsPath)' == ''">$(MSBuildThisFileDirectory)../../config/lifeform_targets.json</TargetsPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <EmbeddedResource Include="$(TemplatePath)" LogicalName="config.vorlage.json" />
+    <EmbeddedResource Include="$(TargetsPath)" LogicalName="lifeform_targets.json" />
+  </ItemGroup>
+
+</Project>

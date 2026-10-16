@@ -51,6 +51,17 @@ cp config/config.vorlage.json "$AUSGABE/config/"
 cp config/REFERENCE.md "$AUSGABE/config/REFERENCE.md"
 cp config/lifeform_targets.json "$AUSGABE/lifeform_targets.json"
 
+# Standalone helper that takes an OLD instance_settings.json over into the new template (own EXE, embedded template).
+# A failure here never stops the package build.
+echo "== MigrateConfig ("$RID") =="
+(cd tools/MigrateConfig && dotnet publish -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \
+  -p:TemplatePath="$OLDPWD/$AUSGABE/config/config.vorlage.json" -p:DebugType=none -p:DebugSymbols=false \
+  -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: MigrateConfig build failed (package is built without it)."
+rm -f "$AUSGABE"/*.pdb
+
+# Version for the update check on the start page: the release tag when built by the release workflow (TBOT_VERSION), otherwise "dev"
+printf '%s' "${TBOT_VERSION:-dev}" > "$AUSGABE/version.txt"
+
 # Pre-split starter config (instance_settings.json with "Load" references + conf.d/ + secrets/), built from the
 # template with tools/split-config.py. Contains placeholders only; the recipient copies config/split/* next to TBot.
 SPLIT_TMP="$(mktemp -d)"
@@ -107,6 +118,7 @@ Folder contents
   start.sh                 starts the bot in this folder
   tbot.service.example     optional systemd unit
   lifeform_targets.json    target table for Lifeform AutoMine (keep it next to TBot)
+  MigrateConfig            takes an old config over into the new template (see "Updating from an older version")
   config/config.vorlage.json   anonymised template as ONE file (alternative)
   config/split/                the same template pre-split: instance_settings.json, settings.json, conf.d/, secrets/
   config/REFERENCE.md          explains every field of the template (start with "New account quick start")
@@ -137,6 +149,13 @@ Keeping secrets safe
   - Optional: split passwords out into a secrets/ folder (chmod 700, files 600) with "Load" references
     (see config/README.md in the repo and tools/split-config.py, needs Python).
   - Do not put coordinates or credentials into screenshots or chats.
+
+Updating from an older version or from the original TBot
+  Run MigrateConfig (it sits next to the bot) in the folder of your OLD config - ideally BEFORE the first start of the new version.
+  It finds instance_settings.json (and the instances listed in settings.json), shows what it will change and asks
+  before it writes anything. It makes a backup in backups/config-<time>, keeps ALL your old values, adds the new
+  settings with default values and switches every new worker OFF. Options: --dry-run (only show), --yes (no question).
+  Afterwards: restart the bot and CHECK the config - especially Lifeform AutoMine (see lifeform_targets.json).
 
 Notes about this build
   - Lifeform AutoMine needs lifeform_targets.json. If it is missing, LF building is skipped (warning in the log).

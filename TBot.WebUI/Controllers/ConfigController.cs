@@ -3,11 +3,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Tbot.Common.Settings;
 using TBot.WebUI.Models;
+using TBot.WebUI.Services;
 
 namespace TBot.WebUI.Controllers {
 	public sealed class ConfigController : Controller {
 		private const string CustomPage = "Expeditions";
-		private static readonly string[] CustomPages = { "Expeditions", "AutoFarm", "Defender", "GhostSleep", "SleepMode", "Messenger", "General", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave" };
+		private const string StartPage = "Start";
+		private static readonly string[] CustomPages = { "Expeditions", "AutoFarm", "Defender", "GhostSleep", "SleepMode", "Messenger", "General", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave", "FastFarm" };
 		private static readonly HashSet<string> NeverForm = new(StringComparer.OrdinalIgnoreCase) { "Credentials" };
 		private static readonly HashSet<string> ProtectedBlocks = new(StringComparer.OrdinalIgnoreCase) { "TelegramMessenger", "DiscordWebhook" };
 		private static readonly HashSet<string> ProtectedKeys = new(StringComparer.OrdinalIgnoreCase) { "Url", "WebhookUrl", "API", "ApiKey", "ChatId", "Token", "Password" };
@@ -97,9 +99,6 @@ namespace TBot.WebUI.Controllers {
 
 		private static string BaseDir => AppDomain.CurrentDomain.BaseDirectory;
 
-		// Newtonsoft liest das Literal "undefined" (steht in manchen Config-Dateien, z. B. "ReturnAt": undefined) als eigenen Tokentyp und
-		// schreibt es unveraendert wieder aus - das ist kein gueltiges JSON und bricht JSON.parse im Browser. Solche Eintraege werden entfernt
-		// (das Formular zeigt dann den Standardwert; beim Speichern ist die Datei wieder gueltig).
 		private static void StripUndefined(JToken token) {
 			if (token is JObject obj) {
 				foreach (var prop in obj.Properties().ToList()) {
@@ -195,6 +194,21 @@ namespace TBot.WebUI.Controllers {
 						Mode = ModeFor(prop.Name, enabled)
 					});
 				}
+#if FASTFARM
+				var deutOverride = FastFarmReader.GetOverride(model.Instance);
+				if (deutOverride.Overrides) {
+					var suppressed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AutoFarm", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave" };
+					if (!deutOverride.KeepExpeditions)
+						suppressed.Add("Expeditions");
+					foreach (var info in model.Blocks.Where(b => suppressed.Contains(b.Name))) {
+						info.Overridden = true;
+						info.OverrideTag = info.Name == "AutoFarm" ? "override" : "";
+						info.OverrideText = info.Name == "AutoFarm"
+							? "AutoFarm override active: FastFarm is on, so AutoFarm is switched off (the menu entry shows the FastFarm overview)."
+							: "Switched off while FastFarm is active.";
+					}
+				}
+#endif
 					var discordEntry = model.Blocks.FirstOrDefault(b => b.Name == "DiscordWebhook");
 					int messengerAt = discordEntry != null ? model.Blocks.IndexOf(discordEntry) : model.Blocks.Count;
 					if (discordEntry != null)
@@ -210,9 +224,9 @@ namespace TBot.WebUI.Controllers {
 						if (string.Equals(block, "GhostSleep", StringComparison.OrdinalIgnoreCase))
 							block = "SleepMode";
 					}
+					model.Blocks.Insert(0, new ConfigBlockInfo { Name = StartPage, Label = "Start", Mode = "start" });
 					var selected = model.Blocks.FirstOrDefault(b => string.Equals(b.Name, block, StringComparison.OrdinalIgnoreCase))
-					?? model.Blocks.FirstOrDefault(b => b.Name == CustomPage)
-					?? model.Blocks.FirstOrDefault();
+					?? model.Blocks.First();
 				if (selected != null) {
 					model.Selected = selected.Name;
 					model.SelectedMode = selected.Mode;
@@ -308,6 +322,26 @@ namespace TBot.WebUI.Controllers {
 
 		[HttpGet]
 		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+		public IActionResult StartData(string? instance) {
+			try {
+				var instances = GetInstances();
+				var chosen = instances.FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (chosen.Alias == null)
+					chosen = instances[0];
+				var main = ParseObject(System.IO.File.ReadAllText(chosen.Path));
+				bool overrides = false, keepExp = false;
+#if FASTFARM
+				(overrides, keepExp) = FastFarmReader.GetOverride(chosen.Alias);
+#endif
+				var data = StartReader.Read(chosen.Alias, main, LegacyConfigCheck.IsLegacy(), overrides, keepExp);
+				return Content(data.ToString(Formatting.None), "application/json");
+			} catch (Exception e) {
+				return Json(new { error = e.Message });
+			}
+		}
+
+		[HttpGet]
+		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 		public IActionResult GetBlock(string? instance, string block, string? scope) {
 			try {
 				var chosen = GetInstances().FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
@@ -364,6 +398,59 @@ namespace TBot.WebUI.Controllers {
 				return Json(new { success = false, error = e.Message });
 			}
 		}
+
+#if FASTFARM
+		[HttpPost]
+		public async Task<IActionResult> CreateFastFarm(string? instance) {
+			try {
+				var chosen = GetInstances().FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				string mainPath = chosen.Alias == null ? GetInstances()[0].Path : chosen.Path;
+				string baseDir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!;
+				var main = ParseObject(System.IO.File.ReadAllText(mainPath));
+				if (main["FastFarm"] != null)
+					return Json(new { success = true, existed = true });
+
+				var block = new JObject {
+					["Active"] = false,
+					["OnlyWorker"] = true,
+					["KeepExpeditions"] = false,
+					["CargoType"] = "SmallCargo",
+					["ProbesPerTarget"] = 20,
+					["SlotsToLeaveFree"] = 1,
+					["WeightMetal"] = 1,
+					["WeightCrystal"] = 1.5,
+					["WeightDeuterium"] = 3,
+					["MinLoot"] = 100000,
+					["MinDeuterium"] = 0,
+					["TopTargets"] = 36,
+					["ReportMaxAgeMinutes"] = 30,
+					["RespyAfterAttackMinutes"] = 60,
+					["DefendedRecheckHours"] = 6,
+					["DeleteReports"] = true,
+					["FleetSpeedPercent"] = 100,
+					["CargoSurplusPercent"] = 0,
+					["MinFillPercent"] = 50,
+					["MaxSystemsPerScanStep"] = 25
+				};
+				try {
+					var af = ReadBlock(main, "AutoFarm", baseDir, out _, out _);
+					if (af["Origin"] != null) block["Origin"] = af["Origin"].DeepClone();
+					if (af["ScanRange"] != null) block["ScanRange"] = af["ScanRange"].DeepClone();
+				} catch { }
+				if (block["Origin"] == null)
+					block["Origin"] = new JArray(new JObject { ["Galaxy"] = 1, ["System"] = 1, ["Position"] = 1, ["Type"] = "Planet" });
+				if (block["ScanRange"] == null)
+					block["ScanRange"] = new JArray(new JObject { ["Galaxy"] = 1, ["StartSystem"] = 1, ["EndSystem"] = 499 });
+
+				main["FastFarm"] = block;
+				try { System.IO.File.Copy(mainPath, mainPath + ".bak", true); } catch { }
+				await SettingsService.WriteSettings(mainPath, main.ToString(Formatting.Indented));
+				return Json(new { success = true, existed = false });
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
+		}
+#endif
 
 		[HttpPost]
 		public async Task<IActionResult> SaveBlock(string? instance, string block, string content, string? scope) {

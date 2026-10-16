@@ -402,6 +402,35 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `Origin` | Celestials discovery missions start from. |
 | `MaxSlots` | Slots used. |
 
+## FastFarm
+
+Resource farming mode with one goal: collect as much deuterium as possible. A background scan keeps a list of inactive players; every free fleet slot sends one probe fleet (`ProbesPerTarget` probes), reports are read when the probes arrive, and the best targets (ranked by weighted loot) are raided with small and/or large cargos. While `Active` is on, all other workers except the Defender stay off (`OnlyWorker`). The WebUI menu entry **AutoFarm** then shows the FastFarm overview instead of the AutoFarm report; the switch is on top of the AutoFarm page and on the Config page.
+
+| Field | Meaning |
+|---|---|
+| `Active` | Master switch of the mode. |
+| `OnlyWorker` | `true` (default) = every other worker except Defender and sleep mode stays off. `false` = they keep running and compete for slots. |
+| `KeepExpeditions` | Keeps the expeditions running although the other workers are off. |
+| `Origin` | Celestials the probes and cargo ships start from. The nearest one with enough ships is used per target. Empty = all planets. |
+| `ScanRange` | Galaxy and system ranges that are scanned, nearest to the origins first. Empty = 100 systems around every origin. |
+| `CargoType` | `SmallCargo` (default), `LargeCargo` or `Both` (small cargos first, large cargos for the rest). |
+| `ProbesPerTarget` | Probes per spying fleet (default 20). |
+| `SlotsToLeaveFree` | Slots that are never used, so the Defender can always send (default 1). |
+| `WeightMetal`, `WeightCrystal`, `WeightDeuterium` | Weights of the loot value that ranks the targets (default 1 : 1.5 : 3). |
+| `MinLoot` | Minimum lootable resources (metal + crystal + deuterium) for an attack. |
+| `MinDeuterium` | Minimum lootable deuterium for an attack. |
+| `TopTargets` | Highest number of attacks per round. |
+| `ReportMaxAgeMinutes` | Reports older than this are not attacked; the target is spied again. |
+| `RespyAfterAttackMinutes` | A raided target is left alone for this long. |
+| `DefendedRecheckHours` | Targets with ships or defence, or that turned active, are checked again after this time. |
+| `DeleteReports` | Deletes each report after reading it (keeps the inbox from filling up). |
+| `FleetSpeedPercent` | Speed of the cargo fleets (10-100). |
+| `CargoSurplusPercent` | Extra cargo space on top of the expected loot. |
+| `MinFillPercent` | A target is skipped when the available ships carry less than this share of its loot. |
+| `MaxSystemsPerScanStep` | Systems the background scan visits per step while the bot waits for fleets. |
+
+State and statistics are kept in `data/fastfarm_<Alias>.json` (written by the worker, shown on the overview page).
+
 ## WebUI.FormPages (settings.json)
 
 The WebUI page **Config** shows a form view per block (each block also has a JSON tab). Blocks with credentials are never shown as a form. The former Settings page (raw JSON editor) has been removed.

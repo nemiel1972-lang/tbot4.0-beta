@@ -4,6 +4,9 @@ namespace TBot.WebUI.Models {
 		public bool? Active { get; set; }
 		public string Label { get; set; } = "";
 		public string Mode { get; set; } = "placeholder";
+		public bool Overridden { get; set; }
+		public string OverrideText { get; set; } = "";
+		public string OverrideTag { get; set; } = "";
 	}
 
 	public class ConfigPageModel {

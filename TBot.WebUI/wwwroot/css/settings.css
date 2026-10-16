@@ -1,7 +1,7 @@
 .list-files {
-	list-style-type: none; 
-	padding: 0; 
-	margin: 0; 
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
 	margin-bottom: 20px;
 	max-height: calc(100vh - 160px);
 	overflow-y: auto;
@@ -19,6 +19,7 @@
 		width: 100%;
 		text-align: left;
 	}
+
 
 .buttons-box {
 	margin-bottom: 20px;

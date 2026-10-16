@@ -32,7 +32,11 @@
                                 <span class="nm">@(string.IsNullOrEmpty(b.Label) ? b.Name : b.Label)</span>
                                 @if (b.Mode == "secret") { <span class="lock" title="Credentials: edit the config file directly">🔒</span> }
                                 else if (b.Mode == "placeholder") { <span class="ph" title="Placeholder - enable in settings.json">soon</span> }
-                                @if (b.Active.HasValue) {
+                                @if (b.Overridden) {
+                                    if (!string.IsNullOrEmpty(b.OverrideTag)) { <span class="ovr-tag" title="@b.OverrideText">@b.OverrideTag</span> }
+                                    <span class="sw ovr" data-block="@b.Name" title="@b.OverrideText"></span>
+                                }
+                                else if (b.Active.HasValue) {
                                     var fixedSw = b.Name == "SleepMode" || b.Name == "GhostSleep" || b.Name == "Messenger" || b.Mode == "secret";
                                     <span class="sw @(b.Active.Value ? "on" : "") @(fixedSw ? "" : "click")" data-block="@b.Name" title="@(fixedSw ? "Use the switch on the page" : "Click to switch on/off")"></span>
                                 }
@@ -44,7 +48,11 @@
             </aside>
             <main class="cfg-card cfg-main" id="cfg-main" data-instance="@Model.Instance" data-block="@Model.Selected" data-mode="@Model.SelectedMode"
                   data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-aflosses="@Url.Action("AfLosses", "Config")" data-allynames="@Url.Action("AllyNames", "Config")" data-lfimg="@Url.Content("~/img/lf/")" data-save="@Url.Action("SaveBlock", "Config")" data-setactive="@Url.Action("SetActive", "Config")">
-                @if (Model.SelectedMode == "placeholder")
+                @if (Model.SelectedMode == "start")
+                {
+                    <div id="cfg-start" data-url="@Url.Action("StartData", "Config")" data-lf="@Url.Action("Index", "Config")" data-upd="@Url.Action("Check", "Update")" data-updstart="@Url.Action("Start", "Update")" data-upddismiss="@Url.Action("Dismiss", "Update")"><div class="cfg-loading">Loading…</div></div>
+                }
+                else if (Model.SelectedMode == "placeholder")
                 {
                     <div class="cfg-placeholder">
                         <h1>@Model.Selected</h1>
@@ -69,5 +77,9 @@
         </div>
         <script src="~/js/config-help-en.js" asp-append-version="true"></script>
         <script src="~/js/config-forms.js" asp-append-version="true"></script>
+        @if (Model.SelectedMode == "start")
+        {
+            <script src="~/js/config-start.js" asp-append-version="true"></script>
+        }
     }
 </div>

@@ -26,6 +26,12 @@ ls -1dt "$ZIEL"/backups/build-* 2>/dev/null | tail -n +11 | xargs -r rm -rf
 echo "== Building TBot (.NET) =="
 (cd TBot && dotnet publish -c Release -o "$ZIEL" -nologo -clp:"ErrorsOnly;Summary")
 
+# Config migration tool (old config -> current template); the updater runs it after every update (optional)
+(cd tools/MigrateConfig && dotnet publish -c Release -o "$ZIEL" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: MigrateConfig build failed."
+
+# Update helper for "Install update" in the WebUI (optional; a failure only means the button stays off)
+(cd tools/TBotUpdater && dotnet publish -c Release -o "$ZIEL" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: TBotUpdater build failed (no update button)."
+
 # Restore missing config files from the backup (existing ones stay unchanged)
 for f in instance_settings.json settings.json; do
   if [ ! -f "$ZIEL/$f" ] && [ -f "$SICHERUNG/$f" ]; then cp -p "$SICHERUNG/$f" "$ZIEL/$f"; echo "Restored: $f"; fi

@@ -251,6 +251,9 @@ namespace Tbot.Workers {
 						Feature.BrainLifeformAutoMine,
 						Feature.BrainLifeformAutoResearch,
 						Feature.AutoFarm,
+#if FASTFARM
+						Feature.FastFarm,
+#endif
 						Feature.Harvest,
 						Feature.Expeditions,
 						Feature.AutoDiscovery

@@ -4826,6 +4826,9 @@ namespace Tbot.Includes {
 				case Feature.BrainLifeformAutoResearch: logsender = LogSender.LifeformsAutoResearch; break;
 				case Feature.Expeditions: logsender = LogSender.Expeditions; break;
 				case Feature.AutoFarm: logsender = LogSender.AutoFarm; break;
+#if FASTFARM
+				case Feature.FastFarm: logsender = LogSender.FastFarm; break;
+#endif
 				case Feature.Colonize: logsender = LogSender.Colonize; break;
 				case Feature.AutoDiscovery: logsender = LogSender.AutoDiscovery; break;
 				case Feature.Harvest: logsender = LogSender.Harvest; break;

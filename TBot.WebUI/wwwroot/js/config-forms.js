@@ -2,14 +2,15 @@
     'use strict';
     var main = document.getElementById('cfg-main');
     var root = document.getElementById('cfg-root');
-    if (!main || !root) { wireSearch(); return; }
+    if (!main) { wireSearch(); return; }
     wireSearch();
     wireSwitches();
+    if (!root) return;
 
     var instance = main.dataset.instance, block = main.dataset.block;
     var SENS_RE = /host|alliance|galaxy|system|position|coord|name|url|id$/i;
     var moreOpen = false, lfOpen = false, escOpen = false, openSecs = {};
-    var mask = false;
+    var mask = window.tbotHideData ? window.tbotHideData.get() : false;
     var sensNodes = [];
     function setMasked(n, on) {
         if (n.tagName === 'INPUT') {
@@ -864,7 +865,7 @@
         ];
         var DEUT_DEFAULTS = { ReduceDeuterium: false, ReduceDeuteriumMinSpeedPercent: 30, DeuteriumGuard: true, DeuteriumGuardMin: 10000000, DeuteriumGuardOverride: false, UseSpeedFleet: false };
         Object.keys(DEUT_DEFAULTS).forEach(function (k) { if (!has(d, k)) d[k] = DEUT_DEFAULTS[k]; });
-        body.appendChild(sec('Deuterium and speed fleet', [
+        body.appendChild(el('details', { class: 'cfg-sec cfg-more' }, [el('summary', { text: 'Deuterium and speed fleet' })].concat([
             el('div', { class: 'cfg-note', text: 'Save deuterium: attack fleet and recyclers fly as slowly as sensible (never below the lowest speed). Low-deuterium guard: when a start celestial has less deuterium than the minimum, attacks on defended targets from there are paused and the speed fleet is switched off. The AutoFarm page shows the stock and a warning.' }),
             fld(d, 'UseSpeedFleet', P, 'Speed fleet (UseSpeedFleet)', 'Use Pathfinders as cargo ships; switched off automatically while the low-deuterium guard is active', 'toggle'),
             fld(d, 'ReduceDeuterium', P, 'Save deuterium', 'Attack fleet and recyclers fly as slowly as sensible (flight time limit kept, recycler arrives right behind the fleet)', 'toggle'),
@@ -872,7 +873,7 @@
             fld(d, 'DeuteriumGuard', P, 'Low-deuterium guard', 'Below the minimum on the start celestial: no speed fleet, no attacks on defended targets', 'toggle'),
             fld(d, 'DeuteriumGuardMin', P, 'Guard: minimum deuterium', null, 'num', { min: 0 }),
             fld(d, 'DeuteriumGuardOverride', P, 'Guard: bridge manually', 'On = ignore the guard and keep farming with low deuterium', 'toggle')
-        ].filter(Boolean)));
+        ].filter(Boolean))));
 
         var esc = [
             fld(d, 'TargetCombatTechBonus', P, 'Target combat tech bonus', 'Safety margin in simulations', 'num', { min: 0 }),
@@ -1352,6 +1353,52 @@
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
+    function renderFastFarm(body) {
+        var d = state, P = [];
+        body.appendChild(sec('FastFarm', [
+            el('div', { class: 'cfg-note', text: 'Resource farming mode with one goal: collect as much deuterium as possible. It scans the galaxy for inactive players, spies them with a fixed number of probes and raids the best ones with cargo ships. While it is on, all other workers except the Defender stay off.' }),
+            fld(d, 'Active', P, 'FastFarm active', 'Master switch', 'toggle'),
+            fld(d, 'OnlyWorker', P, 'Switch off all other workers', 'Defender and sleep mode always stay on', 'toggle'),
+            fld(d, 'KeepExpeditions', P, 'Keep expeditions running', 'Only used when the other workers are switched off', 'toggle')
+        ].filter(Boolean)));
+        if (Array.isArray(d.Origin)) body.appendChild(sec('Origins', [
+            el('div', { class: 'cfg-note', text: 'Celestials the probes and cargo ships start from. The nearest origin with enough ships is used for every target.' }),
+            listTable(d.Origin, COORD_COLS, newCoord, '+ Add origin', ['Origin'])
+        ]));
+        if (Array.isArray(d.ScanRange)) body.appendChild(sec('Scan area', [
+            el('div', { class: 'cfg-note', text: 'Systems that are scanned for inactive players, nearest to your origins first. Leave empty to scan 100 systems around every origin.' }),
+            listTable(d.ScanRange, [{ key: 'Galaxy', label: 'Galaxy', min: 1, sens: true }, { key: 'StartSystem', label: 'From system', min: 1, sens: true }, { key: 'EndSystem', label: 'To system', min: 1, sens: true }],
+                function () { return { Galaxy: 1, StartSystem: 1, EndSystem: 499 }; }, '+ Add range', ['ScanRange'])
+        ]));
+        body.appendChild(sec('Ships and slots', [
+            fld(d, 'CargoType', P, 'Cargo ships', 'Both = small cargos first, large cargos for the rest', 'select', { options: ['SmallCargo', 'LargeCargo', 'Both'] }),
+            fld(d, 'ProbesPerTarget', P, 'Probes per target', null, 'num', { min: 1 }),
+            fld(d, 'SlotsToLeaveFree', P, 'Slots to leave free', 'Kept free for the Defender', 'num', { min: 0 }),
+            fld(d, 'FleetSpeedPercent', P, 'Fleet speed', null, 'num', { min: 10, max: 100, step: 10, unit: '%' }),
+            fld(d, 'CargoSurplusPercent', P, 'Extra cargo space', 'Added on top of the expected loot', 'num', { min: 0, unit: '%' }),
+            fld(d, 'MinFillPercent', P, 'Minimum fill', 'Skip a target when the available ships carry less than this share of its loot', 'num', { min: 1, max: 100, unit: '%' })
+        ].filter(Boolean)));
+        body.appendChild(sec('Target choice', [
+            el('div', { class: 'cfg-note', text: 'Targets are ranked by loot value = metal x weight + crystal x weight + deuterium x weight. The best ones are attacked first.' }),
+            fld(d, 'WeightMetal', P, 'Weight metal', null, 'num', { min: 0, step: 'any' }),
+            fld(d, 'WeightCrystal', P, 'Weight crystal', null, 'num', { min: 0, step: 'any' }),
+            fld(d, 'WeightDeuterium', P, 'Weight deuterium', null, 'num', { min: 0, step: 'any' }),
+            fld(d, 'MinLoot', P, 'Minimum loot', 'Metal + crystal + deuterium that can be taken', 'num', { min: 0 }),
+            fld(d, 'MinDeuterium', P, 'Minimum deuterium', 'Deuterium that can be taken', 'num', { min: 0 }),
+            fld(d, 'TopTargets', P, 'Top targets per round', null, 'num', { min: 1 })
+        ].filter(Boolean)));
+        foldTo(body, 'Reports and timing', [
+            fld(d, 'DeleteReports', P, 'Delete reports after reading', 'Keeps the inbox empty so it does not fill up', 'toggle'),
+            fld(d, 'ReportMaxAgeMinutes', P, 'Max report age', 'Older reports are not attacked', 'num', { min: 1, unit: 'minutes' }),
+            fld(d, 'RespyAfterAttackMinutes', P, 'Wait before spying a raided target again', null, 'num', { min: 0, unit: 'minutes' }),
+            fld(d, 'DefendedRecheckHours', P, 'Wait before re-checking a defended target', null, 'num', { min: 1, unit: 'hours' }),
+            fld(d, 'MaxSystemsPerScanStep', P, 'Systems per scan step', null, 'num', { min: 1 })
+        ].filter(Boolean));
+        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'Origin', 'ScanRange', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'RespyAfterAttackMinutes', 'DefendedRecheckHours', 'MaxSystemsPerScanStep'];
+        var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
+        if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
+    }
+
     function renderDebrisSave(body) {
         var d = state;
         body.appendChild(sec('DebrisSave', [
@@ -1389,7 +1436,10 @@
             ['Offer / JumpGate', 'Buys the daily merchant offer; jumps the fleet through the jump gate.']]],
         AutoHarvest: ['Sends recyclers to debris fields that are worth the trip: your own, foreign ones and deep space.', []],
         AutoColonize: ['Colonises planets in the configured ranges and can abandon colonies that are too small or the wrong temperature.', []],
-        AutoDiscovery: ['Sends discovery missions from the origin celestials.', []]
+        AutoDiscovery: ['Sends discovery missions from the origin celestials.', []],
+        FastFarm: ['Resource farming mode: scans for inactive players, spies them with a fixed number of probes and raids the best ones with cargo ships, aiming at deuterium. All other workers except the Defender stay off while it runs.', [
+            ['Scan and spy', 'The background scan keeps a list of inactive players; every free slot sends one probe fleet.'],
+            ['Attack', 'Targets with a fresh report are ranked by weighted loot and raided with small and/or large cargos.']]],
     };
     function helpCard(name, extra) {
         var h = BLOCK_HELP[name] || ['This function has no description yet.', []];
@@ -1428,6 +1478,7 @@
         cb.checked = mask;
         cb.addEventListener('change', function () {
             mask = cb.checked;
+            if (window.tbotHideData) window.tbotHideData.set(mask);
             if (view !== 'form') render(); else applyMask();
         });
         return el('label', { class: 'cfg-masklbl' }, [cb, ' Hide data']);
@@ -1450,7 +1501,7 @@
         ]));
         var body = el('div', { class: 'cfg-body' }), ta;
         if (view === 'form') {
-            if (!COMBINED && state && typeof state.Active === 'boolean' && !state.Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else renderSleepPage(body); } else renderGeneric(body);
+            if (!COMBINED && state && typeof state.Active === 'boolean' && !state.Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'FastFarm') renderFastFarm(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else renderSleepPage(body); } else renderGeneric(body);
         } else if (view === 'json') {
             ta = el('textarea', { class: 'cfg-json', spellcheck: 'false' }); ta.value = shown(state); if (mask) { ta.readOnly = true; ta.title = 'Hide data is on - switch it off to edit'; } body.appendChild(ta);
         } else body.appendChild(simpleDiff());

@@ -253,20 +253,30 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         // Kacheln-Schalter: blendet Sleep-/Alarm- und Einstellungskachel aus bzw. ein (Zustand bleibt im Browser gespeichert)
         var kOff = false;
         try { kOff = (localStorage.getItem('tbotKachelnAus') === '1'); } catch (e) { kOff = false; }
+        var ovr = false; // Betriebsart ueberschreibt die Worker (Sondermodus aktiv): Kacheln aus, Schalter rot
         var btnK = document.createElement("BUTTON");
         btnK.style.cssText = 'height:20px;width:130px;display:block;margin-bottom:3px;';
+        var kNote = document.createElement("div");
+        kNote.style.cssText = 'display:none;width:130px;margin-bottom:3px;font:bold 10px/1.2 Arial,sans-serif;color:#ff6b70;text-align:center;';
+        kNote.textContent = 'AutoFarm override active';
         function kApply() {
-            btnK.textContent = 'Tiles (' + (kOff ? 'off' : 'on') + ')';
-            divL.style.display = kOff ? 'none' : 'block';
+            btnK.textContent = 'Tiles (' + ((kOff || ovr) ? 'off' : 'on') + ')';
+            btnK.style.background = ovr ? '#8a1f1f' : '';
+            btnK.style.color = ovr ? '#fff' : '';
+            btnK.style.cursor = ovr ? 'not-allowed' : '';
+            kNote.style.display = ovr ? 'block' : 'none';
+            divL.style.display = (kOff || ovr) ? 'none' : 'block';
             if (kOff) { tile.style.display = 'none'; sTile.style.display = 'none'; }
             else { tRender(); sRender(); }
         }
         btnK.onclick = function() {
+            if (ovr) { return; }
             kOff = !kOff;
             try { localStorage.setItem('tbotKachelnAus', kOff ? '1' : '0'); } catch (e) { }
             kApply();
         };
         div.appendChild(btnK);
+        div.appendChild(kNote);
 
         // --- Sleep-/Recall-Kachel (liest /bot/sleepstatus, von TBot alle 30 s geschrieben) ---
         var tile = document.createElement("div");
@@ -449,7 +459,9 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             wBtns[d.id] = { row: row, on: bOn, off: bOff, prio: pInp };
         });
         function sRender() {
-            if (kOff) { sTile.style.display = 'none'; return; }
+            var nowOvr = !!(st && st.modeOverride);
+            if (nowOvr !== ovr) { ovr = nowOvr; kApply(); return; }
+            if (kOff || ovr) { sTile.style.display = 'none'; return; }
             if (!st || !st.slots || (Date.now() - st.updatedMs) / 1000 > 180) { sTile.style.display = 'none'; return; }
             var s = st.slots;
             sHead.textContent = 'Slots ' + s.inUse + '/' + s.total + ' (free ' + s.free + ')';

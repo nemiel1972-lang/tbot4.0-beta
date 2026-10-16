@@ -7,6 +7,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+#if FASTFARM
+using Tbot.Common.Settings;
+#endif
 using Tbot.Includes;
 using Tbot.Services;
 using TBot.Common.Logging;
@@ -156,6 +159,29 @@ namespace Tbot.Workers {
 			return Task.CompletedTask;
 		}
 
+#if FASTFARM
+		private bool IsSuppressedByFastFarm() {
+			try {
+				Feature feature = GetFeature();
+				if (feature == Feature.FastFarm || feature == Feature.Defender || feature == Feature.SleepMode)
+					return false;
+				var settings = _tbotInstance.InstanceSettings;
+				if (!SettingsService.IsSettingSet(settings, "FastFarm"))
+					return false;
+				var fastFarm = settings.FastFarm;
+				if (!SettingsService.IsSettingSet(fastFarm, "Active") || !(bool) fastFarm.Active)
+					return false;
+				if (SettingsService.IsSettingSet(fastFarm, "OnlyWorker") && !(bool) fastFarm.OnlyWorker)
+					return false;
+				if (feature == Feature.Expeditions && SettingsService.IsSettingSet(fastFarm, "KeepExpeditions") && (bool) fastFarm.KeepExpeditions)
+					return false;
+				return true;
+			} catch (Exception) {
+				return false;
+			}
+		}
+#endif
+
 		private async Task ExecutionWrapper(CancellationToken ct) {
 
 			if (_tbotInstance.UserData.isSleeping == true) {
@@ -166,6 +192,12 @@ namespace Tbot.Workers {
 				DoLog(LogLevel.Information, $"{GetWorkerName()} not enabled by settings. Ending...");
 				await EndExecution();
 				return;
+#if FASTFARM
+			} else if (IsSuppressedByFastFarm()) {
+				DoLog(LogLevel.Information, $"{GetWorkerName()} is switched off while FastFarm is active. Ending...");
+				await EndExecution();
+				return;
+#endif
 			}
 
 			bool releaseNow = true;

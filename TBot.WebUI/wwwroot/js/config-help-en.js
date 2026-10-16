@@ -981,5 +981,76 @@ window.CFG_HELP.en = {
   "MaxSlots": {
    "t": "Fleet slots discovery may use at the same time."
   }
- }
+ },
+ "FastFarm": {
+  "Active": {
+   "t": "Switches the resource farming mode on. It scans for inactive players, spies them and raids the best ones. The Defender and the sleep mode keep working."
+  },
+  "OnlyWorker": {
+   "t": "Keeps every other worker (Brain, AutoFarm, expeditions, harvest, ...) off while FastFarm is active, so all fleet slots are free for farming. Off = the other workers run as configured and compete for slots."
+  },
+  "KeepExpeditions": {
+   "t": "Lets the expeditions keep running although the other workers are off. They occupy their own fleet slots."
+  },
+  "Origin": {
+   "t": "Celestials the probes and cargo ships start from. For every target the nearest origin that has enough ships is used. Empty = all your planets."
+  },
+  "ScanRange": {
+   "t": "Galaxy and system ranges that are scanned for inactive players, nearest to your origins first. Empty = 100 systems around every origin."
+  },
+  "CargoType": {
+   "t": "Ships used to carry the loot. Both = small cargos first, large cargos only for what the small ones cannot carry.",
+   "e": "SmallCargo is the cheapest in fuel for most targets."
+  },
+  "ProbesPerTarget": {
+   "t": "Espionage probes sent to every target. More probes give a full report (fleet and defence) even against high espionage levels, but some may be lost."
+  },
+  "SlotsToLeaveFree": {
+   "t": "Fleet slots that are never used by FastFarm, so the Defender can always send a fleet.",
+   "e": "1 = of 37 slots, 36 are used."
+  },
+  "FleetSpeedPercent": {
+   "t": "Speed of the cargo fleets. 100 is the fastest; lower values save deuterium but keep the slot busy longer."
+  },
+  "CargoSurplusPercent": {
+   "t": "Extra cargo space on top of the expected loot, in percent. Covers resources produced while the fleet is flying."
+  },
+  "MinFillPercent": {
+   "t": "A target is skipped when the ships you have left can carry less than this share of its loot, so a few cargos are not sent to a large target."
+  },
+  "WeightMetal": {
+   "t": "How much one metal counts in the loot value that ranks the targets."
+  },
+  "WeightCrystal": {
+   "t": "How much one crystal counts in the loot value. 1.5 matches the usual trade rate."
+  },
+  "WeightDeuterium": {
+   "t": "How much one deuterium counts in the loot value. A higher value puts deuterium-rich targets first.",
+   "e": "1 : 1.5 : 3 = metal : crystal : deuterium."
+  },
+  "MinLoot": {
+   "t": "Targets with less lootable resources than this (metal + crystal + deuterium, after the plunder ratio) are not attacked."
+  },
+  "MinDeuterium": {
+   "t": "Targets with less lootable deuterium than this are not attacked. 0 = no limit."
+  },
+  "TopTargets": {
+   "t": "Highest number of attacks sent in one round, best targets first."
+  },
+  "DeleteReports": {
+   "t": "Deletes each espionage report after it was read. The inbox has a limit; when it is full, new reports are lost."
+  },
+  "ReportMaxAgeMinutes": {
+   "t": "Reports older than this are not used for an attack, because the target may have changed. It is spied again instead."
+  },
+  "RespyAfterAttackMinutes": {
+   "t": "A target that was just raided is left alone for this long, because its storage has to refill first."
+  },
+  "DefendedRecheckHours": {
+   "t": "Targets with ships or defence, or that turned active, are spied again only after this time."
+  },
+  "MaxSystemsPerScanStep": {
+   "t": "How many systems the background scan visits in one step while the bot waits for fleets."
+  }
+ },
 };

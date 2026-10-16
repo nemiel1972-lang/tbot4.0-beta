@@ -13,8 +13,16 @@ namespace TBot.WebUI.Controllers {
 		private readonly AutoFarmDashboardReader _reader = new();
 
 		[HttpGet]
-		public async Task<IActionResult> Index(string instance) {
+		public async Task<IActionResult> Index(string instance, bool classic = false) {
 			var instances = await GetInstanceAliases();
+#if FASTFARM
+			var deut = FastFarmController.BuildModel(instances, instance);
+			ViewBag.FastFarmAvailable = deut.Available;
+			ViewBag.FastFarmCompiled = true;
+			ViewBag.FastFarmActive = deut.Active;
+			if (deut.Active && !classic)
+				return View("~/Views/FastFarm/Index.cshtml", deut);
+#endif
 			return View(BuildModel(instances, instance));
 		}
 

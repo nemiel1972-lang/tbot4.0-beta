@@ -51,6 +51,24 @@ cp config/REFERENCE.md "$AUSGABE/config/REFERENCE.md"
 # LF target table: the Lifeform AutoMine needs it next to the config (without it LF building is skipped)
 cp config/lifeform_targets.json "$AUSGABE/lifeform_targets.json"
 
+# Standalone helper that takes an OLD instance_settings.json over into the new template (own EXE, embedded template).
+# A failure here never stops the package build.
+echo "== MigrateConfig (win-x64) =="
+(cd tools/MigrateConfig && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true \
+  -p:TemplatePath="$OLDPWD/$AUSGABE/config/config.vorlage.json" -p:DebugType=none -p:DebugSymbols=false \
+  -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: MigrateConfig build failed (package is built without it)."
+rm -f "$AUSGABE"/*.pdb
+
+# Update helper: the "Install update" button on the WebUI start page starts it. It replaces the files after the bot has stopped
+# (config, data, logs and logins stay), runs MigrateConfig and restarts the bot; if the new version does not start it restores the old one.
+echo "== TBotUpdater (win-x64) =="
+(cd tools/TBotUpdater && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true \
+  -p:DebugType=none -p:DebugSymbols=false -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: TBotUpdater build failed (package is built without the update button)."
+rm -f "$AUSGABE"/*.pdb
+
+# Version for the update check on the start page: the release tag when built by the release workflow (TBOT_VERSION), otherwise "dev"
+printf '%s' "${TBOT_VERSION:-dev}" > "$AUSGABE/version.txt"
+
 cat > "$AUSGABE/start.bat" <<'BAT'
 @echo off
 rem Starts TBot in the folder of this file (config, data and log live here).
@@ -69,6 +87,9 @@ Folder contents
   TBot.exe, ogamed.exe     the bot and the connector (keep them in the same folder)
   start.bat                starts the bot in this folder
   lifeform_targets.json    target table for Lifeform AutoMine (keep it next to TBot.exe)
+  MigrateConfig.exe        takes an old config over into the new template (see "Updating from an older version")
+  TBotUpdater.exe          helper for "Install update" in the WebUI (do not start it by hand)
+  version.txt              the installed version (used by the update check)
   config\config.vorlage.json   anonymised template for the instance config
   config\REFERENCE.md          explains every field of the template (start with "New account quick start")
   (the two native DLLs next to TBot.exe belong to the bot, do not delete them)
@@ -104,9 +125,20 @@ Moving an existing bot to this PC
   Copy the data\ folder from the old machine to the folder of TBot.exe. Never run the same account on two machines
   at the same time. Without data\ the bot starts with an empty state.
 
+Updating from an older version or from the original TBot
+  Run MigrateConfig.exe (it sits next to the bot) in the folder of your OLD config - ideally BEFORE the first start of the new version.
+  It finds instance_settings.json (and the instances listed in settings.json), shows what it will change and asks
+  before it writes anything. It makes a backup in backups\config-<time>, keeps ALL your old values, adds the new
+  settings with default values and switches every new worker OFF. Options: --dry-run (only show), --yes (no question).
+  Afterwards: restart the bot and CHECK the config - especially Lifeform AutoMine (see lifeform_targets.json).
+
 Notes about this build
   - Lifeform AutoMine needs lifeform_targets.json. If it is missing, LF building is skipped (warning in the log).
-  - Update: replace TBot.exe, ogamed.exe and the DLLs with the new package; keep your config, data and lifeform_targets.json
+  - Update from the WebUI: open the Config page, "Start" (first entry), card "Version". If a new release exists, click
+    "Install update". The bot stops, the files are replaced (config, data, logs, logins and lifeform_targets.json stay), the config is
+    checked by MigrateConfig and the bot restarts. If the new version does not start, the old one is restored automatically.
+    The old files stay in backups\update-<time> (the last three are kept). Details: update\updater.log
+  - Manual update: replace TBot.exe, ogamed.exe and the DLLs with the new package; keep your config, data and lifeform_targets.json
     (if you changed the target table, do not overwrite it).
 TXT
 

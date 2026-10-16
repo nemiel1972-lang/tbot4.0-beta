@@ -1,0 +1,248 @@
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@model TBot.WebUI.Models.FastFarmDashboardModel
+
+@{
+    var jsonOptions = new JsonSerializerOptions {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = JavaScriptEncoder.Default
+    };
+    var initialSnapshot = JsonSerializer.Serialize(Model, jsonOptions);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/autofarm.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
+}
+
+<div class="autofarm-page tbot-dark" id="fastfarm-dashboard" data-instance="@Model.SelectedInstance">
+    <div class="autofarm-shell">
+        <header class="autofarm-header">
+            <div>
+                <h1>FastFarm</h1>
+                <p class="intro">Resource farming mode: scans for inactive players, spies them and raids the best ones, aiming at deuterium. This page replaces the AutoFarm report while the mode is on.</p>
+            </div>
+            <form method="get" class="instance-picker">
+                <label for="instance">Instance</label>
+                <div class="instance-controls">
+                    <select id="instance" name="instance">
+                        @foreach (var instance in Model.Instances)
+                        {
+                            if (string.Equals(instance, Model.SelectedInstance, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@instance" selected>@instance</option>
+                            }
+                            else
+                            {
+                                <option value="@instance">@instance</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="refresh-button">Open</button>
+                </div>
+            </form>
+        </header>
+
+        <div class="notice" id="mode-box">
+            <strong>FastFarm mode is <span id="mode-state"></span>.</strong>
+            <span id="mode-hint"></span>
+            <button type="button" class="plain-button" id="mode-switch"></button>
+            <a class="plain-button" href="@Url.Action("Index", "AutoFarm", new { instance = Model.SelectedInstance, classic = true })">Show the AutoFarm report</a>
+        </div>
+
+        <div class="dashboard-toolbar" role="status" aria-live="polite">
+            <span id="poll-status">Loading current data...</span>
+            <span id="last-updated"></span>
+            <label class="mask-toggle"><input type="checkbox" id="df-mask" /> Hide data</label>
+        </div>
+
+        <div id="dashboard-content"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const root = document.getElementById("fastfarm-dashboard");
+        const content = document.getElementById("dashboard-content");
+        const pollStatus = document.getElementById("poll-status");
+        const lastUpdated = document.getElementById("last-updated");
+        const maskBox = document.getElementById("df-mask");
+        const modeState = document.getElementById("mode-state");
+        const modeHint = document.getElementById("mode-hint");
+        const modeSwitch = document.getElementById("mode-switch");
+        const MASK = "*****";
+        maskBox.checked = window.tbotHideData.get();
+        const instance = root.dataset.instance;
+        const snapshotUrl = '@Url.Action("Snapshot", "FastFarm")';
+        const setActiveUrl = '@Url.Action("SetActive", "Config")';
+        let snapshot = @Html.Raw(initialSnapshot);
+        let busy = false;
+
+        const esc = v => String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+        const num = v => Number(v || 0).toLocaleString();
+        const mask = v => maskBox.checked ? MASK : String(v ?? "");
+        const dur = sec => { sec = Math.round(Number(sec || 0)); if (sec <= 0) return "-"; const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); };
+        const date = v => { if (!v) return "-"; const d = new Date(v); return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString(); };
+        const coord = t => `[${t.galaxy}:${t.system}:${t.position}]`;
+        const ago = v => {
+            if (!v) return "-";
+            const s = Math.max(0, Math.round((Date.now() - new Date(v).getTime()) / 1000));
+            if (s < 90) return s + " s ago";
+            if (s < 5400) return Math.round(s / 60) + " min ago";
+            return Math.round(s / 3600) + " h ago";
+        };
+        const empty = (cols, msg) => `<tr><td colspan="${cols}" class="empty-cell">${esc(msg)}</td></tr>`;
+
+        function renderMode() {
+            modeState.textContent = snapshot.active ? "ON" : "OFF";
+            modeHint.textContent = snapshot.active
+                ? (snapshot.onlyWorker ? " All other workers are off; the Defender and the sleep mode keep running." : " The other workers keep running and compete for fleet slots.")
+                : " Switching it on stops all other workers except the Defender and shows this page under AutoFarm.";
+            modeSwitch.textContent = snapshot.active ? "Switch FastFarm off" : "Switch FastFarm on";
+            modeSwitch.disabled = !snapshot.available;
+        }
+
+        function tickCountdown() {
+            const el = document.getElementById("df-countdown");
+            if (!el) return;
+            const raw = el.dataset.next;
+            const t = raw ? Date.parse(raw.endsWith("Z") ? raw : raw + "Z") : NaN;
+            if (!raw || Number.isNaN(t) || t < 86400000) { el.textContent = "-"; return; }
+            const sec = Math.round((t - Date.now()) / 1000);
+            if (sec <= 0) { el.textContent = "running / due now"; return; }
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), r = sec % 60;
+            el.textContent = (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(r).padStart(2, "0");
+        }
+        window.setInterval(tickCountdown, 1000);
+
+        function summary(s, c) {
+            const st = s || {};
+            const targets = Object.values(st.targets || {});
+            const ready = targets.filter(t => t.reportServer && !t.blockedUntilUtc).length;
+            const pending = targets.filter(t => t.pending).length;
+            return `<section class="panel panel-primary">
+                <div class="panel-heading"><h2>Status</h2><span class="panel-count">${esc(st.status || "No data yet - FastFarm writes its state with the first cycle.")}</span></div>
+                <div class="metric-grid">
+                    <div class="metric"><span>Known targets</span><strong>${num(targets.length)}</strong></div>
+                    <div class="metric"><span>Reports ready</span><strong>${num(ready)}</strong></div>
+                    <div class="metric"><span>Probes on the way</span><strong>${num(pending)}</strong></div>
+                    <div class="metric"><span>Attacks out</span><strong>${num(st.attacksOut)}</strong></div>
+                    <div class="metric"><span>Free slots</span><strong>${num(st.freeSlots)}</strong></div>
+                    <div class="metric"><span>Fastest target so far (round trip)</span><strong>${st.fastestFlightSec > 0 ? dur(st.fastestFlightSec) + " &middot; " + esc(mask("[" + st.fastestTarget + "]")) : "-"}</strong></div>
+                    <div class="metric"><span>Slowest target so far (round trip)</span><strong>${st.longestFlightSec > 0 ? dur(st.longestFlightSec) + " &middot; " + esc(mask("[" + st.longestTarget + "]")) : "-"}</strong></div>
+                    <div class="metric"><span>Next cycle starts in</span><strong id="df-countdown" data-next="${esc(st.nextRunUtc || '')}">-</strong></div>
+                </div>
+                <p class="reason-detail">Updated ${esc(date(st.updatedUtc))}</p>
+            </section>
+            <section class="panel">
+                <div class="panel-heading"><h2>Totals</h2><span class="panel-note">Loot is the estimate from the reports at the time of the attack, not confirmed income.</span></div>
+                <div class="metric-grid">
+                    <div class="metric"><span>Attacks sent</span><strong>${num(st.attacksSent)}</strong></div>
+                    <div class="metric"><span>Expected metal</span><strong>${num(st.expectedMetal)}</strong></div>
+                    <div class="metric"><span>Expected crystal</span><strong>${num(st.expectedCrystal)}</strong></div>
+                    <div class="metric"><span>Expected deuterium</span><strong>${num(st.expectedDeuterium)}</strong></div>
+                    <div class="metric"><span>Probes sent / reports read</span><strong>${num(st.probesSent)} / ${num(st.reportsRead)}</strong></div>
+                </div>
+            </section>`;
+        }
+
+        function topTargets(s, c) {
+            const cfg = c || {};
+            const all = Object.values((s && s.targets) || {}).filter(t => t.reportServer && !t.blockedUntilUtc);
+            const attackable = t => (t.metal + t.crystal + t.deuterium) >= (cfg.minLoot || 0) && t.deuterium >= (cfg.minDeuterium || 0);
+            const ok = all.filter(attackable);
+            const below = all.length - ok.length;
+            const rows = ok.sort((a, b) => b.weighted - a.weighted).slice(0, 25)
+                .map(t => `<tr><td>${esc(mask(coord(t)))}</td><td>${esc(mask(t.player))}</td><td>${num(t.metal)}</td><td>${num(t.crystal)}</td><td><strong>${num(t.deuterium)}</strong></td><td>${num(t.weighted)}</td></tr>`).join("");
+            const note = below > 0 ? `${num(below)} more with a report are below the minimum loot (${num(cfg.minLoot)}) and are not attacked` : "Lootable amounts, ranked by weighted value";
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Best targets with a fresh report</h2><span class="panel-note">${note}</span></div>
+                <div class="table-wrap"><table><thead><tr><th>Target</th><th>Player</th><th>Metal</th><th>Crystal</th><th>Deuterium</th><th>Value</th></tr></thead><tbody>${rows || empty(6, "No target above the minimum loot yet.")}</tbody></table></div>
+            </section>`;
+        }
+
+        function blocked(s) {
+            const groups = {};
+            Object.values((s && s.targets) || {}).forEach(t => {
+                if (t.blockedUntilUtc && new Date(t.blockedUntilUtc).getTime() > Date.now()) {
+                    const key = t.blockReason || "Blocked";
+                    groups[key] = (groups[key] || 0) + 1;
+                }
+            });
+            const rows = Object.entries(groups).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td>${esc(k)}</td><td>${num(n)}</td></tr>`).join("");
+            const hints = { Defended: "Has ships or defence.", NoInfo: "The report was incomplete.", Active: "Turned active again.", NoReport: "No report arrived (probes lost)." };
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Targets that are skipped for now</h2></div>
+                <div class="table-wrap"><table><thead><tr><th>Reason</th><th>Targets</th></tr></thead><tbody>${rows ? Object.entries(groups).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td>${esc(k)} <span class="muted">${esc(hints[k] || "")}</span></td><td>${num(n)}</td></tr>`).join("") : empty(2, "None.")}</tbody></table></div>
+            </section>`;
+        }
+
+        function recent(s) {
+            const rows = ((s && s.recent) || []).slice().reverse().slice(0, 25)
+                .map(a => `<tr><td>${esc(date(a.timeUtc))}</td><td>${esc(mask("[" + a.target + "]"))}</td><td>${esc(a.ships || "")}</td><td>${num(a.metal)}</td><td>${num(a.crystal)}</td><td><strong>${num(a.deuterium)}</strong></td></tr>`).join("");
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Latest attacks</h2></div>
+                <div class="table-wrap"><table><thead><tr><th>Sent</th><th>Target</th><th>Ships</th><th>Metal</th><th>Crystal</th><th>Deuterium</th></tr></thead><tbody>${rows || empty(6, "No attack sent yet.")}</tbody></table></div>
+            </section>`;
+        }
+
+        function settingsPanel(c) {
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Settings in use</h2><span class="panel-note">Change them on the Config page, block FastFarm.</span></div>
+                <dl class="facts-grid">
+                    <div><dt>Cargo ships</dt><dd>${esc(c.cargoType)}</dd></div>
+                    <div><dt>Probes per target</dt><dd>${num(c.probesPerTarget)}</dd></div>
+                    <div><dt>Slots left free</dt><dd>${num(c.slotsToLeaveFree)}</dd></div>
+                    <div><dt>Top targets per round</dt><dd>${num(c.topTargets)}</dd></div>
+                    <div><dt>Weight M : C : D</dt><dd>${c.weightMetal} : ${c.weightCrystal} : ${c.weightDeuterium}</dd></div>
+                    <div><dt>Minimum loot</dt><dd>${num(c.minLoot)}</dd></div>
+                    <div><dt>Minimum deuterium</dt><dd>${num(c.minDeuterium)}</dd></div>
+                    <div><dt>Max report age</dt><dd>${num(c.reportMaxAgeMinutes)} min</dd></div>
+                </dl>
+            </section>`;
+        }
+
+        function render() {
+            renderMode();
+            content.innerHTML = summary(snapshot.state, snapshot.config) + topTargets(snapshot.state, snapshot.config) + recent(snapshot.state) + blocked(snapshot.state) + settingsPanel(snapshot.config);
+            lastUpdated.textContent = "Page updated " + new Date().toLocaleTimeString();
+            tickCountdown();
+        }
+
+        async function refresh() {
+            if (busy) return;
+            busy = true;
+            try {
+                const response = await fetch(`${snapshotUrl}?instance=${encodeURIComponent(instance)}`, { cache: "no-store" });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                snapshot = await response.json();
+                pollStatus.textContent = "Live";
+                render();
+            } catch (e) {
+                pollStatus.textContent = "Could not load data: " + e.message;
+            } finally {
+                busy = false;
+            }
+        }
+
+        modeSwitch.addEventListener("click", async () => {
+            const turnOn = !snapshot.active;
+            if (!window.confirm((turnOn ? "Switch FastFarm ON? All other workers except the Defender stop." : "Switch FastFarm OFF? The other workers start again.") + "\nIt is saved right away and takes effect when the bot re-reads the config.")) return;
+            modeSwitch.disabled = true;
+            try {
+                const body = new URLSearchParams({ instance, block: "FastFarm", active: turnOn ? "true" : "false" });
+                const r = await (await fetch(setActiveUrl, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })).json();
+                if (!r.success) { alert("Could not switch: " + r.error); modeSwitch.disabled = false; return; }
+                window.location.href = '@Url.Action("Index", "AutoFarm")' + "?instance=" + encodeURIComponent(instance);
+            } catch (e) {
+                alert("Could not switch: " + e);
+                modeSwitch.disabled = false;
+            }
+        });
+
+        maskBox.addEventListener("change", () => { window.tbotHideData.set(maskBox.checked); render(); });
+        render();
+        pollStatus.textContent = "Live";
+        setInterval(refresh, 5000);
+    })();
+</script>

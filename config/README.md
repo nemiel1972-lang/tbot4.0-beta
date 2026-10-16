@@ -9,6 +9,19 @@ New under `Brain.Transports` (both optional, off by default):
 - `UseTransportChain` - Brain workers use the transport chain (CargoFallback, MixFleet, KeepOnOrigin).
 - `CompactSlotPlan` - when too few slots are free, the plan is recalculated with fewer shipments.
 
+## Taking an old config over (MigrateConfig)
+
+`MigrateConfig.exe` (Linux: `MigrateConfig`) sits in the main folder of the packages. Run it in the folder of the old
+`instance_settings.json` before the first start of a new version. It reads the old file(s), keeps all values, adds the
+settings that are new in the template with their defaults, switches new workers off and reports what is no longer used
+(e.g. `DeutPlanets`, the old `MaxT2Building`/`MaxBuilding6-12`). Before writing it checks that every old value is still in
+the result, makes a backup in `backups/config-<time>/` and asks for confirmation (`--dry-run` only shows, `--yes` skips the
+question). It does nothing for configs that already use `Load`. After it ran: restart the bot and check the config.
+Safety net: the template starts with `"ConfigVersion": 4`. If the bot finds a config WITHOUT it that still has the old
+lifeform fields (`MaxT2Building`, `MaxBuilding6-12`), it logs "OLD CONFIG DETECTED" and starts only the Defender until the
+config is migrated (or `"ConfigVersion": 4` is added by hand). Configs without those old fields are never blocked.
+It is built from `tools/MigrateConfig/` (own project, template and `lifeform_targets.json` are embedded).
+
 ## DiscordWebhook (global)
 
 `DiscordWebhook` mirrors all Telegram messages as Discord embeds (colour depends on the event).

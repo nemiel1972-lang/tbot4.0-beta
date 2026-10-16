@@ -1,5 +1,4 @@
 
-
 .ab-toolbar-right {
     display: flex;
     align-items: center;
@@ -50,7 +49,7 @@
     display: inline-block;
     margin-right: 6px;
     padding: 1px 6px;
-    border: 1px solid #aebfce;
+    border: 1px solid #c8c8ca;
     border-radius: 2px;
     color: #345;
     background: #fff;

@@ -1,4 +1,5 @@
 {
+    "ConfigVersion": 4,
     "Credentials": {
         "Universe": "UNIVERSE",
         "Email": "mail@example.com",
@@ -679,6 +680,43 @@
         "SimulationRuns": 1000,
         "CheckIntervalMin": 1,
         "CheckIntervalMax": 3
+    },
+    "FastFarm": {
+        "Active": false,
+        "OnlyWorker": true,
+        "KeepExpeditions": false,
+        "Origin": [
+            {
+                "Galaxy": 1,
+                "System": 1,
+                "Position": 1,
+                "Type": "Planet"
+            }
+        ],
+        "ScanRange": [
+            {
+                "Galaxy": 1,
+                "StartSystem": 1,
+                "EndSystem": 499
+            }
+        ],
+        "CargoType": "SmallCargo",
+        "ProbesPerTarget": 20,
+        "SlotsToLeaveFree": 1,
+        "WeightMetal": 1,
+        "WeightCrystal": 1.5,
+        "WeightDeuterium": 3,
+        "MinLoot": 100000,
+        "MinDeuterium": 0,
+        "TopTargets": 36,
+        "ReportMaxAgeMinutes": 30,
+        "RespyAfterAttackMinutes": 60,
+        "DefendedRecheckHours": 6,
+        "DeleteReports": true,
+        "FleetSpeedPercent": 100,
+        "CargoSurplusPercent": 0,
+        "MinFillPercent": 50,
+        "MaxSystemsPerScanStep": 25
     },
     "AutoHarvest": {
         "Active": false,

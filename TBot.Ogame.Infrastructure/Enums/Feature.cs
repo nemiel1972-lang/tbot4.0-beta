@@ -23,6 +23,9 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		AutoDiscovery = 14,
 		BrainAutobuildDefence = 15,
 		BrainAutoFleetJumpGate = 16,
+#if FASTFARM
+		FastFarm = 18,
+#endif
 
 		BrainCelestialAutoMine = 101,
 		BrainCelestialLifeformAutoMine = 102,

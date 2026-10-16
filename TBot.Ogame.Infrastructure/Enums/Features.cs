@@ -18,6 +18,9 @@ namespace TBot.Ogame.Infrastructure.Enums {
 			Feature.BrainAutoResearch,
 			Feature.BrainAutoFleetJumpGate,
 			Feature.AutoFarm,
+#if FASTFARM
+			Feature.FastFarm,
+#endif
 			Feature.Expeditions,
 			Feature.AutoDiscovery,
 			Feature.Colonize,

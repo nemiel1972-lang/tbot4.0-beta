@@ -57,7 +57,7 @@
                     <option value="Delivery in transit">Delivery in transit</option>
                     <option value="Stock covered">Stock covered</option>
                 </select>
-                <label><input type="checkbox" id="ab-mask" checked /> Hide data</label>
+                <label><input type="checkbox" id="ab-mask" /> Hide data</label>
             </div>
         </div>
 
@@ -89,6 +89,7 @@
         let renderedKey = "";
         let requestInProgress = false;
 
+        maskBox.checked = window.tbotHideData.get();
 
         function esc(value) {
             return String(value ?? "")
@@ -316,6 +317,7 @@
             renderedKey = key;
         }
 
+        maskBox.addEventListener("change", () => window.tbotHideData.set(maskBox.checked));
         maskBox.addEventListener("change", () => {
             render(snapshot, true);
         });
