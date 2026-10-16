@@ -17,6 +17,16 @@ Beta software: changes are made on a live account and not every combination is t
 - **Discord webhook** mirror for all notifications.
 - **Packages:** `tools/build-windows.sh` and `tools/build-linux.sh` pack ready-to-use archives without any config, secrets or data.
 
+## Screenshots
+Config page of the web UI, shown with the anonymised template as sample data.
+
+<p align="center"><img src="assets/screenshots/config-general.png" alt="General" width="850"></p>
+<p align="center"><img src="assets/screenshots/config-messenger.png" alt="Messenger" width="850"></p>
+<p align="center"><img src="assets/screenshots/config-sleep.png" alt="Sleep / GhostSleep" width="850"></p>
+<p align="center"><img src="assets/screenshots/config-defender.png" alt="Defender" width="850"></p>
+<p align="center"><img src="assets/screenshots/config-brain.png" alt="Brain" width="850"></p>
+<p align="center"><img src="assets/screenshots/config-autofarm.png" alt="AutoFarm" width="850"></p>
+
 ## Documentation
 | File | Content |
 |---|---|
