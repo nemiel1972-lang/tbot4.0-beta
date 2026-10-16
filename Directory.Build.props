@@ -1,2 +1,6 @@
 <Project>
+  <!-- FastFarm (one-worker resource farming mode) is compiled in by default. -->
+  <PropertyGroup Condition="'$(NoFastFarm)' != 'true'">
+    <DefineConstants>$(DefineConstants);FASTFARM</DefineConstants>
+  </PropertyGroup>
 </Project>
