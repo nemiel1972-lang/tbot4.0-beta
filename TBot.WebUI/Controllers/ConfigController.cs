@@ -97,6 +97,27 @@ namespace TBot.WebUI.Controllers {
 
 		private static string BaseDir => AppDomain.CurrentDomain.BaseDirectory;
 
+		// Newtonsoft liest das Literal "undefined" (steht in manchen Config-Dateien, z. B. "ReturnAt": undefined) als eigenen Tokentyp und
+		// schreibt es unveraendert wieder aus - das ist kein gueltiges JSON und bricht JSON.parse im Browser. Solche Eintraege werden entfernt
+		// (das Formular zeigt dann den Standardwert; beim Speichern ist die Datei wieder gueltig).
+		private static void StripUndefined(JToken token) {
+			if (token is JObject obj) {
+				foreach (var prop in obj.Properties().ToList()) {
+					if (prop.Value.Type == JTokenType.Undefined)
+						prop.Remove();
+					else
+						StripUndefined(prop.Value);
+				}
+			} else if (token is JArray arr) {
+				foreach (var item in arr.ToList()) {
+					if (item.Type == JTokenType.Undefined)
+						item.Remove();
+					else
+						StripUndefined(item);
+				}
+			}
+		}
+
 		private static JObject ParseObject(string json) {
 			using var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None };
 			return JObject.Load(reader);
@@ -297,6 +318,7 @@ namespace TBot.WebUI.Controllers {
 				var data = ReadBlock(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!, out var targetFile, out var secretRefs);
 				MergeSecrets(SecretFileOf(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!), data);
 				HideFields(block, data);
+				StripUndefined(data);
 				return Json(new {
 					success = true,
 					data = data.ToString(Formatting.None),
