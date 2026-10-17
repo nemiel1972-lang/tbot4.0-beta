@@ -27,6 +27,8 @@ jobs:
 
       - name: Pakete bauen
         env:
+          # ImageSharp 4.x prueft den Lizenzschluessel beim Build (Repo-Secret SIXLABORS_LICENSE_KEY)
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
           # Versionsname fuer die Update-Pruefung im WebUI (version.txt im Paket)
           TBOT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
         run: |
