@@ -333,8 +333,14 @@ namespace Tbot.Workers {
 			}
 
 			Resources PayloadFuer(FleetHypotesis f) {
-				if (isSleepTimeFleetSave)
-					return payload;
+				if (isSleepTimeFleetSave) {
+					Resources ps = new();
+					ps.Metal = payload.Metal;
+					ps.Crystal = payload.Crystal;
+					ps.Food = payload.Food;
+					ps.Deuterium = Math.Max(0, payload.Deuterium - (long) f.Fuel);
+					return ps;
+				}
 				Resources p = new();
 				p.Metal = celestial.Resources.Metal;
 				p.Crystal = celestial.Resources.Crystal;
