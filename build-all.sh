@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # Builds ogamed (Go) and TBot (.NET) from this repo, restarts the service and then builds the Windows 11 package.
 # Run on the server:  cd /home/tbot/TBot4.0 && ./build-all.sh
+# Test build without deploying:  TEST=1 ./build-all.sh   (temp folder, no restart, live folder untouched)
 # Skip the Windows package:  NO_WIN=1 ./build-all.sh   (extra args for the Windows build: WIN_ARGS)
 # Skip the Linux package:    NO_LINUX=1 ./build-all.sh   (extra args: LINUX_ARGS="--arm64")
 set -euo pipefail
 cd "$(dirname "$0")"
-ZIEL=/home/tbot/tbot
+ZIEL="${ZIEL:-/home/tbot/tbot}"
+
+# Test build: TEST=1 ./build-all.sh builds into a temp folder, never touches the live folder and never restarts the service
+if [ "${TEST:-0}" = "1" ]; then
+  ZIEL="$(mktemp -d /tmp/tbot-test.XXXXXX)"
+  trap 'rm -rf "$ZIEL"' EXIT
+  echo "TEST mode: building into $ZIEL (live folder and service stay untouched)"
+fi
 
 echo "== Building ogamed (Go) =="
 (cd ogamed && go build -o "$ZIEL/ogamed.neu" ./cmd/ogamed-tbot)
@@ -44,8 +52,12 @@ done
 mv -f "$ZIEL/ogamed.neu" "$ZIEL/ogamed"
 chmod +x "$ZIEL/ogamed"
 
-echo "== Restarting service =="
-sudo systemctl restart tbot
+if [ "${TEST:-0}" = "1" ]; then
+  echo "== TEST mode: service not restarted =="
+else
+  echo "== Restarting service =="
+  sudo systemctl restart tbot
+fi
 echo "Server build done."
 
 # Windows 11 package (after the restart, so a failure here never affects the running server)
