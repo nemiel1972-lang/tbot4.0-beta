@@ -102,12 +102,13 @@ namespace Tbot.Workers {
 			if (_timer != null)
 				_timer.ChangeDueTime(TimeSpan.FromMilliseconds(dueTimeMs));
 		}
-		public async void RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
+		public async void RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) { try {
 			DoLog(LogLevel.Information, $"Restarting Worker \"{GetWorkerName()}\"...");
 			foreach (var worker in _celestialWorkers.Values) {
 				await worker.StopWorker();
 			}
 			await StartWorker(ct, period, dueTime);
+		} catch (Exception asyncVoidEx) { DoLog(LogLevel.Error, $"Unhandled error in RestartWorker: {asyncVoidEx}"); }
 		}
 		public bool IsWorkerRunning() {
 			return (_timer != null) && (_timer.IsRunning);

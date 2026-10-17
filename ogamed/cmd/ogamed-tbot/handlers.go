@@ -72,12 +72,16 @@ func GetFromGameHandler(c echo.Context) error {
 	}
 	locked, state := bot.GetState()
 	var pageHTML []byte
+	var pageErr error
 	if locked && state == "manual mode" {
 		tx := botMap["tx"]
 		txTimer.Reset(30 * time.Second)
-		pageHTML, _ = tx.GetPageContent(vals)
+		pageHTML, pageErr = tx.GetPageContent(vals)
 	} else {
-		pageHTML, _ = bot.GetPageContent(vals)
+		pageHTML, pageErr = bot.GetPageContent(vals)
+	}
+	if pageErr != nil {
+		return c.JSON(http.StatusBadGateway, wrapper.ErrorResp(502, pageErr.Error()))
 	}
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
@@ -99,12 +103,16 @@ func PostToGameHandler(c echo.Context) error {
 	payload, _ := c.FormParams()
 	locked, state := bot.GetState()
 	var pageHTML []byte
+	var pageErr error
 	if state == "manual mode" && locked {
 		txTimer.Reset(30 * time.Second)
 		tx := botMap["tx"]
-		pageHTML, _ = tx.PostPageContent(vals, payload)
+		pageHTML, pageErr = tx.PostPageContent(vals, payload)
 	} else {
-		pageHTML, _ = bot.PostPageContent(vals, payload)
+		pageHTML, pageErr = bot.PostPageContent(vals, payload)
+	}
+	if pageErr != nil {
+		return c.JSON(http.StatusBadGateway, wrapper.ErrorResp(502, pageErr.Error()))
 	}
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)

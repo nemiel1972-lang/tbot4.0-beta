@@ -230,7 +230,7 @@ namespace Tbot.Workers.Brain {
 					}
 					bool includeCelestial = true;
 					if (cel.Coordinate.Type == Celestials.Planet && cel.Fields.Built == 0 && (bool) _tbotInstance.InstanceSettings.AutoColonize.Abandon.Active) {
-						if (_calculationService.ShouldAbandon(cel as Planet, cel.Fields.Total, abaCelestial.Temperature.Max, fieldsSettings, temperaturesSettings)) {
+						if (abaCelestial != null && _calculationService.ShouldAbandon(cel as Planet, cel.Fields.Total, abaCelestial.Temperature.Max, fieldsSettings, temperaturesSettings)) {
 							DoLog(LogLevel.Debug, $"Skipping {cel.ToString()}: planet should be abandoned.");
 							includeCelestial = false;
 						} else {

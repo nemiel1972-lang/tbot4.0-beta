@@ -310,7 +310,7 @@ namespace Tbot.Workers.Brain {
 					}
 					int homePlanetId = _calculationService.GetHomePlanetId(_tbotInstance.UserData.celestials);
 					if (celestial.ID != homePlanetId && _tbotInstance.UserData.celestials.Count > 1 && celestial.Coordinate.Type == Celestials.Planet && celestial.Fields.Built == 0 && (bool) _tbotInstance.InstanceSettings.AutoColonize.Abandon.Active) {
-						if (_calculationService.ShouldAbandon(celestial as Planet, celestial.Fields.Total, abaCelestial.Temperature.Max, fieldsSettings, temperaturesSettings)) {
+						if (abaCelestial != null && _calculationService.ShouldAbandon(celestial as Planet, celestial.Fields.Total, abaCelestial.Temperature.Max, fieldsSettings, temperaturesSettings)) {
 							DoLog(LogLevel.Debug, $"Skipping {celestial.ToString()}: planet should be abandoned.");
 							return;
 						}
@@ -557,7 +557,7 @@ namespace Tbot.Workers.Brain {
 									incomingTransport = ledgerPlan.MissingIsZero;
 								if (!incomingTransport) {
 									Celestial origin = new() { ID = 0 };
-									List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
+									List<Celestial> allCelestials = _tbotInstance.UserData.celestials.ToList();
 									if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 										for (int i = 0; i < allCelestials.Count(); i++) {
 											allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);

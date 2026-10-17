@@ -256,28 +256,104 @@ function renderLogEntry(timestamp, level, message, sender) {
 	}
 }
 
+let _hadConnection = false;
+let _catchingUp = false;
+let _starting = false;
+
 function defineConnection() {
 	_connection = new signalR.HubConnectionBuilder()
 		.withUrl(_logsUrl)
-		.configureLogging(signalR.LogLevel.Information)
-		.withAutomaticReconnect()
+		.configureLogging(signalR.LogLevel.Warning)
+		.withAutomaticReconnect({
+			nextRetryDelayInMilliseconds: (ctx) => [0, 2000, 5000, 10000][ctx.previousRetryCount] ?? 15000
+		})
 		.build();
+
+	_connection.serverTimeoutInMilliseconds = 10 * 60 * 1000;
+	_connection.keepAliveIntervalInMilliseconds = 15 * 1000;
 
 	_connection.onclose(async () => {
 		await start();
+	});
+
+	_connection.onreconnected(() => {
+		catchUp();
 	});
 
 	_connection.on("SendLogAsObject", (data) => {
 		renderLogEntry(data.timestamp, data.level, data.message, data.LogSender);
 	});
 
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState !== "visible" || !_connection)
+			return;
+		if (_connection.state === signalR.HubConnectionState.Disconnected)
+			start();
+		else if (_connection.state === signalR.HubConnectionState.Connected)
+			catchUp();
+	});
 }
+
 async function start() {
+	if (_starting || _connection.state !== signalR.HubConnectionState.Disconnected)
+		return;
+	_starting = true;
 	try {
 		await _connection.start();
 		console.log("SignalR Connected.");
+		_starting = false;
+		if (_hadConnection)
+			catchUp();
+		_hadConnection = true;
 	} catch (err) {
+		_starting = false;
 		console.log(err);
 		setTimeout(start, 5000);
 	}
 };
+
+function logKey(date, sender, message) {
+	return Math.floor(date.getTime() / 1000) + "|" + sender + "|" + message;
+}
+
+async function catchUp() {
+	if (_catchingUp || !logData.length)
+		return;
+	_catchingUp = true;
+	try {
+		let newest = logData[0].date.getTime();
+		let known = new Set(logData.slice(0, 500).map(e => logKey(e.date, e.sender, e.message)));
+		let missing = [];
+		let url = _getLogsUrl;
+		for (let page = 0; page < 20; page++) {
+			let data = await $.get(url);
+			if (!data.content || !data.content.length)
+				break;
+			let reachedKnown = false;
+			for (const x of data.content) {
+				let d = new Date(x.datetime);
+				if (d.getTime() < newest - 5000) {
+					reachedKnown = true;
+					continue;
+				}
+				if (!known.has(logKey(d, x.sender, x.message))) {
+					known.add(logKey(d, x.sender, x.message));
+					missing.push(x);
+				}
+			}
+			if (reachedKnown || !data.hasMoreData)
+				break;
+			let oldest = data.content[data.content.length - 1];
+			url = _getLogsUrl + "&lastTime=" + encodeURIComponent(oldest.datetime);
+		}
+		missing.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+		for (const x of missing)
+			renderLogEntry(x.datetime, x.type, x.message, x.sender);
+		if (missing.length)
+			console.log("Log: " + missing.length + " verpasste Eintraege nachgeladen.");
+	} catch (err) {
+		console.log(err);
+	} finally {
+		_catchingUp = false;
+	}
+}

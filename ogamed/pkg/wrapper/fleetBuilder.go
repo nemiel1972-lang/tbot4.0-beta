@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
+	"log"
 	"time"
 )
 
@@ -205,18 +206,28 @@ func (f *FleetBuilder) sendNow(tx Prioritizable) error {
 	}
 
 	if f.allShips {
-		f.ships, _ = tx.GetShips(f.origin.GetID())
+		allShips, err := tx.GetShips(f.origin.GetID())
+		if err != nil {
+			f.err = err
+			return f.err
+		}
+		f.ships = allShips
 	}
 
 	var fuel int64
 	var planetResources ogame.Resources
 	if f.minimumDeuterium > 0 {
-		planetResources, _ = tx.GetResources(f.origin.GetID())
+		res, err := tx.GetResources(f.origin.GetID())
+		if err != nil {
+			f.err = err
+			return f.err
+		}
+		planetResources = res
 		_, fuel = tx.FlightTime(f.origin.GetCoordinate(), f.destination, f.speed, f.ships, f.mission, f.holdingTime)
 	}
 
 	if f.minimumDeuterium > 0 && f.resources.Deuterium > 0 {
-		planetResources.Deuterium = planetResources.Deuterium - (fuel + 10) - f.minimumDeuterium
+		planetResources.Deuterium = max(0, planetResources.Deuterium-(fuel+10)-f.minimumDeuterium)
 		f.resources.Deuterium = min(f.resources.Deuterium, planetResources.Deuterium)
 	}
 
@@ -224,11 +235,16 @@ func (f *FleetBuilder) sendNow(tx Prioritizable) error {
 	if f.resources.Metal == -1 || f.resources.Crystal == -1 || f.resources.Deuterium == -1 {
 		cargoCapacity := f.cargo()
 		if f.minimumDeuterium <= 0 {
-			planetResources, _ = tx.GetResources(f.origin.GetID())
+			res, err := tx.GetResources(f.origin.GetID())
+			if err != nil {
+				f.err = err
+				return f.err
+			}
+			planetResources = res
 		}
 		if f.resources.Deuterium == -1 {
 			if f.minimumDeuterium > 0 {
-				planetResources.Deuterium = planetResources.Deuterium - (fuel + 10) - f.minimumDeuterium
+				planetResources.Deuterium = max(0, planetResources.Deuterium-(fuel+10)-f.minimumDeuterium)
 			}
 			payload.Deuterium = min(cargoCapacity, planetResources.Deuterium)
 			cargoCapacity -= payload.Deuterium
@@ -263,7 +279,9 @@ func (f *FleetBuilder) SendNow() (ogame.Fleet, error) {
 		if f.recallIn > 0 {
 			go func() {
 				time.Sleep(time.Duration(f.recallIn) * time.Second)
-				_ = f.b.CancelFleet(f.fleet.ID)
+				if err := f.b.CancelFleet(f.fleet.ID); err != nil {
+					log.Printf("scheduled recall of fleet %d failed: %v", f.fleet.ID, err)
+				}
 			}()
 		}
 

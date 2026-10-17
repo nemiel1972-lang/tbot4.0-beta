@@ -23,7 +23,10 @@ namespace TBot.WebUI {
 				.AddRazorRuntimeCompilation()
 				.AddApplicationPart(assembly)
 				.AddControllersAsServices();
-			_builder.Services.AddSignalR();
+			_builder.Services.AddSignalR(o => {
+				o.ClientTimeoutInterval = System.TimeSpan.FromMinutes(10);
+				o.KeepAliveInterval = System.TimeSpan.FromSeconds(15);
+			});
 
 			_builder.Services.AddResponseCompression(options =>
 			{

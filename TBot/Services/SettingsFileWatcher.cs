@@ -47,10 +47,13 @@ namespace Tbot.Services {
 		private async void onChanged(object state) {
 
 			await _changedSem.WaitAsync();
-			_watchFunc();
-			_changedSem.Release();
-
-			initWatch();
+			try {
+				_watchFunc();
+			} catch (Exception) {
+			} finally {
+				_changedSem.Release();
+				try { initWatch(); } catch (Exception) { }
+			}
 		}
 	}
 }

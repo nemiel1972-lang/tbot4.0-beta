@@ -92,8 +92,8 @@ type OGame struct {
 		allianceClass         *ogame.AllianceClass
 		planets               mtx.RWMutex[[]Planet]
 		ogameSession          string
-		token                 string
-		ajaxChatToken         string
+		token                 guardedString
+		ajaxChatToken         guardedString
 		serverURL             string
 		coloniesCount         int64
 		coloniesPossible      int64
@@ -412,8 +412,14 @@ func convertCelestial(b *OGame, celestial ogame.Celestial) Celestial {
 func (b *OGame) cacheFullPageInfo(page parser.IFullPage) {
 	b.cache.planets.Store(convertPlanets(b, page.ExtractPlanets()))
 	b.cache.isVacationModeEnabled = page.ExtractIsInVacation()
-	b.cache.token, _ = page.ExtractToken()
-	b.cache.ajaxChatToken, _ = page.ExtractAjaxChatToken()
+	{
+		newVal, _ := page.ExtractToken()
+		b.cache.token.Set(newVal)
+	}
+	{
+		newVal, _ := page.ExtractAjaxChatToken()
+		b.cache.ajaxChatToken.Set(newVal)
+	}
 	b.cache.characterClass, _ = page.ExtractCharacterClass()
 	b.cache.hasCommander = page.ExtractCommander()
 	b.cache.hasAdmiral = page.ExtractAdmiral()
@@ -1077,10 +1083,10 @@ func alterPayload(method string, b *OGame, vals, payload url.Values) {
 			page = vals.Get("component")
 		}
 		if page == "ajaxChat" && payload.Get("mode") == "1" {
-			payload.Set("token", b.cache.ajaxChatToken)
+			payload.Set("token", b.cache.ajaxChatToken.Get())
 		} else if (page == "fleetdispatch" && vals.Get("action") == "miniFleet") ||
 			(page == "movement" && vals.Get("action") == "recallFleetAjax") {
-			payload.Set("token", b.cache.token)
+			payload.Set("token", b.cache.token.Get())
 		}
 	}
 }
@@ -1092,7 +1098,7 @@ func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, 
 		}
 		if err := json.Unmarshal(pageHTML, &res); err == nil {
 			if res.NewAjaxToken != "" {
-				b.cache.token = res.NewAjaxToken
+				b.cache.token.Set(res.NewAjaxToken)
 			}
 		}
 	}
@@ -1114,7 +1120,7 @@ func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, 
 				if err := json.Unmarshal(pageHTML, &res); err == nil {
 					allianceClass, _ := b.extractor.ExtractAllianceClass([]byte(res.Content.AllianceAllianceOverview))
 					b.cache.allianceClass = &allianceClass
-					b.cache.token = res.NewAjaxToken
+					b.cache.token.Set(res.NewAjaxToken)
 				}
 			}
 		} else if isAjax {
@@ -1123,7 +1129,10 @@ func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, 
 
 	case http.MethodPost:
 		if page == PreferencesPageName {
-			b.cache.token, _ = b.extractor.ExtractToken(pageHTML)
+			{
+				newVal, _ := b.extractor.ExtractToken(pageHTML)
+				b.cache.token.Set(newVal)
+			}
 			if prefs, err := b.extractor.ExtractPreferences(pageHTML); err == nil {
 				b.cache.CachedPreferences = prefs
 			}
@@ -1143,7 +1152,7 @@ func extractNewChatToken(b *OGame, pageHTMLBytes []byte) error {
 	if err := json.Unmarshal(pageHTMLBytes, &res); err != nil {
 		return err
 	}
-	b.cache.ajaxChatToken = res.NewToken
+	b.cache.ajaxChatToken.Set(res.NewToken)
 	return nil
 }
 
@@ -1529,7 +1538,7 @@ func (b *OGame) sendMessage(id int64, message string, isPlayer bool) error {
 	payload := url.Values{
 		"text":  {message + "\n"},
 		"ajax":  {"1"},
-		"token": {b.cache.ajaxChatToken},
+		"token": {b.cache.ajaxChatToken.Get()},
 	}
 	if isPlayer {
 		payload.Set("playerId", utils.FI64(id))
@@ -1556,7 +1565,7 @@ func (b *OGame) sendMessage(id int64, message string, isPlayer bool) error {
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
 		return err
 	}
-	b.cache.ajaxChatToken = res.NewToken
+	b.cache.ajaxChatToken.Set(res.NewToken)
 	return nil
 }
 
@@ -1830,13 +1839,16 @@ func (b *OGame) getUnsafePhalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([
 		"system":   {utils.FI64(coord.System)},
 		"position": {utils.FI64(coord.Position)},
 		"ajax":     {"1"},
-		"token":    {b.cache.token},
+		"token":    {b.cache.token.Get()},
 	}
 	page, err := getAjaxPage[parser.PhalanxAjaxPage](b, vals, ChangePlanet(moonID.Celestial()))
 	if err != nil {
 		return []ogame.PhalanxFleet{}, err
 	}
-	b.cache.token, _ = page.ExtractPhalanxNewToken()
+	{
+		newVal, _ := page.ExtractPhalanxNewToken()
+		b.cache.token.Set(newVal)
+	}
 	return page.ExtractPhalanx()
 }
 
@@ -2311,7 +2323,7 @@ func (b *OGame) activateItem(ref string, celestialID ogame.CelestialID) error {
 		"asJson":       {"1"},
 		"itemUuid":     {ref},
 		"action":       {"activate"},
-		"token":        {b.cache.token},
+		"token":        {b.cache.token.Get()},
 		"referrerPage": {"ingame"},
 		"_":            {strconv.FormatInt(time.Now().UnixMilli(), 10)},
 	}
@@ -2952,7 +2964,7 @@ func (b *OGame) getAllianceClass() (out ogame.AllianceClass, err error) {
 			var res parser.AllianceOverviewTabRes
 			if err = json.Unmarshal(pageHTML, &res); err == nil {
 				allianceClass, _ = b.extractor.ExtractAllianceClass([]byte(res.Content.AllianceAllianceOverview))
-				b.cache.token = res.NewAjaxToken
+				b.cache.token.Set(res.NewAjaxToken)
 			}
 		}
 	}
@@ -3499,7 +3511,7 @@ func (b *OGame) checkTarget(ships ogame.ShipsInfos, where ogame.Coordinate, opts
 	for shipID, nb := range ships.IterFlyable() {
 		payload.Set("am"+utils.FI64(shipID), utils.FI64(nb))
 	}
-	payload.Set("token", b.cache.token)
+	payload.Set("token", b.cache.token.Get())
 	payload.Set("galaxy", utils.FI64(where.Galaxy))
 	payload.Set("system", utils.FI64(where.System))
 	payload.Set("position", utils.FI64(where.Position))
@@ -3740,7 +3752,7 @@ func (b *OGame) fastMiniFleetSpy(coord ogame.Coordinate, shipCount int64, option
 		"position":  {utils.FI64(coord.Position)},
 		"type":      {utils.FI64(coord.Type)},
 		"shipCount": {utils.FI64(shipCount)},
-		"token":     {b.cache.token},
+		"token":     {b.cache.token.Get()},
 	}
 	var res ogame.MinifleetResponse
 	pageHTML, err := b.postPageContent(vals, payload, options...)
@@ -4527,7 +4539,7 @@ func (b *OGame) chapterClaimAll(chapterID int64) error {
 		"component": {"ipioverview"},
 		"action":    {"collectChapter"},
 		"ajax":      {"1"},
-		"token":     {b.cache.token},
+		"token":     {b.cache.token.Get()},
 		"chapterId": {utils.FI64(chapterID)},
 	})
 	return err
@@ -4539,7 +4551,7 @@ func (b *OGame) chapterCollectReward(taskID int64) error {
 		"component": {"ipioverview"},
 		"action":    {"collectTask"},
 		"ajax":      {"1"},
-		"token":     {b.cache.token},
+		"token":     {b.cache.token.Get()},
 		"taskId":    {utils.FI64(taskID)},
 	})
 	return err
@@ -4569,7 +4581,7 @@ func (b *OGame) selectLfResearch(planetID ogame.PlanetID, slotNumber int64, acti
 		"planetId":  {planetID.String()},
 	}
 	payload := url.Values{
-		"token":      {b.cache.token},
+		"token":      {b.cache.token.Get()},
 		"slotNumber": {utils.FI64(slotNumber)},
 	}
 	if techID.IsSet() {
@@ -4609,7 +4621,7 @@ func (b *OGame) resetTree(planetID ogame.PlanetID, tier int64, action string) er
 		"planetId":  {planetID.String()},
 	}
 	payload := url.Values{
-		"token": {b.cache.token},
+		"token": {b.cache.token.Get()},
 		"tier":  {utils.FI64(tier)},
 	}
 	by, err := b.postPageContent(vals, payload)
@@ -4741,7 +4753,7 @@ func (b *OGame) location() *time.Location {
 }
 
 func (b *OGame) getCachedToken() string {
-	return b.cache.token
+	return b.cache.token.Get()
 }
 
 func (b *OGame) getServerData() ServerData {

@@ -556,7 +556,10 @@ namespace Tbot.Includes {
 		}
 
 		public long CalcShipNumberForPayload(Resources payload, Buildables buildable, int hyperspaceTech, ServerData serverData, float cargoBonus = 0, CharacterClass playerClass = CharacterClass.NoClass, int probeCapacity = 0) {
-			return (long) Math.Round(((float) payload.TotalResources / (float) CalcShipCapacity(buildable, hyperspaceTech, serverData, cargoBonus, playerClass, probeCapacity)), MidpointRounding.ToPositiveInfinity);
+			long capacity = CalcShipCapacity(buildable, hyperspaceTech, serverData, cargoBonus, playerClass, probeCapacity);
+			if (capacity <= 0)
+				return 0;
+			return (long) Math.Round(((float) payload.TotalResources / (float) capacity), MidpointRounding.ToPositiveInfinity);
 		}
 
 		public Ships CalcIdealExpeditionShips(Buildables buildable, int hyperspaceTech, float expeditionResourcesBonus, Dictionary<int, LFBonusesShip> shipBonus, ServerData serverData, CharacterClass playerClass = CharacterClass.NoClass, int probeCargo = 0) {
@@ -3287,6 +3290,8 @@ namespace Tbot.Includes {
 			}
 
 			float delta = nextLevelProd - currentProd;
+			if (cost <= 0)
+				return 0;
 			return delta / cost;
 		}
 

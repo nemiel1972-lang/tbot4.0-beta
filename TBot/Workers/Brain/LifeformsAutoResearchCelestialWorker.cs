@@ -229,7 +229,7 @@ namespace Tbot.Workers.Brain {
 									LedgerTBotPlan ledgerPlan = LedgerTBot.Plan(_tbotInstance, celestial, "LifeformsAutoResearch", buildable.ToString() + " " + level.ToString(), xCostBuildable);
 									if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 										Celestial origin = new() { ID = 0 };
-										List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
+										List<Celestial> allCelestials = _tbotInstance.UserData.celestials.ToList();
 										if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 											for (int i = 0; i < allCelestials.Count(); i++) {
 												allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);

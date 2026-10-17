@@ -19,6 +19,20 @@ func ParseInt(val string) int64 {
 	return DoParseI64(val)
 }
 
+func Group(m []string, i int) string {
+	if i < 0 || i >= len(m) {
+		return ""
+	}
+	return m[i]
+}
+
+func GroupB(m [][]byte, i int) []byte {
+	if i < 0 || i >= len(m) {
+		return nil
+	}
+	return m[i]
+}
+
 func ToInt(buf []byte) (n int) {
 	for _, v := range buf {
 		n = n*10 + int(v-'0')

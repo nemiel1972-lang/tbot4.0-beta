@@ -21,25 +21,25 @@ func ExtractConstructions(pageHTML []byte, clock clockwork.Clock) (out ogame.Con
 	buildingCountdownMatch := regexp.MustCompile(`var restTimebuilding = (\d+) -`).FindSubmatch(pageHTML)
 	if len(buildingCountdownMatch) > 0 {
 		out.Building.Countdown = time.Duration(int64(utils.ToInt(buildingCountdownMatch[1]))-clock.Now().Unix()) * time.Second
-		buildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
+		buildingIDInt := utils.ToInt(utils.GroupB(regexp.MustCompile(`onclick="cancelbuilding\((\d+),`).FindSubmatch(pageHTML), 1))
 		out.Building.ID = ogame.ID(buildingIDInt)
 	}
 	researchCountdownMatch := regexp.MustCompile(`var restTimeresearch = (\d+) -`).FindSubmatch(pageHTML)
 	if len(researchCountdownMatch) > 0 {
 		out.Research.Countdown = time.Duration(int64(utils.ToInt(researchCountdownMatch[1]))-clock.Now().Unix()) * time.Second
-		researchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelresearch\((\d+),`).FindSubmatch(pageHTML)[1])
+		researchIDInt := utils.ToInt(utils.GroupB(regexp.MustCompile(`onclick="cancelresearch\((\d+),`).FindSubmatch(pageHTML), 1))
 		out.Research.ID = ogame.ID(researchIDInt)
 	}
 	lfBuildingCountdownMatch := regexp.MustCompile(`var restTimelfbuilding = (\d+) -`).FindSubmatch(pageHTML)
 	if len(lfBuildingCountdownMatch) > 0 {
 		out.LfBuilding.Countdown = time.Duration(int64(utils.ToInt(lfBuildingCountdownMatch[1]))-clock.Now().Unix()) * time.Second
-		lfBuildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
+		lfBuildingIDInt := utils.ToInt(utils.GroupB(regexp.MustCompile(`onclick="cancellfbuilding\((\d+),`).FindSubmatch(pageHTML), 1))
 		out.LfBuilding.ID = ogame.ID(lfBuildingIDInt)
 	}
 	lfResearchCountdownMatch := regexp.MustCompile(`var restTimelfresearch = (\d+) -`).FindSubmatch(pageHTML)
 	if len(lfResearchCountdownMatch) > 0 {
 		out.LfResearch.Countdown = time.Duration(int64(utils.ToInt(lfResearchCountdownMatch[1]))-clock.Now().Unix()) * time.Second
-		lfResearchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfresearch\((\d+),`).FindSubmatch(pageHTML)[1])
+		lfResearchIDInt := utils.ToInt(utils.GroupB(regexp.MustCompile(`onclick="cancellfresearch\((\d+),`).FindSubmatch(pageHTML), 1))
 		out.LfResearch.ID = ogame.ID(lfResearchIDInt)
 	}
 	return
@@ -99,7 +99,7 @@ func extractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
 		out = append(out, ogame.EmpireCelestial{
 			Name:     utils.DoCastStr(planet["name"]),
 			ID:       ogame.CelestialID(utils.DoCastF64(planet["id"])),
-			Diameter: utils.ParseInt(mm[1]),
+			Diameter: utils.ParseInt(utils.Group(mm, 1)),
 			Img:      utils.DoCastStr(planet["image"]),
 			Type:     celestialType,
 			Fields: ogame.Fields{
@@ -504,7 +504,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`building(\d+)`)
-				buildingID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				buildingID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(buildingID) {
 				case ogame.MetalMine.ID:
@@ -557,7 +557,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`research(\d+)`)
-				researchID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				researchID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(researchID) {
 				case ogame.EspionageTechnology.ID:
@@ -604,7 +604,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`tech(\d+)`)
-				shipID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				shipID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(shipID) {
 				case ogame.SmallCargo.ID:
@@ -653,7 +653,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`defense(\d+)`)
-				defenceID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				defenceID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(defenceID) {
 				case ogame.RocketLauncher.ID:

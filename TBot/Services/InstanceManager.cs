@@ -54,7 +54,16 @@ namespace Tbot.Services {
 
 		public async void OnSettingsChanged() {
 			await instancesSem.WaitAsync();
+			try {
+				await OnSettingsChangedLocked();
+			} catch (Exception e) {
+				_logger.WriteLog(LogLevel.Error, LogSender.Main, $"Error while applying settings change: {e}");
+			} finally {
+				instancesSem.Release();
+			}
+		}
 
+		private async Task OnSettingsChangedLocked() {
 			_logger.WriteLog(LogLevel.Information, LogSender.Main, $"Reading settings \"{SettingsAbsoluteFilepath}\"");
 
 			_mainSettings = await SettingsService.GetSettings(SettingsAbsoluteFilepath);
@@ -155,8 +164,6 @@ namespace Tbot.Services {
 
 			if (settingsWatcher == null)
 				settingsWatcher = new SettingsFileWatcher(OnSettingsChanged, SettingsAbsoluteFilepath);
-
-			instancesSem.Release();
 		}
 
 		public async ValueTask DisposeAsync() {
@@ -238,7 +245,7 @@ namespace Tbot.Services {
 			}
 		}
 
-		private async void TBotInstance_OnError(object sender, EventArgs e) {
+		private async void TBotInstance_OnError(object sender, EventArgs e) { try {
 			ITBotMain tbotInstance = (ITBotMain) sender;
 			var alias = tbotInstance.InstanceAlias;
 			_logger.WriteLog(LogLevel.Error, LogSender.Main, $"Error on tboInstance instance \"{alias}\"");
@@ -252,6 +259,7 @@ namespace Tbot.Services {
 				await tbotToDispose.DisposeAsync();
 			} catch(InvalidOperationException) {
 			}
+		} catch (Exception asyncVoidEx) { _logger.WriteLog(LogLevel.Error, LogSender.Main, $"Unhandled error in TBotInstance_OnError: {asyncVoidEx}"); }
 		}
 	}
 }

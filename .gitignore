@@ -1,3 +1,7 @@
+## Six Labors license (ImageSharp 4.x build-time check) - per-account secret, never commit.
+## Use the SixLaborsLicenseKey environment variable or a local TBot/sixlabors.lic (searched from the project folder downwards).
+sixlabors.lic
+
 # Build-Ausgaben
 bin/
 obj/

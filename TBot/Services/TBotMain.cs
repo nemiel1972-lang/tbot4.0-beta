@@ -379,10 +379,11 @@ namespace Tbot.Services {
 			_logger.WriteLog(logLevel, sender, $"[{ToString()}] {format}");
 		}
 
-		private async void InitializeFeatures() {
+		private async void InitializeFeatures() { try {
 			foreach(var feat in Features.AllFeatures) {
 				await InitializeFeature(feat);
 			}
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in InitializeFeatures: {asyncVoidEx}"); }
 		}
 
 		private bool _legacyConfigLogged;
@@ -985,8 +986,9 @@ namespace Tbot.Services {
 			timers.Remove("GhostSleepScheduleTimer");
 		}
 
-		private async void HandleGhostSleepSchedule(object state) {
+		private async void HandleGhostSleepSchedule(object state) { try {
 			await HandleGhostSleepScheduleAsync(state);
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandleGhostSleepSchedule: {asyncVoidEx}"); }
 		}
 
 		private static bool ComputeShouldBeAsleep(DateTime time, DateTime goToSleep, DateTime wakeUp) {
@@ -1295,7 +1297,7 @@ namespace Tbot.Services {
 			}
 		}
 
-		public async void GhostSleepEscalate(bool active) {
+		public async void GhostSleepEscalate(bool active) { try {
 			if (!_ghostSleeping)
 				return;
 			try {
@@ -1324,6 +1326,7 @@ namespace Tbot.Services {
 			} catch (Exception e) {
 				log(LogLevel.Warning, LogSender.Tbot, $"GhostSleep: error during escalation (active={active}): {e.Message}");
 			}
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in GhostSleepEscalate: {asyncVoidEx}"); }
 		}
 		private readonly SemaphoreSlim _attackLockdownLock = new SemaphoreSlim(1, 1);
 		private bool _attackLockdownActive = false;
@@ -1744,7 +1747,7 @@ namespace Tbot.Services {
 			return false;
 		}
 
-		public async void TelegramSetCurrentCelestial(Coordinate coord, string celestialType, Feature updateType = Feature.Null, bool editsettings = false) {
+		public async void TelegramSetCurrentCelestial(Coordinate coord, string celestialType, Feature updateType = Feature.Null, bool editsettings = false) { try {
 			userData.celestials = await _tbotOgameBridge.UpdateCelestials();
 
 			telegramUserData.CurrentCelestial = userData.celestials
@@ -1766,6 +1769,7 @@ namespace Tbot.Services {
 				await SendTelegramMessage($"Main celestial successfuly updated to {telegramUserData.CurrentCelestial.Coordinate.ToString()}");
 			}
 			return;
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in TelegramSetCurrentCelestial: {asyncVoidEx}"); }
 		}
 
 		public async Task<Celestial> TelegramGetCurrentCelestial() {
@@ -2041,7 +2045,7 @@ namespace Tbot.Services {
 			}
 		}
 
-		private async void HandleSlotCmd(object state) {
+		private async void HandleSlotCmd(object state) { try {
 			if (Interlocked.Exchange(ref _slotCmdBusy, 1) == 1)
 				return;
 			try {
@@ -2072,6 +2076,7 @@ namespace Tbot.Services {
 			} finally {
 				Interlocked.Exchange(ref _slotCmdBusy, 0);
 			}
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandleSlotCmd: {asyncVoidEx}"); }
 		}
 
 		private async Task ApplySlotSettingAsync(string path, int value) {
@@ -2129,12 +2134,13 @@ namespace Tbot.Services {
 			try { await WriteSleepStatusAsync(); } catch { }
 		}
 
-		private async void HandleSleepStatusWrite(object state) {
+		private async void HandleSleepStatusWrite(object state) { try {
 			try {
 				await WriteSleepStatusAsync();
 			} catch (Exception e) {
 				log(LogLevel.Debug, LogSender.Tbot, $"Sleep status could not be written: {e.Message}");
 			}
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandleSleepStatusWrite: {asyncVoidEx}"); }
 		}
 
 		private bool ReadSleepSchedule(bool ghost, out DateTime goToSleep, out DateTime wakeUp) {
@@ -2369,8 +2375,9 @@ namespace Tbot.Services {
 			} catch {  }
 		}
 
-		private async void HandleSleepMode(object state) {
+		private async void HandleSleepMode(object state) { try {
 			await HandleSleepModeAsync(state);
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandleSleepMode: {asyncVoidEx}"); }
 		}
 		private async Task HandleSleepModeAsync(object state) {
 			if (timers.TryGetValue("TelegramSleepModeTimer", out Timer value)) {
@@ -2479,8 +2486,9 @@ namespace Tbot.Services {
 			}
 		}
 
-		private async void GoToSleep(object state) {
+		private async void GoToSleep(object state) { try {
 			await GoToSleepAsync(state);
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in GoToSleep: {asyncVoidEx}"); }
 		}
 		private async Task GoToSleepAsync(object state) {
 			try {
@@ -2580,7 +2588,7 @@ namespace Tbot.Services {
 		}
 
 
-		public async void WakeUpNow(object state) {
+		public async void WakeUpNow(object state) { try {
 			if (timers.TryGetValue("TelegramSleepModeTimer", out Timer value))
 				value.Dispose();
 			timers.Remove("TelegramSleepModeTimer");
@@ -2592,10 +2600,12 @@ namespace Tbot.Services {
 				userData.isSleeping = false;
 			}
 			InitializeFeatures();
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in WakeUpNow: {asyncVoidEx}"); }
 		}
 
-		private async void WakeUp(object state) {
+		private async void WakeUp(object state) { try {
 			await WakeUpAsync(state);
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in WakeUp: {asyncVoidEx}"); }
 		}
 
 		private async Task WakeUpAsync(object state) {

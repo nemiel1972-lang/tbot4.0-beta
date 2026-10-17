@@ -96,7 +96,7 @@ namespace Tbot.Services {
 				pingSem = null;
 			}
 		}
-		private async void AutoPing(object state) {
+		private async void AutoPing(object state) { try {
 			await pingSem.WaitAsync();
 			try {
 				DateTime now = DateTime.UtcNow;
@@ -125,6 +125,7 @@ namespace Tbot.Services {
 				pingSem.Release();
 			}
 			return;
+		} catch (Exception asyncVoidEx) { _logger.WriteLog(LogLevel.Error, LogSender.Telegram, $"Unhandled error in AutoPing: {asyncVoidEx}"); }
 		}
 
 		public async Task AddTbotInstance(TBotMain instance, ITBotOgamedBridge tbotOgamedBridge) {

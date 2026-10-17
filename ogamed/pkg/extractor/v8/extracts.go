@@ -163,7 +163,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`building(\d+)`)
-				buildingID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				buildingID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(buildingID) {
 				case ogame.MetalMine.ID:
@@ -216,7 +216,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`research(\d+)`)
-				researchID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				researchID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(researchID) {
 				case ogame.EspionageTechnology.ID:
@@ -263,7 +263,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`tech(\d+)`)
-				shipID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				shipID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(shipID) {
 				case ogame.SmallCargo.ID:
@@ -312,7 +312,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`defense(\d+)`)
-				defenceID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				defenceID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(defenceID) {
 				case ogame.RocketLauncher.ID:

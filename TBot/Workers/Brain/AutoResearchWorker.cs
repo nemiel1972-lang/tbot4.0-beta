@@ -56,7 +56,7 @@ namespace Tbot.Workers.Brain {
 				if (parseSucceded) {
 					celestial = _tbotInstance.UserData.celestials
 						.Unique()
-						.Single(c => c.HasCoords(new(
+						.SingleOrDefault(c => c.HasCoords(new(
 							(int) _tbotInstance.InstanceSettings.Brain.AutoResearch.Target.Galaxy,
 							(int) _tbotInstance.InstanceSettings.Brain.AutoResearch.Target.System,
 							(int) _tbotInstance.InstanceSettings.Brain.AutoResearch.Target.Position,
@@ -65,6 +65,15 @@ namespace Tbot.Workers.Brain {
 						)) as Planet;
 				} else {
 					DoLog(LogLevel.Warning, "Unable to parse Brain.AutoResearch.Target. Falling back to planet with biggest Research Lab");
+					_tbotInstance.UserData.celestials = await _tbotOgameBridge.UpdatePlanets(UpdateTypes.Facilities);
+					celestial = _tbotInstance.UserData.celestials
+						.Where(c => c.Coordinate.Type == Celestials.Planet)
+						.OrderByDescending(c => c.Facilities.ResearchLab)
+						.First() as Planet;
+				}
+
+				if (celestial == null) {
+					DoLog(LogLevel.Warning, "Brain.AutoResearch.Target does not match any of your planets. Falling back to planet with biggest Research Lab");
 					_tbotInstance.UserData.celestials = await _tbotOgameBridge.UpdatePlanets(UpdateTypes.Facilities);
 					celestial = _tbotInstance.UserData.celestials
 						.Where(c => c.Coordinate.Type == Celestials.Planet)
@@ -247,7 +256,7 @@ namespace Tbot.Workers.Brain {
 								LedgerTBotPlan ledgerPlan = LedgerTBot.Plan(_tbotInstance, celestial, "AutoResearch", research.ToString() + " " + level.ToString(), cost);
 								if (ledgerPlan.Legacy ? !_calculationService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) : !ledgerPlan.MissingIsZero) {
 									Celestial origin = new() { ID = 0 };
-									List<Celestial> allCelestials = _tbotInstance.UserData.celestials;
+									List<Celestial> allCelestials = _tbotInstance.UserData.celestials.ToList();
 									if ((bool) _tbotInstance.InstanceSettings.Brain.Transports.MultipleOrigins.Active) {
 										for (int i = 0; i < allCelestials.Count(); i++) {
 											allCelestials[i] = await _tbotOgameBridge.UpdatePlanet(allCelestials[i], UpdateTypes.Resources);

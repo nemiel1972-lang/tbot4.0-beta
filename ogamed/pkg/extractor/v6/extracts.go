@@ -778,7 +778,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`building(\d+)`)
-				buildingID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				buildingID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(buildingID) {
 				case ogame.MetalMine.ID:
@@ -831,7 +831,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`research(\d+)`)
-				researchID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				researchID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(researchID) {
 				case ogame.EspionageTechnology.ID:
@@ -878,7 +878,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`tech(\d+)`)
-				shipID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				shipID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(shipID) {
 				case ogame.SmallCargo.ID:
@@ -921,7 +921,7 @@ func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Locatio
 				}
 				imgClass := img.AttrOr("class", "")
 				r := regexp.MustCompile(`defense(\d+)`)
-				defenceID := utils.DoParseI64(r.FindStringSubmatch(imgClass)[1])
+				defenceID := utils.DoParseI64(utils.Group(r.FindStringSubmatch(imgClass), 1))
 				level := utils.Ptr(utils.ParseInt(s2.Find("span.fright").Text()))
 				switch ogame.ID(defenceID) {
 				case ogame.RocketLauncher.ID:
@@ -1735,9 +1735,9 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 			}
 
 			if len(prefixedNumRgx.FindStringSubmatch(metalTxt)) > 0 {
-				planetInfos.Debris.Metal = utils.ParseInt(prefixedNumRgx.FindStringSubmatch(metalTxt)[1])
-				planetInfos.Debris.Crystal = utils.ParseInt(prefixedNumRgx.FindStringSubmatch(crystalTxt)[1])
-				planetInfos.Debris.RecyclersNeeded = utils.ParseInt(prefixedNumRgx.FindStringSubmatch(recyclersTxt)[1])
+				planetInfos.Debris.Metal = utils.ParseInt(utils.Group(prefixedNumRgx.FindStringSubmatch(metalTxt), 1))
+				planetInfos.Debris.Crystal = utils.ParseInt(utils.Group(prefixedNumRgx.FindStringSubmatch(crystalTxt), 1))
+				planetInfos.Debris.RecyclersNeeded = utils.ParseInt(utils.Group(prefixedNumRgx.FindStringSubmatch(recyclersTxt), 1))
 			}
 
 			planetInfos.Activity = extractActivity(s.Find("td:not(.moon) div.activity"))
@@ -1763,7 +1763,7 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 				for _, s := range tooltips.EachIter() {
 					idAttr := s.AttrOr("id", "")
 					if strings.HasPrefix(idAttr, "player") {
-						playerID = utils.DoParseI64(regexp.MustCompile(`player(\d+)`).FindStringSubmatch(idAttr)[1])
+						playerID = utils.DoParseI64(utils.Group(regexp.MustCompile(`player(\d+)`).FindStringSubmatch(idAttr), 1))
 						playerName = s.Find("h1").Find("span").Text()
 						playerRank = utils.DoParseI64(s.Find("li.rank").Find("a").Text())
 					}
@@ -1796,9 +1796,9 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 		metalTxt := lis.First().Text()
 		crystalTxt := lis.Eq(1).Text()
 		pathfindersTxt := lis.Eq(2).Text()
-		res.ExpeditionDebris.Metal = utils.ParseInt(prefixedNumRgx.FindStringSubmatch(metalTxt)[1])
-		res.ExpeditionDebris.Crystal = utils.ParseInt(prefixedNumRgx.FindStringSubmatch(crystalTxt)[1])
-		res.ExpeditionDebris.PathfindersNeeded = utils.ParseInt(prefixedNumRgx.FindStringSubmatch(pathfindersTxt)[1])
+		res.ExpeditionDebris.Metal = utils.ParseInt(utils.Group(prefixedNumRgx.FindStringSubmatch(metalTxt), 1))
+		res.ExpeditionDebris.Crystal = utils.ParseInt(utils.Group(prefixedNumRgx.FindStringSubmatch(crystalTxt), 1))
+		res.ExpeditionDebris.PathfindersNeeded = utils.ParseInt(utils.Group(prefixedNumRgx.FindStringSubmatch(pathfindersTxt), 1))
 	}
 
 	debris17Div := doc.Find("div#debris17")
@@ -1982,13 +1982,13 @@ func extractConstructions(pageHTML []byte) (out ogame.Constructions) {
 	buildingCountdownMatch := regexp.MustCompile(`getElementByIdWithCache\("Countdown"\),(\d+),`).FindSubmatch(pageHTML)
 	if len(buildingCountdownMatch) > 0 {
 		out.Building.Countdown = time.Duration(int64(utils.ToInt(buildingCountdownMatch[1]))) * time.Second
-		buildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelProduction\((\d+),`).FindSubmatch(pageHTML)[1])
+		buildingIDInt := utils.ToInt(utils.GroupB(regexp.MustCompile(`onclick="cancelProduction\((\d+),`).FindSubmatch(pageHTML), 1))
 		out.Building.ID = ogame.ID(buildingIDInt)
 	}
 	researchCountdownMatch := regexp.MustCompile(`getElementByIdWithCache\("researchCountdown"\),(\d+),`).FindSubmatch(pageHTML)
 	if len(researchCountdownMatch) > 0 {
 		out.Research.Countdown = time.Duration(int64(utils.ToInt(researchCountdownMatch[1]))) * time.Second
-		researchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelResearch\((\d+),`).FindSubmatch(pageHTML)[1])
+		researchIDInt := utils.ToInt(utils.GroupB(regexp.MustCompile(`onclick="cancelResearch\((\d+),`).FindSubmatch(pageHTML), 1))
 		out.Research.ID = ogame.ID(researchIDInt)
 	}
 	return
@@ -2191,7 +2191,7 @@ func extractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
 		out = append(out, ogame.EmpireCelestial{
 			Name:     utils.DoCastStr(planet["name"]),
 			ID:       ogame.CelestialID(utils.DoCastF64(planet["id"])),
-			Diameter: utils.ParseInt(mm[1]),
+			Diameter: utils.ParseInt(utils.Group(mm, 1)),
 			Img:      utils.DoCastStr(planet["image"]),
 			Type:     celestialType,
 			Fields: ogame.Fields{

@@ -777,7 +777,7 @@ if (
 						_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Unable to send fleet from {origin.Coordinate.ToString()}: no ships to send.");
 						return (int) SendFleetCode.GenericError;
 					}
-					_tbotInstance.UserData.fleets.Add(newFleet);
+					_tbotInstance.UserData.fleets = _tbotInstance.UserData.fleets.Append(newFleet).ToList();
 					_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "Fleet sent successfully!");
 					if (mission == Missions.Transport)
 						LedgerTBot.OnTransportSent(_tbotInstance, destination, newFleet.ID, payload, fleetPrediction.Time);
@@ -953,15 +953,16 @@ if (
 			return true;
 		}
 
-		public async void RetireFleet(object fleet) {
+		public async void RetireFleet(object fleet) { try {
 			try {
 				await CancelFleet((Fleet)fleet);
 			} catch (Exception ex) {
 				_tbotInstance?.log(LogLevel.Error, LogSender.FleetScheduler, $"RetireFleet callback failed: {ex.Message}");
 			}
+		} catch (Exception asyncVoidEx) { _tbotInstance.log(LogLevel.Error, LogSender.FleetScheduler, $"Unhandled error in RetireFleet: {asyncVoidEx}"); }
 		}
 
-		private async void GhostandSleepAfterFleetsReturnAll(object state) {
+		private async void GhostandSleepAfterFleetsReturnAll(object state) { try {
 			try {
 				DisposeAndRemoveTimer("GhostSleepTimer");
 
@@ -976,9 +977,10 @@ if (
 			} catch (Exception ex) {
 				_tbotInstance?.log(LogLevel.Error, LogSender.SleepMode, $"GhostSleep(all) timer callback failed: {ex.Message}");
 			}
+		} catch (Exception asyncVoidEx) { _tbotInstance.log(LogLevel.Error, LogSender.FleetScheduler, $"Unhandled error in GhostandSleepAfterFleetsReturnAll: {asyncVoidEx}"); }
 		}
 
-		private async void GhostandSleepAfterFleetsReturn(object state) {
+		private async void GhostandSleepAfterFleetsReturn(object state) { try {
 			try {
 				DisposeAndRemoveTimer("GhostSleepTimer");
 
@@ -987,6 +989,7 @@ if (
 			} catch (Exception ex) {
 				_tbotInstance?.log(LogLevel.Error, LogSender.SleepMode, $"GhostSleep timer callback failed: {ex.Message}");
 			}
+		} catch (Exception asyncVoidEx) { _tbotInstance.log(LogLevel.Error, LogSender.FleetScheduler, $"Unhandled error in GhostandSleepAfterFleetsReturn: {asyncVoidEx}"); }
 		}
 
 
