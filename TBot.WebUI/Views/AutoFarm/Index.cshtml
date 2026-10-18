@@ -23,7 +23,7 @@
                 <h1>AutoFarm</h1>
                 <p class="intro">Diagnostics for scans, decisions and fleets sent by AutoFarm, plus blacklist and database maintenance.</p>
             </div>
-            <form method="get" class="instance-picker">
+            <form method="get" class="instance-picker" style="@(Model.Instances.Count <= 1 ? "display:none" : null)">
                 <label for="instance">Instance</label>
                 <div class="instance-controls">
                     <select id="instance" name="instance">

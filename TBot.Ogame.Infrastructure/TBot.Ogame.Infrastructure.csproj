@@ -4,6 +4,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Alte Null-Warnungen der Modelle (JSON-Deserialisierung) und Stilregeln (Async-Suffix) bewusst ausgeblendet -->
+    <NoWarn>NETSDK1188;$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8618;VSTHRD200;VSTHRD002;CS8625;SYSLIB0051</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

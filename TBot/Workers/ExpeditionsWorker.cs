@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -100,7 +101,7 @@ namespace Tbot.Workers {
 				string dir = System.IO.Path.Combine(AppContext.BaseDirectory, "data");
 				System.IO.Directory.CreateDirectory(dir);
 				string file = System.IO.Path.Combine(dir, $"lf_expedition_{System.IO.Path.GetFileName(_tbotInstance.InstanceAlias)}.json");
-				System.IO.File.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(snapshot));
+				AtomicFile.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(snapshot));
 			} catch (Exception e) {
 				DoLog(LogLevel.Debug, $"LF snapshot could not be written: {e.Message}");
 			}

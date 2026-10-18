@@ -14,17 +14,21 @@ namespace TBot.WebUI.Models {
 		public string CargoType { get; set; } = "SmallCargo";
 		public int ProbesPerTarget { get; set; } = 20;
 		public int SlotsToLeaveFree { get; set; } = 1;
-		public double WeightMetal { get; set; } = 1;
-		public double WeightCrystal { get; set; } = 1.5;
-		public double WeightDeuterium { get; set; } = 3;
+		public double WeightMetal { get; set; } = 3;
+		public double WeightCrystal { get; set; } = 2;
+		public double WeightDeuterium { get; set; } = 1;
 		public long MinLoot { get; set; }
 		public long MinDeuterium { get; set; }
 		public int TopTargets { get; set; } = 36;
 		public int ReportMaxAgeMinutes { get; set; } = 30;
+		public double ShrinkDiscardPercent { get; set; } = 10;
 	}
 
 	public sealed class FastFarmStateDto {
 		public Dictionary<string, FastFarmTargetDto> Targets { get; set; } = new();
+		public string? SweepPhase { get; set; }
+		public int SweepGalaxy { get; set; }
+		public int SweepRound { get; set; }
 		public long AttacksSent { get; set; }
 		public long ProbesSent { get; set; }
 		public long ReportsRead { get; set; }
@@ -55,6 +59,7 @@ namespace TBot.WebUI.Models {
 		public long Crystal { get; set; }
 		public long Deuterium { get; set; }
 		public long Weighted { get; set; }
+		public long SweepValue { get; set; }
 		public long LastWeighted { get; set; }
 		public DateTime? BlockedUntilUtc { get; set; }
 		public string? BlockReason { get; set; }

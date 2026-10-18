@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -174,7 +175,7 @@ namespace Tbot.Workers {
 		private void SavePendingRecalls(List<PendingRecallEntry> entries) {
 			lock (_pendingRecallsLock) {
 				try {
-					File.WriteAllText(GetPendingRecallsFilePath(), JsonConvert.SerializeObject(entries));
+					AtomicFile.WriteAllText(GetPendingRecallsFilePath(), JsonConvert.SerializeObject(entries));
 				} catch (Exception e) {
 					_tbotInstance?.log(LogLevel.Warning, LogSender.FleetScheduler, $"Unable to save pending recalls: {e.Message}");
 				}
@@ -338,7 +339,7 @@ namespace Tbot.Workers {
 					ps.Metal = payload.Metal;
 					ps.Crystal = payload.Crystal;
 					ps.Food = payload.Food;
-					ps.Deuterium = Math.Max(0, payload.Deuterium - (long) f.Fuel);
+					ps.Deuterium = payload.Deuterium;
 					return ps;
 				}
 				Resources p = new();
@@ -367,7 +368,7 @@ namespace Tbot.Workers {
 				foreach (FleetHypotesis fleet in fleetHypotesis.OrderBy(pf => pf.Fuel).ThenBy(pf => pf.Duration <= minDuration)) {
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"checking {mission} fleet to: {fleet.Destination}");
 					if (CheckFuel(fleet, celestial)) {
-						fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram);
+						fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram, allowSpeedReduction: true, shrinkDeuteriumPayload: true);
 
 						if (fleetId != (int)SendFleetCode.GenericError &&
     fleetId != (int)SendFleetCode.AfterSleepTime &&
@@ -406,7 +407,7 @@ namespace Tbot.Workers {
 					foreach (FleetHypotesis fleet in fleetHypotesis.OrderBy(pf => pf.Fuel).ThenBy(pf => pf.Duration <= minDuration)) {
 						_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"checking {mission} fleet to: {fleet.Destination}");
 						if (CheckFuel(fleet, celestial)) {
-							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram);
+							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram, allowSpeedReduction: true, shrinkDeuteriumPayload: true);
 
 							if (fleetId != (int)SendFleetCode.GenericError &&
     fleetId != (int)SendFleetCode.AfterSleepTime &&
@@ -428,7 +429,7 @@ namespace Tbot.Workers {
 					foreach (FleetHypotesis fleet in fleetHypotesis.OrderBy(pf => pf.Fuel).ThenBy(pf => pf.Duration <= minDuration)) {
 						_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"checking {mission} fleet to: {fleet.Destination}");
 						if (CheckFuel(fleet, celestial)) {
-							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram);
+							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram, allowSpeedReduction: true, shrinkDeuteriumPayload: true);
 
 							if (fleetId != (int)SendFleetCode.GenericError &&
     fleetId != (int)SendFleetCode.AfterSleepTime &&
@@ -452,7 +453,7 @@ namespace Tbot.Workers {
 					foreach (FleetHypotesis fleet in fleetHypotesis.OrderBy(pf => pf.Fuel).ThenBy(pf => pf.Duration <= minDuration)) {
 						_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"checking {mission} fleet to: {fleet.Destination}");
 						if (CheckFuel(fleet, celestial)) {
-							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram);
+							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram, allowSpeedReduction: true, shrinkDeuteriumPayload: true);
 
 							if (fleetId != (int)SendFleetCode.GenericError &&
     fleetId != (int)SendFleetCode.AfterSleepTime &&
@@ -478,7 +479,7 @@ namespace Tbot.Workers {
 					foreach (FleetHypotesis fleet in fleetHypotesis.OrderBy(pf => pf.Fuel).ThenBy(pf => pf.Duration <= minDuration)) {
 						_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"checking {mission} fleet to: {fleet.Destination}");
 						if (CheckFuel(fleet, celestial)) {
-							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram);
+							fleetId = await SendFleet(fleet.Origin, fleet.Ships, fleet.Destination, fleet.Mission, fleet.Speed, PayloadFuer(fleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram, allowSpeedReduction: true, shrinkDeuteriumPayload: true);
 
 							if (fleetId != (int)SendFleetCode.GenericError &&
     fleetId != (int)SendFleetCode.AfterSleepTime &&
@@ -524,7 +525,7 @@ namespace Tbot.Workers {
 						Duration = switchPrediction.Time
 					};
 					if (CheckFuel(switchFleet, celestial)) {
-						int switchId = await SendFleet(celestial, switchShips, switchDest, Missions.Deploy, Speeds.TenPercent, PayloadFuer(switchFleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram);
+						int switchId = await SendFleet(celestial, switchShips, switchDest, Missions.Deploy, Speeds.TenPercent, PayloadFuer(switchFleet), _tbotInstance.UserData.userInfo.Class, true, fromTelegram, allowSpeedReduction: true, shrinkDeuteriumPayload: true);
 						if (switchId != (int) SendFleetCode.GenericError && switchId != (int) SendFleetCode.AfterSleepTime && switchId != (int) SendFleetCode.NotEnoughSlots) {
 							fleetId = switchId;
 							possibleFleet = switchFleet;
@@ -639,7 +640,7 @@ namespace Tbot.Workers {
 			}
 		}
 
-		public async Task<int> SendFleet(Celestial origin, Ships ships, Coordinate destination, Missions mission, decimal speed, Resources payload = null, CharacterClass playerClass = CharacterClass.NoClass, bool force = false, bool ignoreLedger = false, long deutToLeave = 0) {
+		public async Task<int> SendFleet(Celestial origin, Ships ships, Coordinate destination, Missions mission, decimal speed, Resources payload = null, CharacterClass playerClass = CharacterClass.NoClass, bool force = false, bool ignoreLedger = false, long deutToLeave = 0, bool allowSpeedReduction = false, bool shrinkDeuteriumPayload = false) {
 			_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending fleet from {origin.Coordinate.ToString()} to {destination.ToString()}. Mission: {mission.ToString()}. Speed: {(speed * 10).ToString()}% Ships: {ships.ToString()}");
 
 			if (playerClass == CharacterClass.NoClass)
@@ -705,11 +706,6 @@ var flightTime = mission switch
 origin = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
 
 long deuteriumInPayload = payload?.Deuterium ?? 0;
-if (origin.Resources.Deuterium - deuteriumInPayload - deutToLeave < fleetPrediction.Fuel) {
-    _tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler,
-        $"Unable to send fleet: not enough deuterium! (stock {origin.Resources.Deuterium}, payload {deuteriumInPayload}, reserve {deutToLeave}, fuel {fleetPrediction.Fuel})");
-    return (int)SendFleetCode.GenericError;
-}
 
 long fuelCapacity = _calcService.CalcFleetFuelCapacity(
     ships,
@@ -719,10 +715,51 @@ long fuelCapacity = _calcService.CalcFleetFuelCapacity(
     _tbotInstance.UserData.serverData.ProbeCargo
 );
 
-if (fuelCapacity != 0 && fuelCapacity < fleetPrediction.Fuel) {
-    _tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler,
-        "Unable to send fleet: ships don't have enough fuel capacity!");
-    return (int)SendFleetCode.GenericError;
+bool notEnoughDeuterium = origin.Resources.Deuterium - deuteriumInPayload - deutToLeave < fleetPrediction.Fuel;
+bool notEnoughFuelCapacity = fuelCapacity != 0 && fuelCapacity < fleetPrediction.Fuel;
+if (notEnoughDeuterium || notEnoughFuelCapacity) {
+    bool speedReduced = false;
+    if (allowSpeedReduction) {
+        var lowerSpeeds = _calcService.GetValidSpeedsForClass(playerClass).Where(s => s < speed).OrderByDescending(s => s).ToList();
+        foreach (var lowerSpeed in lowerSpeeds) {
+            var lowerPrediction = _calcService.CalcFleetPrediction(
+                origin.Coordinate, destination, ships, mission, lowerSpeed,
+                _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData,
+                origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
+            if (origin.Resources.Deuterium - deuteriumInPayload - deutToLeave >= lowerPrediction.Fuel && (fuelCapacity == 0 || fuelCapacity >= lowerPrediction.Fuel)) {
+                _tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler,
+                    $"Insufficient fuel at {speed * 10}% speed ({fleetPrediction.Fuel} fuel needed, {origin.Resources.Deuterium} available, tank capacity {fuelCapacity}). Reducing to {lowerSpeed * 10}% speed ({lowerPrediction.Fuel} fuel needed).");
+                fleetPrediction = lowerPrediction;
+                flightTime = mission switch {
+                    Missions.Deploy => fleetPrediction.Time,
+                    Missions.Expedition => (long)Math.Round((double)(2 * fleetPrediction.Time) + 3600, 0, MidpointRounding.ToPositiveInfinity),
+                    _ => (long)Math.Round((double)(2 * fleetPrediction.Time), 0, MidpointRounding.ToPositiveInfinity)
+                };
+                speed = lowerSpeed;
+                speedReduced = true;
+                break;
+            }
+        }
+    }
+    if (!speedReduced) {
+        if (notEnoughFuelCapacity) {
+            _tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler,
+                "Unable to send fleet: ships don't have enough fuel capacity!");
+            return (int)SendFleetCode.GenericError;
+        }
+        long availableForDeuteriumCargo = Math.Max(0, origin.Resources.Deuterium - deutToLeave - fleetPrediction.Fuel);
+        bool fuelFitsWithoutCargo = origin.Resources.Deuterium - deutToLeave >= fleetPrediction.Fuel;
+        if (shrinkDeuteriumPayload && payload != null && fuelFitsWithoutCargo && deuteriumInPayload > availableForDeuteriumCargo) {
+            _tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler,
+                $"Not enough deuterium to ship {deuteriumInPayload} and still cover {fleetPrediction.Fuel} fuel plus the {deutToLeave} reserve - shipping {availableForDeuteriumCargo} deuterium instead.");
+            payload.Deuterium = availableForDeuteriumCargo;
+            deuteriumInPayload = availableForDeuteriumCargo;
+        } else {
+            _tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler,
+                $"Unable to send fleet: not enough deuterium! (stock {origin.Resources.Deuterium}, payload {deuteriumInPayload}, reserve {deutToLeave}, fuel {fleetPrediction.Fuel})");
+            return (int)SendFleetCode.GenericError;
+        }
+    }
 }
 
 bool ignoreSleepForExpeditions =

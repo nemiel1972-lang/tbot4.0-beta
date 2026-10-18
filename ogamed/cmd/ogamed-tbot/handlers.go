@@ -420,6 +420,17 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             { key: 'w_harvest',     id: 'harvest',     label: 'Harvest',     pkey: 'p_harvest' },
             { key: 'w_discovery',   id: 'discovery',   label: 'Discovery',   pkey: 'p_discovery' },
             { key: 'w_brain',       id: 'brain',       label: 'Brain',       pkey: 'p_brain' },
+            // Unter-Worker: nur An/Aus, keine Slot-Prioritaet (die Slots bleiben bei den Hauptkategorien)
+            { key: 'w_transport',   id: 'transport',   label: 'Transport',   sub: true },
+            { key: 'w_repatriate',  id: 'repatriate',  label: 'Repatriate',  sub: true },
+            { key: 'w_cargo',       id: 'cargo',       label: 'Cargo build', sub: true },
+            { key: 'w_mine',        id: 'mine',        label: 'Mines',       sub: true },
+            { key: 'w_research',    id: 'research',    label: 'Research',    sub: true },
+            { key: 'w_lfmine',      id: 'lfmine',      label: 'LF mines',    sub: true },
+            { key: 'w_lfresearch',  id: 'lfresearch',  label: 'LF research', sub: true },
+            { key: 'w_boosters',    id: 'boosters',    label: 'Boosters',    sub: true },
+            { key: 'w_offer',       id: 'offer',       label: 'Daily offer', sub: true },
+            { key: 'w_colonize',    id: 'colonize',    label: 'Colonizer',   sub: true }
         ];
         var wBtns = {};
         var wTitle = document.createElement("div");
@@ -438,7 +449,8 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             row.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;';
             var lab = document.createElement("span");
             lab.style.cssText = 'flex:1 1 auto;white-space:nowrap;';
-            lab.textContent = d.label;
+            lab.textContent = d.sub ? '\u21b3 ' + d.label : d.label;
+            if (d.sub) { lab.style.paddingLeft = '8px'; lab.style.color = '#b9cde0'; }
             var bOn = document.createElement("button");
             bOn.textContent = 'On';
             var bOff = document.createElement("button");
@@ -725,7 +737,8 @@ func PostSlotLimitHandler(c echo.Context) error {
 	switch key {
 	case "leaveFree", "autofarm", "brain", "harvest", "discovery", "exp",
 		"p_autofarm", "p_expeditions", "p_harvest", "p_discovery", "p_brain",
-		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain":
+		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain",
+		"w_transport", "w_repatriate", "w_cargo", "w_mine", "w_research", "w_lfmine", "w_lfresearch", "w_boosters", "w_offer", "w_colonize":
 	default:
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "unbekannter Schluessel"})
 	}

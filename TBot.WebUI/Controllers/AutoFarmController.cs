@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -59,7 +60,7 @@ namespace TBot.WebUI.Controllers {
 					if (!string.IsNullOrEmpty(coord))
 						entry["coord"] = coord;
 					list.Add(entry);
-					System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(list));
+					AtomicFile.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(list));
 				}
 				return Json(new { success = true });
 			} catch (Exception e) {

@@ -132,14 +132,16 @@ namespace Tbot.Services {
 			}
 			await Task.WhenAll(deinitingInstances);
 
-			foreach (var instanceToBeInited in instancesToBeInited) {
+			for (int initIndex = 0; initIndex < instancesToBeInited.Count; initIndex++) {
+				var instanceToBeInited = instancesToBeInited[initIndex];
 				string cInstanceSettingPath = instanceToBeInited.SettingsPath;
 				string alias = instanceToBeInited.Alias;
 				_logger.WriteLog(LogLevel.Information, LogSender.Main, $"Asynchronously initializing instance \"{alias}\" \"{cInstanceSettingPath}\"");
 				awaitingInstances.Add(StartTBotMain(cInstanceSettingPath, alias));
-				Random waitTime = new Random();
-				int millisecondsTimeout	 = waitTime.Next(30, 60) * 1000;
-				System.Threading.Thread.Sleep(millisecondsTimeout);
+				if (initIndex < instancesToBeInited.Count - 1) {
+					int millisecondsTimeout = Random.Shared.Next(30, 60) * 1000;
+					await Task.Delay(millisecondsTimeout);
+				}
 			}
 
 			foreach (Task<TbotInstanceData> awaitingInstance in awaitingInstances) {

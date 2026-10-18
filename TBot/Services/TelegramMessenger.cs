@@ -177,13 +177,18 @@ namespace Tbot.Services {
 		bool isTyping = false;
 		public Task SendTyping(CancellationToken cancellationToken) {
 			isTyping = true;
-			Task.Run(async () => {
-				while (isTyping) {
-					await Client.SendChatAction(
-						chatId: Channel,
-						action: ChatAction.Typing,
-						cancellationToken: cancellationToken);
-					await Task.Delay(3000);
+			_ = Task.Run(async () => {
+				try {
+					while (isTyping) {
+						await Client.SendChatAction(
+							chatId: Channel,
+							action: ChatAction.Typing,
+							cancellationToken: cancellationToken);
+						await Task.Delay(3000);
+					}
+				} catch (Exception e) {
+					isTyping = false;
+					_logger.WriteLog(LogLevel.Warning, LogSender.Tbot, $"Typing indicator stopped: {e.Message}");
 				}
 			});
 			return Task.CompletedTask;
@@ -271,8 +276,7 @@ namespace Tbot.Services {
 				"/stopautodiscovery",
 				"/startautodiscovery",
 				"/fleetjumpgate",
-				"/startautodiscovery",
-				"/profile"
+				"/startautodiscovery"
 			};
 
 			if (update.Type != UpdateType.Message) {
@@ -287,7 +291,6 @@ namespace Tbot.Services {
 				Celestial celestial;
 				int celestialID = 0;
 				List<Celestial> myCelestials;
-				Resources resources;
 				Coordinate coord = new();
 				Coordinate target = new();
 				string[] args;
@@ -451,8 +454,7 @@ namespace Tbot.Services {
 								"/startautofarm - start autofarm\n" +
 								"/stopautodiscovery - stop autodiscovery\n" +
 								"/startautodiscovery - start autodiscovery\n" +
-								"/fleetjumpgate - run jump gate worker immediately\n" +
-								"/profile - able to load one or multiple profiles. Format: <code>/profile ls/ls-r/reset/load [profilename] [profilenameX] </code>\n"
+								"/fleetjumpgate - run jump gate worker immediately\n"
 							, ParseMode.Html);
 							return;
 						default:
@@ -1270,37 +1272,6 @@ namespace Tbot.Services {
 
 								return;
 
-							case "/profile":
-								if (message.Text.Split(' ').Length < 2) {
-									await SendMessage(botClient, message.Chat, "Mission argument required!");
-									await SendMessage(botClient, message.Chat, "<code>/profile ls</code> (list of profiles)\n<code>/profile ls-r</code> (list of profile currently running)\n<code>/profile load ProfileName</code> (to load a profile)\n<code>/profile load ProfileName1 ProfilName2 ProfilNameX</code> (to merge and load multiple profiles)\n<code>/profile reset</code> (to reset the default profile)");
-									return;
-								}
-
-								switch (message.Text.Split(' ')[1]) {
-									case "ls":
-										await currInstance.ListProfiles();
-										return;
-
-									case "ls-r":
-										await currInstance.ListRunningProfiles();
-										return;
-
-									case "load":
-										List<string> messageParts = message.Text.Split(" ").ToList();
-										messageParts = messageParts.Skip(2).ToList();
-										await currInstance.LoadProfile(messageParts);
-										return;
-
-									case "reset":
-										await currInstance.ResetProfile();
-										return;
-									default:
-										await SendMessage(botClient, message.Chat, "Unknown argument for /profile command!");
-										await SendMessage(botClient, message.Chat, "<code>/profile ls</code> (list of profiles)\n<code>/profile ls-r</code> (list of profile currently running)\n<code>/profile load ProfileName</code> (to load a profile)\n<code>/profile load ProfileName1 ProfilName2 ProfilNameX</code> (to merge and load multiple profiles)\n<code>/profile reset</code> (to reset the default profile)");
-										return;
-								}
-								
 							default:
 								return;
 						}

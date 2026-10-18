@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,7 +42,7 @@ namespace Tbot.Workers {
 			};
 			ResourceLedger.SaveHook = (path, claims) => {
 				try {
-					File.WriteAllText(path, JsonConvert.SerializeObject(claims, Formatting.Indented));
+					AtomicFile.WriteAllText(path, JsonConvert.SerializeObject(claims, Formatting.Indented));
 				} catch {
 				}
 			};
@@ -61,10 +62,7 @@ namespace Tbot.Workers {
 			};
 			BuildRequestLog.SaveHook = (path, file) => {
 				try {
-					string tmp = path + ".tmp";
-					File.WriteAllText(tmp, JsonConvert.SerializeObject(file, Formatting.Indented));
-					File.Copy(tmp, path, true);
-					File.Delete(tmp);
+					AtomicFile.WriteAllText(path, JsonConvert.SerializeObject(file, Formatting.Indented));
 				} catch {
 				}
 			};

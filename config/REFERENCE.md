@@ -189,6 +189,8 @@ Builds mines, storage, energy and facilities on all planets.
 | `PrioritizeRobotsAndNanites` | Build robotics and nanite factories early. |
 | `BuildDepositIfFull` | Build storage when it is full. |
 | `BuildSolarSatellites` | Build solar satellites when energy is short. |
+| `SolarSatelliteBatch` | Satellites are built in bundles of this size (the need is rounded up); default 20, 0/1 = exactly the missing amount. |
+| `EnergyReservePercent` | Before a mine upgrade (or a building with an energy cost such as the Terraformer) that would push energy into deficit, the energy source (solar plant/fusion/satellites) is built first, sized for the missing amount plus this percentage; default 10, 0 = exact. |
 | `BuildCrawlers` | Build crawlers. |
 | `FixedCrawlerTarget` | Fixed crawler count target; 0 = calculate. |
 | `DepositHours` | Storage should hold this many hours of production. |
@@ -266,6 +268,22 @@ Sends resources from your planets to one target.
 | `CargoType` | Ship type used. |
 | `Reverse.*` | Reverse repatriation (fetch resources back out for a build): `Active`, `ReturnFuelFactor`, `ReturnAllShips`, `KeepShips`, `PendingTtlMinutes`, `OutboundCapacityFactor`. Advanced. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | As above. |
+
+### Brain.KeepBoosters
+
+Keeps resource boosters running. When no booster of a type is running on a planet, one from your inventory is activated (never bought with Dark Matter).
+
+| Field | Meaning |
+|---|---|
+| `Active` | Switch. |
+| `DryRun` | `true` = only write to the log what would be activated. Check the log first, then set `false`. |
+| `Types.Metal`, `Types.Crystal`, `Types.Deuterium`, `Types.Energy` | Which booster types to keep running. |
+| `Tiers.bronze`, `.silver`, `.gold`, `.platinum` | Which tiers may be used. Bronze is used first, then silver, gold, platinum. (An old list like `["bronze","silver"]` still works.) |
+| `Reserve.bronze`, `.silver`, `.gold`, `.platinum` | Per tier: this many of each booster stay in the inventory; one is only activated while the stock is above it. The Config page shows the current stock next to it. (A single number for all tiers still works.) |
+| `MinMineLevel.Metal`, `.Crystal`, `.Deuterium` | A booster is only used on a planet whose matching mine has at least this level (0 = no limit). Saves boosters on planets where the mine is too low to profit. The overview of running boosters is on the Mine plan page. |
+| `LogItems` | Log the active items of every planet and the inventory once per run (shows event and special items too). |
+| `Exclude` | Planets that are left alone. |
+| `CheckIntervalMin`, `CheckIntervalMax` | Minutes between checks. |
 
 ### Brain.BuyOfferOfTheDay and Brain.AutoFleetJumpGate
 
@@ -404,7 +422,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 
 ## FastFarm
 
-Resource farming mode with one goal: collect as much deuterium as possible. A background scan keeps a list of inactive players; every free fleet slot sends one probe fleet (`ProbesPerTarget` probes), reports are read when the probes arrive, and the best targets (ranked by weighted loot) are raided with small and/or large cargos. While `Active` is on, all other workers except the Defender stay off (`OnlyWorker`). The WebUI menu entry **AutoFarm** then shows the FastFarm overview instead of the AutoFarm report; the switch is on top of the AutoFarm page and on the Config page.
+Resource farming mode with one goal: collect as much deuterium as possible. It works in rounds per galaxy: scan all systems for inactive players, spy every target once, sort by weighted loot, then re-spy the best ones with fresh probes right before the attack (`ProbesPerTarget` probes per fleet) and raid them with small and/or large cargos; targets whose loot shrank by `ShrinkDiscardPercent` or more are dropped, attacked ones leave the storage. Stored targets can be sorted and deleted in the WebUI. While `Active` is on, all other workers except the Defender stay off (`OnlyWorker`). The WebUI menu entry **AutoFarm** then shows the FastFarm overview instead of the AutoFarm report; the switch is on top of the AutoFarm page and on the Config page.
 
 | Field | Meaning |
 |---|---|
@@ -416,18 +434,17 @@ Resource farming mode with one goal: collect as much deuterium as possible. A ba
 | `CargoType` | `SmallCargo` (default), `LargeCargo` or `Both` (small cargos first, large cargos for the rest). |
 | `ProbesPerTarget` | Probes per spying fleet (default 20). |
 | `SlotsToLeaveFree` | Slots that are never used, so the Defender can always send (default 1). |
-| `WeightMetal`, `WeightCrystal`, `WeightDeuterium` | Weights of the loot value that ranks the targets (default 1 : 1.5 : 3). |
+| `WeightMetal`, `WeightCrystal`, `WeightDeuterium` | Weights of the loot value that ranks the targets (default 3 : 2 : 1, the usual MSE ratio). |
 | `MinLoot` | Minimum lootable resources (metal + crystal + deuterium) for an attack. |
 | `MinDeuterium` | Minimum lootable deuterium for an attack. |
 | `TopTargets` | Highest number of attacks per round. |
-| `ReportMaxAgeMinutes` | Reports older than this are not attacked; the target is spied again. |
-| `RespyAfterAttackMinutes` | A raided target is left alone for this long. |
-| `DefendedRecheckHours` | Targets with ships or defence, or that turned active, are checked again after this time. |
+| `ReportMaxAgeMinutes` | A fresh check report older than this is not attacked; the target is checked again. |
 | `DeleteReports` | Deletes each report after reading it (keeps the inbox from filling up). |
 | `FleetSpeedPercent` | Speed of the cargo fleets (10-100). |
 | `CargoSurplusPercent` | Extra cargo space on top of the expected loot. |
 | `MinFillPercent` | A target is skipped when the available ships carry less than this share of its loot. |
-| `MaxSystemsPerScanStep` | Systems the background scan visits per step while the bot waits for fleets. |
+| `MaxSystemsPerScanStep` | Systems the full scan of a round visits per step. |
+| `ShrinkDiscardPercent` | Drop a target when its fresh weighted loot is at least this many percent below the value from the full sweep (default 10). `MinLoot`/`MinDeuterium` still apply. |
 
 State and statistics are kept in `data/fastfarm_<Alias>.json` (written by the worker, shown on the overview page).
 

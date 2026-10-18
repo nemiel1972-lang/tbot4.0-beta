@@ -3271,13 +3271,13 @@ namespace Tbot.Includes {
 			float cost;
 			switch (buildable) {
 				case Buildables.MetalMine:
-					currentProd = CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5;
-					nextLevelProd = CalcMetalProduction(planet.Buildings.MetalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5;
+					currentProd = CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium;
+					nextLevelProd = CalcMetalProduction(planet.Buildings.MetalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium;
 					cost = CalcPrice(buildable, GetNextLevel(planet, buildable)).ConvertedDeuterium;
 					break;
 				case Buildables.CrystalMine:
-					currentProd = CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5;
-					nextLevelProd = CalcCrystalProduction(planet.Buildings.CrystalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5;
+					currentProd = CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium;
+					nextLevelProd = CalcCrystalProduction(planet.Buildings.CrystalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium;
 					cost = CalcPrice(buildable, GetNextLevel(planet, buildable)).ConvertedDeuterium;
 					break;
 				case Buildables.DeuteriumSynthesizer:
@@ -3305,12 +3305,12 @@ namespace Tbot.Includes {
 					planet.LFBonuses = new() { Production = new() { Metal = 0, Crystal = 0, Deuterium = 0 } };
 				switch (buildable) {
 					case Buildables.MetalMine:
-						currentOneDayProd = CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24;
-						nextOneDayProd = CalcMetalProduction(planet.Buildings.MetalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24;
+						currentOneDayProd = CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24;
+						nextOneDayProd = CalcMetalProduction(planet.Buildings.MetalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24;
 						break;
 					case Buildables.CrystalMine:
-						currentOneDayProd = CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24;
-						nextOneDayProd = CalcCrystalProduction(planet.Buildings.CrystalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24;
+						currentOneDayProd = CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24;
+						nextOneDayProd = CalcCrystalProduction(planet.Buildings.CrystalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24;
 						break;
 					case Buildables.DeuteriumSynthesizer:
 						currentOneDayProd = CalcDeuteriumProduction(planet.Buildings.DeuteriumSynthesizer, planet.Temperature.Average, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Deuterium, playerClass, hasGeologist, hasStaff) * 24;
@@ -3334,12 +3334,12 @@ namespace Tbot.Includes {
 				planet.LFBonuses = new() { Production = new() { Metal = 0, Crystal = 0, Deuterium = 0 } };
 			
 			var metalCost = CalcPrice(Buildables.MetalMine, GetNextLevel(planet, Buildables.MetalMine)).ConvertedDeuterium;
-			var currentOneDayMetalProd = CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24;
-			var nextOneDayMetalProd = CalcMetalProduction(planet.Buildings.MetalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24;
+			var currentOneDayMetalProd = CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24;
+			var nextOneDayMetalProd = CalcMetalProduction(planet.Buildings.MetalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24;
 			float metalDOIR = metalCost / (float) (nextOneDayMetalProd - currentOneDayMetalProd);
 			var crystalCost = CalcPrice(Buildables.CrystalMine, GetNextLevel(planet, Buildables.CrystalMine)).ConvertedDeuterium;
-			var currentOneDayCrystalProd = CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24;
-			var nextOneDayCrystalProd = CalcCrystalProduction(planet.Buildings.CrystalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24;
+			var currentOneDayCrystalProd = CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24;
+			var nextOneDayCrystalProd = CalcCrystalProduction(planet.Buildings.CrystalMine + 1, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24;
 			float crystalDOIR = crystalCost / (float) (nextOneDayCrystalProd - currentOneDayCrystalProd);
 			var deuteriumCost = CalcPrice(Buildables.DeuteriumSynthesizer, GetNextLevel(planet, Buildables.DeuteriumSynthesizer)).ConvertedDeuterium;
 			var currentOneDayDeuteriumProd = CalcDeuteriumProduction(planet.Buildings.DeuteriumSynthesizer, planet.Temperature.Average, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Deuterium, playerClass, hasGeologist, hasStaff) * 24;
@@ -3362,12 +3362,12 @@ namespace Tbot.Includes {
 				if (planet.LFBonuses == null || planet.LFBonuses.Production == null)
 					planet.LFBonuses = new() { Production = new() { Metal = 0, Crystal = 0, Deuterium = 0 } };
 				
-				currentProd += (long) Math.Round(CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24, 0);
-				currentProd += (long) Math.Round(CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24, 0);
+				currentProd += (long) Math.Round(CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24, 0);
+				currentProd += (long) Math.Round(CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24, 0);
 				currentProd += CalcDeuteriumProduction(planet.Buildings.DeuteriumSynthesizer, planet.Temperature.Average, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Deuterium, playerClass, hasGeologist, hasStaff) * 24;
 
-				nextProd += (long) Math.Round(CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, nextPlasmaLevel, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24, 0);
-				nextProd += (long) Math.Round(CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, nextPlasmaLevel, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24, 0);
+				nextProd += (long) Math.Round(CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, nextPlasmaLevel, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24, 0);
+				nextProd += (long) Math.Round(CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, nextPlasmaLevel, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24, 0);
 				nextProd += CalcDeuteriumProduction(planet.Buildings.DeuteriumSynthesizer, planet.Temperature.Average, speedFactor, ratio, nextPlasmaLevel, planet.LFBonuses.Production.Deuterium, playerClass, hasGeologist, hasStaff) * 24;
 			}
 
@@ -3405,8 +3405,8 @@ namespace Tbot.Includes {
 				if (planet.LFBonuses == null || planet.LFBonuses.Production == null)
 					planet.LFBonuses = new() { Production = new() { Metal = 0, Crystal = 0, Deuterium = 0 } };
 				
-				dailyProd += (long) Math.Round(CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) 2.5 * 24, 0);
-				dailyProd += (long) Math.Round(CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) 1.5 * 24, 0);
+				dailyProd += (long) Math.Round(CalcMetalProduction(planet.Buildings.MetalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Metal, playerClass, hasGeologist, hasStaff) / (float) Resources.MetalPerDeuterium * 24, 0);
+				dailyProd += (long) Math.Round(CalcCrystalProduction(planet.Buildings.CrystalMine, planet.Coordinate.Position, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Crystal, playerClass, hasGeologist, hasStaff) / (float) Resources.CrystalPerDeuterium * 24, 0);
 				dailyProd += CalcDeuteriumProduction(planet.Buildings.DeuteriumSynthesizer, planet.Temperature.Average, speedFactor, ratio, researches.PlasmaTechnology, planet.LFBonuses.Production.Deuterium, playerClass, hasGeologist, hasStaff) * 24;
 			}
 			long nextDailyProd = dailyProd + (long) Math.Round((float) dailyProd / (float) planets.Count, 0);

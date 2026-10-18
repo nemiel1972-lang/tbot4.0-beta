@@ -5,6 +5,65 @@
     if (!main) { wireSearch(); return; }
     wireSearch();
     wireSwitches();
+
+    var DRAFT_KEY = 'tbot.cfgdraft.' + main.dataset.instance;
+    var SAVE_SCOPE = { TelegramMessenger: 'global' };
+    var DRAFT_PAGE = { TelegramMessenger: 'Messenger', DiscordWebhook: 'Messenger', GhostSleep: 'SleepMode' };
+    function readDrafts() { try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '{}') || {}; } catch (e) { return {}; } }
+    function writeDrafts(d) { try { if (Object.keys(d).length) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else sessionStorage.removeItem(DRAFT_KEY); } catch (e) { } }
+    function clearPendingActive(name) {
+        var d = readDrafts();
+        if (d.__active && d.__active[name] !== undefined) { delete d.__active[name]; if (!Object.keys(d.__active).length) delete d.__active; writeDrafts(d); }
+        document.querySelectorAll('#cfg-blocks .sw.click').forEach(function (sw) { if (sw.dataset.block === name && sw.dataset.orig !== undefined) sw.classList.toggle('on', sw.dataset.orig === '1'); });
+    }
+    function clearDraft(name) { var d = readDrafts(); delete d[name]; writeDrafts(d); renderDraftBar(); }
+    function postBlock(name, content) {
+        var fd = new URLSearchParams(); fd.set('instance', main.dataset.instance); fd.set('block', name); fd.set('content', JSON.stringify(content)); if (SAVE_SCOPE[name]) fd.set('scope', SAVE_SCOPE[name]);
+        return fetch(main.dataset.save, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() }).then(function (r) { return r.json(); });
+    }
+    function renderDraftBar() {
+        var d = readDrafts(), act = d.__active || {}, names = Object.keys(d).filter(function (n) { return n !== '__active'; }), pages = {};
+        names.forEach(function (n) { pages[DRAFT_PAGE[n] || n] = true; });
+        Object.keys(act).forEach(function (n) { pages[n] = true; if (names.indexOf(n) < 0) names.push(n); });
+        document.querySelectorAll('#cfg-blocks .sw.click').forEach(function (sw) { if (act[sw.dataset.block] !== undefined) sw.classList.toggle('on', !!act[sw.dataset.block]); });
+        document.querySelectorAll('#cfg-blocks li').forEach(function (li) { li.classList.toggle('has-draft', !!pages[li.dataset.name]); });
+        var bar = document.getElementById('cfg-draftbar');
+        if (!names.length) { if (bar) bar.remove(); return; }
+        if (!bar) { bar = document.createElement('div'); bar.id = 'cfg-draftbar'; bar.className = 'cfg-draftbar'; var pg = document.querySelector('.cfg-page'); if (pg) pg.insertBefore(bar, pg.firstChild); else document.body.insertBefore(bar, document.body.firstChild); }
+        bar.innerHTML = '';
+        var lbl = document.createElement('span'); lbl.className = 'lbl';
+        lbl.textContent = '⚠ Not saved yet - ' + names.length + ' unsaved block' + (names.length > 1 ? 's' : '') + ': ' + names.join(', ');
+        var bSave = document.createElement('button'); bSave.type = 'button'; bSave.className = 'cfg-btn p'; bSave.textContent = 'Save all';
+        var bDisc = document.createElement('button'); bDisc.type = 'button'; bDisc.className = 'cfg-btn'; bDisc.textContent = 'Discard & reload';
+        bSave.addEventListener('click', function () {
+            bSave.disabled = true; bDisc.disabled = true;
+            var cur = readDrafts(), act = cur.__active || {};
+            var jobs = Object.keys(cur).filter(function (n) { return n !== '__active'; }).map(function (n) { return { n: n, run: function () { return postBlock(n, cur[n]); }, done: function () { clearDraft(n); } }; });
+            Object.keys(act).forEach(function (n) {
+                jobs.push({ n: n + ' (Active)', run: function () {
+                    var fd = new URLSearchParams(); fd.set('instance', main.dataset.instance); fd.set('block', n); fd.set('active', act[n] ? 'true' : 'false');
+                    return fetch(main.dataset.setactive, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() }).then(function (r) { return r.json(); });
+                }, done: function () { var d2 = readDrafts(); if (d2.__active) { delete d2.__active[n]; if (!Object.keys(d2.__active).length) delete d2.__active; } writeDrafts(d2); renderDraftBar(); } });
+            });
+            jobs.reduce(function (p, job) {
+                return p.then(function (ok) {
+                    if (!ok) return false;
+                    return job.run().then(function (r) {
+                        if (!r.success) { alert('Save failed (' + job.n + '): ' + r.error); return false; }
+                        job.done(); return true;
+                    });
+                });
+            }, Promise.resolve(true)).then(function (ok) {
+                if (ok) window.location.reload(); else { bSave.disabled = false; bDisc.disabled = false; }
+            }).catch(function (e) { alert('Save failed: ' + e); bSave.disabled = false; bDisc.disabled = false; });
+        });
+        bDisc.addEventListener('click', function () {
+            if (!window.confirm('Discard all unsaved changes in ' + names.length + ' block(s)?')) return;
+            writeDrafts({}); window.location.reload();
+        });
+        bar.appendChild(lbl); bar.appendChild(bDisc); bar.appendChild(bSave);
+    }
+    renderDraftBar();
     if (!root) return;
 
     var instance = main.dataset.instance, block = main.dataset.block;
@@ -66,23 +125,19 @@
     function clone(o) { return JSON.parse(JSON.stringify(o)); }
     function dirty() { return JSON.stringify(state) !== JSON.stringify(original); }
 
+    var onSidebarActive = null;
     function wireSwitches() {
         document.querySelectorAll('#cfg-blocks .sw.click').forEach(function (sw) {
+            sw.dataset.orig = sw.classList.contains('on') ? '1' : '0';
             sw.addEventListener('click', function (ev) {
                 ev.preventDefault(); ev.stopPropagation();
-                var name = sw.dataset.block, turnOn = !sw.classList.contains('on'), li = sw.closest('li');
-                if (!window.confirm((turnOn ? 'Switch ' + name + ' ON?' : 'Switch ' + name + ' OFF?') + '\nIt is saved right away and takes effect when the bot re-reads the config.' + (li && li.classList.contains('sel') ? '\nUnsaved changes on this page are lost.' : ''))) return;
-                var fd = new URLSearchParams(); fd.set('instance', main.dataset.instance); fd.set('block', name); fd.set('active', turnOn ? 'true' : 'false');
-                sw.classList.add('busy');
-                fetch(main.dataset.setactive, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() })
-                    .then(function (r) { return r.json(); })
-                    .then(function (r) {
-                        sw.classList.remove('busy');
-                        if (!r.success) { alert('Could not switch: ' + r.error); return; }
-                        sw.classList.toggle('on', !!r.active);
-                        if (li && li.classList.contains('sel')) window.location.reload();
-                    })
-                    .catch(function (e) { sw.classList.remove('busy'); alert('Could not switch: ' + e); });
+                var name = sw.dataset.block, want = !sw.classList.contains('on');
+                var d = readDrafts(), act = d.__active || {};
+                if ((want ? '1' : '0') === sw.dataset.orig) delete act[name]; else act[name] = want;
+                if (Object.keys(act).length) d.__active = act; else delete d.__active;
+                writeDrafts(d);
+                if (onSidebarActive) onSidebarActive(name, want);
+                renderDraftBar();
             });
         });
     }
@@ -118,6 +173,13 @@
         .then(function (r) {
             if (!r.success) { root.innerHTML = ''; root.appendChild(el('div', { class: 'cfg-error', text: r.error })); return; }
             original = JSON.parse(r.data); state = clone(original); originalText = JSON.stringify(original, null, 2); file = r.file;
+            var dr = readDrafts();
+            if (!COMBINED && dr.__active && dr.__active[block] !== undefined && dr[block] === undefined && typeof state.Active === 'boolean') state.Active = !!dr.__active[block];
+            onSidebarActive = function (name, v) { if (!COMBINED && name === block && state && typeof state.Active === 'boolean') { state.Active = v; render(); } };
+            (COMBINED || [block]).forEach(function (n) {
+                if (dr[n] === undefined) return;
+                if (COMBINED) state[n] = clone(dr[n]); else state = clone(dr[n]);
+            });
             render();
         })
         .catch(function (e) { root.innerHTML = ''; root.appendChild(el('div', { class: 'cfg-error', text: String(e) })); });
@@ -1056,8 +1118,39 @@
         AutoDefence: 'Builds defence until the target counts are reached. 0 = do not build, shield domes are on/off.',
         AutoRepatriate: 'Sends resources from your planets to one target (for example the home moon) once enough has piled up.',
         BuyOfferOfTheDay: 'Buys the daily merchant offer.',
+        KeepBoosters: 'Keeps resource boosters running: when none of a type is active on a planet, one from your inventory is activated. Nothing is bought with Dark Matter. Start with test mode on and read the log.',
         AutoFleetJumpGate: 'Jumps the fleet from the moon to a target moon through the jump gate, if enough fleet points would go.'
     };
+    function boosterTiers(k, o, p) {
+        var TIERS = ['bronze', 'silver', 'gold', 'platinum'], LABEL = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' };
+        if (Array.isArray(o.Tiers)) { var old = o.Tiers.map(function (t) { return String(t).toLowerCase(); }); o.Tiers = {}; TIERS.forEach(function (t) { o.Tiers[t] = old.indexOf(t) >= 0; }); }
+        if (!o.Tiers || typeof o.Tiers !== 'object') { o.Tiers = {}; TIERS.forEach(function (t) { o.Tiers[t] = t !== 'platinum'; }); }
+        if (typeof o.Reserve !== 'object' || o.Reserve === null) { var r0 = typeof o.Reserve === 'number' ? o.Reserve : 10; o.Reserve = {}; TIERS.forEach(function (t) { o.Reserve[t] = r0; }); }
+        TIERS.forEach(function (t) { if (o.Tiers[t] === undefined) o.Tiers[t] = false; if (o.Reserve[t] === undefined) o.Reserve[t] = 10; });
+        var spans = {};
+        var rows = TIERS.map(function (t) {
+            var sp = el('span', { class: 'cfg-unit', text: '/ … available' });
+            spans[t] = sp;
+            var ctl = el('div', { class: 'cfg-inline' }, [
+                toggle(o.Tiers, t, p.concat('Tiers', t)),
+                el('span', { class: 'cfg-unit', text: ' keep ' }),
+                num(o.Reserve, t, p.concat('Reserve', t), { min: 0 }),
+                sp
+            ]);
+            return row(LABEL[t], t === 'bronze' ? 'Switch = may be used. The number is kept in the inventory.' : null, ctl);
+        });
+        k.push(inner('brain:Boost:tiers', 'Booster tiers: use + reserve (Bronze is used first)', rows));
+        fetch(main.dataset.boosterstock + '?instance=' + encodeURIComponent(instance), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (r) {
+                TIERS.forEach(function (t) {
+                    var s = r.success && r.data && r.data.stock ? r.data.stock[t] : null;
+                    if (!s) { spans[t].textContent = '/ no data yet'; return; }
+                    spans[t].textContent = '/ ' + ['Metal', 'Crystal', 'Deuterium', 'Energy'].map(function (n) { return n.charAt(0) + ' ' + (s[n] || 0); }).join(' · ') + ' available';
+                });
+            })
+            .catch(function () { TIERS.forEach(function (t) { spans[t].textContent = ''; }); });
+    }
     function brainSub(body, name, title, build) {
         var o = state[name];
         if (!o || typeof o !== 'object' || Array.isArray(o)) return;
@@ -1129,10 +1222,10 @@
                 ovKids.push(el('button', { type: 'button', class: 'cfg-btn sm', text: '+ Add planet', onclick: function () { o.ColonyOverrides.push(newCoord()); openSecs['brain:AutoMine:ov'] = true; update(); render(); } }));
                 k.push(inner('brain:AutoMine:ov', 'Planets with own caps (' + o.ColonyOverrides.length + ')', ovKids));
             }
-            k.push(inner('brain:AutoMine:opt', 'Build options', autoRows(o, p, ['RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons'])));
+            k.push(inner('brain:AutoMine:opt', 'Build options', autoRows(o, p, ['RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'SolarSatelliteBatch', 'EnergyReservePercent', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons'])));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'Transports', 'HomeWorld', 'Colony', 'ColonyOverrides', 'RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^Max/))).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Transports', 'HomeWorld', 'Colony', 'ColonyOverrides', 'RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'SolarSatelliteBatch', 'EnergyReservePercent', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^Max/))).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoResearch', 'AutoResearch', function (k, o, p) {
@@ -1231,6 +1324,22 @@
             restRows(o, p, ['Active', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
+        brainSub(body, 'KeepBoosters', 'KeepBoosters', function (k, o, p) {
+            k.push(fld(o, 'DryRun', p, 'Test mode (nothing activated)', 'Only the log shows what would be activated', 'toggle'));
+            if (o.Types && typeof o.Types === 'object') {
+                var tp = p.concat('Types');
+                k.push(inner('brain:Boost:types', 'Booster types to keep running', autoRows(o.Types, tp, ['Metal', 'Crystal', 'Deuterium', 'Energy'])));
+            }
+            k.push(fld(o, 'LogItems', p, 'Log found items', 'Writes the active items of each planet and the inventory to the log', 'toggle'));
+            boosterTiers(k, o, p);
+            if (o.MinMineLevel && typeof o.MinMineLevel === 'object') {
+                k.push(inner('brain:Boost:minlevel', 'Minimum mine level (no booster below it, 0 = always)', autoRows(o.MinMineLevel, p.concat('MinMineLevel'), ['Metal', 'Crystal', 'Deuterium'])));
+            }
+            k.push(coordList(o, 'Exclude', 'Excluded planets', 'Never touched', '+ Add exclusion', p));
+            intervalRows(o, p).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'DryRun', 'Types', 'Reserve', 'MinMineLevel', 'LogItems', 'Tiers', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+        });
+
         brainSub(body, 'AutoFleetJumpGate', 'AutoFleetJumpGate', function (k, o, p) {
             k.push(coordList(o, 'Target', 'Target moons', 'Where the fleet jumps to', '+ Add target', p));
             k.push(fld(o, 'MinimumAmountOfShipPointsToTeleport', p, 'Min fleet points to jump', null, 'num', { min: 0 }));
@@ -1242,7 +1351,7 @@
             restRows(o, p, ['Active', 'Target', 'MinimumAmountOfShipPointsToTeleport', 'MinimumAmountOfShipsToBeLeftOnMoon', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
-        var known = ['Active', 'Transports', 'AutoMine', 'AutoResearch', 'LifeformAutoMine', 'LifeformAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'AutoFleetJumpGate'];
+        var known = ['Active', 'Transports', 'AutoMine', 'AutoResearch', 'LifeformAutoMine', 'LifeformAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'KeepBoosters', 'AutoFleetJumpGate'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
@@ -1370,6 +1479,10 @@
             listTable(d.ScanRange, [{ key: 'Galaxy', label: 'Galaxy', min: 1, sens: true }, { key: 'StartSystem', label: 'From system', min: 1, sens: true }, { key: 'EndSystem', label: 'To system', min: 1, sens: true }],
                 function () { return { Galaxy: 1, StartSystem: 1, EndSystem: 499 }; }, '+ Add range', ['ScanRange'])
         ]));
+        body.appendChild(sec('Sweep', [
+            el('div', { class: 'cfg-note', text: 'FastFarm works in rounds: scan one galaxy, spy every target, sort by loot, then check the best ones again with fresh probes right before the attack. Targets whose loot shrank by the set share are dropped.' }),
+            fld(d, 'ShrinkDiscardPercent', P, 'Drop target when loot shrank by', null, 'num', { min: 0, max: 100, unit: '%' })
+        ].filter(Boolean)));
         body.appendChild(sec('Ships and slots', [
             fld(d, 'CargoType', P, 'Cargo ships', 'Both = small cargos first, large cargos for the rest', 'select', { options: ['SmallCargo', 'LargeCargo', 'Both'] }),
             fld(d, 'ProbesPerTarget', P, 'Probes per target', null, 'num', { min: 1 }),
@@ -1390,11 +1503,9 @@
         foldTo(body, 'Reports and timing', [
             fld(d, 'DeleteReports', P, 'Delete reports after reading', 'Keeps the inbox empty so it does not fill up', 'toggle'),
             fld(d, 'ReportMaxAgeMinutes', P, 'Max report age', 'Older reports are not attacked', 'num', { min: 1, unit: 'minutes' }),
-            fld(d, 'RespyAfterAttackMinutes', P, 'Wait before spying a raided target again', null, 'num', { min: 0, unit: 'minutes' }),
-            fld(d, 'DefendedRecheckHours', P, 'Wait before re-checking a defended target', null, 'num', { min: 1, unit: 'hours' }),
             fld(d, 'MaxSystemsPerScanStep', P, 'Systems per scan step', null, 'num', { min: 1 })
         ].filter(Boolean));
-        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'Origin', 'ScanRange', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'RespyAfterAttackMinutes', 'DefendedRecheckHours', 'MaxSystemsPerScanStep'];
+        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'Origin', 'ScanRange', 'ShrinkDiscardPercent', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'MaxSystemsPerScanStep'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
@@ -1471,7 +1582,16 @@
     }
 
     var saveBtn, dirtyLbl;
-    function update() { if (saveBtn) { saveBtn.disabled = !dirty(); dirtyLbl.textContent = dirty() ? '● unsaved changes' : ''; } }
+    function syncDraft() {
+        if (!state || !original) return;
+        var dr = readDrafts();
+        (COMBINED || [block]).forEach(function (n) {
+            var cur = COMBINED ? state[n] : state, orig = COMBINED ? original[n] : original;
+            if (cur !== undefined && JSON.stringify(cur) !== JSON.stringify(orig)) dr[n] = cur; else delete dr[n];
+        });
+        writeDrafts(dr); renderDraftBar();
+    }
+    function update() { if (saveBtn) { saveBtn.disabled = !dirty(); dirtyLbl.textContent = dirty() ? '● unsaved changes' : ''; } syncDraft(); }
 
     function maskLabel() {
         var cb = el('input', { type: 'checkbox' });
@@ -1510,8 +1630,8 @@
         saveBtn = el('button', { type: 'button', class: 'cfg-btn p', text: 'Save', onclick: save });
         dirtyLbl = el('span', { class: 'dirty' });
         root.appendChild(el('div', { class: 'cfg-foot' }, [
-            dirtyLbl, el('span', { class: 'grow cfg-note', text: 'Backup (.bak) is created. The bot picks up changes on its next config read/restart.' }),
-            el('button', { type: 'button', class: 'cfg-btn', text: 'Discard', onclick: function () { state = clone(original); render(); } }), saveBtn
+            dirtyLbl, el('span', { class: 'grow cfg-note', text: 'Changes are kept while you switch pages - "Save all" (banner at the top) writes every changed block at once. Backup (.bak) is created.' }),
+            el('button', { type: 'button', class: 'cfg-btn', text: 'Discard', onclick: function () { (COMBINED || [block]).forEach(clearPendingActive); state = clone(original); render(); } }), saveBtn
         ]));
         applyMask();
         update();
@@ -1521,10 +1641,7 @@
         saveBtn.disabled = true;
         var ta = root.querySelector('.cfg-json');
         if (ta && !ta.readOnly) { try { var parsed2 = JSON.parse(ta.value); restoreSecrets(parsed2, state); state = parsed2; } catch (e) { alert('Invalid JSON: ' + e.message); saveBtn.disabled = false; return; } }
-        function post(name, content) {
-            var fd = new URLSearchParams(); fd.set('instance', instance); fd.set('block', name); fd.set('content', JSON.stringify(content)); if (SCOPE[name]) fd.set('scope', SCOPE[name]);
-            return fetch(main.dataset.save, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() }).then(function (r) { return r.json(); });
-        }
+        var post = postBlock;
         var saving = COMBINED
             ? COMBINED.filter(function (b) { return state[b] && JSON.stringify(state[b]) !== JSON.stringify(original[b]); }).reduce(function (p, b) {
                 return p.then(function (res) { return res.success ? post(b, state[b]) : res; });
@@ -1533,7 +1650,7 @@
         saving
             .then(function (r) {
                 if (!r.success) { alert('Save failed: ' + r.error); saveBtn.disabled = false; return; }
-                original = clone(state); originalText = JSON.stringify(original, null, 2); render();
+                original = clone(state); originalText = JSON.stringify(original, null, 2); (COMBINED || [block]).forEach(function (n) { var sw0 = document.querySelector('#cfg-blocks .sw.click[data-block="' + n + '"]'); if (sw0) sw0.dataset.orig = ((COMBINED ? state[n] : state) || {}).Active ? '1' : '0'; clearPendingActive(n); }); render();
                 dirtyLbl.textContent = '✓ saved'; dirtyLbl.style.color = 'var(--tb-ok)';
             })
             .catch(function (e) { alert('Save failed: ' + e); saveBtn.disabled = false; });

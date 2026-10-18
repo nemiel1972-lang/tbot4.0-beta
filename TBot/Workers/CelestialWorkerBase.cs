@@ -168,7 +168,9 @@ namespace Tbot.Workers {
 			}
 
 			try {
+#pragma warning disable VSTHRD003
 				await _executionPredecessor;
+#pragma warning restore VSTHRD003
 				await WaitWorker();
 
 				ct.ThrowIfCancellationRequested();

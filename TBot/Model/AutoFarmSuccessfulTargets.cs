@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -170,26 +171,7 @@ namespace TBot.Model
 
 				string json = JsonConvert.SerializeObject(_successfulTargets, Formatting.Indented);
 
-				string tmpPath = _filePath + ".tmp";
-
-				File.WriteAllText(tmpPath, json);
-
-				if (File.Exists(_filePath))
-				{
-					try
-					{
-						File.Replace(tmpPath, _filePath, null);
-					}
-					catch
-					{
-						File.Delete(_filePath);
-						File.Move(tmpPath, _filePath);
-					}
-				}
-				else
-				{
-					File.Move(tmpPath, _filePath);
-				}
+				AtomicFile.WriteAllText(_filePath, json);
 
 				_lastSaveUtc = DateTime.UtcNow;
 				_pendingChanges = 0;

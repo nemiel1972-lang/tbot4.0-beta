@@ -124,24 +124,6 @@ func main() {
 			Value:   "",
 			Sources: cli.EnvVars("OGAMED_AUTH_PASSWORD"),
 		},
-		&cli.StringFlag{
-			Name:    "enable-tls",
-			Usage:   "Enable TLS. Needs key.pem and cert.pem",
-			Value:   "false",
-			Sources: cli.EnvVars("OGAMED_ENABLE_TLS"),
-		},
-		&cli.StringFlag{
-			Name:    "tls-key-file",
-			Usage:   "Path to key.pem",
-			Value:   "~/.ogame/key.pem",
-			Sources: cli.EnvVars("OGAMED_TLS_CERTFILE"),
-		},
-		&cli.StringFlag{
-			Name:    "tls-cert-file",
-			Usage:   "Path to cert.pem",
-			Value:   "~/.ogame/cert.pem",
-			Sources: cli.EnvVars("OGAMED_TLS_KEYFILE"),
-		},
 		&cli.BoolFlag{
 			Name:    "cors-enabled",
 			Usage:   "Enable CORS",
@@ -219,6 +201,7 @@ func main() {
 			Sources: cli.EnvVars("OGAMED_DEVICEUSERAGENT"),
 		},
 	}
+	app.Flags = append(app.Flags, tlsFlags()...)
 	app.Action = start
 	if err := app.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
@@ -241,8 +224,8 @@ func start(ctx context.Context, c *cli.Command) error {
 	lobby := c.String("lobby")
 	apiNewHostname := c.String("api-new-hostname")
 	enableTLS := c.Bool("enable-tls")
-	tlsKeyFile := c.String("tls-key-file")
-	tlsCertFile := c.String("tls-cert-file")
+	tlsKeyFile := expandHome(c.String("tls-key-file"))
+	tlsCertFile := expandHome(c.String("tls-cert-file"))
 	basicAuthUsername := c.String("basic-auth-username")
 	basicAuthPassword := c.String("basic-auth-password")
 	corsEnabled := c.Bool("cors-enabled")
@@ -421,6 +404,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/moons/:moonID", wrapper.GetMoonHandler)
 	e.GET("/bot/moons/:galaxy/:system/:position", wrapper.GetMoonByCoordHandler)
 	e.GET("/bot/celestials/:celestialID/items", wrapper.GetCelestialItemsHandler)
+	e.GET("/bot/celestials/:celestialID/active-items", wrapper.GetCelestialActiveItemsHandler)
 	e.GET("/bot/celestials/:celestialID/items/:itemRef/activate", wrapper.ActivateCelestialItemHandler)
 	e.GET("/bot/celestials/:celestialID/techs", wrapper.TechsHandler)
 	e.GET("/bot/celestials/:celestialID/abandon", wrapper.CelestialAbandonHandler)
@@ -483,6 +467,5 @@ func start(ctx context.Context, c *cli.Command) error {
 		log.Println("Enable TLS Support")
 		return e.StartTLS(host+":"+strconv.Itoa(port), tlsCertFile, tlsKeyFile)
 	}
-	log.Println("Disable TLS Support")
 	return e.Start(host + ":" + strconv.Itoa(port))
 }

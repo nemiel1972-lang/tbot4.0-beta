@@ -18,7 +18,6 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Workers {
 
-	public delegate Task WorkerFunction(CancellationToken ct);
 
 	public abstract class WorkerBase : ITBotWorker {
 		protected readonly ITBotMain _tbotInstance;

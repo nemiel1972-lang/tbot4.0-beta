@@ -281,6 +281,7 @@ namespace Tbot.Workers.Brain {
 					}
 				}
 				celestialsToMine = AccountConstructionPlanner.OrderCelestials(celestialsToMine, constructionCandidates).ToList();
+				MinePlanSnapshot.TryWrite(_tbotInstance, _calculationService, _ogameService, celestialsToExclude);
 				celestialsToMine.AddRange(_tbotInstance.UserData.celestials.Where(c => c is Moon));
 
 				var dueTime = TimeSpan.Zero;

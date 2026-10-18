@@ -42,6 +42,7 @@ namespace TBot.Common.Logging.Sinks {
 				LogSender.AutoRepatriate => ConsoleColor.Blue,
 				LogSender.AutoResearch => ConsoleColor.Blue,
 				LogSender.BuyOfferOfTheDay => ConsoleColor.Blue,
+				LogSender.KeepBoosters => ConsoleColor.Blue,
 				LogSender.LifeformsAutoMine => ConsoleColor.Blue,
 				LogSender.LifeformsAutoResearch => ConsoleColor.Blue,
 				LogSender.Defender => ConsoleColor.DarkGreen,

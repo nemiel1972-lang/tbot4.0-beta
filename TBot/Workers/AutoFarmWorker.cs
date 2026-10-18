@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -112,7 +113,7 @@ namespace Tbot.Workers {
 				if (isRecycler) { cal.RecyclerFactor = newFactor; cal.RecyclerSamples = samples + 1; }
 				else { cal.AttackFactor = newFactor; cal.AttackSamples = samples + 1; }
 				try {
-					File.WriteAllText(GetFlightCalibrationFilePath(), JsonConvert.SerializeObject(cal));
+					AtomicFile.WriteAllText(GetFlightCalibrationFilePath(), JsonConvert.SerializeObject(cal));
 				} catch (Exception e) {
 					_tbotInstance?.log(LogLevel.Warning, LogSender.AutoFarm, $"Flight time calibration could not be saved: {e.Message}");
 				}
@@ -356,7 +357,7 @@ namespace Tbot.Workers {
 		private void SavePendingRecyclers(List<PendingRecyclerEntry> entries) {
 			lock (_pendingRecyclersLock) {
 				try {
-					File.WriteAllText(GetPendingRecyclersFilePath(), JsonConvert.SerializeObject(entries));
+					AtomicFile.WriteAllText(GetPendingRecyclersFilePath(), JsonConvert.SerializeObject(entries));
 				} catch (Exception e) {
 					_tbotInstance?.log(LogLevel.Warning, LogSender.AutoFarm, $"Scheduled recyclers could not be saved: {e.Message}");
 				}
@@ -429,7 +430,7 @@ namespace Tbot.Workers {
 				bool overridden = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeuteriumGuardOverride", false);
 				string dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
 				Directory.CreateDirectory(dataDir);
-				File.WriteAllText(Path.Combine(dataDir, Path.GetFileName($"autofarm_deut_{_tbotInstance.InstanceAlias}.json")), JsonConvert.SerializeObject(new {
+				AtomicFile.WriteAllText(Path.Combine(dataDir, Path.GetFileName($"autofarm_deut_{_tbotInstance.InstanceAlias}.json")), JsonConvert.SerializeObject(new {
 					UpdatedUtc = DateTime.UtcNow,
 					MinDeuterium = min,
 					GuardEnabled = enabled,
@@ -1185,7 +1186,7 @@ namespace Tbot.Workers {
 							}).Where(x => x.name != null).ToList();
 							string allyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
 							Directory.CreateDirectory(allyDir);
-							File.WriteAllText(Path.Combine(allyDir, $"ally_names_{_tbotInstance.InstanceAlias}.json"), JsonConvert.SerializeObject(names));
+							AtomicFile.WriteAllText(Path.Combine(allyDir, $"ally_names_{_tbotInstance.InstanceAlias}.json"), JsonConvert.SerializeObject(names));
 						} catch {
 						}
 						_allyPlayerIds = members;

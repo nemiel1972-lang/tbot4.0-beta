@@ -653,6 +653,12 @@ window.CFG_HELP.en = {
   "AutoMine.BuildSolarSatellites": {
    "t": "Build solar satellites when energy is short."
   },
+  "AutoMine.SolarSatelliteBatch": {
+   "t": "Solar satellites are built in bundles of this size (the missing amount is rounded up) instead of one by one. Default 20; 0 or 1 = exactly the missing amount."
+  },
+  "AutoMine.EnergyReservePercent": {
+   "t": "Before a mine upgrade that would push the energy balance into deficit, the energy source (solar plant, fusion or satellites) is built first, sized for the missing energy plus this percentage as a buffer. Default 10; 0 = exactly the missing amount."
+  },
   "AutoMine.BuildCrawlers": {
    "t": "Build crawlers."
   },
@@ -816,6 +822,24 @@ window.CFG_HELP.en = {
   },
   "BuyOfferOfTheDay.Active": {
    "t": "Buys the daily offer of the merchant."
+  },
+  "KeepBoosters.Active": {
+   "t": "Activates a booster from the inventory when none of that type is running."
+  },
+  "KeepBoosters.DryRun": {
+   "t": "Only writes to the log what would be activated."
+  },
+  "KeepBoosters.MinMineLevel.*": {
+   "t": "A booster of this type is only used when the matching mine on the planet has at least this level."
+  },
+  "KeepBoosters.Reserve": {
+   "t": "Boosters of each type that stay in the inventory."
+  },
+  "KeepBoosters.LogItems": {
+   "t": "Logs active items per planet and the inventory."
+  },
+  "KeepBoosters.Tiers": {
+   "t": "Allowed tiers, the first one is used first."
   },
   "AutoFleetJumpGate.Active": {
    "t": "Jumps the fleet through the jump gate automatically."
@@ -1022,11 +1046,15 @@ window.CFG_HELP.en = {
    "t": "How much one metal counts in the loot value that ranks the targets."
   },
   "WeightCrystal": {
-   "t": "How much one crystal counts in the loot value. 1.5 matches the usual trade rate."
+   "t": "How much one crystal counts in the loot value."
   },
   "WeightDeuterium": {
    "t": "How much one deuterium counts in the loot value. A higher value puts deuterium-rich targets first.",
-   "e": "1 : 1.5 : 3 = metal : crystal : deuterium."
+   "e": "Only the ratio of the three weights matters, default 3 : 2 : 1 (MSE ratio); raise the deuterium weight to put deuterium-rich targets first."
+  },
+  "ShrinkDiscardPercent": {
+   "t": "A target is dropped when its fresh loot value is at least this many percent below the value from the full sweep (or below the minimum loot).",
+   "e": "10 = drop everything that lost 10 % or more."
   },
   "MinLoot": {
    "t": "Targets with less lootable resources than this (metal + crystal + deuterium, after the plunder ratio) are not attacked."
@@ -1041,16 +1069,10 @@ window.CFG_HELP.en = {
    "t": "Deletes each espionage report after it was read. The inbox has a limit; when it is full, new reports are lost."
   },
   "ReportMaxAgeMinutes": {
-   "t": "Reports older than this are not used for an attack, because the target may have changed. It is spied again instead."
-  },
-  "RespyAfterAttackMinutes": {
-   "t": "A target that was just raided is left alone for this long, because its storage has to refill first."
-  },
-  "DefendedRecheckHours": {
-   "t": "Targets with ships or defence, or that turned active, are spied again only after this time."
+   "t": "Sweep mode: a fresh check report older than this is not used for an attack (e.g. no free cargo for a while); the target is checked again."
   },
   "MaxSystemsPerScanStep": {
-   "t": "How many systems the background scan visits in one step while the bot waits for fleets."
+   "t": "How many systems the full scan of a round visits in one step."
   }
  },
 };

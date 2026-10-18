@@ -13,7 +13,7 @@
     {
         <div class="cfg-grid">
             <aside class="cfg-card cfg-side">
-                <form method="get" class="cfg-instance">
+                <form method="get" class="cfg-instance" style="@(Model.Instances.Count <= 1 ? "display:none" : null)">
                     <input type="hidden" name="block" value="@Model.Selected" />
                     <select name="instance" onchange="this.form.submit()">
                         @foreach (var alias in Model.Instances)
@@ -47,7 +47,7 @@
                 <div class="cfg-hint">All blocks have their own form. Credentials (login, passwords, own alliance ID, captcha key, proxy login) are not shown or editable here - set them directly in the config file. Every block also has a JSON tab.</div>
             </aside>
             <main class="cfg-card cfg-main" id="cfg-main" data-instance="@Model.Instance" data-block="@Model.Selected" data-mode="@Model.SelectedMode"
-                  data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-aflosses="@Url.Action("AfLosses", "Config")" data-allynames="@Url.Action("AllyNames", "Config")" data-lfimg="@Url.Content("~/img/lf/")" data-save="@Url.Action("SaveBlock", "Config")" data-setactive="@Url.Action("SetActive", "Config")">
+                  data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-aflosses="@Url.Action("AfLosses", "Config")" data-allynames="@Url.Action("AllyNames", "Config")" data-boosterstock="@Url.Action("BoosterStock", "Config")" data-lfimg="@Url.Content("~/img/lf/")" data-save="@Url.Action("SaveBlock", "Config")" data-setactive="@Url.Action("SetActive", "Config")">
                 @if (Model.SelectedMode == "start")
                 {
                     <div id="cfg-start" data-url="@Url.Action("StartData", "Config")" data-lf="@Url.Action("Index", "Config")" data-upd="@Url.Action("Check", "Update")" data-updstart="@Url.Action("Start", "Update")" data-upddismiss="@Url.Action("Dismiss", "Update")"><div class="cfg-loading">Loading…</div></div>

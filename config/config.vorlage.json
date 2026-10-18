@@ -255,6 +255,8 @@
             "PrioritizeRobotsAndNanites": true,
             "BuildDepositIfFull": true,
             "BuildSolarSatellites": true,
+            "SolarSatelliteBatch": 20,
+            "EnergyReservePercent": 10,
             "BuildCrawlers": false,
             "DepositHours": 6,
             "MaxDaysOfInvestmentReturn": 9999,
@@ -499,6 +501,23 @@
             "CheckIntervalMin": 240,
             "CheckIntervalMax": 360
         },
+        "KeepBoosters": {
+            "Active": false,
+            "DryRun": true,
+            "Types": {
+                "Metal": true,
+                "Crystal": true,
+                "Deuterium": true,
+                "Energy": false
+            },
+            "Tiers": { "bronze": true, "silver": true, "gold": true, "platinum": false },
+            "Reserve": { "bronze": 10, "silver": 10, "gold": 10, "platinum": 10 },
+            "MinMineLevel": { "Metal": 40, "Crystal": 30, "Deuterium": 30 },
+            "LogItems": true,
+            "Exclude": [],
+            "CheckIntervalMin": 30,
+            "CheckIntervalMax": 60
+        },
         "AutoFleetJumpGate": {
             "Active": false,
             "Target": [
@@ -700,18 +719,17 @@
                 "EndSystem": 499
             }
         ],
+        "ShrinkDiscardPercent": 10,
         "CargoType": "SmallCargo",
         "ProbesPerTarget": 20,
         "SlotsToLeaveFree": 1,
-        "WeightMetal": 1,
-        "WeightCrystal": 1.5,
-        "WeightDeuterium": 3,
+        "WeightMetal": 3,
+        "WeightCrystal": 2,
+        "WeightDeuterium": 1,
         "MinLoot": 100000,
         "MinDeuterium": 0,
         "TopTargets": 36,
         "ReportMaxAgeMinutes": 30,
-        "RespyAfterAttackMinutes": 60,
-        "DefendedRecheckHours": 6,
         "DeleteReports": true,
         "FleetSpeedPercent": 100,
         "CargoSurplusPercent": 0,

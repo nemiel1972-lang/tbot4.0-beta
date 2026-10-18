@@ -1,0 +1,193 @@
+@{
+    var instances = (IReadOnlyList<string>) ViewBag.Instances;
+    var selected = (string) ViewBag.Selected;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/autofarm.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
+    <style>
+        .mp-card { margin: 14px 0; padding: 12px 14px; border: 1px solid rgba(128,128,128,.35); border-radius: 8px; }
+        .mp-card h2 { font-size: 1.05rem; margin: 0 0 6px; }
+        .mp-card.mp-excluded { opacity: .6; }
+        .mp-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 6px 0 10px; }
+        .mp-table th, .mp-table td { padding: 3px 8px; text-align: right; border-bottom: 1px solid rgba(128,128,128,.25); white-space: nowrap; }
+        .mp-table th:first-child, .mp-table td:first-child, .mp-table th:nth-child(2), .mp-table td:nth-child(2) { text-align: left; }
+        .mp-warn { color: #e0a030; font-weight: 600; }
+        .mp-muted { opacity: .7; font-size: .85rem; }
+        .mp-scroll { overflow-x: auto; }
+        details.mp-alt summary { cursor: pointer; margin: 4px 0; }
+    </style>
+}
+
+<div class="autofarm-page tbot-dark" id="mp-page" data-instance="@selected">
+    <div class="autofarm-shell">
+        <header class="autofarm-header">
+            <div>
+                <h1>Mine plan</h1>
+                <p class="intro">Next mine upgrades per planet: cost, extra yield, payback time and energy. Preview only - nothing is built or changed by this page.</p>
+            </div>
+            <form method="get" class="instance-picker" style="@(instances.Count <= 1 ? "display:none" : null)">
+                <label for="instance">Instance</label>
+                <div class="instance-controls">
+                    <select id="instance" name="instance">
+                        @foreach (var instance in instances)
+                        {
+                            if (string.Equals(instance, selected, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@instance" data-name="@instance" selected>*****</option>
+                            }
+                            else
+                            {
+                                <option value="@instance" data-name="@instance">*****</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="refresh-button">Open</button>
+                </div>
+            </form>
+        </header>
+
+        <div class="dashboard-toolbar" role="status" aria-live="polite">
+            <span id="mp-status">Loading data...</span>
+            <span id="mp-updated"></span>
+            <label style="margin-left:auto"><input type="checkbox" id="mp-mask" /> Hide data</label>
+        </div>
+
+        <div id="mp-content"></div>
+        <p class="mp-muted">All values in deuterium equivalents at the official trade rate 3 : 2 : 1 (metal : crystal : deuterium), prices without lifeform discount. Extra bonus from active items (resource boosters), crawlers etc. is derived from the real hourly production and is included in "Payback"; "Payback w/o bonus" leaves that bonus out. It is only derived while the energy balance is not negative. Payback = cost / extra yield per day. "Short" = energy missing after the step (a power source is needed first).</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    (function () {
+        var page = document.getElementById('mp-page');
+        var instance = page.getAttribute('data-instance');
+        var content = document.getElementById('mp-content');
+        var statusEl = document.getElementById('mp-status');
+        var updatedEl = document.getElementById('mp-updated');
+        var maskEl = document.getElementById('mp-mask');
+        var last = null;
+        try { maskEl.checked = localStorage.getItem('mp-mask') !== '0'; } catch (e) { maskEl.checked = true; }
+
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+        function n(v) { return (Math.round(Number(v) || 0)).toLocaleString('en'); }
+        function d1(v) { v = Number(v) || 0; return v > 0 ? v.toLocaleString('en', { maximumFractionDigits: 1 }) : '-'; }
+        function mask(s) { return maskEl.checked ? '*****' : esc(s); }
+
+        function stepRow(s, cum) {
+            var energy = s.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(s.EnergyShort) + '</span>' : n(s.EnergyAfter);
+            return '<tr><td>' + esc(s.Mine) + '</td><td>' + s.Level + '</td>'
+                + '<td>' + n(s.Metal) + '</td><td>' + n(s.Crystal) + '</td><td>' + n(s.Deuterium) + '</td>'
+                + '<td>' + n(s.CostDeut) + '</td><td>' + n(s.GainPerDay) + '</td><td>' + d1(s.RoiDays) + '</td>'
+                + (cum ? '' : '<td class="mp-muted">' + d1(s.RoiDaysBase) + '</td>')
+                + (cum ? '<td>' + n(s.CumCostDeut) + '</td><td>' + n(s.CumGainPerDay) + '</td><td>' + d1(s.CumRoiDays) + '</td>' : '')
+                + '<td>' + energy + '</td></tr>';
+        }
+        function head(cum) {
+            return '<tr><th>Mine</th><th>To level</th><th>Metal</th><th>Crystal</th><th>Deut</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th>'
+                + (cum ? '' : '<th title="Without item/crawler bonus (still at 3:2:1)">Payback w/o bonus</th>')
+                + (cum ? '<th>Total cost</th><th>Total gain/day</th><th>Total payback</th>' : '') + '<th>Energy after</th></tr>';
+        }
+
+        function boosterCard(b) {
+            if (!b || !(b.planets || []).length) return '';
+            var types = ['Metal', 'Crystal', 'Deuterium', 'Energy'];
+            var used = types.filter(function (t) { return b.planets.some(function (p) { return p.cells && p.cells[t]; }); });
+            if (!used.length) return '';
+            function left(sec) { var h = Math.floor(sec / 3600), d = Math.floor(h / 24); return d > 0 ? d + 'd ' + (h % 24) + 'h' : h + 'h'; }
+            var h = '<div class="mp-card"><h2>Boosters <span class="mp-muted">' + (b.updated ? 'updated ' + new Date(b.updated).toLocaleString() : '') + '</span></h2><div class="mp-scroll"><table class="mp-table"><tr><th>Planet</th>'
+                + used.map(function (t) { return '<th>' + t + '</th>'; }).join('') + '</tr>';
+            b.planets.forEach(function (p) {
+                h += '<tr><td>' + mask(p.name) + '</td>';
+                used.forEach(function (t) {
+                    var c = (p.cells || {})[t], txt = '-';
+                    if (c) {
+                        if (c.state === 'active') txt = esc(c.item) + ' <span class="mp-muted">(' + left(c.remainingSec) + ')</span>';
+                        else if (c.state === 'below-min') txt = '<span class="mp-muted">below ' + c.minLevel + ' (mine ' + c.level + ')</span>';
+                        else if (c.state === 'no-data') txt = '<span class="mp-muted">mine level unknown</span>';
+                        else if (c.state === 'no-stock') txt = '<span class="mp-warn">missing, none in stock</span>';
+                        else if (c.state === 'would-activate') txt = '<span class="mp-warn">missing</span> <span class="mp-muted">(test mode: ' + esc(c.item) + ')</span>';
+                        else txt = '<span class="mp-warn">missing</span>';
+                    }
+                    h += '<td>' + txt + '</td>';
+                });
+                h += '</tr>';
+            });
+            return h + '</table></div></div>';
+        }
+
+        function render(res) {
+            if (!res.available) {
+                content.innerHTML = '<p>No plan yet. The file is written by AutoMine in its next cycle' + (res.error ? ' (' + esc(res.error) + ')' : '') + '.</p>';
+                statusEl.textContent = 'No data';
+                return;
+            }
+            var data = res.data;
+            statusEl.textContent = 'Data available';
+            updatedEl.textContent = data.UpdatedUtc ? 'Updated: ' + new Date(data.UpdatedUtc).toLocaleString() : '';
+            var html = '';
+
+            html += '<div class="mp-card"><h2>Best investments right now</h2><div class="mp-scroll"><table class="mp-table"><tr><th>Planet</th><th>Mine</th><th>To level</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th><th>Energy</th></tr>';
+            (data.Best || []).forEach(function (b) {
+                html += '<tr><td>' + mask(b.Planet) + '</td><td>' + esc(b.Mine) + '</td><td>' + b.Level + '</td><td>' + n(b.CostDeut) + '</td><td>' + n(b.GainPerDay) + '</td><td>' + d1(b.RoiDays) + '</td><td>'
+                    + (b.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(b.EnergyShort) + '</span>' : 'ok') + '</td></tr>';
+            });
+            html += '</table></div></div>';
+
+            html += boosterCard(res.boosters);
+
+            (data.Planets || []).forEach(function (p) {
+                html += '<div class="mp-card' + (p.Excluded ? ' mp-excluded' : '') + '"><h2>' + mask(p.Name) + ' <span class="mp-muted">' + mask(p.Coord) + (p.Excluded ? ' - excluded from AutoMine' : '') + '</span></h2>';
+                html += '<div class="mp-muted">Metal ' + p.Metal + ' / Crystal ' + p.Crystal + ' / Deuterium ' + p.Deuterium + ' - energy balance ' + n(p.Energy) + '</div>';
+                var names = ['Metal', 'Crystal', 'Deuterium'], bon = [];
+                for (var i = 0; i < 3; i++) {
+                    var pc = (p.ExtraPercent || [])[i], nt = (p.ExtraNote || [])[i];
+                    bon.push(names[i] + ' ' + (nt ? '<span class="mp-muted">n/a (' + esc(nt) + ')</span>' : (pc > 0 ? '+' : '') + pc + ' %'));
+                }
+                if ((p.Items || []).length) {
+                    html += '<div class="mp-muted">Active items: ' + p.Items.map(function (it) {
+                        var h = Math.floor(it.RemainingSec / 3600), d = Math.floor(h / 24);
+                        return esc(it.Name) + ' (' + (d > 0 ? d + 'd ' + (h % 24) + 'h' : h + 'h') + ' left)';
+                    }).join(', ') + '</div>';
+                }
+                html += '<div class="mp-muted" title="Derived from the real hourly production minus plasma, geologist, class and lifeform bonuses: active boosters, crawlers, etc.">Extra bonus (items, crawlers ...): ' + bon.join(' / ') + '</div>';
+                html += '<h3 style="font-size:.95rem;margin:8px 0 0">Next step per mine</h3><div class="mp-scroll"><table class="mp-table">' + head(false);
+                (p.Next || []).forEach(function (s) { html += stepRow(s, false); });
+                html += '</table></div>';
+                html += '<h3 style="font-size:.95rem;margin:8px 0 0">Planned order (best payback first, like AutoMine)</h3><div class="mp-scroll"><table class="mp-table">' + head(true);
+                (p.Sequence || []).forEach(function (s) { html += stepRow(s, true); });
+                html += '</table></div>';
+                html += '<details class="mp-alt"><summary>Alternatives: upgrade only one mine type</summary>';
+                (p.Alternatives || []).forEach(function (a) {
+                    html += '<div class="mp-scroll"><table class="mp-table"><tr><th colspan="12" style="text-align:left">Only ' + esc(a.Mine) + '</th></tr>' + head(true);
+                    (a.Steps || []).forEach(function (s) { html += stepRow(s, true); });
+                    html += '</table></div>';
+                });
+                html += '</details></div>';
+            });
+            content.innerHTML = html;
+        }
+
+        function load() {
+            fetch('@Url.Action("Snapshot", "Minenplan")?instance=' + encodeURIComponent(instance), { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) { last = res; render(res); })
+                .catch(function () { statusEl.textContent = 'Could not load data'; });
+        }
+        function maskInstances() {
+            var opts = document.querySelectorAll('#instance option');
+            for (var i = 0; i < opts.length; i++) opts[i].textContent = maskEl.checked ? '*****' : (opts[i].getAttribute('data-name') || '');
+        }
+        maskInstances();
+        maskEl.addEventListener('change', function () {
+            try { localStorage.setItem('mp-mask', maskEl.checked ? '1' : '0'); } catch (e) { }
+            maskInstances();
+            if (last) render(last);
+        });
+        load();
+        setInterval(load, 30000);
+    })();
+    </script>
+}

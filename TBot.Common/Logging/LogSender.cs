@@ -17,6 +17,7 @@ namespace TBot.Common.Logging {
 		AutoRepatriate,
 		AutoResearch,
 		BuyOfferOfTheDay,
+		KeepBoosters,
 		LifeformsAutoMine,
 		LifeformsAutoResearch,
 		AutoFleetJumpGate,

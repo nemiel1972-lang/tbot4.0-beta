@@ -22,7 +22,7 @@
                 <h1>FastFarm</h1>
                 <p class="intro">Resource farming mode: scans for inactive players, spies them and raids the best ones, aiming at deuterium. This page replaces the AutoFarm report while the mode is on.</p>
             </div>
-            <form method="get" class="instance-picker">
+            <form method="get" class="instance-picker" style="@(Model.Instances.Count <= 1 ? "display:none" : null)">
                 <label for="instance">Instance</label>
                 <div class="instance-controls">
                     <select id="instance" name="instance">
@@ -161,6 +161,57 @@
             </section>`;
         }
 
+        let sortKey = "value", sortDir = -1;
+        const deletedKeys = new Set();
+        fetch('@Url.Action("GetSort", "FastFarm")?instance=' + encodeURIComponent(instance), { cache: "no-store" })
+            .then(r => r.json()).then(o => { if (o && o.key) { sortKey = o.key; sortDir = o.dir === "asc" ? 1 : -1; render(); } }).catch(() => {});
+        function targetList(s) {
+            const st = s || {};
+            const sweep = true;
+            const all = Object.entries(st.targets || {})
+                .filter(([k, t]) => !deletedKeys.has(k) && (t.metal + t.crystal + t.deuterium) > 0 && !(t.blockedUntilUtc && new Date(t.blockedUntilUtc).getTime() > Date.now()));
+            const val = t => ({ metal: t.metal, crystal: t.crystal, deuterium: t.deuterium, value: sweep && t.sweepValue ? t.sweepValue : t.weighted, target: t.galaxy * 1e6 + t.system * 1e3 + t.position })[sortKey];
+            all.sort((a, b) => (val(a[1]) - val(b[1])) * sortDir);
+            const arrow = k => sortKey === k ? (sortDir < 0 ? " &#9660;" : " &#9650;") : "";
+            const th = (k, label) => `<th><a href="#" class="ff-sort" data-sort="${k}">${label}${arrow(k)}</a></th>`;
+            const rows = all.slice(0, 300).map(([k, t], i) => `<tr><td>${i + 1}. ${esc(mask(coord(t)))}</td><td>${esc(mask(t.player))}</td><td>${num(t.metal)}</td><td>${num(t.crystal)}</td><td><strong>${num(t.deuterium)}</strong></td><td>${num(sweep && t.sweepValue ? t.sweepValue : t.weighted)}</td><td>${t.reportServer ? "fresh" : (t.pending ? "probes out" : (sweep ? "swept" : "old"))}</td><td><button type="button" class="ff-del" data-key="${esc(k)}">Delete</button></td></tr>`).join("");
+            const note = sweep ? `Round ${num(st.sweepRound)}, galaxy ${num(st.sweepGalaxy)}, phase ${esc(st.sweepPhase)}. The order shown here is the order the bot works through (from its next cycle). Click a column head to sort. Deleted targets are dropped for 24 hours.` : "The order shown here is the order the bot works through (from its next cycle). Click a column head to sort. Deleted targets are not taken in again for 24 hours.";
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Stored targets</h2><span class="panel-note">${num(all.length)} with known loot${all.length > 300 ? " (first 300 shown)" : ""}. ${note}</span></div>
+                <div class="table-wrap"><table><thead><tr>${th("target", "Target")}<th>Player</th>${th("metal", "Metal")}${th("crystal", "Crystal")}${th("deuterium", "Deuterium")}${th("value", "Value")}<th>State</th><th></th></tr></thead><tbody>${rows || empty(8, "No stored target with known loot yet.")}</tbody></table></div>
+            </section>`;
+        }
+
+        content.addEventListener("click", async ev => {
+            const sortEl = ev.target.closest(".ff-sort");
+            if (sortEl) {
+                ev.preventDefault();
+                const k = sortEl.dataset.sort;
+                if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = k === "target" ? 1 : -1; }
+                render();
+                try {
+                    const body = new URLSearchParams({ instance, key: sortKey, dir: sortDir < 0 ? "desc" : "asc" });
+                    await fetch('@Url.Action("SetSort", "FastFarm")', { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() });
+                } catch (e) { /* Anzeige bleibt trotzdem sortiert */ }
+                return;
+            }
+            const del = ev.target.closest(".ff-del");
+            if (del) {
+                const key = del.dataset.key;
+                del.disabled = true;
+                try {
+                    const body = new URLSearchParams({ instance, keys: key });
+                    const r = await (await fetch('@Url.Action("DeleteTargets", "FastFarm")', { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })).json();
+                    if (!r.success) { alert("Could not delete: " + r.error); del.disabled = false; return; }
+                    deletedKeys.add(key);
+                    render();
+                } catch (e) {
+                    alert("Could not delete: " + e);
+                    del.disabled = false;
+                }
+            }
+        });
+
         function blocked(s) {
             const groups = {};
             Object.values((s && s.targets) || {}).forEach(t => {
@@ -197,6 +248,7 @@
                     <div><dt>Weight M : C : D</dt><dd>${c.weightMetal} : ${c.weightCrystal} : ${c.weightDeuterium}</dd></div>
                     <div><dt>Minimum loot</dt><dd>${num(c.minLoot)}</dd></div>
                     <div><dt>Minimum deuterium</dt><dd>${num(c.minDeuterium)}</dd></div>
+                    <div><dt>Drop target at shrink</dt><dd>${num(c.shrinkDiscardPercent)} %</dd></div>
                     <div><dt>Max report age</dt><dd>${num(c.reportMaxAgeMinutes)} min</dd></div>
                 </dl>
             </section>`;
@@ -204,7 +256,7 @@
 
         function render() {
             renderMode();
-            content.innerHTML = summary(snapshot.state, snapshot.config) + topTargets(snapshot.state, snapshot.config) + recent(snapshot.state) + blocked(snapshot.state) + settingsPanel(snapshot.config);
+            content.innerHTML = summary(snapshot.state, snapshot.config) + targetList(snapshot.state) + topTargets(snapshot.state, snapshot.config) + recent(snapshot.state) + blocked(snapshot.state) + settingsPanel(snapshot.config);
             lastUpdated.textContent = "Page updated " + new Date().toLocaleTimeString();
             tickCountdown();
         }

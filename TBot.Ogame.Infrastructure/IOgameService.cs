@@ -73,6 +73,9 @@ namespace TBot.Ogame.Infrastructure {
 		Task<Staff> GetStaff();
 		Task<string> GetTbotIP();
 		Task<Techs> GetTechs(Celestial celestial);
+		Task<List<ActiveItem>> GetActiveItems(Celestial celestial);
+		Task<List<InventoryItem>> GetItems(Celestial celestial);
+		Task ActivateItem(Celestial celestial, string itemRef);
 		Task<CharacterClass> GetUserClass();
 		Task<List<Celestial>> GetEmpirePlanets();
 		Task<List<Celestial>> GetEmpireMoons();

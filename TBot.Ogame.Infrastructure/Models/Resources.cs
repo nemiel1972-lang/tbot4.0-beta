@@ -30,7 +30,10 @@ namespace TBot.Ogame.Infrastructure.Models {
 			}
 		}
 
-		public long GetConvertedDeuterium(double metalRatio = 2.5, double crystalRatio = 1.5) {
+		public const double MetalPerDeuterium = 3.0;
+		public const double CrystalPerDeuterium = 2.0;
+
+		public long GetConvertedDeuterium(double metalRatio = MetalPerDeuterium, double crystalRatio = CrystalPerDeuterium) {
 			return (long) Math.Round((Metal / metalRatio) + (Crystal / crystalRatio) + Deuterium, 0, MidpointRounding.ToPositiveInfinity);
 		}
 

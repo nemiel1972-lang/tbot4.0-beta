@@ -407,6 +407,19 @@ func GetCelestialItemsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(items))
 }
 
+func GetCelestialActiveItemsHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	celestialID, err := utils.ParseI64(c.Param("celestialID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid celestial id"))
+	}
+	items, err := bot.GetActiveItems(ogame.CelestialID(celestialID))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(items))
+}
+
 func ActivateCelestialItemHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	celestialID, err := utils.ParseI64(c.Param("celestialID"))

@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -125,7 +126,7 @@ namespace Tbot.Includes {
 				lock (_lock) {
 					json = JsonConvert.SerializeObject(_samples);
 				}
-				File.WriteAllText(_filePath, json);
+				AtomicFile.WriteAllText(_filePath, json);
 			} catch (Exception e) {
 				_debugLog?.Invoke($"Expedition duration data could not be saved: {e.Message}");
 			}

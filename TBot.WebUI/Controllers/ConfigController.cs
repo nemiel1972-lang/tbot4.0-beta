@@ -294,6 +294,21 @@ namespace TBot.WebUI.Controllers {
 
 		[HttpGet]
 		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+		public IActionResult BoosterStock(string? instance) {
+			try {
+				var chosen = GetInstances().FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				string alias = chosen.Alias ?? GetInstances()[0].Alias;
+				string file = System.IO.Path.Combine(AppContext.BaseDirectory, "data", $"booster_stock_{System.IO.Path.GetFileName(alias)}.json");
+				if (!System.IO.File.Exists(file))
+					return Json(new { success = false, error = "No data yet - the KeepBoosters worker writes it on its next run." });
+				return Content("{\"success\":true,\"data\":" + System.IO.File.ReadAllText(file) + "}", "application/json");
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
+		}
+
+		[HttpGet]
+		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 		public IActionResult AfLosses(string? instance) {
 			try {
 				var chosen = GetInstances().FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
@@ -417,15 +432,13 @@ namespace TBot.WebUI.Controllers {
 					["CargoType"] = "SmallCargo",
 					["ProbesPerTarget"] = 20,
 					["SlotsToLeaveFree"] = 1,
-					["WeightMetal"] = 1,
-					["WeightCrystal"] = 1.5,
-					["WeightDeuterium"] = 3,
+					["WeightMetal"] = 3,
+					["WeightCrystal"] = 2,
+					["WeightDeuterium"] = 1,
 					["MinLoot"] = 100000,
 					["MinDeuterium"] = 0,
 					["TopTargets"] = 36,
 					["ReportMaxAgeMinutes"] = 30,
-					["RespyAfterAttackMinutes"] = 60,
-					["DefendedRecheckHours"] = 6,
 					["DeleteReports"] = true,
 					["FleetSpeedPercent"] = 100,
 					["CargoSurplusPercent"] = 0,

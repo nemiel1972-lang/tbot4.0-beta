@@ -24,7 +24,7 @@
     <ApplicationIcon>tbot.ico</ApplicationIcon>
     <PackageIcon></PackageIcon>
     <!-- Harmlose Warnungen ausblenden (Nachrichten bleiben bei Fehlern sichtbar) -->
-    <NoWarn>$(NoWarn);NETSDK1188;CS0108;CS0219;CS1998;SYSLIB0051</NoWarn>
+    <NoWarn>$(NoWarn);VSTHRD200;VSTHRD100;VSTHRD103;VSTHRD105;VSTHRD002;NETSDK1188;CS0108;CS0219;CS1998;SYSLIB0051</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

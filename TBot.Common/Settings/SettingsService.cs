@@ -4,12 +4,14 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using Tbot.Common.Extensions;
+using Tbot.Common.IO;
 
 namespace Tbot.Common.Settings {
 	public static class SettingsService {
@@ -21,7 +23,7 @@ namespace Tbot.Common.Settings {
 		public static async Task WriteSettings(string settingsPath, string content) {
 			var semaphore = _settingsSemaphoreManager.GetSemaphore(settingsPath);
 			using (await semaphore.WriteLockAsync()) {
-				await File.WriteAllTextAsync(settingsPath, content, Encoding.Default);
+				await AtomicFile.WriteAllTextAsync(settingsPath, content, Encoding.Default);
 			}
 		}
 
@@ -151,17 +153,6 @@ namespace Tbot.Common.Settings {
 			}
 		}
 
-		public static async Task<dynamic> GetMergedSettings(string baseSettingsPath, List<string> overlaySettingsPath) {
-            string baseJson = await GetSettingsFileContents(baseSettingsPath);
-			List<string> overlayJson = new();
-			foreach (var overlay in overlaySettingsPath) {
-				overlayJson.Add(await GetSettingsFileContents(overlay));
-			}
-			var merged = MergeToJObject(baseJson, overlayJson);
-			ResolveLoadReferences(merged, Path.GetDirectoryName(Path.GetFullPath(baseSettingsPath)));
-			return FinalizeSettings(merged);
-        }
-
         public static dynamic GetMergedSettingsFromContents(string baseJson, List<string> overlayJson) {
             return FinalizeSettings(MergeToJObject(baseJson, overlayJson));
         }
@@ -290,24 +281,10 @@ namespace Tbot.Common.Settings {
 		}
 
 		private class SettingsSemaphoreManager {
-			private readonly SemaphoreSlim _dictSemaphore;
-			private readonly Dictionary<string, AsyncReaderWriterLock> _settingsSemaphores;
-
-			public SettingsSemaphoreManager() {
-				_settingsSemaphores = new Dictionary<string, AsyncReaderWriterLock>();
-				_dictSemaphore = new SemaphoreSlim(1, 1);
-			}
+			private readonly ConcurrentDictionary<string, AsyncReaderWriterLock> _settingsSemaphores = new();
 
 			public AsyncReaderWriterLock GetSemaphore(string settingsPath) {
-				if (!_settingsSemaphores.ContainsKey(settingsPath)) {
-
-					_dictSemaphore.Wait();
-					if (!_settingsSemaphores.ContainsKey(settingsPath)) {
-						_settingsSemaphores.Add(settingsPath, new AsyncReaderWriterLock());
-					}
-					_dictSemaphore.Release();
-				}
-				return _settingsSemaphores[settingsPath];
+				return _settingsSemaphores.GetOrAdd(settingsPath, _ => new AsyncReaderWriterLock());
 			}
 		}
 

@@ -17,13 +17,14 @@ namespace TBot.WebUI.Services {
 						CargoType = block.Value<string>("CargoType") ?? "SmallCargo",
 						ProbesPerTarget = block.Value<int?>("ProbesPerTarget") ?? 20,
 						SlotsToLeaveFree = block.Value<int?>("SlotsToLeaveFree") ?? 1,
-						WeightMetal = block.Value<double?>("WeightMetal") ?? 1,
-						WeightCrystal = block.Value<double?>("WeightCrystal") ?? 1.5,
-						WeightDeuterium = block.Value<double?>("WeightDeuterium") ?? 3,
+						WeightMetal = block.Value<double?>("WeightMetal") ?? 3,
+						WeightCrystal = block.Value<double?>("WeightCrystal") ?? 2,
+						WeightDeuterium = block.Value<double?>("WeightDeuterium") ?? 1,
 						MinLoot = block.Value<long?>("MinLoot") ?? 100000,
 						MinDeuterium = block.Value<long?>("MinDeuterium") ?? 0,
 						TopTargets = block.Value<int?>("TopTargets") ?? 36,
-						ReportMaxAgeMinutes = block.Value<int?>("ReportMaxAgeMinutes") ?? 30
+						ReportMaxAgeMinutes = block.Value<int?>("ReportMaxAgeMinutes") ?? 30,
+						ShrinkDiscardPercent = block.Value<double?>("ShrinkDiscardPercent") ?? 10
 					};
 				}
 			} catch {
@@ -53,14 +54,6 @@ namespace TBot.WebUI.Services {
 				return (true, block.Value<bool?>("KeepExpeditions") ?? false);
 			} catch {
 				return (false, false);
-			}
-		}
-
-		public static bool HasBlock(string alias) {
-			try {
-				return ReadBlock(alias) != null;
-			} catch {
-				return false;
 			}
 		}
 

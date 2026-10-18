@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -113,10 +114,7 @@ namespace Tbot.Workers {
 		private static void Speichere(ITBotMain inst) {
 			try {
 				lock (_lock) {
-					string tmp = _pfad + ".tmp";
-					File.WriteAllText(tmp, JsonSerializer.Serialize(_eintraege, new JsonSerializerOptions { WriteIndented = true }));
-					File.Copy(tmp, _pfad, true);
-					File.Delete(tmp);
+					AtomicFile.WriteAllText(_pfad, JsonSerializer.Serialize(_eintraege, new JsonSerializerOptions { WriteIndented = true }));
 				}
 			} catch (Exception) {
 			}

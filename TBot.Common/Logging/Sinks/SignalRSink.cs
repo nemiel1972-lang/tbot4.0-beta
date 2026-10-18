@@ -75,7 +75,7 @@ namespace TBot.Common.Logging.Sinks {
 
 			foreach (var target in targets) {
 				if (_sendAsString) {
-					target.SendLogAsString($"{logEvent.Timestamp:dd.MM.yyyy HH:mm:ss.fff} " +
+					_ = target.SendLogAsString($"{logEvent.Timestamp:dd.MM.yyyy HH:mm:ss.fff} " +
 										   $"{logEvent.Level.ToString()} " +
 										   $"{logEvent.RenderMessage(_formatProvider)} " +
 										   $"{logEvent.Exception?.ToString() ?? "-"} ");
@@ -97,7 +97,7 @@ namespace TBot.Common.Logging.Sinks {
 						if (!dynamicObject.ContainsKey(property.Key)) 
 							dynamicObject.Add(property.Key, property.Value.ToString());
 					}
-					target.SendLogAsObject(dynamicObject);
+					_ = target.SendLogAsObject(dynamicObject);
 				}
 			}
 

@@ -147,6 +147,59 @@ namespace Tbot.Workers.Brain {
 			};
 		}
 
+		private int RundeSatelliten(int bedarf) {
+			if (bedarf <= 0)
+				return bedarf;
+			int bund = 20;
+			try {
+				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "SolarSatelliteBatch"))
+					bund = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.SolarSatelliteBatch;
+			} catch (Exception) {
+				bund = 20;
+			}
+			if (bund <= 1)
+				return bedarf;
+			return (int) (((long) bedarf + bund - 1) / bund * bund);
+		}
+
+		private (Buildables, int) EnergieVorabbau(Planet planet, Buildings maxBuildings, bool satelliten, Buildables buildable, int level) {
+			try {
+				if (buildable == Buildables.Null || buildable == Buildables.SolarPlant || buildable == Buildables.FusionReactor || buildable == Buildables.SolarSatellite)
+					return (buildable, level);
+				bool istMine = buildable == Buildables.MetalMine || buildable == Buildables.CrystalMine || buildable == Buildables.DeuteriumSynthesizer;
+				long delta = istMine ? _calculationService.GetRequiredEnergyDelta(buildable, level) : _calculationService.CalcPrice(buildable, level, planet.LFBonuses).Energy;
+				if (delta <= 0)
+					return (buildable, level);
+				long frei = planet.ResourcesProduction.Energy.Available;
+				int proSat = _calculationService.GetSolarSatelliteOutput(planet, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
+				long inProduktion = 0;
+				foreach (Production p in planet.Productions) {
+					if (p.ID == (int) Buildables.SolarSatellite)
+						inProduktion += (long) p.Nbr * proSat;
+				}
+				long fehlt = delta - frei - inProduktion;
+				if (fehlt <= 0)
+					return (buildable, level);
+				int prozent = 10;
+				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "EnergyReservePercent"))
+					prozent = Math.Max(0, (int) _tbotInstance.InstanceSettings.Brain.AutoMine.EnergyReservePercent);
+				long ziel = (long) Math.Ceiling(fehlt * (1.0 + prozent / 100.0));
+				Buildables quelle = _calculationService.GetNextEnergySourceToBuild(planet, maxBuildings.SolarPlant, maxBuildings.FusionReactor, satelliten);
+				if (quelle == Buildables.SolarSatellite) {
+					int bedarf = _calculationService.CalcNeededSolarSatellites(planet, ziel, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
+					DoLog(LogLevel.Information, $"Energy pre-build on {planet.ToString()}: {buildable.ToString()} level {level.ToString()} needs {delta:N0} energy, free {frei:N0} (+{inProduktion:N0} in production) - building solar satellites first (target +{prozent}%).");
+					return (Buildables.SolarSatellite, RundeSatelliten(bedarf));
+				}
+				if (quelle == Buildables.SolarPlant || quelle == Buildables.FusionReactor) {
+					DoLog(LogLevel.Information, $"Energy pre-build on {planet.ToString()}: {buildable.ToString()} level {level.ToString()} needs {delta:N0} energy, free {frei:N0} - building {quelle.ToString()} first.");
+					return (quelle, _calculationService.GetNextLevel(planet, quelle));
+				}
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Energy pre-build check failed: {e.Message}");
+			}
+			return (buildable, level);
+		}
+
 		private int GetCrawlerAmountToBuild(Planet planet) {
 			bool fixedTargetSet = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "FixedCrawlerTarget") && (int) _tbotInstance.InstanceSettings.Brain.AutoMine.FixedCrawlerTarget > 0;
 			if (fixedTargetSet) {
@@ -339,6 +392,8 @@ namespace Tbot.Workers.Brain {
 					if (celestial is Planet) {
 						buildable = _calculationService.GetNextBuildingToBuild(celestial as Planet, _tbotInstance.UserData.researches, maxBuildings, maxFacilities, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff, _tbotInstance.UserData.serverData, autoMinerSettings);
 						level = _calculationService.GetNextLevel(celestial as Planet, buildable, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
+						if (buildable == Buildables.SolarSatellite)
+							level = RundeSatelliten(level);
 
 						if (_pendingFundedBuildable != Buildables.Null) {
 							int pendingCurrentLevel = celestial.GetLevel(_pendingFundedBuildable);
@@ -366,6 +421,8 @@ namespace Tbot.Workers.Brain {
 								}
 							}
 						}
+						if (_pendingFundedBuildable == Buildables.Null || buildable != _pendingFundedBuildable)
+							(buildable, level) = EnergieVorabbau(celestial as Planet, maxBuildings, (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.BuildSolarSatellites, buildable, level);
 					} else {
 						buildable = _calculationService.GetNextLunarFacilityToBuild(celestial as Moon, _tbotInstance.UserData.researches, maxLunarFacilities);
 						level = _calculationService.GetNextLevel(celestial as Moon, buildable, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
@@ -399,6 +456,7 @@ namespace Tbot.Workers.Brain {
 							if ((bool) _tbotInstance.InstanceSettings.Brain.AutoMine.BuildSolarSatellites) {
 								buildable = Buildables.SolarSatellite;
 								level = _calculationService.CalcNeededSolarSatellites(celestial as Planet, xCostBuildable.Energy - celestial.ResourcesProduction.Energy.CurrentProduction, _tbotInstance.UserData.userInfo.Class == CharacterClass.Collector, _tbotInstance.UserData.staff.Engineer, _tbotInstance.UserData.staff.IsFull);
+								level = RundeSatelliten(level);
 								xCostBuildable = _calculationService.CalcPrice(buildable, level, celestial.LFBonuses);
 							} else {
 								DoLog(LogLevel.Information, $"Unable to build SolarSatellites for Terraformer. Stopping AutoMiner for celestial {celestial.ToString()}");

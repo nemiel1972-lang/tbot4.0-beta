@@ -191,3 +191,8 @@
 .st-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
 .st-link { color: var(--tb-gold); }
 .st-note.ok { color: #9be3c4; background: #12332a; border-color: #1f6a52; }
+
+.cfg-draftbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--tb-warn); background: #3a2e12; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+.cfg-draftbar .lbl { margin-right: auto; }
+.cfg-draftbar .lbl { color: var(--tb-warn); }
+.cfg-block.has-draft .nm:after { content: " ●"; color: var(--tb-warn); }

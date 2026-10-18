@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 #if FASTFARM
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,7 @@ namespace Tbot.Workers {
 
 		private readonly object _stateLock = new object();
 		private FastFarmState _state;
+		private bool _probesShort;
 		private int _nextDelayMs = 30000;
 
 		public FastFarmWorker(ITBotMain parentInstance,
@@ -69,13 +71,12 @@ namespace Tbot.Workers {
 			public long MinDeuterium;
 			public int TopTargets;
 			public int ReportMaxAgeMinutes;
-			public int RespyAfterAttackMinutes;
-			public int DefendedRecheckHours;
 			public bool DeleteReports;
 			public int FleetSpeedPercent;
 			public double CargoSurplusPercent;
 			public double MinFillPercent;
 			public int MaxSystemsPerScanStep;
+			public double ShrinkDiscardPercent;
 		}
 
 		private double Num(string name, double def) {
@@ -125,20 +126,19 @@ namespace Tbot.Workers {
 				CargoTypes = cargoTypes,
 				ProbesPerTarget = Math.Max(1, (int) Num("ProbesPerTarget", 20)),
 				SlotsToLeaveFree = Math.Max(0, (int) Num("SlotsToLeaveFree", 1)),
-				WeightMetal = Num("WeightMetal", 1.0),
-				WeightCrystal = Num("WeightCrystal", 1.5),
-				WeightDeuterium = Num("WeightDeuterium", 3.0),
+				WeightMetal = Num("WeightMetal", 3.0),
+				WeightCrystal = Num("WeightCrystal", 2.0),
+				WeightDeuterium = Num("WeightDeuterium", 1.0),
 				MinLoot = (long) Num("MinLoot", 100000),
 				MinDeuterium = (long) Num("MinDeuterium", 0),
 				TopTargets = Math.Max(1, (int) Num("TopTargets", 36)),
 				ReportMaxAgeMinutes = Math.Max(1, (int) Num("ReportMaxAgeMinutes", 30)),
-				RespyAfterAttackMinutes = Math.Max(0, (int) Num("RespyAfterAttackMinutes", 60)),
-				DefendedRecheckHours = Math.Max(1, (int) Num("DefendedRecheckHours", 6)),
 				DeleteReports = Flag("DeleteReports", true),
 				FleetSpeedPercent = Math.Clamp((int) Num("FleetSpeedPercent", 100), 10, 100),
 				CargoSurplusPercent = Math.Max(0, Num("CargoSurplusPercent", 0)),
 				MinFillPercent = Math.Clamp(Num("MinFillPercent", 50), 1, 100),
-				MaxSystemsPerScanStep = Math.Max(1, (int) Num("MaxSystemsPerScanStep", 25))
+				MaxSystemsPerScanStep = Math.Max(1, (int) Num("MaxSystemsPerScanStep", 25)),
+				ShrinkDiscardPercent = Math.Clamp(Num("ShrinkDiscardPercent", 10), 0, 100)
 			};
 		}
 
@@ -173,6 +173,8 @@ namespace Tbot.Workers {
 			public DateTime? LastAttackUtc { get; set; }
 			public int Attacks { get; set; }
 			public int SpyFails { get; set; }
+			public long SweepValue { get; set; }
+			public bool Verify { get; set; }
 		}
 
 		public sealed class FastFarmAttackLog {
@@ -188,6 +190,11 @@ namespace Tbot.Workers {
 		public sealed class FastFarmState {
 			public Dictionary<string, FastFarmTarget> Targets { get; set; } = new Dictionary<string, FastFarmTarget>();
 			public int ScanCursor { get; set; }
+			public string SweepPhase { get; set; }
+			public int SweepGalaxy { get; set; }
+			public int SweepRound { get; set; }
+			public Dictionary<string, DateTime> Ignored { get; set; } = new Dictionary<string, DateTime>();
+			public string ScanSignature { get; set; }
 			public long AttacksSent { get; set; }
 			public long ProbesSent { get; set; }
 			public long ReportsRead { get; set; }
@@ -227,6 +234,59 @@ namespace Tbot.Workers {
 			_state ??= new FastFarmState();
 			_state.Targets ??= new Dictionary<string, FastFarmTarget>();
 			_state.Recent ??= new List<FastFarmAttackLog>();
+			_state.Ignored ??= new Dictionary<string, DateTime>();
+		}
+
+		private (string key, bool desc) ReadSort() {
+			try {
+				string path = Path.Combine(Path.GetDirectoryName(StatePath()), $"fastfarm_{Path.GetFileName(_tbotInstance.InstanceAlias ?? "default")}_sort.json");
+				if (File.Exists(path)) {
+					var o = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(path));
+					string key = (o.Value<string>("key") ?? "value").ToLowerInvariant();
+					if (key == "value" || key == "metal" || key == "crystal" || key == "deuterium" || key == "target")
+						return (key, !string.Equals(o.Value<string>("dir"), "asc", StringComparison.OrdinalIgnoreCase));
+				}
+			} catch (Exception) { }
+			return ("value", true);
+		}
+
+		private static long SortValue(FastFarmTarget t, string key) {
+			switch (key) {
+				case "metal": return t.Metal;
+				case "crystal": return t.Crystal;
+				case "deuterium": return t.Deuterium;
+				case "target": return t.Galaxy * 1000000L + t.System * 1000L + t.Position;
+				default: return t.ReportServer.HasValue && t.Weighted > 0 ? t.Weighted : (t.SweepValue > 0 ? t.SweepValue : t.Weighted);
+			}
+		}
+
+		private IOrderedEnumerable<FastFarmTarget> Ordered(IEnumerable<FastFarmTarget> src) {
+			var (key, desc) = ReadSort();
+			return desc ? src.OrderByDescending(t => SortValue(t, key)) : src.OrderBy(t => SortValue(t, key));
+		}
+
+		private void ApplyDeleteRequests() {
+			try {
+				string path = Path.Combine(Path.GetDirectoryName(StatePath()), $"fastfarm_{Path.GetFileName(_tbotInstance.InstanceAlias ?? "default")}_delete.json");
+				var now = DateTime.UtcNow;
+				foreach (var k in _state.Ignored.Where(kv => kv.Value < now).Select(kv => kv.Key).ToList())
+					_state.Ignored.Remove(k);
+				if (!File.Exists(path))
+					return;
+				var keys = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(path)) ?? new List<string>();
+				File.Delete(path);
+				int removed = 0;
+				foreach (var key in keys.Distinct()) {
+					if (_state.Targets.Remove(key))
+						removed++;
+					_state.Ignored[key] = now.AddHours(24);
+				}
+				if (keys.Count > 0)
+					DoLog(LogLevel.Information, $"{removed} target(s) removed on request from the WebUI (not taken in again for 24 h).");
+				SaveState();
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"Could not process delete requests: {e.Message}");
+			}
 		}
 
 		private void SaveState() {
@@ -234,9 +294,7 @@ namespace Tbot.Workers {
 				lock (_stateLock) {
 					_state.UpdatedUtc = DateTime.UtcNow;
 					string path = StatePath();
-					string tmp = path + ".tmp";
-					File.WriteAllText(tmp, JsonConvert.SerializeObject(_state, Formatting.Indented));
-					File.Move(tmp, path, true);
+					AtomicFile.WriteAllText(path, JsonConvert.SerializeObject(_state, Formatting.Indented));
 				}
 			} catch (Exception e) {
 				DoLog(LogLevel.Warning, $"Could not write the state file: {e.Message}");
@@ -252,17 +310,6 @@ namespace Tbot.Workers {
 			DoLog(LogLevel.Information, text);
 		}
 
-		private async Task WaitSeconds(double seconds) {
-			DateTime end = DateTime.UtcNow.AddSeconds(seconds);
-			while (true) {
-				double left = (end - DateTime.UtcNow).TotalMilliseconds;
-				if (left <= 0)
-					break;
-				Heartbeat();
-				await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(left, 15000)), _ct);
-			}
-		}
-
 
 		private sealed class OriginState {
 			public Celestial Celestial;
@@ -275,6 +322,7 @@ namespace Tbot.Workers {
 			_nextDelayMs = 30000;
 			try {
 				LoadState();
+				ApplyDeleteRequests();
 				Cfg cfg = ReadConfig();
 				stop = await RunCycle(cfg);
 			} catch (OperationCanceledException) {
@@ -301,6 +349,7 @@ namespace Tbot.Workers {
 		}
 
 		private async Task<bool> RunCycle(Cfg cfg) {
+			_probesShort = false;
 			var origins = await PrepareOrigins(cfg);
 			if (origins.Count == 0) {
 				SetStatus("No usable origin celestial found (check FastFarm.Origin).");
@@ -313,17 +362,36 @@ namespace Tbot.Workers {
 
 			await CollectReports(cfg);
 
+			PruneOutOfRange(origins);
+
+			{
+				AdvanceSweep(cfg);
+				if (_state.SweepPhase == "scan") {
+					DateTime scanUntil = DateTime.UtcNow.AddSeconds(60);
+					bool more = true;
+					while (more && DateTime.UtcNow < scanUntil)
+						more = await ScanStep(cfg, origins, cfg.MaxSystemsPerScanStep, scanUntil);
+					if (!more) {
+						_state.SweepPhase = "sweep";
+						DoLog(LogLevel.Information, $"Sweep round {_state.SweepRound}, galaxy {_state.SweepGalaxy}: scan done, {_state.Targets.Count} inactive targets found.");
+					}
+					SetStatus(BuildStatus(0));
+					_nextDelayMs = 2000;
+					return false;
+				}
+			}
+
 			int free = _tbotInstance.UserData.slots.Free - cfg.SlotsToLeaveFree;
 			bool bedTime = false;
 
-			if (free > 0) {
+			if (free > 0 && _state.SweepPhase == "verify") {
 				var attack = await AttackPhase(cfg, origins, free);
 				free = attack.freeLeft;
 				bedTime = attack.bedTime;
 			}
 			int probesSentNow = 0;
 			if (!bedTime && free > 0) {
-				var spy = await SpyPhase(cfg, origins, free);
+				var spy = await SweepSpyPhase(cfg, origins, free);
 				probesSentNow = spy.sent;
 				bedTime = spy.bedTime;
 			}
@@ -344,25 +412,12 @@ namespace Tbot.Workers {
 				.Where(f => f.BackIn.HasValue && f.BackIn.Value > 0)
 				.Select(f => (double) f.BackIn.Value + 2).ToList();
 			bool slotsFull = _tbotInstance.UserData.slots.Free - cfg.SlotsToLeaveFree - probesSentNow <= 0 || free <= 0;
-			if (slotsFull && backs.Count > 0)
+			if ((slotsFull || _probesShort) && backs.Count > 0)
 				nextSec = Math.Min(nextSec, backs.Min());
 			if (nextSec == double.MaxValue)
 				nextSec = 60;
 
 			SetStatus(BuildStatus(free));
-
-			double scanBudget = Math.Min(nextSec, 90);
-			if (scanBudget >= 3 && NeedMoreTargets(cfg)) {
-				DateTime until = DateTime.UtcNow.AddSeconds(scanBudget);
-				int scanned = 0;
-				while (DateTime.UtcNow < until && scanned < cfg.MaxSystemsPerScanStep * 4) {
-					bool more = await ScanStep(cfg, origins, cfg.MaxSystemsPerScanStep, until);
-					scanned++;
-					if (!more)
-						break;
-				}
-				nextSec = Math.Max(2, nextSec - (scanBudget - Math.Max(0, (until - DateTime.UtcNow).TotalSeconds)));
-			}
 
 			_nextDelayMs = (int) Math.Min(nextSec * 1000, 15 * 60 * 1000);
 			return false;
@@ -378,7 +433,7 @@ namespace Tbot.Workers {
 		private string BuildStatus(int freeLeft) {
 			int pending = _state.Targets.Values.Count(t => t.Pending);
 			int ready = _state.Targets.Values.Count(t => t.ReportServer.HasValue && !IsBlocked(t));
-			return $"Targets known {_state.Targets.Count}, reports ready {ready}, probes pending {pending}, attacks out {_state.AttacksOut}, free slots {freeLeft}.";
+			return $"Sweep round {_state.SweepRound}, galaxy {_state.SweepGalaxy}, phase {_state.SweepPhase}: targets {_state.Targets.Count}, swept {_state.Targets.Values.Count(t => t.SweepValue > 0)}, fresh reports {ready}, probes pending {pending}, attacks out {_state.AttacksOut}, free slots {freeLeft}.";
 		}
 
 		private static bool IsBlocked(FastFarmTarget t) {
@@ -440,11 +495,8 @@ namespace Tbot.Workers {
 						t.Pending = false;
 						t.SpyFails++;
 						DoLog(LogLevel.Information, $"{Key(t)}: no report arrived (probes lost or target gone).");
-						if (t.SpyFails >= 3) {
-							t.BlockedUntilUtc = DateTime.UtcNow.AddHours(cfg.DefendedRecheckHours);
-							t.BlockReason = "NoReport";
-							t.SpyFails = 0;
-						}
+						if (t.SpyFails >= 3)
+							_state.Targets.Remove(Key(t));
 					}
 					continue;
 				}
@@ -454,26 +506,7 @@ namespace Tbot.Workers {
 				_state.ReportsRead++;
 				t.Player = report.Username ?? t.Player;
 
-				if (!report.IsInactive) {
-					t.BlockedUntilUtc = DateTime.UtcNow.AddHours(12);
-					t.BlockReason = "Active";
-					t.ReportServer = null;
-				} else if (!report.IsDefenceless(false)) {
-					t.BlockedUntilUtc = DateTime.UtcNow.AddHours(cfg.DefendedRecheckHours);
-					t.BlockReason = report.HasDefensesInformation && report.HasFleetInformation ? "Defended" : "NoInfo";
-					t.ReportServer = null;
-				} else {
-					Resources loot = report.Loot(playerClass);
-					t.Metal = loot.Metal;
-					t.Crystal = loot.Crystal;
-					t.Deuterium = loot.Deuterium;
-					t.Weighted = Weigh(cfg, loot);
-					t.LastWeighted = t.Weighted;
-					t.ReportServer = report.Date;
-					t.BlockedUntilUtc = null;
-					t.BlockReason = null;
-				}
-
+				ProcessSweepReport(cfg, t, report, playerClass);
 				if (cfg.DeleteReports) {
 					try {
 						await _ogameService.DeleteReport(report.ID);
@@ -494,6 +527,13 @@ namespace Tbot.Workers {
 			DateTime serverNow = await _tbotOgameBridge.GetDateTime();
 			var fleets = _tbotInstance.UserData.fleets ?? new List<Fleet>();
 
+			{
+				foreach (var st in _state.Targets.Values.Where(x => x.ReportServer.HasValue && (serverNow - x.ReportServer.Value).TotalMinutes > cfg.ReportMaxAgeMinutes)) {
+					st.ReportServer = null;
+					st.Verify = false;
+				}
+			}
+
 			var candidates = _state.Targets.Values
 				.Where(t => t.ReportServer.HasValue
 					&& !IsBlocked(t)
@@ -502,9 +542,8 @@ namespace Tbot.Workers {
 					&& (t.Metal + t.Crystal + t.Deuterium) >= cfg.MinLoot
 					&& t.Deuterium >= cfg.MinDeuterium
 					&& !fleets.Any(f => f.Mission == Missions.Attack && f.Destination != null && f.Destination.IsSame(Coord(t))))
-				.OrderByDescending(t => t.Weighted)
-				.Take(cfg.TopTargets)
 				.ToList();
+			candidates = Ordered(candidates).Take(cfg.TopTargets).ToList();
 			if (candidates.Count == 0)
 				return (free, false);
 
@@ -527,8 +566,10 @@ namespace Tbot.Workers {
 						return (free, true);
 					if (code == (int) SendFleetCode.NotEnoughSlots)
 						return (0, false);
-					if (code <= (int) SendFleetCode.GenericError)
+					if (code <= (int) SendFleetCode.GenericError) {
+						DoLog(LogLevel.Warning, $"Attack on {Key(t)} from {origin.Celestial.Coordinate} failed (code {code}, origin deuterium {origin.Celestial.Resources?.Deuterium}).");
 						continue;
+					}
 
 					free--;
 					sent++;
@@ -573,6 +614,7 @@ namespace Tbot.Workers {
 					t.Attacks++;
 					t.ReportServer = null;
 					DoLog(LogLevel.Information, $"Attack sent: {Key(t)} loot ~{t.Metal}/{t.Crystal}/{t.Deuterium} (M/C/D) with {ships}.");
+					_state.Targets.Remove(Key(t));
 					break;
 				}
 			}
@@ -614,36 +656,9 @@ namespace Tbot.Workers {
 		}
 
 
-		private async Task<(int sent, bool bedTime)> SpyPhase(Cfg cfg, List<OriginState> origins, int free) {
-			var fleets = _tbotInstance.UserData.fleets ?? new List<Fleet>();
-			DateTime nowUtc = DateTime.UtcNow;
-
-			Func<FastFarmTarget, bool> eligible = t =>
-				!t.Pending
-				&& !IsBlocked(t)
-				&& !t.ReportServer.HasValue
-				&& (!t.LastAttackUtc.HasValue || (nowUtc - t.LastAttackUtc.Value).TotalMinutes >= cfg.RespyAfterAttackMinutes)
-				&& !fleets.Any(f => (f.Mission == Missions.Attack || f.Mission == Missions.Spy) && f.Destination != null && f.Destination.IsSame(Coord(t)));
-
-			var pool = _state.Targets.Values.Where(eligible)
-				.OrderByDescending(t => t.LastWeighted)
-				.ThenBy(t => origins.Min(o => Distance(o.Celestial.Coordinate, Coord(t))))
-				.ToList();
-
-			int guard = 0;
-			while (pool.Count < free && guard++ < 6) {
-				bool more = await ScanStep(cfg, origins, cfg.MaxSystemsPerScanStep, DateTime.UtcNow.AddSeconds(30));
-				pool = _state.Targets.Values.Where(eligible)
-					.OrderByDescending(t => t.LastWeighted)
-					.ThenBy(t => origins.Min(o => Distance(o.Celestial.Coordinate, Coord(t))))
-					.ToList();
-				if (!more)
-					break;
-			}
-			if (pool.Count == 0)
-				return (0, false);
-
+		private async Task<(int sent, bool bedTime)> SendSpies(Cfg cfg, List<OriginState> origins, List<FastFarmTarget> pool, int free, bool verify) {
 			int sent = 0;
+			int failedSends = 0;
 			foreach (var t in pool) {
 				if (free <= 0)
 					break;
@@ -651,7 +666,8 @@ namespace Tbot.Workers {
 				Coordinate dest = Coord(t);
 				OriginState origin = ByDistance(origins, dest).FirstOrDefault(o => o.ProbesLeft >= cfg.ProbesPerTarget);
 				if (origin == null) {
-					DoLog(LogLevel.Information, $"Not enough probes ({cfg.ProbesPerTarget} needed) on any origin.");
+					DoLog(LogLevel.Information, $"Not enough probes ({cfg.ProbesPerTarget} needed) on any origin, waiting for returning probe fleets.");
+					_probesShort = true;
 					break;
 				}
 
@@ -662,8 +678,15 @@ namespace Tbot.Workers {
 					return (sent, true);
 				if (code == (int) SendFleetCode.NotEnoughSlots)
 					break;
-				if (code <= (int) SendFleetCode.GenericError)
+				if (code <= (int) SendFleetCode.GenericError) {
+					failedSends++;
+					DoLog(LogLevel.Warning, $"Probe dispatch to {Key(t)} from {origin.Celestial.Coordinate} failed (code {code}, origin deuterium {origin.Celestial.Resources?.Deuterium}). Reason: see the FleetScheduler line above.");
+					if (failedSends >= 3) {
+						DoLog(LogLevel.Warning, "Three dispatches in a row failed, trying again next cycle.");
+						break;
+					}
 					continue;
+				}
 
 				FleetPrediction prediction = _calculationService.CalcFleetPrediction(origin.Celestial.Coordinate, dest, ships, Missions.Spy, Speeds.HundredPercent,
 					_tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, origin.Celestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
@@ -673,6 +696,7 @@ namespace Tbot.Workers {
 				sent++;
 				_state.ProbesSent += cfg.ProbesPerTarget;
 				t.Pending = true;
+				t.Verify = verify;
 				t.SpySentServer = serverNow;
 				t.ExpectedArrivalUtc = DateTime.UtcNow.AddSeconds(prediction.Time);
 			}
@@ -684,10 +708,129 @@ namespace Tbot.Workers {
 		}
 
 
-		private bool NeedMoreTargets(Cfg cfg) {
-			int usable = _state.Targets.Values.Count(t => !IsBlocked(t));
-			return usable < cfg.TopTargets * 3;
+		private void AdvanceSweep(Cfg cfg) {
+			if (string.IsNullOrEmpty(_state.SweepPhase)) {
+				_state.SweepPhase = "scan";
+				_state.ScanCursor = 0;
+				if (_state.SweepRound <= 0)
+					_state.SweepRound = 1;
+			}
+			if (_state.SweepPhase == "sweep") {
+				var fl = _tbotInstance.UserData.fleets ?? new List<Fleet>();
+				bool open = _state.Targets.Values.Any(t => t.Pending || (!IsBlocked(t) && t.SweepValue == 0
+					&& !fl.Any(f => (f.Mission == Missions.Attack || f.Mission == Missions.Spy) && f.Destination != null && f.Destination.IsSame(Coord(t)))));
+				if (!open) {
+					_state.SweepPhase = "verify";
+					DoLog(LogLevel.Information, $"Sweep round {_state.SweepRound}: all targets spied, {_state.Targets.Values.Count(t => t.SweepValue > 0)} worth checking again, best first.");
+				}
+			}
+			if (_state.SweepPhase == "verify") {
+				bool open = _state.Targets.Values.Any(t => t.Pending || t.ReportServer.HasValue || (!IsBlocked(t) && t.SweepValue > 0));
+				if (!open) {
+					foreach (var key in _state.Targets.Where(kv => !kv.Value.Pending && !IsBlocked(kv.Value)).Select(kv => kv.Key).ToList())
+						_state.Targets.Remove(key);
+					_state.SweepRound++;
+					_state.SweepGalaxy = NextSweepGalaxy();
+					_state.ScanCursor = 0;
+					_state.SweepPhase = "scan";
+					DoLog(LogLevel.Information, $"Sweep round finished. Next round {_state.SweepRound} starts in galaxy {_state.SweepGalaxy}.");
+				}
+			}
 		}
+
+		private List<int> SweepGalaxies = new List<int>();
+
+		private int NextSweepGalaxy() {
+			if (SweepGalaxies.Count == 0)
+				return _state.SweepGalaxy;
+			int idx = SweepGalaxies.IndexOf(_state.SweepGalaxy);
+			return SweepGalaxies[(idx + 1) % SweepGalaxies.Count];
+		}
+
+		private List<(int galaxy, int system)> CurrentScanList(Cfg cfg, List<OriginState> origins) {
+			var list = BuildScanList(origins);
+			SweepGalaxies = list.Select(x => x.galaxy).Distinct().ToList();
+			if (SweepGalaxies.Count == 0)
+				return list;
+			if (!SweepGalaxies.Contains(_state.SweepGalaxy))
+				_state.SweepGalaxy = SweepGalaxies[0];
+			return list.Where(x => x.galaxy == _state.SweepGalaxy).ToList();
+		}
+
+		private void ProcessSweepReport(Cfg cfg, FastFarmTarget t, EspionageReport report, CharacterClass playerClass) {
+			string key = Key(t);
+			if (!report.IsInactive) {
+				_state.Targets.Remove(key);
+				return;
+			}
+			if (!report.IsDefenceless(false)) {
+				t.BlockedUntilUtc = DateTime.UtcNow.AddHours(6);
+				t.BlockReason = "Defended";
+				t.ReportServer = null;
+				t.SweepValue = 0;
+				t.Verify = false;
+				return;
+			}
+			Resources loot = report.Loot(playerClass);
+			long weighted = Weigh(cfg, loot);
+			long total = loot.Metal + loot.Crystal + loot.Deuterium;
+			bool belowMin = total < cfg.MinLoot || loot.Deuterium < cfg.MinDeuterium || weighted <= 0;
+
+			if (!t.Verify) {
+				if (belowMin) {
+					_state.Targets.Remove(key);
+					return;
+				}
+				t.Metal = loot.Metal;
+				t.Crystal = loot.Crystal;
+				t.Deuterium = loot.Deuterium;
+				t.Weighted = weighted;
+				t.LastWeighted = weighted;
+				t.SweepValue = weighted;
+				t.ReportServer = null;
+				return;
+			}
+
+			double limit = t.SweepValue * (1.0 - cfg.ShrinkDiscardPercent / 100.0);
+			if (belowMin || weighted < limit) {
+				DoLog(LogLevel.Information, $"{key}: discarded, loot {t.SweepValue} -> {weighted} (weighted).");
+				_state.Targets.Remove(key);
+				return;
+			}
+			t.Metal = loot.Metal;
+			t.Crystal = loot.Crystal;
+			t.Deuterium = loot.Deuterium;
+			t.Weighted = weighted;
+			t.LastWeighted = weighted;
+			t.ReportServer = report.Date;
+			t.BlockedUntilUtc = null;
+			t.BlockReason = null;
+		}
+
+		private async Task<(int sent, bool bedTime)> SweepSpyPhase(Cfg cfg, List<OriginState> origins, int free) {
+			var fleets = _tbotInstance.UserData.fleets ?? new List<Fleet>();
+			Func<FastFarmTarget, bool> free2 = t => !t.Pending && !IsBlocked(t)
+				&& !fleets.Any(f => (f.Mission == Missions.Attack || f.Mission == Missions.Spy) && f.Destination != null && f.Destination.IsSame(Coord(t)));
+			List<FastFarmTarget> pool;
+			bool verify = _state.SweepPhase == "verify";
+			if (verify) {
+				pool = Ordered(_state.Targets.Values.Where(t => free2(t) && t.SweepValue > 0 && !t.ReportServer.HasValue)).ToList();
+			} else if (_state.SweepPhase == "sweep") {
+				pool = _state.Targets.Values.Where(t => free2(t) && t.SweepValue == 0)
+					.OrderBy(t => origins.Min(o => Distance(o.Celestial.Coordinate, Coord(t)))).ToList();
+			} else {
+				return (0, false);
+			}
+			if (pool.Count == 0) {
+				int unswept = _state.Targets.Values.Count(t => t.SweepValue == 0);
+				int blockedNow = _state.Targets.Values.Count(t => IsBlocked(t));
+				DoLog(LogLevel.Information, $"No target to spy right now (phase {_state.SweepPhase}): {_state.Targets.Count} stored, {unswept} without sweep value, {blockedNow} blocked, {_state.Targets.Values.Count(t => t.Pending)} pending.");
+				return (0, false);
+			}
+			DoLog(LogLevel.Debug, $"Spy pool: {pool.Count} targets, {free} free slots.");
+			return await SendSpies(cfg, origins, pool, free, verify);
+		}
+
 
 		private List<(int galaxy, int system)> BuildScanList(List<OriginState> origins) {
 			var list = new List<(int galaxy, int system)>();
@@ -728,8 +871,31 @@ namespace Tbot.Workers {
 				.ToList();
 		}
 
+		private void PruneOutOfRange(List<OriginState> origins) {
+			try {
+				var list = BuildScanList(origins);
+				if (list.Count == 0)
+					return;
+				var inRange = new HashSet<(int, int)>(list);
+				string signature = list.Count + ":" + string.Join(",", list.Select(x => x.galaxy + "." + x.system).Take(6)) + ":" + list[list.Count - 1].galaxy + "." + list[list.Count - 1].system;
+				var remove = _state.Targets.Where(kv => !kv.Value.Pending && !inRange.Contains((kv.Value.Galaxy, kv.Value.System))).Select(kv => kv.Key).ToList();
+				foreach (var key in remove)
+					_state.Targets.Remove(key);
+				if (remove.Count > 0)
+					DoLog(LogLevel.Information, $"Scan range changed: removed {remove.Count} saved target(s) outside the current range.");
+				if (_state.ScanSignature != signature) {
+					if (_state.ScanSignature != null)
+						DoLog(LogLevel.Information, "Scan range changed: scan starts again from the beginning.");
+					_state.ScanSignature = signature;
+					_state.ScanCursor = 0;
+				}
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Could not check the scan range: {e.Message}");
+			}
+		}
+
 		private async Task<bool> ScanStep(Cfg cfg, List<OriginState> origins, int maxSystems, DateTime until) {
-			var list = BuildScanList(origins);
+			var list = CurrentScanList(cfg, origins);
 			if (list.Count == 0)
 				return false;
 			int done = 0;
@@ -750,6 +916,8 @@ namespace Tbot.Workers {
 						continue;
 					foreach (var p in info.Planets.Where(p => p != null && p.Inactive && !p.Administrator && !p.Banned && !p.Vacation)) {
 						string key = Key(p.Coordinate);
+						if (_state.Ignored.TryGetValue(key, out var ignUntil) && ignUntil > DateTime.UtcNow)
+							continue;
 						if (!_state.Targets.TryGetValue(key, out var target)) {
 							target = new FastFarmTarget { Galaxy = p.Coordinate.Galaxy, System = p.Coordinate.System, Position = p.Coordinate.Position };
 							_state.Targets[key] = target;

@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -60,19 +61,7 @@ namespace TBot.Model {
 
 		private void Persist() {
 			try {
-				var tempPath = _filePath + ".tmp";
-				File.WriteAllText(tempPath, JsonConvert.SerializeObject(_entries, Formatting.Indented));
-
-				if (File.Exists(_filePath)) {
-					try {
-						File.Replace(tempPath, _filePath, null);
-					} catch {
-						File.Delete(_filePath);
-						File.Move(tempPath, _filePath);
-					}
-				} else {
-					File.Move(tempPath, _filePath);
-				}
+				AtomicFile.WriteAllText(_filePath, JsonConvert.SerializeObject(_entries, Formatting.Indented));
 			} catch {
 			}
 		}

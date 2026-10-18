@@ -23,7 +23,7 @@
                 <h1>Autobuilds</h1>
                 <p class="intro">What the Brain workers (AutoMine, AutoResearch, LF-AutoMine, LF-AutoResearch) want to build per celestial and what they started last. Read only.</p>
             </div>
-            <form method="get" class="instance-picker">
+            <form method="get" class="instance-picker" style="@(Model.Instances.Count <= 1 ? "display:none" : null)">
                 <label for="instance">Instance</label>
                 <div class="instance-controls">
                     <select id="instance" name="instance">

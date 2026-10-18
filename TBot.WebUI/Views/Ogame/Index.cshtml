@@ -13,7 +13,7 @@
         $("#instanceFrame").attr("src", e.target.value);
     }
 </script>
-<div id="instancesWrapper" style="margin-top:-20px;">
+<div id="instancesWrapper" style="margin-top:-20px;@(Model.Instances.Count <= 1 ? "display:none;" : "")">
     <label for="instance" style="font-size:7pt;">Instance:</label>
     <select class="form-select" name="instance" id="instance" onchange="onInstanceSelected(event)" style="max-width:500px;margin-bottom:10px;">
         @foreach (var instance in Model.Instances)

@@ -36,7 +36,6 @@ namespace TBot.Ogame.Infrastructure {
 		private int _port;
 		private string _captchaKey;
 		private ProxySettings _proxySettings;
-		private string _cookiesPath;
 
 		public event EventHandler OnError;
 
@@ -768,6 +767,18 @@ namespace TBot.Ogame.Infrastructure {
 			return await GetAsync<Techs>($"/bot/celestials/{celestial.ID}/techs");
 		}
 
+		public async Task<List<ActiveItem>> GetActiveItems(Celestial celestial) {
+			return await GetAsync<List<ActiveItem>>($"/bot/celestials/{celestial.ID}/active-items");
+		}
+
+		public async Task<List<InventoryItem>> GetItems(Celestial celestial) {
+			return await GetAsync<List<InventoryItem>>($"/bot/celestials/{celestial.ID}/items");
+		}
+
+		public async Task ActivateItem(Celestial celestial, string itemRef) {
+			await GetAsync<object>($"/bot/celestials/{celestial.ID}/items/{Uri.EscapeDataString(itemRef)}/activate");
+		}
+
 		public async Task<Resources> GetResources(Celestial celestial) {
 			return await GetAsync<Resources>($"/bot/planets/{celestial.ID}/resources");
 		}
@@ -1071,9 +1082,9 @@ namespace TBot.Ogame.Infrastructure {
 				success = await PostAsync<bool>($"/bot/planets/{origin.ID}/send-discovery", parameters.ToArray());
 			} catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest) {
 				success = false;
-			} catch (OgamedException e) {
+			} catch (OgamedException) {
 				success = false;
-			} catch (Exception e) {
+			} catch (Exception) {
 				success = false;
 			}
 			return success;
@@ -1102,9 +1113,9 @@ namespace TBot.Ogame.Infrastructure {
 				}
 			} catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest) {
 				success = false;
-			} catch (OgamedException e) {
+			} catch (OgamedException) {
 				success = false;
-			} catch (Exception e) {
+			} catch (Exception) {
 				success = false;
 			}
 			return success;

@@ -37,6 +37,7 @@ namespace Tbot.Workers {
 			if (!_pendingFleetSaves.TryGetValue(celestialId, out var p))
 				return;
 			long delayMs = (long) Math.Max(0, (p.DispatchAtUtc - DateTime.UtcNow).TotalMilliseconds);
+#pragma warning disable VSTHRD101
 			System.Threading.Timer timer = new System.Threading.Timer(async _ => {
 				try {
 					await DispatchPendingAsync(celestialId, "Timer");
@@ -44,6 +45,7 @@ namespace Tbot.Workers {
 					DoLog(LogLevel.Warning, $"Dispatch timer: error during fleetsave dispatch: {e.Message}");
 				}
 			}, null, delayMs, System.Threading.Timeout.Infinite);
+#pragma warning restore VSTHRD101
 			_dispatchTimers.AddOrUpdate(celestialId, timer, (_, old) => { old.Dispose(); return timer; });
 		}
 

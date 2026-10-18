@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -424,6 +425,7 @@ namespace Tbot.Services {
 				Feature.BrainLifeformAutoMine => RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds),
 				Feature.BrainLifeformAutoResearch => RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds),
 				Feature.BrainOfferOfTheDay => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
+				Feature.BrainKeepBoosters => RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo),
 				Feature.BrainAutoResearch => RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds),
 				Feature.AutoFarm => RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo),
 #if FASTFARM
@@ -588,127 +590,6 @@ namespace Tbot.Services {
 			}
 			
 		}
-		public async Task ListProfiles() {
-			string profilesDir = Path.Combine(Path.GetDirectoryName(InstanceSettingsPath), "profiles");
-			string profileList = "Available profiles:\n";
-			if (Directory.Exists(profilesDir)) {
-				var profileFiles = Directory.GetFiles(profilesDir, "*.json");
-				log(LogLevel.Information, LogSender.Tbot, "Available profiles:");
-				foreach (var profileFile in profileFiles) {
-					profileList += $"- {Path.GetFileNameWithoutExtension(profileFile)}\n";
-					log(LogLevel.Information, LogSender.Tbot, $"- {Path.GetFileNameWithoutExtension(profileFile)}");
-				}
-			} else {
-				log(LogLevel.Warning, LogSender.Tbot, "Profiles directory not found.");
-				profileList = "No profiles found.";
-			}
-			await SendTelegramMessage(profileList);
-		}
-		public async Task ListRunningProfiles() {
-			List<string> profiles = userData.runningProfiles;
-			if (profiles.Count <= 0 || profiles == null) {
-				await SendTelegramMessage("No profile is currently running.");
-				return;
-			}
-			string txt = profiles.Count > 1 ? "Profiles currently running:\n" : "Profile currently running:\n";
-			foreach (var profile in profiles) {
-				txt += $"- {profile}\n";
-			}
-			await SendTelegramMessage(txt);
-		}
-		public async Task LoadProfile(List<string> profileName) {
-			for (int i = 0; i < profileName.Count; i++)
-				profileName[i] = profileName[i].Trim();
-
-			log(LogLevel.Information, LogSender.Tbot, "Loading profile detected !");
-			await _settingsReloadSemaphore.WaitAsync();
-
-			try {
-				List<string> profilePath = new();
-				for (int i = 0; i < profileName.Count; i++) {
-					string pPath = Path.Combine(Path.GetDirectoryName(InstanceSettingsPath), "profiles", profileName[i] + ".json");
-					profilePath.Add(pPath);
-					if (!File.Exists(pPath)) {
-						log(LogLevel.Warning, LogSender.Tbot, $"Profile {profileName[i]} not found in the profile folder, loading abandoned.");
-						await SendTelegramMessage($"Profile {profileName[i]} not found in the profile folder, loading abandoned.");
-						return;
-					}
-				}
-				string txt = " "+ profileName.First();
-				foreach (var p in profileName.Skip(1)) {
-					txt += " + "+ p;
-				}
-				if (profilePath.Count > 1)
-					log(LogLevel.Information, LogSender.Tbot, $"Loading profiles{txt}. Waiting workers to complete ongoing activities...");
-				else
-					log(LogLevel.Information, LogSender.Tbot, $"Loading profile{txt}. Waiting workers to complete ongoing activities...");
-				
-				cts.Cancel();
-				foreach (var worker in workers) {
-					log(LogLevel.Information, LogSender.Tbot, $"Stopping feature {worker.Key.ToString()}...");
-					await worker.Value.StopWorker();
-					log(LogLevel.Information, LogSender.Tbot, $"Feature {worker.Key.ToString()} stopped for settings reload!");
-				}
-
-				InstanceSettings = await SettingsService.GetMergedSettings(InstanceSettingsPath, profilePath);
-
-				if (profilePath.Count > 1) {
-					log(LogLevel.Information, LogSender.Tbot, $"Profiles{txt} loaded successfully.");
-					await SendTelegramMessage($"Profiles{txt} loaded successfully.");
-				} else {
-					log(LogLevel.Information, LogSender.Tbot, $"Profile{txt} loaded successfully.");
-					await SendTelegramMessage($"Profile{txt} loaded successfully.");
-				}
-				userData.runningProfiles = profileName;
-
-				_lastReloadFinished = DateTime.Now;
-			} catch (Newtonsoft.Json.JsonException jsonEx) {
-				log(LogLevel.Error, LogSender.Tbot, $"Invalid JSON Format: {jsonEx.Message}");
-				await SendTelegramMessage($"Invalid JSON Format: {jsonEx.Message}");
-			} catch (Exception e) {
-				log(LogLevel.Warning, LogSender.Tbot, $"Exception: {e.Message}");
-				log(LogLevel.Warning, LogSender.Tbot, $"Stacktrace: {e.StackTrace}");
-				await SendTelegramMessage($"Error loading profile: refer to logs.");
-			} finally {
-				if (cts.IsCancellationRequested) {
-					cts = new();
-					await HandleSleepModeAsync(null);
-				}
-				_settingsReloadSemaphore.Release();
-			}
-		}
-		public async Task ResetProfile() {
-
-			log(LogLevel.Information, LogSender.Tbot, "Unloading profile detected! Waiting workers to complete ongoing activities...");
-			await _settingsReloadSemaphore.WaitAsync();
-
-			try {
-				cts.Cancel();
-				foreach (var worker in workers) {
-					log(LogLevel.Information, LogSender.Tbot, $"Stopping feature {worker.Key.ToString()}...");
-					await worker.Value.StopWorker();
-					log(LogLevel.Information, LogSender.Tbot, $"Feature {worker.Key.ToString()} stopped for settings reload!");
-				}
-
-				log(LogLevel.Information, LogSender.Tbot, "Loading origin settings file");
-				await SendTelegramMessage($"Loading origin settings file");
-				InstanceSettings = await SettingsService.GetSettings(InstanceSettingsPath);
-				userData.runningProfiles = new List<string>();
-
-				_lastReloadFinished = DateTime.Now;
-			} catch (Exception e) {
-				log(LogLevel.Warning, LogSender.Tbot, $"Exception: {e.Message}");
-				log(LogLevel.Warning, LogSender.Tbot, $"Stacktrace: {e.StackTrace}");
-				await SendTelegramMessage($"Error loading profile: refer to logs.");
-			} finally {
-				if (cts.IsCancellationRequested) {
-					cts = new();
-					await HandleSleepModeAsync(null);
-				}
-				_settingsReloadSemaphore.Release();
-			}
-		}
-
 		private void InitializeSleepMode() {
 			log(LogLevel.Information, LogSender.Tbot, "Initializing sleep mode...");
 			StopSleepMode(false);
@@ -1958,6 +1839,16 @@ namespace Tbot.Services {
 			{ "w_harvest", "AutoHarvest.Active" },
 			{ "w_discovery", "AutoDiscovery.Active" },
 			{ "w_brain", "Brain.Active" }
+			,{ "w_transport", "Brain.Transports.Active" }
+			,{ "w_repatriate", "Brain.AutoRepatriate.Active" }
+			,{ "w_cargo", "Brain.AutoCargo.Active" }
+			,{ "w_mine", "Brain.AutoMine.Active" }
+			,{ "w_research", "Brain.AutoResearch.Active" }
+			,{ "w_lfmine", "Brain.LifeformAutoMine.Active" }
+			,{ "w_lfresearch", "Brain.LifeformAutoResearch.Active" }
+			,{ "w_boosters", "Brain.KeepBoosters.Active" }
+			,{ "w_offer", "Brain.BuyOfferOfTheDay.Active" }
+			,{ "w_colonize", "AutoColonize.Active" }
 		};
 
 		private static List<Feature> FeaturesForToggle(string key) {
@@ -1966,6 +1857,16 @@ namespace Tbot.Services {
 				case "w_expeditions": return new List<Feature> { Feature.Expeditions };
 				case "w_harvest": return new List<Feature> { Feature.Harvest };
 				case "w_discovery": return new List<Feature> { Feature.AutoDiscovery };
+				case "w_repatriate": return new List<Feature> { Feature.BrainAutoRepatriate };
+				case "w_cargo": return new List<Feature> { Feature.BrainAutobuildCargo };
+				case "w_mine": return new List<Feature> { Feature.BrainAutoMine, Feature.BrainCelestialAutoMine };
+				case "w_research": return new List<Feature> { Feature.BrainAutoResearch };
+				case "w_lfmine": return new List<Feature> { Feature.BrainLifeformAutoMine, Feature.BrainCelestialLifeformAutoMine };
+				case "w_lfresearch": return new List<Feature> { Feature.BrainLifeformAutoResearch, Feature.BrainCelestialLifeformAutoResearch };
+				case "w_boosters": return new List<Feature> { Feature.BrainKeepBoosters };
+				case "w_offer": return new List<Feature> { Feature.BrainOfferOfTheDay };
+				case "w_colonize": return new List<Feature> { Feature.Colonize };
+				case "w_transport": return new List<Feature>();
 				case "w_brain": return Features.AllFeatures.Where(f => f.ToString().StartsWith("Brain")).ToList();
 				default: return new List<Feature>();
 			}
@@ -1979,6 +1880,16 @@ namespace Tbot.Services {
 					case "AutoHarvest.Active": return (bool) InstanceSettings.AutoHarvest.Active;
 					case "AutoDiscovery.Active": return (bool) InstanceSettings.AutoDiscovery.Active;
 					case "Brain.Active": return (bool) InstanceSettings.Brain.Active;
+					case "Brain.Transports.Active": return (bool) InstanceSettings.Brain.Transports.Active;
+					case "Brain.AutoRepatriate.Active": return (bool) InstanceSettings.Brain.AutoRepatriate.Active;
+					case "Brain.AutoCargo.Active": return (bool) InstanceSettings.Brain.AutoCargo.Active;
+					case "Brain.AutoMine.Active": return (bool) InstanceSettings.Brain.AutoMine.Active;
+					case "Brain.AutoResearch.Active": return (bool) InstanceSettings.Brain.AutoResearch.Active;
+					case "Brain.LifeformAutoMine.Active": return (bool) InstanceSettings.Brain.LifeformAutoMine.Active;
+					case "Brain.LifeformAutoResearch.Active": return (bool) InstanceSettings.Brain.LifeformAutoResearch.Active;
+					case "Brain.KeepBoosters.Active": return (bool) InstanceSettings.Brain.KeepBoosters.Active;
+					case "Brain.BuyOfferOfTheDay.Active": return (bool) InstanceSettings.Brain.BuyOfferOfTheDay.Active;
+					case "AutoColonize.Active": return (bool) InstanceSettings.AutoColonize.Active;
 					default: return null;
 				}
 			} catch {
@@ -1994,6 +1905,16 @@ namespace Tbot.Services {
 					case "AutoHarvest.Active": InstanceSettings.AutoHarvest.Active = v; return true;
 					case "AutoDiscovery.Active": InstanceSettings.AutoDiscovery.Active = v; return true;
 					case "Brain.Active": InstanceSettings.Brain.Active = v; return true;
+					case "Brain.Transports.Active": InstanceSettings.Brain.Transports.Active = v; return true;
+					case "Brain.AutoRepatriate.Active": InstanceSettings.Brain.AutoRepatriate.Active = v; return true;
+					case "Brain.AutoCargo.Active": InstanceSettings.Brain.AutoCargo.Active = v; return true;
+					case "Brain.AutoMine.Active": InstanceSettings.Brain.AutoMine.Active = v; return true;
+					case "Brain.AutoResearch.Active": InstanceSettings.Brain.AutoResearch.Active = v; return true;
+					case "Brain.LifeformAutoMine.Active": InstanceSettings.Brain.LifeformAutoMine.Active = v; return true;
+					case "Brain.LifeformAutoResearch.Active": InstanceSettings.Brain.LifeformAutoResearch.Active = v; return true;
+					case "Brain.KeepBoosters.Active": InstanceSettings.Brain.KeepBoosters.Active = v; return true;
+					case "Brain.BuyOfferOfTheDay.Active": InstanceSettings.Brain.BuyOfferOfTheDay.Active = v; return true;
+					case "AutoColonize.Active": InstanceSettings.AutoColonize.Active = v; return true;
 					default: return false;
 				}
 			} catch (Exception e) {
@@ -2114,6 +2035,8 @@ namespace Tbot.Services {
 				bool pausiert = _attackLockdownActive || (userData != null && userData.isSleeping);
 				foreach (Feature feat in FeaturesForToggle(key)) {
 					if (on) {
+						if ((int) feat >= 100)
+							continue;
 						if (_attackLockdownActive && !_attackLockdownStoppedFeatures.Contains(feat))
 							_attackLockdownStoppedFeatures.Add(feat);
 						if (pausiert || (_ghostSleeping && _ghostSleepStoppedFeatures.Contains(feat))) {
@@ -2304,7 +2227,17 @@ namespace Tbot.Services {
 				expeditions = ReadBoolSetting("Expeditions.Active"),
 				harvest = ReadBoolSetting("AutoHarvest.Active"),
 				discovery = ReadBoolSetting("AutoDiscovery.Active"),
-				brain = ReadBoolSetting("Brain.Active")
+				brain = ReadBoolSetting("Brain.Active"),
+				transport = ReadBoolSetting("Brain.Transports.Active"),
+				repatriate = ReadBoolSetting("Brain.AutoRepatriate.Active"),
+				cargo = ReadBoolSetting("Brain.AutoCargo.Active"),
+				mine = ReadBoolSetting("Brain.AutoMine.Active"),
+				research = ReadBoolSetting("Brain.AutoResearch.Active"),
+				lfmine = ReadBoolSetting("Brain.LifeformAutoMine.Active"),
+				lfresearch = ReadBoolSetting("Brain.LifeformAutoResearch.Active"),
+				boosters = ReadBoolSetting("Brain.KeepBoosters.Active"),
+				offer = ReadBoolSetting("Brain.BuyOfferOfTheDay.Active"),
+				colonize = ReadBoolSetting("AutoColonize.Active")
 			};
 
 			object modeOverride = null;
@@ -2363,9 +2296,7 @@ namespace Tbot.Services {
 			};
 
 			string target = Path.Combine(AppContext.BaseDirectory, "sleepstatus.json");
-			string tmp = target + ".tmp";
-			File.WriteAllText(tmp, Newtonsoft.Json.JsonConvert.SerializeObject(payload));
-			File.Move(tmp, target, true);
+			AtomicFile.WriteAllText(target, Newtonsoft.Json.JsonConvert.SerializeObject(payload));
 
 			try {
 				string dataDir = Path.Combine(AppContext.BaseDirectory, "data");

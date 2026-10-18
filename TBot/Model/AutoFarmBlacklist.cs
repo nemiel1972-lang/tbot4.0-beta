@@ -1,3 +1,4 @@
+using Tbot.Common.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -149,7 +150,7 @@ namespace TBot.Model {
 
 			try {
 				string json = JsonConvert.SerializeObject(snapshot, Formatting.Indented);
-				File.WriteAllText(_filePath, json);
+				AtomicFile.WriteAllText(_filePath, json);
 			} catch (Exception) {
 			}
 		}
