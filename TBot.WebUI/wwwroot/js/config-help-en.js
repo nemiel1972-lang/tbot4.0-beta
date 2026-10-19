@@ -1156,7 +1156,8 @@ window.CFG_HELP.en = {
    "t": "Switch the hunter on or off (default off)."
   },
   "AsteroidHunt.ShipType": {
-   "t": "Ship that is sent. The planet with the most of this ship is used (a probe cannot find items)."
+   "t": "Ship that is sent, typed as in the game (English name). Any ship works, e.g. Pathfinder, Cruiser, Reaper, Destroyer; a probe cannot find items. The planet with the most of this ship is used. An unknown name falls back to Pathfinder.",
+   "e": "Pathfinder"
   },
   "AsteroidHunt.ShipCount": {
    "t": "How many ships are sent (default 1)."

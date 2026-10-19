@@ -830,7 +830,7 @@
         },
         "AsteroidHunt": {
             "Active": false,
-            "ShipType": "Cruiser",
+            "ShipType": "Pathfinder",
             "ShipCount": 1,
             "MaxAttemptsPerDay": 0,
             "SearchSystems": 10,

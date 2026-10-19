@@ -231,8 +231,8 @@ namespace Tbot.Workers {
 
 		private async Task<long> StartAsync(HuntState state, AsteroidHuntConfig cfg, DateTime gameNow) {
 			if (!Enum.TryParse(cfg.ShipType, true, out Buildables shipType)) {
-				DoLog(LogLevel.Warning, $"Asteroid hunt: unknown ship type \"{cfg.ShipType}\" - using Cruiser.");
-				shipType = Buildables.Cruiser;
+				DoLog(LogLevel.Warning, $"Asteroid hunt: unknown ship type \"{cfg.ShipType}\" - using Pathfinder.");
+				shipType = Buildables.Pathfinder;
 			}
 
 			Celestial origin = null;

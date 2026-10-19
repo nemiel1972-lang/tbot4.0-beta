@@ -46,7 +46,7 @@
                 </ul>
                 <div class="cfg-hint">All blocks have their own form. Credentials (login, passwords, own alliance ID, captcha key, proxy login) are not shown or editable here - set them directly in the config file. Every block also has a JSON tab.</div>
             </aside>
-            <main class="cfg-card cfg-main" id="cfg-main" data-instance="@Model.Instance" data-block="@Model.Selected" data-mode="@Model.SelectedMode"
+            <main class="cfg-card cfg-main" id="cfg-main" data-instance="@Model.Instance" data-block="@Model.Selected" data-mode="@Model.SelectedMode" data-lang="@Model.Language" data-setlang="@Url.Action("SetLanguage", "Config")"
                   data-get="@Url.Action("GetBlock", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-aflosses="@Url.Action("AfLosses", "Config")" data-allynames="@Url.Action("AllyNames", "Config")" data-boosterstock="@Url.Action("BoosterStock", "Config")" data-lfimg="@Url.Content("~/img/lf/")" data-save="@Url.Action("SaveBlock", "Config")" data-setactive="@Url.Action("SetActive", "Config")">
                 @if (Model.SelectedMode == "start")
                 {
@@ -76,6 +76,7 @@
             </main>
         </div>
         <script src="~/js/config-help-en.js" asp-append-version="true"></script>
+        <script src="~/js/config-help-de.js" asp-append-version="true"></script>
         <script src="~/js/config-forms.js" asp-append-version="true"></script>
         @if (Model.SelectedMode == "start")
         {

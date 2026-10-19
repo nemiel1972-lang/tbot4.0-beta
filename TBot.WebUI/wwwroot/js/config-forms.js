@@ -748,7 +748,7 @@
                 body.appendChild(sec('Asteroid item hunter (item event)', [
                     el('div', { class: 'cfg-note', text: 'Once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the bot checks whether the inventory grew. One short log line per attempt, no messenger message.' }),
                     fld(ah, 'Active', ahp, 'Hunt asteroids', 'Off by default. Only useful while the item event runs', 'toggle'),
-                    fld(ah, 'ShipType', ahp, 'Ship', 'The planet with the most of this ship sends it', 'select', { options: ['Cruiser', 'LightFighter', 'HeavyFighter', 'Battleship', 'SmallCargo', 'LargeCargo'] }),
+                    fld(ah, 'ShipType', ahp, 'Ship', 'Type the ship name exactly as in the game (English), e.g. Pathfinder, Cruiser, Reaper, Destroyer. No espionage probes. The planet with the most of this ship sends it.', 'text', {}),
                     fld(ah, 'ShipCount', ahp, 'Number of ships', null, 'num', { min: 1 }),
                     fld(ah, 'MaxAttemptsPerDay', ahp, 'Attempts per game day', '0 = unlimited (stops after the first find)', 'num', { min: 0 }),
                     fld(ah, 'SearchSystems', ahp, 'Systems to search', 'The asteroid is rarely in the home system. Tried: own, +1, -1, +2 ...', 'num', { min: 1 }),
@@ -757,7 +757,7 @@
             } else {
                 body.appendChild(sec('Asteroid item hunter (item event)', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet (off). Add it to switch it on.' }),
-                    addDefault(X, 'AsteroidHunt', { Active: false, ShipType: 'Cruiser', ShipCount: 1, MaxAttemptsPerDay: 0, SearchSystems: 10, SaveJson: true }, 'Asteroid hunter settings', null)
+                    addDefault(X, 'AsteroidHunt', { Active: false, ShipType: 'Pathfinder', ShipCount: 1, MaxAttemptsPerDay: 0, SearchSystems: 10, SaveJson: true }, 'Asteroid hunter settings', null)
                 ]));
             }
         }
@@ -865,8 +865,15 @@
     function fullKey(path, k) {
         return (COMBINED ? path : [block].concat(path)).concat(k).join('.');
     }
+    var LANG = main.dataset.lang || 'en';
+    var UI_TEXT = { de: { 'Example: ': 'Beispiel: ', 'Explain this option': 'Diese Option erklaeren', 'Show all help': 'Alle Hilfen zeigen', 'Language': 'Sprache' } };
+    function uiText(s) { return (UI_TEXT[LANG] && UI_TEXT[LANG][s]) || s; }
     function helpFor(full) {
-        var all = window.CFG_HELP || {}, H = all[main.dataset.lang || 'en'] || all.en || {};
+        var all = window.CFG_HELP || {};
+        return helpIn(all[LANG], full) || (LANG !== 'en' ? helpIn(all.en, full) : null);
+    }
+    function helpIn(H, full) {
+        if (!H) return null;
         var parts = full.split('.'), k = parts[parts.length - 1], rel = parts.slice(1).join('.');
         var bl = H[parts[0]] || {}, cm = H['*'] || {};
         if (bl[rel]) return bl[rel];
@@ -883,8 +890,8 @@
     function withHelp(r, full) {
         var h = r && full ? helpFor(full) : null;
         if (!h) return r;
-        var box = el('div', { class: 'cfg-opt-help' }, [el('span', { text: h.t }), h.e ? el('span', { class: 'eg' }, [el('b', { text: 'Example: ' }), h.e]) : null]);
-        var q = el('button', { type: 'button', class: 'cfg-q', title: 'Explain this option', text: '?' });
+        var box = el('div', { class: 'cfg-opt-help' }, [el('span', { text: h.t }), h.e ? el('span', { class: 'eg' }, [el('b', { text: uiText('Example: ') }), h.e]) : null]);
+        var q = el('button', { type: 'button', class: 'cfg-q', title: uiText('Explain this option'), text: '?' });
         q.addEventListener('click', function () { box.classList.toggle('open'); q.classList.toggle('on', box.classList.contains('open')); });
         var lab = r.querySelector('.cfg-lab b');
         if (lab) lab.appendChild(q);
@@ -895,7 +902,18 @@
         var cb = el('input', { type: 'checkbox' });
         cb.checked = helpAll;
         cb.addEventListener('change', function () { helpAll = cb.checked; root.classList.toggle('cfg-help-all', helpAll); });
-        return el('label', { class: 'cfg-masklbl' }, [cb, ' Show all help']);
+        var sel = el('select', { class: 'cfg-langsel', title: uiText('Language') }, [
+            el('option', { value: 'en', text: 'English' }), el('option', { value: 'de', text: 'Deutsch' })
+        ]);
+        sel.value = LANG;
+        sel.addEventListener('change', function () {
+            if (!main.dataset.setlang) return;
+            fetch(main.dataset.setlang, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'lang=' + encodeURIComponent(sel.value) })
+                .then(function (r) { return r.json(); })
+                .then(function (j) { if (j && j.success) location.reload(); else alert('Language not saved: ' + ((j && j.error) || 'settings.json not found')); })
+                .catch(function (e) { alert('Language not saved: ' + e); });
+        });
+        return el('span', { class: 'cfg-masklbl' }, [el('label', { class: 'cfg-masklbl' }, [cb, ' ' + uiText('Show all help')]), ' ', sel]);
     }
 
     function fld(o, k, path, label, hint, kind, opts) {
@@ -1247,6 +1265,40 @@
         });
         return (o.PriorityTechs || []).length ? withHelp(row('Order', 'Researched first, top to bottom', box), 'Brain.LifeformAutoResearch.PriorityTechs') : null;
     }
+    function lfCapGrid(o) {
+        var keys = numKeys(o, /^MaxTechs\d+$/);
+        if (!Array.isArray(o.PriorityTechs)) o.PriorityTechs = [];
+        var labels = [];
+        function refresh() {
+            labels.forEach(function (l) {
+                var i = o.PriorityTechs.indexOf(l.slot);
+                l.el.textContent = i >= 0 ? 'Prio ' + (i + 1) : 'Prio';
+            });
+        }
+        var grid = el('div', { class: 'cfg-lfgrid' });
+        [1, 2, 3].forEach(function (tier) {
+            var col = el('div', { class: 'cfg-lfcol' }, [el('b', { text: 'T' + tier })]);
+            keys.filter(function (k) { return Math.floor(Number(k.replace('MaxTechs', '')) / 10) === tier; }).forEach(function (key) {
+                var slot = Number(key.replace('MaxTechs', ''));
+                var cb = el('input', { type: 'checkbox' });
+                cb.checked = o.PriorityTechs.indexOf(slot) >= 0;
+                var lab = el('span', { class: 'cfg-lfprio-l', text: 'Prio' });
+                labels.push({ slot: slot, el: lab });
+                cb.addEventListener('change', function () {
+                    var i = o.PriorityTechs.indexOf(slot);
+                    if (cb.checked && i < 0) o.PriorityTechs.push(slot);
+                    if (!cb.checked && i >= 0) o.PriorityTechs.splice(i, 1);
+                    refresh(); update();
+                });
+                col.appendChild(el('div', { class: 'cfg-lfcaprow', title: lfNames(slot).join(' / ') }, [
+                    el('span', { class: 'cfg-lfslot', text: String(slot) }), lfImgs(slot), num(o, key, [key], { min: 0 }),
+                    el('label', { class: 'cfg-lfprio-cb', title: 'Research this tech first' }, [cb, lab])]));
+            });
+            grid.appendChild(col);
+        });
+        refresh();
+        return el('div', null, [el('div', { class: 'cfg-note', text: 'Level cap per slot (one tech per race in each slot, 0 = do not research). The tick marks a slot as priority: ticked slots are researched first, in the order shown (Prio 1, 2, ...); newly ticked ones go to the end.' }), grid]);
+    }
     var BRAIN_HELP = {
         Transports: 'Shared settings for every Brain worker that moves resources: where it collects from, which cargo ships it uses and how many slots it may take. Pathfinders are never used.',
         AutoMine: 'Builds mines, storage, energy and facilities up to the caps you set. 0 = do not build. The caps at the top are for the home world, "Colony" is for all other planets, single planets can get their own caps.',
@@ -1409,10 +1461,8 @@
 
         brainSub(body, 'LifeformAutoResearch', 'LifeformAutoResearch', function (k, o, p) {
             k.push(transportRow(o, p));
-            k.push(fld(o, 'PriorityTechs', p, 'Priority techs', 'Tech IDs researched first, in this order (comma separated)', 'intlist'));
             k.push(fld(o, 'MaxResearchLevel', p, 'Highest level per tech', null, 'num', { min: 0 }));
-            k.push(lfPriorityPreview(o));
-            k.push(inner('brain:LfRes:caps', 'Level caps per slot (one tech per race in each slot)', numKeys(o, /^MaxTechs\d+$/).map(function (key) { return lfCapRow(o, key); })));
+            k.push(lfCapGrid(o));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Transports', 'PriorityTechs', 'MaxResearchLevel', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^MaxTechs\d+$/))).forEach(function (r) { k.push(r); });
@@ -1470,7 +1520,8 @@
         });
 
         brainSub(body, 'AutoFleetJumpGate', 'AutoFleetJumpGate', function (k, o, p) {
-            k.push(coordList(o, 'Target', 'Target moons', 'Where the fleet jumps to', '+ Add target', p));
+            if (Array.isArray(o.Target)) k.push(withHelp(row('Target moons', 'Where the fleet jumps to (jump gates exist on moons only)',
+                listTable(o.Target, COORD_COLS.slice(0, 3), function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Moon' }; }, '+ Add target', ['Target'])), fullKey(p, 'Target')));
             k.push(fld(o, 'MinimumAmountOfShipPointsToTeleport', p, 'Min fleet points to jump', null, 'num', { min: 0 }));
             if (o.MinimumAmountOfShipsToBeLeftOnMoon && typeof o.MinimumAmountOfShipsToBeLeftOnMoon === 'object') {
                 var mp = p.concat('MinimumAmountOfShipsToBeLeftOnMoon'), M = o.MinimumAmountOfShipsToBeLeftOnMoon;

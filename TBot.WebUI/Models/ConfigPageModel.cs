@@ -16,5 +16,6 @@ namespace TBot.WebUI.Models {
 		public string Selected { get; set; } = "";
 		public string SelectedMode { get; set; } = "placeholder";
 		public string? Error { get; set; }
+		public string Language { get; set; } = "en";
 	}
 }

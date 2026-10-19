@@ -2618,6 +2618,7 @@ namespace Tbot.Services {
 				priorities,
 				modeOverride,
 				account,
+				lang = UiLanguage.Read(),
 				updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			};
 

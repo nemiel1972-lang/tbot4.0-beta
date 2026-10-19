@@ -36,7 +36,7 @@ namespace TBot.WebUI.Controllers {
 			},
 			["AsteroidHunt"] = new JObject {
 				["Active"] = false,
-				["ShipType"] = "Cruiser",
+				["ShipType"] = "Pathfinder",
 				["ShipCount"] = 1,
 				["MaxAttemptsPerDay"] = 0,
 				["SearchSystems"] = 10,
@@ -208,7 +208,7 @@ namespace TBot.WebUI.Controllers {
 
 		[HttpGet]
 		public IActionResult Index(string? instance, string? block) {
-			var model = new ConfigPageModel();
+			var model = new ConfigPageModel { Language = UiLanguage.Read() };
 			try {
 				var instances = GetInstances();
 				model.Instances = instances.Select(i => i.Alias).ToList();
@@ -510,6 +510,16 @@ namespace TBot.WebUI.Controllers {
 			}
 		}
 #endif
+
+		[HttpPost]
+		public async Task<IActionResult> SetLanguage(string lang) {
+			try {
+				bool ok = await UiLanguage.Write(lang);
+				return Json(new { success = ok, lang = UiLanguage.Normalize(lang) });
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
+		}
 
 		[HttpPost]
 		public async Task<IActionResult> SaveBlock(string? instance, string block, string content, string? scope) {

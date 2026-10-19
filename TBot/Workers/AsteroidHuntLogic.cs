@@ -5,7 +5,7 @@ using System.Linq;
 namespace Tbot.Workers {
 	public class AsteroidHuntConfig {
 		public bool Active = false;
-		public string ShipType = "Cruiser";
+		public string ShipType = "Pathfinder";
 		public int ShipCount = 1;
 		public int MaxAttemptsPerDay = 0;
 		public int SearchSystems = 10;

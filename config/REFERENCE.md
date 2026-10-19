@@ -469,11 +469,15 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | `FleetsaveSlot.Active` | Default on. The last free fleet slot is kept for the fleetsave (and DebrisSave): all other fleets, even forced ones, are refused when only the reserved slots are left. Refusals show in the log as `SLOTCOLLISION #n` (counter since start) - this also tells whether a central slot ledger would be worth it. |
 | `FleetsaveSlot.Slots` | Number of reserved slots (default 1). Works on top of `General.SlotsToLeaveFree`. |
 | `AsteroidHunt.Active` | Default off. Item event: once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the inventory is compared with the one from before; one short log line per attempt, no messenger message. Assumes one find per day and account. |
-| `AsteroidHunt.ShipType` / `ShipCount` | Ship sent (default `Cruiser`, 1). The planet with the most of that ship is used. |
+| `AsteroidHunt.ShipType` / `ShipCount` | Ship sent, typed as in the game (English name, default `Pathfinder`; an unknown name falls back to Pathfinder), count default 1. The planet with the most of that ship is used. |
 | `AsteroidHunt.MaxAttemptsPerDay` / `SearchSystems` | Attempts per game day (default 0 = unlimited, max 60; the hunter stops for the day after the first find); `SearchSystems` (default 10) = how many systems around the home system are searched for the asteroid (own, +1, -1, +2 ...); a refused target costs no attempt, the last hit system is tried first the next day. |
 | `AsteroidHunt` (Erkennung) | The result is read from the report of the Flottenkommando under Messages -> Sonstiges (found / no result, retry / "sleep on it" = day over). If no new report arrives or the text is not recognised, the inventory before and after the attack is compared instead. |
 | `AsteroidHunt.SaveJson` | Default on. Log of all attempts and finds in `data/asteroiden_funde_<alias>.json`. |
 
+
+## WebUI.Language (settings.json)
+
+`"WebUI": { "Language": "en" }` sets the interface language: `en` (default) or `de`. It is changed with the language selector on the Config page, which writes this value. It controls (1) the help texts on the Config page (`config-help-de.js`, missing keys fall back to English per key) and (2) the texts of the browser tiles (ogamed). More languages: add `lang/<code>.json` next to the ogamed binary (map of English tile text to translated text) and a `CFG_HELP.<code>` file. Logs and Telegram messages stay English.
 
 ## WebUI.FormPages (settings.json)
 

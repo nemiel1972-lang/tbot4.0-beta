@@ -233,6 +233,21 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
 	tmpHTML := string(pageHTML)
 
 	toReplace := `<script>
+        // --- Sprache der Kacheln: TBot schreibt WebUI.Language als "lang" in die sleepstatus.json, die Texte kommen von /bot/i18n/<sprache> (Englisch = Texte im Code) ---
+        var tL = {}, tLang = 'en', tLabelFns = [];
+        function tr(s) { return tL[s] || s; }
+        function tReg(fn) { tLabelFns.push(fn); fn(); }
+        function tApply() {
+            tLabelFns.forEach(function(f) { f(); });
+            try { pRender(); kApply(); tRender(); sRender(); } catch (e) { }
+        }
+        function tSetLang(l) {
+            l = l || 'en';
+            if (l === tLang) { return; }
+            if (l === 'en') { tL = {}; tLang = 'en'; tApply(); return; }
+            $.ajax({ url: "/bot/i18n/" + encodeURIComponent(l), type: 'GET', cache: false, dataType: 'json',
+                success: function(r) { tL = r || {}; tLang = l; tApply(); }, error: function() { } });
+        }
 	var btn1 = document.createElement("BUTTON");
         var t = document.createTextNode("Pause");
         btn1.style.height = '20px';
@@ -254,11 +269,11 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             if (pBusy) { return; }
             if (p && p.active) {
                 var left = p.untilInSec - (Date.now() - st.updatedMs) / 1000;
-                btn1.textContent = 'Resume (' + pFmt(left) + ')';
+                btn1.textContent = tr('Resume') + ' (' + pFmt(left) + ')';
                 btn1.style.background = '#8a5a1f';
                 btn1.style.color = '#fff';
             } else {
-                btn1.textContent = 'Pause';
+                btn1.textContent = tr('Pause');
                 btn1.style.background = '';
                 btn1.style.color = '';
             }
@@ -301,9 +316,9 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         btnK.style.cssText = 'height:20px;width:130px;display:block;margin-bottom:3px;';
         var kNote = document.createElement("div");
         kNote.style.cssText = 'display:none;width:130px;margin-bottom:3px;font:bold 10px/1.2 Arial,sans-serif;color:#ff6b70;text-align:center;';
-        kNote.textContent = 'AutoFarm override active';
+        tReg(function() { kNote.textContent = tr('AutoFarm override active'); });
         function kApply() {
-            btnK.textContent = 'Tiles (' + ((kOff || ovr) ? 'off' : 'on') + ')';
+            btnK.textContent = tr('Tiles') + ' (' + ((kOff || ovr) ? tr('off') : tr('on')) + ')';
             btnK.style.background = ovr ? '#8a1f1f' : '';
             btnK.style.color = ovr ? '#fff' : '';
             btnK.style.cursor = ovr ? 'not-allowed' : '';
@@ -344,10 +359,10 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             return (h > 0 ? h + ':' : '') + mm + ':' + (x < 10 ? '0' : '') + x;
         }
         function tMis(m) {
-            if (m === 'GroupedAttack') { return 'ACS'; }
-            if (m === 'MissileAttack') { return 'Missile'; }
-            if (m === 'Destroy') { return 'Destroy'; }
-            return 'Attack';
+            if (m === 'GroupedAttack') { return tr('ACS'); }
+            if (m === 'MissileAttack') { return tr('Missile'); }
+            if (m === 'Destroy') { return tr('Destroy'); }
+            return tr('Attack');
         }
         function tRender() {
             if (kOff) { tile.style.display = 'none'; return; }
@@ -359,23 +374,23 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             if (!st.sleeping && rec.length === 0 && att.length === 0) { tile.style.display = 'none'; return; }
             var h = '';
             if (att.length) {
-                h += '<div style="color:#ffb3b3"><b>INCOMING ATTACK</b></div>';
+                h += '<div style="color:#ffb3b3"><b>' + tr('INCOMING ATTACK') + '</b></div>';
                 for (var k = 0; k < att.length; k++) {
                     h += '<div>' + tMis(att[k].mission) + ' ' + tCoord(att[k].dest) + '</div>';
-                    h += '<div style="color:#ffd2d2">&nbsp;&nbsp;' + tEsc(att[k].at) + ' (in ' + tCd(att[k].inSec - el) + ')</div>';
+                    h += '<div style="color:#ffd2d2">&nbsp;&nbsp;' + tEsc(att[k].at) + ' (' + tr('in') + ' ' + tCd(att[k].inSec - el) + ')</div>';
                 }
-                if (st.attacksMore > 0) { h += '<div>and ' + st.attacksMore + ' more</div>'; }
+                if (st.attacksMore > 0) { h += '<div>' + tr('and {n} more').replace('{n}', st.attacksMore) + '</div>'; }
             }
-            if (st.sleeping) { h += '<div' + (att.length ? ' style="margin-top:3px"' : '') + '><b>' + (st.mode === 'GhostSleep' ? 'Ghost sleep on' : 'Sleep mode on') + '</b></div>'; }
+            if (st.sleeping) { h += '<div' + (att.length ? ' style="margin-top:3px"' : '') + '><b>' + (st.mode === 'GhostSleep' ? tr('Ghost sleep on') : tr('Sleep mode on')) + '</b></div>'; }
             if (rec.length) {
-                h += '<div style="margin-top:3px"><u>Recalls due</u></div>';
+                h += '<div style="margin-top:3px"><u>' + tr('Recalls due') + '</u></div>';
                 for (var i = 0; i < rec.length; i++) { h += '<div>' + tCoord(rec[i].coord) + ' ' + tEsc(rec[i].at) + '</div>'; }
-                if (st.more > 0) { h += '<div>and ' + st.more + ' more</div>'; }
+                if (st.more > 0) { h += '<div>' + tr('and {n} more').replace('{n}', st.more) + '</div>'; }
             }
             if (st.sleeping && st.wakeInSec != null) {
-                h += '<div style="margin-top:3px">Wake up in ' + tFmt(st.wakeInSec - el) + '</div>';
+                h += '<div style="margin-top:3px">' + tr('Wake up in') + ' ' + tFmt(st.wakeInSec - el) + '</div>';
             } else if (!st.sleeping && st.sleepInSec != null) {
-                h += '<div style="margin-top:3px">Back to sleep in ' + tFmt(st.sleepInSec - el) + '</div>';
+                h += '<div style="margin-top:3px">' + tr('Back to sleep in') + ' ' + tFmt(st.sleepInSec - el) + '</div>';
             }
             tile.style.background = att.length ? '#6b1414' : '#5b3a1e';
             tile.style.borderColor = att.length ? '#d04040' : '#8a5a2b';
@@ -384,7 +399,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         }
         function tLoad() {
             $.ajax({ url: "/bot/sleepstatus", type: 'GET', cache: false, dataType: 'json',
-                success: function(r) { st = r; tRender(); }, error: function() {} });
+                success: function(r) { st = r; if (r && r.lang) { tSetLang(r.lang); } tRender(); }, error: function() {} });
         }
         setInterval(tRender, 1000);
         setInterval(tLoad, 10000);
@@ -418,15 +433,15 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             if (isNaN(v) || v < 0) { return; }
             info.textContent = '...';
             $.ajax({ url: "/bot/slot-limit", type: 'POST', data: { key: key, value: v }, dataType: 'json',
-                success: function() { inp.dataset.dirty = ''; info.textContent = 'ok'; setTimeout(tLoad, 4000); setTimeout(function() { info.textContent = ''; }, 3000); },
-                error: function() { info.textContent = 'Error'; } });
+                success: function() { inp.dataset.dirty = ''; info.textContent = tr('ok'); setTimeout(tLoad, 4000); setTimeout(function() { info.textContent = ''; }, 3000); },
+                error: function() { info.textContent = tr('Error'); } });
         }
         sRowsDef.forEach(function(def) {
             var row = document.createElement("div");
             row.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;';
             var lab = document.createElement("span");
             lab.style.cssText = 'flex:1 1 auto;white-space:nowrap;';
-            lab.textContent = def.label;
+            tReg(function() { lab.textContent = tr(def.label); });
             var use = document.createElement("span");
             use.style.cssText = 'min-width:12px;text-align:right;color:#9fd0ff;';
             var inp = document.createElement("input");
@@ -470,7 +485,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         var wBtns = {};
         var wTitle = document.createElement("div");
         wTitle.style.cssText = 'margin-top:5px;border-top:1px solid #2b5a8a;padding-top:3px;font-weight:bold;';
-        wTitle.textContent = 'Workers (priority: lower = more important)';
+        tReg(function() { wTitle.textContent = tr('Workers (priority: lower = more important)'); });
         sTile.appendChild(wTitle);
         // pro Worker eine Zeile wie bei den Slots: Name | On | Off (aktiver Zustand hervorgehoben)
         function wSend(d, on, row) {
@@ -484,12 +499,12 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             row.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;';
             var lab = document.createElement("span");
             lab.style.cssText = 'flex:1 1 auto;white-space:nowrap;';
-            lab.textContent = d.sub ? '\u21b3 ' + d.label : d.label;
+            tReg(function() { lab.textContent = d.sub ? '\u21b3 ' + tr(d.label) : tr(d.label); });
             if (d.sub) { lab.style.paddingLeft = '8px'; lab.style.color = '#b9cde0'; }
             var bOn = document.createElement("button");
-            bOn.textContent = 'On';
+            tReg(function() { bOn.textContent = tr('On'); });
             var bOff = document.createElement("button");
-            bOff.textContent = 'Off';
+            tReg(function() { bOff.textContent = tr('Off'); });
             [bOn, bOff].forEach(function(x) { x.style.cssText = 'font:10px Arial,sans-serif;padding:0 5px;cursor:pointer;border:1px solid #2b5a8a;border-radius:2px;background:#0f2238;color:#9fb8cf;'; });
             bOn.addEventListener('click', function() { if (bOn.dataset.active !== '1') { wSend(d, true); } });
             bOff.addEventListener('click', function() { if (bOff.dataset.active !== '1') { wSend(d, false); } });
@@ -499,7 +514,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
                 // Slot-Prioritaet (General.SlotPriorityLevel): Eingabe, Enter oder Verlassen des Feldes sendet
                 pInp = document.createElement("input");
                 pInp.type = 'number'; pInp.min = '0'; pInp.max = '40';
-                pInp.title = 'Slot priority (lower = more important)';
+                tReg(function() { pInp.title = tr('Slot priority (lower = more important)'); });
                 pInp.style.cssText = 'width:34px;font:11px Arial,sans-serif;padding:0 2px;background:#0f2238;color:#ffd86b;border:1px solid #2b5a8a;border-radius:2px;';
                 var pInfo = document.createElement("span");
                 pInfo.style.cssText = 'font-size:9px;color:#9fd0ff;';
@@ -519,7 +534,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             if (kOff || ovr) { sTile.style.display = 'none'; return; }
             if (!st || !st.slots || (Date.now() - st.updatedMs) / 1000 > 180) { sTile.style.display = 'none'; return; }
             var s = st.slots;
-            sHead.textContent = 'Slots ' + s.inUse + '/' + s.total + ' (free ' + s.free + ')';
+            sHead.textContent = tr('Slots') + ' ' + s.inUse + '/' + s.total + ' (' + tr('free') + ' ' + s.free + ')';
             var use = st.slotUse || {}, lim = st.slotLimits || {};
             use.exp = s.expInUse;
             sRowsDef.forEach(function(def) {
