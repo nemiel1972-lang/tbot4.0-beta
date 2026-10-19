@@ -486,6 +486,10 @@ func (b *OGame) GetExpeditionMessages(maxPage int64) ([]ogame.ExpeditionMessage,
 	return b.WithPriority(taskRunner.Normal).GetExpeditionMessages(maxPage)
 }
 
+func (b *OGame) GetOtherMessages() ([]ogame.OtherMessage, error) {
+	return b.WithPriority(taskRunner.Normal).GetOtherMessages()
+}
+
 func (b *OGame) GetExpeditionMessageAt(t time.Time) (ogame.ExpeditionMessage, error) {
 	return b.WithPriority(taskRunner.Normal).GetExpeditionMessageAt(t)
 }

@@ -3841,6 +3841,52 @@ func (b *OGame) getExpeditionMessages(maxPage int64) ([]ogame.ExpeditionMessage,
 	return getMessages(b, maxPage, ExpeditionsMessagesTabID, b.extractor.ExtractExpeditionMessages)
 }
 
+
+func (b *OGame) getOtherMessages() ([]ogame.OtherMessage, error) {
+	var res struct {
+		Messages []any `json:"messages"`
+	}
+	pageHTML, err := b.getPageMessages(1, OtherMessagesTabID)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(pageHTML, &res); err != nil {
+		return nil, err
+	}
+	msgs := make([]ogame.OtherMessage, 0)
+	for _, m := range res.Messages {
+		html, ok := m.(string)
+		if !ok {
+			continue
+		}
+		doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+		if err != nil {
+			continue
+		}
+		for _, s := range doc.Find("li.msg").EachIter() {
+			idStr, exists := s.Attr("data-msg-id")
+			if !exists {
+				continue
+			}
+			id, err := utils.ParseI64(idStr)
+			if err != nil {
+				continue
+			}
+			content := strings.TrimSpace(s.Find("span.msg_content").Text())
+			if content == "" {
+				content = strings.TrimSpace(s.Find(".msg_content").Text())
+			}
+			msgs = append(msgs, ogame.OtherMessage{
+				ID:      id,
+				Date:    strings.TrimSpace(s.Find(".msg_date").First().Text()),
+				Title:   strings.TrimSpace(s.Find(".msg_title").First().Text()),
+				Content: content,
+			})
+		}
+	}
+	return msgs, nil
+}
+
 func getMessages[T any](b *OGame, maxPage int64, tabID ogame.MessagesTabID, extractor func([]byte) ([]T, int64, error)) ([]T, error) {
 	var res struct {
 		ServerLang   string `json:"js_serverlang"`

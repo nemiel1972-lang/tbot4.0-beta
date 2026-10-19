@@ -230,6 +230,8 @@ namespace Tbot.Services {
 			};
 			List<string> commands = new List<string>()
 			{
+				"/pause",
+				"/resume",
 				"/ghostsleep",
 				"/ghostsleepall",
 				"/ghost",
@@ -430,6 +432,8 @@ namespace Tbot.Services {
 								"/msg - Send a message to current attacker. Format: <code>/msg hello dude</code>\n" +
 								"/sleep - Stop bot for the specified amount of hours. Format: <code>/sleep 4h3m or 3m50s</code>\n" +
 								"/wakeup - Wakeup bot\n" +
+								"/pause - Stop all workers except Defender for a few minutes (default 15, config Experimental.BotPause), then resume on its own. Refused if a recall is due in that time. Format: <code>/pause</code> or <code>/pause 10</code>\n" +
+								"/resume - End the pause at once and restart the workers\n" +
 								"/cancel - Cancel fleet with specified ID. Format: <code>/cancel 65656</code>\n" +
 								"/cancelmission - Cancel all fleets with specified mission. Format: <code>/cancel Deploy</code> or other mission\n" +
 								"/getcelestials - Return the list of your celestials\n" +
@@ -892,6 +896,35 @@ namespace Tbot.Services {
 								await currInstance.InitializeFeature(Feature.Expeditions);
 								await SendMessage(botClient, message.Chat, "Expeditions initialized!");
 								return;
+
+							case "/pause": {
+								string[] pauseArgs = message.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+								int? pauseMinutes = null;
+								if (pauseArgs.Length > 2) {
+									await SendMessage(botClient, message.Chat, "Format: <code>/pause</code> or <code>/pause 10</code> (minutes)");
+									return;
+								}
+								if (pauseArgs.Length == 2) {
+									if (!int.TryParse(pauseArgs[1], out int pauseValue) || pauseValue < 1) {
+										await SendMessage(botClient, message.Chat, "Minutes must be a positive whole number! Format: <code>/pause 10</code>");
+										return;
+									}
+									pauseMinutes = pauseValue;
+								}
+								var pauseResult = await currInstance.PauseBot(pauseMinutes);
+								await SendMessage(botClient, message.Chat, pauseResult.Text);
+								return;
+							}
+
+							case "/resume": {
+								if (message.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length != 1) {
+									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
+									return;
+								}
+								var resumeResult = await currInstance.ResumeBot("Telegram");
+								await SendMessage(botClient, message.Chat, resumeResult.Text);
+								return;
+							}
 
 							case "/collect":
 								if (message.Text.Split(' ').Length != 1) {

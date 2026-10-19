@@ -9,6 +9,40 @@ namespace TBot.WebUI.Controllers {
 	public sealed class ConfigController : Controller {
 		private const string CustomPage = "Expeditions";
 		private const string StartPage = "Start";
+		private const string TestingPage = "Testing";
+		private const string ExperimentalBlock = "Experimental";
+
+		private static JObject DefaultExperimental() => new JObject {
+			["BotPause"] = new JObject {
+				["Active"] = true,
+				["DurationMinutes"] = 15,
+				["RecallMarginMinutes"] = 2,
+				["MaxDurationMinutes"] = 120
+			},
+			["DefenderRecheck"] = new JObject {
+				["Active"] = false,
+				["TimeoutSeconds"] = 4
+			},
+			["FleetsaveSlot"] = new JObject {
+				["Active"] = true,
+				["Slots"] = 1
+			},
+			["MinePlanRanking"] = new JObject {
+				["Mode"] = "Payback",
+				["HorizonDays"] = 90,
+				["MaxPaybackDays"] = 200,
+				["OnlySensible"] = false,
+				["IncludeResearch"] = true
+			},
+			["AsteroidHunt"] = new JObject {
+				["Active"] = false,
+				["ShipType"] = "Cruiser",
+				["ShipCount"] = 1,
+				["MaxAttemptsPerDay"] = 0,
+				["SearchSystems"] = 10,
+				["SaveJson"] = true
+			}
+		};
 		private static readonly string[] CustomPages = { "Expeditions", "AutoFarm", "Defender", "GhostSleep", "SleepMode", "Messenger", "General", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave", "FastFarm" };
 		private static readonly HashSet<string> NeverForm = new(StringComparer.OrdinalIgnoreCase) { "Credentials" };
 		private static readonly HashSet<string> ProtectedBlocks = new(StringComparer.OrdinalIgnoreCase) { "TelegramMessenger", "DiscordWebhook" };
@@ -209,6 +243,10 @@ namespace TBot.WebUI.Controllers {
 					}
 				}
 #endif
+				model.Blocks.RemoveAll(b => string.Equals(b.Name, ExperimentalBlock, StringComparison.OrdinalIgnoreCase));
+				model.Blocks.Add(new ConfigBlockInfo { Name = TestingPage, Label = "Testing", Mode = "custom" });
+				if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase))
+					block = TestingPage;
 					var discordEntry = model.Blocks.FirstOrDefault(b => b.Name == "DiscordWebhook");
 					int messengerAt = discordEntry != null ? model.Blocks.IndexOf(discordEntry) : model.Blocks.Count;
 					if (discordEntry != null)
@@ -364,6 +402,14 @@ namespace TBot.WebUI.Controllers {
 				if (NeverForm.Contains(block))
 					return Json(new { success = false, error = "This block contains credentials - edit the config file directly on the server." });
 				var main = ParseObject(System.IO.File.ReadAllText(mainPath));
+				if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase) && main[ExperimentalBlock] == null) {
+					return Json(new {
+						success = true,
+						data = DefaultExperimental().ToString(Formatting.None),
+						file = "(not in the config yet - saving creates the block \"Experimental\")",
+						secretRefs = 0
+					});
+				}
 				var data = ReadBlock(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!, out var targetFile, out var secretRefs);
 				MergeSecrets(SecretFileOf(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!), data);
 				HideFields(block, data);
@@ -477,6 +523,8 @@ namespace TBot.WebUI.Controllers {
 				var incoming = ParseObject(content);
 				string mainText = System.IO.File.ReadAllText(mainPath);
 				var main = ParseObject(mainText);
+				if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase) && main[ExperimentalBlock] == null)
+					main[ExperimentalBlock] = new JObject();
 				var existingBlock = ReadBlock(main, block, baseDir, out var targetFile, out _);
 				RestoreHidden(block, existingBlock, incoming);
 				await SplitSecrets(SecretFileOf(main, block, baseDir), incoming);

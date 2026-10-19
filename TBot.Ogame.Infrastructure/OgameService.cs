@@ -364,6 +364,18 @@ namespace TBot.Ogame.Infrastructure {
 				new KeyValuePair<string, string>("answer", answer.ToString()));
 		}
 
+		public async Task SetLoginPause(long untilUnixSeconds) {
+			await PostAsyncNoRetry<object>("/bot/login-pause", new KeyValuePair<string, string>("until", untilUnixSeconds.ToString()));
+		}
+
+		public async Task<LoginPauseStatus> GetLoginPauseStatus() {
+			try {
+				return await GetAsync<LoginPauseStatus>("/bot/login-pause");
+			} catch {
+				return new LoginPauseStatus();
+			}
+		}
+
 		public async Task<string> GetOgamedIP() {
 			try {
 				return await GetAsync<string>("/bot/ip");
@@ -773,6 +785,10 @@ namespace TBot.Ogame.Infrastructure {
 
 		public async Task<List<InventoryItem>> GetItems(Celestial celestial) {
 			return await GetAsync<List<InventoryItem>>($"/bot/celestials/{celestial.ID}/items");
+		}
+
+		public async Task<List<OtherMessage>> GetOtherMessages() {
+			return await GetAsync<List<OtherMessage>>("/bot/other-messages");
 		}
 
 		public async Task ActivateItem(Celestial celestial, string itemRef) {

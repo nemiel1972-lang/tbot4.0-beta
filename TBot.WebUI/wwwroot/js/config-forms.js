@@ -8,7 +8,7 @@
 
     var DRAFT_KEY = 'tbot.cfgdraft.' + main.dataset.instance;
     var SAVE_SCOPE = { TelegramMessenger: 'global' };
-    var DRAFT_PAGE = { TelegramMessenger: 'Messenger', DiscordWebhook: 'Messenger', GhostSleep: 'SleepMode' };
+    var DRAFT_PAGE = { TelegramMessenger: 'Messenger', DiscordWebhook: 'Messenger', GhostSleep: 'SleepMode', Experimental: 'Testing' };
     function readDrafts() { try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '{}') || {}; } catch (e) { return {}; } }
     function writeDrafts(d) { try { if (Object.keys(d).length) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else sessionStorage.removeItem(DRAFT_KEY); } catch (e) { } }
     function clearPendingActive(name) {
@@ -156,8 +156,8 @@
     function getBlock(name) {
         return fetch(main.dataset.get + '?instance=' + encodeURIComponent(instance) + '&block=' + encodeURIComponent(name) + (SCOPE[name] ? '&scope=' + SCOPE[name] : ''), { cache: 'no-store' }).then(function (r) { return r.json(); });
     }
-    var COMBINED = block === 'SleepMode' ? ['SleepMode', 'GhostSleep'] : (block === 'Messenger' ? ['TelegramMessenger', 'DiscordWebhook'] : null);
-    var COMBINED_TITLE = block === 'Messenger' ? 'Messenger' : 'Sleep / GhostSleep';
+    var COMBINED = block === 'SleepMode' ? ['SleepMode', 'GhostSleep'] : (block === 'Messenger' ? ['TelegramMessenger', 'DiscordWebhook'] : (block === 'Testing' ? ['Experimental', 'General', 'Brain'] : null));
+    var COMBINED_TITLE = block === 'Messenger' ? 'Messenger' : (block === 'Testing' ? 'Testing' : 'Sleep / GhostSleep');
     var loading = COMBINED
         ? Promise.all(COMBINED.map(getBlock)).then(function (rs) {
             var data = {}, files = [], firstError = null;
@@ -191,7 +191,7 @@
         var b = el('button', { type: 'button', class: 'cfg-toggle' + (obj[key] ? ' on' : '') });
         b.addEventListener('click', function () {
             obj[key] = !obj[key]; b.classList.toggle('on', !!obj[key]); update();
-            if (key === 'Active' && path && ((path.length === 1 && !COMBINED && state === obj) || (path.length === 2 && COMBINED && state[path[0]] === obj) || (path.length === 2 && !COMBINED && block === 'Brain' && state[path[0]] === obj))) render();
+            if (key === 'Active' && path && ((path.length === 1 && !COMBINED && state === obj) || (path.length === 2 && COMBINED && state[path[0]] === obj) || (path.length === 2 && !COMBINED && block === 'Brain' && state[path[0]] === obj) || (path.length === 3 && COMBINED && block === 'Testing' && state[path[0]] && state[path[0]][path[1]] === obj))) render();
         });
         return b;
     }
@@ -669,6 +669,145 @@
                 el('li', null, [el('b', { text: 'GhostSleep: ' }), 'Second, independent window (timed version of /ghost). Everything stops except Expeditions, Defender and SleepMode, and all ships are fleetsaved with a ghost flight. Expeditions keep flying, the Defender only alerts (no automatic fleetsave) and polls rarely, and escalates to full defence if an attack wave is detected.'])
             ])
         ]));
+    }
+
+
+    function addDefault(parent, key, dflt, label, hint) {
+        var b = el('button', { type: 'button', class: 'cfg-btn', text: 'Add with default ' + (typeof dflt === 'object' ? '' : dflt) });
+        b.addEventListener('click', function () { parent[key] = JSON.parse(JSON.stringify(dflt)); update(); render(); });
+        return row(label, hint, b);
+    }
+    function testingField(o, key, dflt, path, label, hint, kind, opts) {
+        return has(o, key) ? fld(o, key, path, label, hint, kind, opts) : addDefault(o, key, dflt, label, hint);
+    }
+    function renderTestingPage(body) {
+        var X = state.Experimental, G = state.General, B = state.Brain;
+        body.appendChild(el('div', { class: 'cfg-note', text: 'New functions that are still in testing. They are kept apart from the normal pages (General, Brain) until they have proven themselves. Switch one on, watch the log and report problems. When a function has proven itself it moves back to its normal page.' }));
+
+        if (X && typeof X === 'object') {
+            var xp = ['Experimental'];
+            if (X.BotPause && typeof X.BotPause === 'object') {
+                var bp = X.BotPause, bpp = xp.concat('BotPause');
+                body.appendChild(sec('Bot pause (Pause button and /pause)', [
+                    el('div', { class: 'cfg-note', text: 'The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as "Experimental" in the config.' }),
+                    fld(bp, 'Active', bpp, 'Pause function active', 'Off: the Pause button and /pause are refused', 'toggle'),
+                    fld(bp, 'DurationMinutes', bpp, 'Pause length', 'Used when you press the button or send /pause without a time', 'num', { min: 1, unit: 'minutes' }),
+                    fld(bp, 'RecallMarginMinutes', bpp, 'Margin before a recall', 'A recall due within the pause time plus this margin blocks the pause', 'num', { min: 0, unit: 'minutes' }),
+                    fld(bp, 'MaxDurationMinutes', bpp, 'Longest pause', 'Upper limit for /pause with a time', 'num', { min: 1, unit: 'minutes' })
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Bot pause (Pause button and /pause)', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet - the defaults (15 minutes, margin 2, longest 120) are used. Add it to change them.' }),
+                    addDefault(X, 'BotPause', { Active: true, DurationMinutes: 15, RecallMarginMinutes: 2, MaxDurationMinutes: 120 }, 'Bot pause settings', null)
+                ]));
+            }
+            if (X.DefenderRecheck && typeof X.DefenderRecheck === 'object') {
+                var dr = X.DefenderRecheck, drp = xp.concat('DefenderRecheck');
+                body.appendChild(sec('Defender: check again before the fleetsave', [
+                    el('div', { class: 'cfg-note', text: 'Shortly before a fleetsave the Defender asks the game for the attack list once more. Attack recalled: no fleetsave. Attack later: the fleetsave is moved. If the question fails or takes too long, the fleetsave goes out as planned.' }),
+                    fld(dr, 'Active', drp, 'Check again before the fleetsave', 'Off by default', 'toggle'),
+                    fld(dr, 'TimeoutSeconds', drp, 'Wait for the answer', 'After this the fleetsave is sent as planned', 'num', { min: 1, unit: 'seconds' })
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Defender: check again before the fleetsave', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet (off). Add it to switch it on.' }),
+                    addDefault(X, 'DefenderRecheck', { Active: false, TimeoutSeconds: 4 }, 'Defender recheck settings', null)
+                ]));
+            }
+            if (X.FleetsaveSlot && typeof X.FleetsaveSlot === 'object') {
+                var fs = X.FleetsaveSlot, fsp = xp.concat('FleetsaveSlot');
+                body.appendChild(sec('Reserved slot for the fleetsave', [
+                    el('div', { class: 'cfg-note', text: 'The last free fleet slot is kept for the fleetsave. All other fleets, even forced ones, are refused when only the reserved slot is left. Refusals appear in the log as SLOTCOLLISION.' }),
+                    fld(fs, 'Active', fsp, 'Reserve a slot for the fleetsave', 'On by default', 'toggle'),
+                    fld(fs, 'Slots', fsp, 'Reserved slots', 'Works on top of "Slots to leave free"', 'num', { min: 0 })
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Reserved slot for the fleetsave', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet - the default (1 slot reserved) applies. Add it to change that.' }),
+                    addDefault(X, 'FleetsaveSlot', { Active: true, Slots: 1 }, 'Fleetsave slot settings', null)
+                ]));
+            }
+            if (X.MinePlanRanking && typeof X.MinePlanRanking === 'object') {
+                var mr = X.MinePlanRanking, mrp = xp.concat('MinePlanRanking');
+                body.appendChild(sec('Mine plan: ranking of the next steps', [
+                    el('div', { class: 'cfg-note', text: 'How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. Display only: AutoMine and AutoResearch build by their own rules.' }),
+                    fld(mr, 'Mode', mrp, 'Ranking', 'Payback = like AutoMine; Cheapest = lowest cost first; Npv = most gain over the horizon', 'select', { options: ['Payback', 'Cheapest', 'Npv'] }),
+                    fld(mr, 'HorizonDays', mrp, 'Horizon (Npv)', 'Steps that do not pay back within this time are left out', 'num', { min: 1, unit: 'days' }),
+                    fld(mr, 'OnlySensible', mrp, 'Only sensible steps', 'Hide steps with a payback longer than the limit', 'toggle'),
+                    fld(mr, 'MaxPaybackDays', mrp, 'Longest sensible payback', null, 'num', { min: 1, unit: 'days' }),
+                    fld(mr, 'IncludeResearch', mrp, 'Include research', 'Rank plasma technology next to the mine steps', 'toggle')
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Mine plan: ranking of the next steps', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet - the default (shortest payback, research included) applies. Add it to change that.' }),
+                    addDefault(X, 'MinePlanRanking', { Mode: 'Payback', HorizonDays: 90, MaxPaybackDays: 200, OnlySensible: false, IncludeResearch: true }, 'Mine plan ranking settings', null)
+                ]));
+            }
+            if (X.AsteroidHunt && typeof X.AsteroidHunt === 'object') {
+                var ah = X.AsteroidHunt, ahp = xp.concat('AsteroidHunt');
+                body.appendChild(sec('Asteroid item hunter (item event)', [
+                    el('div', { class: 'cfg-note', text: 'Once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the bot checks whether the inventory grew. One short log line per attempt, no messenger message.' }),
+                    fld(ah, 'Active', ahp, 'Hunt asteroids', 'Off by default. Only useful while the item event runs', 'toggle'),
+                    fld(ah, 'ShipType', ahp, 'Ship', 'The planet with the most of this ship sends it', 'select', { options: ['Cruiser', 'LightFighter', 'HeavyFighter', 'Battleship', 'SmallCargo', 'LargeCargo'] }),
+                    fld(ah, 'ShipCount', ahp, 'Number of ships', null, 'num', { min: 1 }),
+                    fld(ah, 'MaxAttemptsPerDay', ahp, 'Attempts per game day', '0 = unlimited (stops after the first find)', 'num', { min: 0 }),
+                    fld(ah, 'SearchSystems', ahp, 'Systems to search', 'The asteroid is rarely in the home system. Tried: own, +1, -1, +2 ...', 'num', { min: 1 }),
+                    fld(ah, 'SaveJson', ahp, 'Keep a JSON log', 'data/asteroiden_funde_<alias>.json', 'toggle')
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Asteroid item hunter (item event)', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet (off). Add it to switch it on.' }),
+                    addDefault(X, 'AsteroidHunt', { Active: false, ShipType: 'Cruiser', ShipCount: 1, MaxAttemptsPerDay: 0, SearchSystems: 10, SaveJson: true }, 'Asteroid hunter settings', null)
+                ]));
+            }
+        }
+
+        if (G && typeof G === 'object') {
+            var gp = ['General'];
+            if (G.LoginPause && typeof G.LoginPause === 'object') {
+                var lpo = G.LoginPause, lpp = gp.concat('LoginPause');
+                body.appendChild(sec('Login pause (protects the IP)', [
+                    el('div', { class: 'cfg-note', text: 'After repeated failed logins (captcha etc.) the bot waits instead of trying again and again. The pause doubles with every further failure. The manual captcha page (/bot/captcha) stays usable; solving the captcha by hand ends the pause.' }),
+                    fld(lpo, 'Active', lpp, 'Login pause active', null, 'toggle'),
+                    fld(lpo, 'FailuresBeforePause', lpp, 'Failed logins before the first pause', null, 'num', { min: 1 }),
+                    fld(lpo, 'PauseMinutes', lpp, 'First pause', 'Doubles with every further failure', 'num', { min: 1, unit: 'minutes' }),
+                    fld(lpo, 'MaxPauseMinutes', lpp, 'Longest pause', null, 'num', { min: 1, unit: 'minutes' })
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Login pause (protects the IP)', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet - the defaults (pause after 2 failed logins, 30 minutes, doubling up to 120) are used. Add it to change them.' }),
+                    addDefault(G, 'LoginPause', { Active: true, FailuresBeforePause: 2, PauseMinutes: 30, MaxPauseMinutes: 120 }, 'Login pause settings', null)
+                ]));
+            }
+        }
+
+        if (B && typeof B === 'object') {
+            var bpath = ['Brain'];
+            if (B.AutoMine && typeof B.AutoMine === 'object') {
+                var am = B.AutoMine, amp = bpath.concat('AutoMine');
+                body.appendChild(sec('AutoMine: energy planning', [
+                    el('div', { class: 'cfg-note', text: 'Energy is built ahead of a mine or facility upgrade (Terraformer and others), so the upgrade does not run into an energy shortage. Solar satellites are built in batches. The other AutoMine settings stay on the Brain page.' }),
+                    testingField(am, 'SolarSatelliteBatch', 20, amp, 'Satellites per batch', 'Solar satellites are built in multiples of this number (0 or 1 = one by one)', 'num', { min: 0 }),
+                    testingField(am, 'EnergyReservePercent', 10, amp, 'Energy reserve in advance', 'Extra energy built before the upgrade that needs it, in percent of the missing energy', 'num', { min: 0, unit: '%' })
+                ].filter(Boolean)));
+            }
+            if (B.AutoRepatriate && typeof B.AutoRepatriate === 'object' && B.AutoRepatriate.Reverse && typeof B.AutoRepatriate.Reverse === 'object') {
+                var R = B.AutoRepatriate.Reverse, rp = bpath.concat('AutoRepatriate', 'Reverse');
+                body.appendChild(sec('Reverse repatriation', [
+                    el('div', { class: 'cfg-note', text: 'Fetches resources back out of the repatriate target when a build needs them. It never builds ships. It only starts if the free cargo space is large enough. It needs AutoRepatriate to be switched on on the Brain page.' }),
+                    fld(R, 'Active', rp, 'Active', null, 'toggle'),
+                    fld(R, 'ReturnFuelFactor', rp, 'Return fuel factor', null, 'num', { min: 0, step: 0.1 }),
+                    fld(R, 'ReturnAllShips', rp, 'Return all ships', null, 'toggle'),
+                    fld(R, 'PendingTtlMinutes', rp, 'Pending request valid for', null, 'num', { min: 0, unit: 'minutes' }),
+                    fld(R, 'OutboundCapacityFactor', rp, 'Outbound capacity factor', null, 'num', { min: 0, step: 0.1 })
+                ].concat(restRows(R, rp, ['Active', 'ReturnFuelFactor', 'ReturnAllShips', 'PendingTtlMinutes', 'OutboundCapacityFactor'])).filter(Boolean)));
+            }
+            if (B.KeepBoosters && typeof B.KeepBoosters === 'object') {
+                brainSub(body, 'KeepBoosters', 'KeepBoosters', buildKeepBoosters, B, bpath);
+            }
+        }
+        if ((!X || typeof X !== 'object') && (!G || typeof G !== 'object') && (!B || typeof B !== 'object'))
+            body.appendChild(el('div', { class: 'cfg-note', text: 'The General and Brain blocks were not found in the config, so nothing can be shown here.' }));
     }
 
     var MESSENGER_HELP = {
@@ -1151,10 +1290,10 @@
             })
             .catch(function () { TIERS.forEach(function (t) { spans[t].textContent = ''; }); });
     }
-    function brainSub(body, name, title, build) {
-        var o = state[name];
+    function brainSub(body, name, title, build, rootObj, prefix) {
+        var o = (rootObj || state)[name];
         if (!o || typeof o !== 'object' || Array.isArray(o)) return;
-        var p = [name];
+        var p = (prefix || []).concat(name);
         var on = o.Active !== false;
         var kids = [fld(o, 'Active', p, title + ' active', 'Switch', 'toggle'), el('div', { class: 'cfg-note', text: BRAIN_HELP[name] || '' })];
         if (!on) kids.push(el('div', { class: 'cfg-note', text: title + ' is switched off - only help is shown. Your settings are kept.' }));
@@ -1164,6 +1303,21 @@
         if (openSecs[key]) det.open = true;
         det.addEventListener('toggle', function () { openSecs[key] = det.open; });
         body.appendChild(det);
+    }
+    function buildKeepBoosters(k, o, p) {
+        k.push(fld(o, 'DryRun', p, 'Test mode (nothing activated)', 'Only the log shows what would be activated', 'toggle'));
+        if (o.Types && typeof o.Types === 'object') {
+            var tp = p.concat('Types');
+            k.push(inner('brain:Boost:types', 'Booster types to keep running', autoRows(o.Types, tp, ['Metal', 'Crystal', 'Deuterium', 'Energy'])));
+        }
+        k.push(fld(o, 'LogItems', p, 'Log found items', 'Writes the active items of each planet and the inventory to the log', 'toggle'));
+        boosterTiers(k, o, p);
+        if (o.MinMineLevel && typeof o.MinMineLevel === 'object') {
+            k.push(inner('brain:Boost:minlevel', 'Minimum mine level (no booster below it, 0 = always)', autoRows(o.MinMineLevel, p.concat('MinMineLevel'), ['Metal', 'Crystal', 'Deuterium'])));
+        }
+        k.push(coordList(o, 'Exclude', 'Excluded planets', 'Never touched', '+ Add exclusion', p));
+        intervalRows(o, p).forEach(function (r) { k.push(r); });
+        restRows(o, p, ['Active', 'DryRun', 'Types', 'Reserve', 'MinMineLevel', 'LogItems', 'Tiers', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
     }
     function renderBrain(body) {
         var d = state;
@@ -1222,7 +1376,7 @@
                 ovKids.push(el('button', { type: 'button', class: 'cfg-btn sm', text: '+ Add planet', onclick: function () { o.ColonyOverrides.push(newCoord()); openSecs['brain:AutoMine:ov'] = true; update(); render(); } }));
                 k.push(inner('brain:AutoMine:ov', 'Planets with own caps (' + o.ColonyOverrides.length + ')', ovKids));
             }
-            k.push(inner('brain:AutoMine:opt', 'Build options', autoRows(o, p, ['RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'SolarSatelliteBatch', 'EnergyReservePercent', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons'])));
+            k.push(inner('brain:AutoMine:opt', 'Build options', autoRows(o, p, ['RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons'])));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Transports', 'HomeWorld', 'Colony', 'ColonyOverrides', 'RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'SolarSatelliteBatch', 'EnergyReservePercent', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^Max/))).forEach(function (r) { k.push(r); });
@@ -1269,25 +1423,27 @@
             k.push(fld(o, 'MaxCargosToBuild', p, 'Target amount', null, 'num', { min: 0 }));
             k.push(fld(o, 'MaxCargosToKeep', p, 'Keep amount', null, 'num', { min: 0 }));
             k.push(fld(o, 'LimitToCapacity', p, 'Only as many as the stock needs', null, 'toggle'));
+            k.push(fld(o, 'MaxProductionHours', p, 'Longest production time', '0 = no limit. One order per celestial never takes longer than this; the rest follows in the next run', 'num', { min: 0, unit: 'hours' }));
             k.push(fld(o, 'SupplyMoonFromPlanet', p, 'Moons get ships from the planet', null, 'toggle'));
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'CargoType', 'MaxCargosToBuild', 'MaxCargosToKeep', 'LimitToCapacity', 'SupplyMoonFromPlanet', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'CargoType', 'MaxCargosToBuild', 'MaxCargosToKeep', 'LimitToCapacity', 'MaxProductionHours', 'SupplyMoonFromPlanet', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoDefence', 'AutoDefence', function (k, o, p) {
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
+            k.push(fld(o, 'MaxProductionHours', p, 'Longest production time', '0 = no limit. One order per celestial never takes longer than this; the rest follows in the next run', 'num', { min: 0, unit: 'hours' }));
             if (o.DefenceToReach && typeof o.DefenceToReach === 'object') {
                 var dp = p.concat('DefenceToReach');
                 k.push(inner('brain:AutoDefence:t', 'Target per defence type (0 = do not build)', autoRows(o.DefenceToReach, dp, Object.keys(o.DefenceToReach))));
             }
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'ExcludeMoons', 'RandomOrder', 'DefenceToReach', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'ExcludeMoons', 'RandomOrder', 'MaxProductionHours', 'DefenceToReach', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoRepatriate', 'AutoRepatriate', function (k, o, p) {
@@ -1303,17 +1459,6 @@
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
-            if (o.Reverse && typeof o.Reverse === 'object') {
-                var rp = p.concat('Reverse'), R = o.Reverse;
-                k.push(inner('brain:AutoRepatriate:rev', 'Reverse repatriation (advanced)', [
-                    el('div', { class: 'cfg-note', text: 'Fetches resources back out of the target when a build needs them.' }),
-                    fld(R, 'Active', rp, 'Active', null, 'toggle'),
-                    fld(R, 'ReturnFuelFactor', rp, 'Return fuel factor', null, 'num', { min: 0, step: 0.1 }),
-                    fld(R, 'ReturnAllShips', rp, 'Return all ships', null, 'toggle'),
-                    fld(R, 'PendingTtlMinutes', rp, 'Pending request valid for', null, 'num', { min: 0, unit: 'minutes' }),
-                    fld(R, 'OutboundCapacityFactor', rp, 'Outbound capacity factor', null, 'num', { min: 0, step: 0.1 })
-                ].concat(restRows(R, rp, ['Active', 'ReturnFuelFactor', 'ReturnAllShips', 'PendingTtlMinutes', 'OutboundCapacityFactor']))));
-            }
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Target', 'TargetAssociateMoon', 'MinimumResources', 'LeaveDeut', 'CargoType', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Reverse', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
@@ -1322,22 +1467,6 @@
         brainSub(body, 'BuyOfferOfTheDay', 'BuyOfferOfTheDay', function (k, o, p) {
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
-        });
-
-        brainSub(body, 'KeepBoosters', 'KeepBoosters', function (k, o, p) {
-            k.push(fld(o, 'DryRun', p, 'Test mode (nothing activated)', 'Only the log shows what would be activated', 'toggle'));
-            if (o.Types && typeof o.Types === 'object') {
-                var tp = p.concat('Types');
-                k.push(inner('brain:Boost:types', 'Booster types to keep running', autoRows(o.Types, tp, ['Metal', 'Crystal', 'Deuterium', 'Energy'])));
-            }
-            k.push(fld(o, 'LogItems', p, 'Log found items', 'Writes the active items of each planet and the inventory to the log', 'toggle'));
-            boosterTiers(k, o, p);
-            if (o.MinMineLevel && typeof o.MinMineLevel === 'object') {
-                k.push(inner('brain:Boost:minlevel', 'Minimum mine level (no booster below it, 0 = always)', autoRows(o.MinMineLevel, p.concat('MinMineLevel'), ['Metal', 'Crystal', 'Deuterium'])));
-            }
-            k.push(coordList(o, 'Exclude', 'Excluded planets', 'Never touched', '+ Add exclusion', p));
-            intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'DryRun', 'Types', 'Reserve', 'MinMineLevel', 'LogItems', 'Tiers', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoFleetJumpGate', 'AutoFleetJumpGate', function (k, o, p) {
@@ -1382,7 +1511,7 @@
                 el('div', { class: 'cfg-note', text: 'Who gets a free slot first when several workers compete. Lower number = served first.' })
             ].concat(Object.keys(sp).map(function (k) { return fld(sp, k, ['SlotPriorityLevel'], k, null, 'num', { min: 0 }); }))));
         }
-        var rest = Object.keys(d).filter(function (k) { return ['Host', 'Port', 'Proxy', 'SlotsToLeaveFree', 'SlotPriorityLevel', 'CaptchaAPIKey', 'BasicAuth'].indexOf(k) < 0; });
+        var rest = Object.keys(d).filter(function (k) { return ['Host', 'Port', 'Proxy', 'SlotsToLeaveFree', 'SlotPriorityLevel', 'CaptchaAPIKey', 'BasicAuth', 'LoginPause', 'BotPause'].indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
@@ -1621,7 +1750,7 @@
         ]));
         var body = el('div', { class: 'cfg-body' }), ta;
         if (view === 'form') {
-            if (!COMBINED && state && typeof state.Active === 'boolean' && !state.Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'FastFarm') renderFastFarm(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else renderSleepPage(body); } else renderGeneric(body);
+            if (!COMBINED && state && typeof state.Active === 'boolean' && !state.Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'FastFarm') renderFastFarm(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else if (block === 'Testing') renderTestingPage(body); else renderSleepPage(body); } else renderGeneric(body);
         } else if (view === 'json') {
             ta = el('textarea', { class: 'cfg-json', spellcheck: 'false' }); ta.value = shown(state); if (mask) { ta.readOnly = true; ta.title = 'Hide data is on - switch it off to edit'; } body.appendChild(ta);
         } else body.appendChild(simpleDiff());

@@ -60,6 +60,15 @@ func GetExpeditionMessagesHandler(c echo.Context) error {
 
 }
 
+func GetOtherMessagesHandler(c echo.Context) error {
+	bot := c.Get("bot").(*wrapper.OGame)
+	messages, err := bot.GetOtherMessages()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, wrapper.ErrorResp(http.StatusInternalServerError, err.Error()))
+	}
+	return c.JSON(http.StatusOK, wrapper.SuccessResp(messages))
+}
+
 func GetFromGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	botMap := c.Get("botMap").(map[string]wrapper.Prioritizable)
@@ -224,32 +233,57 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
 	tmpHTML := string(pageHTML)
 
 	toReplace := `<script>
-	var btn1 = document.createElement("BUTTON");`
-	if state == "manual mode" && locked {
-		toReplace += `
-        var t = document.createTextNode("Manual mode (on)");
-		`
-	} else {
-		toReplace += `
-        var t = document.createTextNode("Manual mode (off)");
-		`
-	}
-	toReplace += `
+	var btn1 = document.createElement("BUTTON");
+        var t = document.createTextNode("Pause");
         btn1.style.height = '20px';
         btn1.style.width = '130px';
         btn1.style.display = 'block';
         btn1.style.marginBottom = '3px';
         btn1.appendChild(t);
+        var pNote = document.createElement("div");
+        pNote.style.cssText = 'display:none;width:130px;margin-bottom:3px;padding:3px 4px;background:#6b1414;border:1px solid #d04040;border-radius:3px;font:10px/1.3 Arial,sans-serif;color:#ffd6d6;box-sizing:border-box;';
+        var pBusy = false;
+        function pFmt(sec) {
+            if (sec < 0) { sec = 0; }
+            sec = Math.floor(sec);
+            var m = Math.floor(sec / 60), x = sec % 60;
+            return m + ':' + (x < 10 ? '0' : '') + x;
+        }
+        function pRender() {
+            var p = (st && (Date.now() - st.updatedMs) / 1000 <= 180) ? st.pause : null;
+            if (pBusy) { return; }
+            if (p && p.active) {
+                var left = p.untilInSec - (Date.now() - st.updatedMs) / 1000;
+                btn1.textContent = 'Resume (' + pFmt(left) + ')';
+                btn1.style.background = '#8a5a1f';
+                btn1.style.color = '#fff';
+            } else {
+                btn1.textContent = 'Pause';
+                btn1.style.background = '';
+                btn1.style.color = '';
+            }
+            if (p && !p.active && p.reject) {
+                pNote.textContent = p.reject;
+                pNote.style.display = 'block';
+            } else {
+                pNote.style.display = 'none';
+            }
+        }
         btn1.onclick = function() {
-            var formData = new FormData();
-            $.ajax({
-                url: "/bot/toggle-manual-mode", data: formData, type: 'POST', processData: false, contentType: false,
-                success: function(res) {
-                    $(btn1).text("Manual mode (" + (res ? "on" : "off") + ")");
+            if (pBusy) { return; }
+            var on = !!(st && st.pause && st.pause.active);
+            pBusy = true;
+            btn1.textContent = '...';
+            $.ajax({ url: "/bot/slot-limit", type: 'POST', data: { key: 'pause', value: on ? 0 : 1 }, dataType: 'json',
+                success: function() {
+                    // TBot liest den Befehl alle 3 s und schreibt danach den Status neu
+                    setTimeout(tLoad, 3500);
+                    setTimeout(function() { tLoad(); pBusy = false; pRender(); }, 5500);
                 },
-                error: function(req) { console.log(req.responseText); },
+                error: function(req) { console.log(req.responseText); pBusy = false; pRender(); },
             });
         };
+        setInterval(pRender, 1000);
 
 		var div = document.createElement("div");
         div.style.position = 'fixed';
@@ -257,6 +291,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         div.style.top = '10px';
         div.style.zIndex = '3001';
         div.appendChild(btn1);
+        div.appendChild(pNote);
 
         // Kacheln-Schalter: blendet Sleep-/Alarm- und Einstellungskachel aus bzw. ein (Zustand bleibt im Browser gespeichert)
         var kOff = false;
@@ -738,7 +773,8 @@ func PostSlotLimitHandler(c echo.Context) error {
 	case "leaveFree", "autofarm", "brain", "harvest", "discovery", "exp",
 		"p_autofarm", "p_expeditions", "p_harvest", "p_discovery", "p_brain",
 		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain",
-		"w_transport", "w_repatriate", "w_cargo", "w_mine", "w_research", "w_lfmine", "w_lfresearch", "w_boosters", "w_offer", "w_colonize":
+		"w_transport", "w_repatriate", "w_cargo", "w_mine", "w_research", "w_lfmine", "w_lfresearch", "w_boosters", "w_offer", "w_colonize",
+		"pause":
 	default:
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "unbekannter Schluessel"})
 	}

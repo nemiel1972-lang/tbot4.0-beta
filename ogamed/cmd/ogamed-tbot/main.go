@@ -356,6 +356,8 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/captcha", wrapper.GetCaptchaHandler)
 	e.POST("/bot/captcha/solve", wrapper.GetCaptchaSolverHandler)
 	e.GET("/bot/captcha/challenge", wrapper.GetCaptchaChallengeHandler)
+	e.GET("/bot/login-pause", wrapper.LoginPauseHandler)
+	e.POST("/bot/login-pause", wrapper.LoginPauseHandler)
 
 	e.GET("/bot/ip", wrapper.GetPublicIPHandler)
 	e.GET("/bot/server", wrapper.GetServerHandler)
@@ -447,6 +449,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/alliance-class", GetAllianceClassHandler)
 	e.GET("/bot/planets/:planetID/lifeform-bonuses", GetLfBonusesTbotHandler)
 	e.GET("/bot/expedition-messages", GetExpeditionMessagesHandler)
+	e.GET("/bot/other-messages", GetOtherMessagesHandler)
 	e.POST("/bot/toggle-manual-mode", PostToggleManualModeHandler)
 	e.POST("/bot/slot-limit", PostSlotLimitHandler)
 	e.GET("/bot/lfbonuses", GetLfBonusesHandler)

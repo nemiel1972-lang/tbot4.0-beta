@@ -190,6 +190,13 @@ type ExpeditionMessage struct {
 	CreatedAt  time.Time
 }
 
+type OtherMessage struct {
+	ID      int64
+	Date    string
+	Title   string
+	Content string
+}
+
 type MarketplaceMessage struct {
 	ID                  int64
 	Type                int64

@@ -382,6 +382,7 @@ func (d *Builder) Build() (*Device, error) {
 	d.userAgent = fprt.UserAgent
 
 	if d.client == nil {
+		fmt.Printf("Cookie-Datei: %s\n", filepath.Join(defaultStoragePath, d.name, "cookies"))
 		jar, err := cookiejar.New(&cookiejar.Options{
 			Filename:              filepath.Join(defaultStoragePath, d.name, "cookies"),
 			PersistSessionCookies: true,

@@ -36,6 +36,12 @@
             "LoginOnly": true
         },
         "CaptchaAPIKey": "",
+        "LoginPause": {
+            "Active": true,
+            "FailuresBeforePause": 2,
+            "PauseMinutes": 30,
+            "MaxPauseMinutes": 120
+        },
         "SlotsToLeaveFree": 1,
         "SlotPriorityLevel": {
             "Brain": 2,
@@ -417,6 +423,7 @@
             "RandomOrder": true,
             "MaxCargosToBuild": 0,
             "MaxCargosToKeep": 0,
+            "MaxProductionHours": 0,
             "LimitToCapacity": false,
             "SkipIfIncomingTransport": true,
             "Exclude": [
@@ -434,6 +441,7 @@
             "Active": false,
             "ExcludeMoons": true,
             "RandomOrder": true,
+            "MaxProductionHours": 0,
             "DefenceToReach": {
                 "RocketLauncher": 0,
                 "LightLaser": 0,
@@ -797,5 +805,36 @@
         "MaxSlots": 2,
         "CheckIntervalMin": 15,
         "CheckIntervalMax": 25
+    },
+    "Experimental": {
+        "BotPause": {
+            "Active": true,
+            "DurationMinutes": 15,
+            "RecallMarginMinutes": 2,
+            "MaxDurationMinutes": 120
+        },
+        "DefenderRecheck": {
+            "Active": false,
+            "TimeoutSeconds": 4
+        },
+        "FleetsaveSlot": {
+            "Active": true,
+            "Slots": 1
+        },
+        "MinePlanRanking": {
+            "Mode": "Payback",
+            "HorizonDays": 90,
+            "MaxPaybackDays": 200,
+            "OnlySensible": false,
+            "IncludeResearch": true
+        },
+        "AsteroidHunt": {
+            "Active": false,
+            "ShipType": "Cruiser",
+            "ShipCount": 1,
+            "MaxAttemptsPerDay": 0,
+            "SearchSystems": 10,
+            "SaveJson": true
+        }
     }
 }

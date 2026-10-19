@@ -198,6 +198,95 @@ namespace Tbot.Services {
 			await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds));
 		}
 
+
+		private void LogCaptchaHint() {
+			try {
+				log(LogLevel.Warning, LogSender.Tbot, $"Captcha required. If the automatic solver fails, solve it by hand: {CaptchaPageAddress()}. The bot logs in afterwards.");
+			} catch (Exception) {
+			}
+		}
+
+		private LoginPauseConfig ReadLoginPauseConfig() {
+			LoginPauseConfig c = new();
+			try {
+				var g = InstanceSettings.General;
+				if (!SettingsService.IsSettingSet(g, "LoginPause"))
+					return c;
+				var lp = g.LoginPause;
+				if (SettingsService.IsSettingSet(lp, "Active"))
+					c.Active = (bool) lp.Active;
+				if (SettingsService.IsSettingSet(lp, "FailuresBeforePause"))
+					c.FailuresBeforePause = Math.Max(1, (int) lp.FailuresBeforePause);
+				if (SettingsService.IsSettingSet(lp, "PauseMinutes"))
+					c.PauseMinutes = Math.Max(1, (int) lp.PauseMinutes);
+				if (SettingsService.IsSettingSet(lp, "MaxPauseMinutes"))
+					c.MaxPauseMinutes = Math.Max(c.PauseMinutes, (int) lp.MaxPauseMinutes);
+			} catch (Exception) {
+			}
+			return c;
+		}
+
+
+
+		private async Task WaitLoginPauseAsync() {
+			LoginPauseConfig c = ReadLoginPauseConfig();
+			if (!c.Active)
+				return;
+			var st = LoginPause.Read(InstanceAlias);
+			if (st.UntilUtc <= DateTime.UtcNow)
+				return;
+			try {
+				await _ogameService.SetLoginPause(new DateTimeOffset(st.UntilUtc, TimeSpan.Zero).ToUnixTimeSeconds());
+			} catch (Exception) {
+			}
+			DateTime nextLog = DateTime.MinValue;
+			while (DateTime.UtcNow < st.UntilUtc) {
+				if (DateTime.UtcNow >= nextLog) {
+					log(LogLevel.Warning, LogSender.Tbot, $"Login paused for another {Math.Ceiling((st.UntilUtc - DateTime.UtcNow).TotalMinutes):N0} min after {st.Failures} failed login(s) - this protects the IP. To skip the pause, solve the captcha by hand: {CaptchaPageAddress()}");
+					nextLog = DateTime.UtcNow.AddMinutes(5);
+				}
+				await Task.Delay(TimeSpan.FromSeconds(15));
+				var status = await _ogameService.GetLoginPauseStatus();
+				if (status != null && status.LoggedIn) {
+					log(LogLevel.Information, LogSender.Tbot, "Logged in by hand during the login pause - pause ended.");
+					LoginPause.Clear(InstanceAlias);
+					return;
+				}
+			}
+			try {
+				await _ogameService.SetLoginPause(0);
+			} catch (Exception) {
+			}
+			log(LogLevel.Information, LogSender.Tbot, "Login pause over - trying to log in again.");
+		}
+
+		private void RegisterLoginFailure() {
+			try {
+				LoginPauseConfig c = ReadLoginPauseConfig();
+				if (!c.Active)
+					return;
+				DateTime? until = LoginPause.RegisterFailure(InstanceAlias, c);
+				if (until.HasValue) {
+					_ = _ogameService.SetLoginPause(new DateTimeOffset(until.Value, TimeSpan.Zero).ToUnixTimeSeconds());
+					log(LogLevel.Warning, LogSender.Tbot, $"Login failed repeatedly - no further login attempts until {until.Value.ToLocalTime():HH:mm} (pause). Manual captcha: {CaptchaPageAddress()}");
+				}
+			} catch (Exception) {
+			}
+		}
+
+		private string CaptchaPageAddress() {
+			string host = "localhost";
+			string port = "8080";
+			try {
+				host = (string) InstanceSettings.General.Host ?? "localhost";
+				if (string.IsNullOrWhiteSpace(host) || host == "0.0.0.0")
+					host = "localhost";
+				port = (string) InstanceSettings.General.Port ?? "8080";
+			} catch (Exception) {
+			}
+			return $"http://{host}:{port}/bot/captcha (enter the number 0-3 of the requested symbol)";
+		}
+
 		private async Task ResolveCaptcha() {
 
 			var captchaChallenge = await _ogameService.GetCaptchaChallenge();
@@ -208,6 +297,7 @@ namespace Tbot.Services {
 				log(LogLevel.Warning, LogSender.Tbot, "If you are using a proxy, a VPN or hosting TBot on a VPS, be warned that Ogame blocks datacenters' IPs. You probably need a residential proxy.");
 			} else {
 				log(LogLevel.Information, LogSender.Tbot, "Trying to solve captcha...");
+				LogCaptchaHint();
 				int answer = 0;
 				if (captchaChallenge.Icons != "" && captchaChallenge.Question != "" && captchaChallenge.Icons != null && captchaChallenge.Question != null) {
 					answer = OgameCaptchaSolver.GetCapcthaSolution(captchaChallenge.Icons, captchaChallenge.Question);
@@ -255,22 +345,30 @@ namespace Tbot.Services {
 
 			await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.LessThanASecond));
 
+			await WaitLoginPauseAsync();
 			try {
-				await _ogameService.Login();
-			} catch (OgamedException oe) {
-				log(LogLevel.Warning, LogSender.Tbot, $"Unable to login (\"{oe.Message}\"). Checking captcha...");
-				await ResolveCaptcha();
-			} catch (System.Net.Http.HttpRequestException) {
 				try {
+					await _ogameService.Login();
+				} catch (OgamedException oe) {
+					log(LogLevel.Warning, LogSender.Tbot, $"Unable to login (\"{oe.Message}\"). Checking captcha...");
 					await ResolveCaptcha();
-				} catch (Exception ex) {
-					log(LogLevel.Error, LogSender.Tbot, $"Unable to login after captcha. (\"{ex.Message}\")");
-					throw new UnableToLoginException("Unable to login", ex);
+				} catch (System.Net.Http.HttpRequestException) {
+					try {
+						await ResolveCaptcha();
+					} catch (Exception ex) {
+						log(LogLevel.Error, LogSender.Tbot, $"Unable to login after captcha. (\"{ex.Message}\")");
+						LogCaptchaHint();
+						throw new UnableToLoginException("Unable to login", ex);
+					}
+				} catch (Exception e) {
+					log(LogLevel.Error, LogSender.Tbot, $"Unable to login. (\"{e.Message}\")");
+					throw new UnableToLoginException("Unable to login", e);
 				}
-			} catch (Exception e) {
-				log(LogLevel.Error, LogSender.Tbot, $"Unable to login. (\"{e.Message}\")");
-				throw new UnableToLoginException("Unable to login", e);
+			} catch (Exception) {
+				RegisterLoginFailure();
+				throw;
 			}
+			LoginPause.Clear(InstanceAlias);
 
 			await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds));
 
@@ -414,6 +512,14 @@ namespace Tbot.Services {
 				return;
 			}
 			if (feat == Feature.SleepMode) {
+				return;
+			}
+
+
+			if (_pauseActive && feat != Feature.Defender) {
+				lock (_pauseSync) {
+					_pauseStoppedFeatures.Add(feat);
+				}
 				return;
 			}
 			long dueTime = feat switch {
@@ -1262,6 +1368,224 @@ namespace Tbot.Services {
 			}
 		}
 
+		private readonly SemaphoreSlim _pauseLock = new SemaphoreSlim(1, 1);
+		private readonly object _pauseSync = new();
+		private volatile bool _pauseActive = false;
+		private DateTime _pauseUntilUtc = DateTime.MinValue;
+		private readonly HashSet<Feature> _pauseStoppedFeatures = new();
+		private string _pauseRejectText = null;
+		private DateTime _pauseRejectUtc = DateTime.MinValue;
+
+		private BotPauseConfig ReadBotPauseConfig() {
+			BotPauseConfig c = new();
+			try {
+				var g = InstanceSettings;
+				if (!SettingsService.IsSettingSet(g, "Experimental") || !SettingsService.IsSettingSet(g.Experimental, "BotPause"))
+					return c;
+				var p = g.Experimental.BotPause;
+				if (SettingsService.IsSettingSet(p, "Active"))
+					c.Active = (bool) p.Active;
+				if (SettingsService.IsSettingSet(p, "DurationMinutes"))
+					c.DurationMinutes = Math.Max(1, (int) p.DurationMinutes);
+				if (SettingsService.IsSettingSet(p, "RecallMarginMinutes"))
+					c.RecallMarginMinutes = Math.Max(0, (int) p.RecallMarginMinutes);
+				if (SettingsService.IsSettingSet(p, "MaxDurationMinutes"))
+					c.MaxDurationMinutes = Math.Max(c.DurationMinutes, (int) p.MaxDurationMinutes);
+			} catch (Exception) {
+			}
+			if (c.MaxDurationMinutes < c.DurationMinutes)
+				c.MaxDurationMinutes = c.DurationMinutes;
+			return c;
+		}
+
+
+
+		private List<PendingRecall> ReadPendingRecalls() {
+			var list = new List<PendingRecall>();
+			try {
+				string playerTag = UserData?.userInfo?.PlayerName ?? "unknown";
+				string universeTag = UserData?.serverData?.Name ?? "unknown";
+				string path = Path.Combine(AppContext.BaseDirectory, "data", $"pending_recalls_{playerTag}-{universeTag}.json");
+				if (!File.Exists(path))
+					return list;
+				var settings = new Newtonsoft.Json.JsonSerializerSettings { DateParseHandling = Newtonsoft.Json.DateParseHandling.None };
+				var arr = Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(File.ReadAllText(path), settings) ?? new JArray();
+				foreach (var e in arr) {
+					string raw = (string) e["RecallAtUtc"];
+					if (string.IsNullOrEmpty(raw) || raw.Length < 19)
+						continue;
+					if (!DateTime.TryParse(raw.Substring(0, 19), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime at))
+						continue;
+					list.Add(new PendingRecall { At = at, Coordinate = (string) e["OriginCoordinate"] ?? "?" });
+				}
+			} catch (Exception e) {
+				log(LogLevel.Debug, LogSender.Tbot, $"Pending recalls not readable: {e.Message}");
+			}
+			return list;
+		}
+
+		private void PublishStatusSoon() {
+			_ = Task.Run(async () => {
+				try { await WriteSleepStatusAsync(); } catch { }
+			});
+		}
+
+		private (bool Ok, string Text) PauseRejected(string text) {
+			_pauseRejectText = text;
+			_pauseRejectUtc = DateTime.UtcNow;
+			log(LogLevel.Warning, LogSender.Tbot, text);
+			PublishStatusSoon();
+			return (false, text);
+		}
+
+		private void ArmPauseTimer(int minutes) {
+			if (timers.TryGetValue("BotPauseTimer", out Timer old)) {
+				old.Dispose();
+				timers.Remove("BotPauseTimer");
+			}
+			timers.Add("BotPauseTimer", new Timer(HandlePauseTimer, null, (long) minutes * 60 * 1000, Timeout.Infinite));
+		}
+
+		private async void HandlePauseTimer(object state) { try {
+			await ResumeBot("time is up");
+		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandlePauseTimer: {asyncVoidEx}"); }
+		}
+
+
+		public async Task<(bool Ok, string Text)> PauseBot(int? minutes = null) {
+			await _pauseLock.WaitAsync();
+			try {
+				BotPauseConfig cfg = ReadBotPauseConfig();
+				int min = BotPause.ClampMinutes(minutes, cfg);
+
+				if (!cfg.Active && !_pauseActive)
+					return PauseRejected("Pause rejected: the pause function is switched off (Experimental.BotPause.Active).");
+
+				if (_pauseActive) {
+					_pauseUntilUtc = DateTime.UtcNow.AddMinutes(min);
+					ArmPauseTimer(min);
+					log(LogLevel.Information, LogSender.Tbot, $"Pause prolonged: {min} min from now.");
+					PublishStatusSoon();
+					return (true, $"Pause prolonged: {min} min from now.");
+				}
+				if (_attackLockdownActive)
+					return PauseRejected("Pause rejected: an attack lockdown is active.");
+				if (_ghostSleeping || (userData != null && userData.isSleeping))
+					return PauseRejected("Pause rejected: the bot is sleeping.");
+
+				DateTime gameNow;
+				try {
+					gameNow = await _tbotOgameBridge.GetDateTime();
+				} catch (Exception) {
+					gameNow = DateTime.Now;
+				}
+				List<PendingRecall> recalls = ReadPendingRecalls();
+				PendingRecall blocking = BotPause.FindBlockingRecall(recalls, gameNow, min, cfg.RecallMarginMinutes);
+				if (blocking != null) {
+					string text = BotPause.RejectionText(blocking, gameNow);
+					int possible = BotPause.MaxPossibleMinutes(recalls, gameNow, cfg.RecallMarginMinutes);
+					if (possible >= 1 && possible < min)
+						text += $" A pause of up to {possible} min would fit.";
+					return PauseRejected(text);
+				}
+
+				var toStop = Features.AllFeatures
+					.Where(f => f != Feature.Defender && f != Feature.SleepMode && IsFeatureRunning(f))
+					.ToList();
+
+				lock (_pauseSync) {
+					_pauseStoppedFeatures.Clear();
+					foreach (var f in toStop)
+						_pauseStoppedFeatures.Add(f);
+				}
+				_pauseActive = true;
+				_pauseUntilUtc = DateTime.UtcNow.AddMinutes(min);
+				_pauseRejectText = null;
+				foreach (var feat in toStop) {
+					try {
+						await StopFeature(feat);
+					} catch (Exception e) {
+						log(LogLevel.Warning, LogSender.Tbot, $"Pause: could not stop {feat}: {e.Message}");
+					}
+				}
+				ArmPauseTimer(min);
+				log(LogLevel.Warning, LogSender.Tbot, $"Pause started: {toStop.Count} workers stopped for {min} min (Defender, SleepMode and recalls keep running). Ends on its own or with Resume.");
+				PublishStatusSoon();
+				return (true, $"Pause started for {min} min: {toStop.Count} workers stopped. Defender and recalls keep running.");
+			} finally {
+				_pauseLock.Release();
+			}
+		}
+
+		public async Task<(bool Ok, string Text)> ResumeBot(string reason = "manual") {
+			await _pauseLock.WaitAsync();
+			try {
+				if (!_pauseActive)
+					return (false, "The bot is not paused.");
+				if (timers.TryGetValue("BotPauseTimer", out Timer t)) {
+					t.Dispose();
+					timers.Remove("BotPauseTimer");
+				}
+				_pauseActive = false;
+				List<Feature> toStart;
+				lock (_pauseSync) {
+					toStart = _pauseStoppedFeatures.ToList();
+					_pauseStoppedFeatures.Clear();
+				}
+
+
+				await _attackLockdownLock.WaitAsync();
+				try {
+					if (_attackLockdownActive) {
+						foreach (var f in toStart)
+							if (!_attackLockdownStoppedFeatures.Contains(f))
+								_attackLockdownStoppedFeatures.Add(f);
+						log(LogLevel.Information, LogSender.Tbot, $"Pause ended ({reason}); the attack lockdown keeps {toStart.Count} workers stopped until the attack wave is over.");
+						PublishStatusSoon();
+						return (true, "Pause ended; the attack lockdown keeps the workers stopped until the attack wave is over.");
+					}
+				} finally {
+					_attackLockdownLock.Release();
+				}
+
+
+				if (_ghostSleeping) {
+					foreach (var f in toStart)
+						if (!_ghostSleepStoppedFeatures.Contains(f))
+							_ghostSleepStoppedFeatures.Add(f);
+					log(LogLevel.Information, LogSender.Tbot, $"Pause ended ({reason}); the bot is in GhostSleep, the workers start at wake-up.");
+					PublishStatusSoon();
+					return (true, "Pause ended; the workers start at wake-up (GhostSleep).");
+				}
+				if (userData != null && userData.isSleeping) {
+					log(LogLevel.Information, LogSender.Tbot, $"Pause ended ({reason}); the bot is sleeping, the workers start at wake-up.");
+					PublishStatusSoon();
+					return (true, "Pause ended; the workers start at wake-up.");
+				}
+
+				int started = 0;
+				foreach (var feat in toStart) {
+					if (IsFeatureRunning(feat))
+						continue;
+					try {
+						await InitializeFeature(feat);
+						started++;
+					} catch (Exception e) {
+						log(LogLevel.Warning, LogSender.Tbot, $"Pause: could not restart {feat}: {e.Message}");
+					}
+				}
+				log(LogLevel.Information, LogSender.Tbot, $"Pause ended ({reason}): {started} workers restarted.");
+				PublishStatusSoon();
+				return (true, $"Pause ended ({reason}): {started} workers restarted.");
+			} finally {
+				_pauseLock.Release();
+			}
+		}
+
+
+
+
+
 		public void RemoveTelegramMessenger() {
 			if (telegramMessenger != null) {
 				log(LogLevel.Information, LogSender.Tbot, "Removing TelegramMessenger from current instance...");
@@ -1977,6 +2301,14 @@ namespace Tbot.Services {
 						File.Delete(file);
 						string key = (string) cmd["key"] ?? "";
 						int value = (int) cmd["value"];
+						if (key == "pause") {
+
+							if (value != 0)
+								await PauseBot(null);
+							else
+								await ResumeBot("button");
+							continue;
+						}
 						if (WorkerTogglePaths.ContainsKey(key)) {
 							await ApplyWorkerToggleAsync(key, value != 0);
 							continue;
@@ -2115,28 +2447,13 @@ namespace Tbot.Services {
 			var recalls = new List<object>();
 			int more = 0;
 			try {
-				string playerTag = UserData?.userInfo?.PlayerName ?? "unknown";
-				string universeTag = UserData?.serverData?.Name ?? "unknown";
-				string path = Path.Combine(AppContext.BaseDirectory, "data", $"pending_recalls_{playerTag}-{universeTag}.json");
-				if (File.Exists(path)) {
-					var settings = new Newtonsoft.Json.JsonSerializerSettings { DateParseHandling = Newtonsoft.Json.DateParseHandling.None };
-					var arr = Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(File.ReadAllText(path), settings) ?? new JArray();
-					var list = new List<(DateTime at, string coord)>();
-					foreach (var e in arr) {
-						string raw = (string) e["RecallAtUtc"];
-						if (string.IsNullOrEmpty(raw) || raw.Length < 19)
-							continue;
-						if (!DateTime.TryParse(raw.Substring(0, 19), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime at))
-							continue;
-						if (at < gameNow.AddMinutes(-10))
-							continue;
-						list.Add((at, (string) e["OriginCoordinate"] ?? "?"));
-					}
-					list = list.OrderBy(x => x.at).ToList();
-					more = Math.Max(0, list.Count - 6);
-					foreach (var x in list.Take(6))
-						recalls.Add(new { coord = x.coord, at = x.at.ToString("HH:mm"), inSec = (long) Math.Max(0, (x.at - gameNow).TotalSeconds) });
-				}
+				var list = ReadPendingRecalls()
+					.Where(r => r.At >= gameNow.AddMinutes(-10)) 
+					.OrderBy(r => r.At)
+					.ToList();
+				more = Math.Max(0, list.Count - 6);
+				foreach (var x in list.Take(6))
+					recalls.Add(new { coord = x.Coordinate, at = x.At.ToString("HH:mm"), inSec = (long) Math.Max(0, (x.At - gameNow).TotalSeconds) });
 			} catch (Exception e) {
 				log(LogLevel.Debug, LogSender.Tbot, $"Pending recalls for the status tile not readable: {e.Message}");
 			}
@@ -2276,9 +2593,18 @@ namespace Tbot.Services {
 				}
 			} catch { account = null; }
 
+
+			var pauseInfo = new {
+				active = _pauseActive,
+				untilInSec = _pauseActive ? (long) Math.Max(0, (_pauseUntilUtc - DateTime.UtcNow).TotalSeconds) : 0L,
+				reject = (!_pauseActive && _pauseRejectText != null && (DateTime.UtcNow - _pauseRejectUtc).TotalSeconds < 90) ? _pauseRejectText : null,
+				defaultMinutes = ReadBotPauseConfig().DurationMinutes
+			};
+
 			var payload = new {
 				sleeping,
 				mode = ghost ? "GhostSleep" : (normal ? "Sleep" : ""),
+				pause = pauseInfo,
 				wakeInSec,
 				sleepInSec,
 				recalls,

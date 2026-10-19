@@ -72,6 +72,7 @@ far targets, but you need to have researched and built them. A new account shoul
 | `Proxy.Address`, `Type`, `Username`, `Password` | Proxy address, type (e.g. `socks5`) and login. Real values in `secrets/proxy`. |
 | `Proxy.LoginOnly` | `true` = proxy is used only for the login, not for game requests. |
 | `CaptchaAPIKey` | API key of the captcha solving service (optional). |
+| `LoginPause.*` | Protects the IP: after `FailuresBeforePause` (2) failed logins in a row the bot waits `PauseMinutes` (30), doubling with each further failure up to `MaxPauseMinutes` (120), instead of retrying. The manual captcha page `/bot/captcha` stays usable; solving it ends the pause. State in `data/login_pause_<alias>.json`. `Active` switches it off. |
 | `SlotsToLeaveFree` | Fleet slots no worker may use, kept free for you. |
 | `SlotPriorityLevel.*` | Who gets free slots first when workers compete. Lower number = served first. Keys: `Brain`, `Expeditions`, `AutoFarm`, `AutoColonize`/`Colonize`, `AutoDiscovery`, `AutoHarvest`. |
 
@@ -243,6 +244,7 @@ Builds cargo ships.
 | `CargoType` | Ship type to build. |
 | `MaxCargosToBuild`, `MaxCargosToKeep` | Total target count / how many to keep. |
 | `LimitToCapacity` | Only build as many as the stored resources need. |
+| `MaxProductionHours` | Optional. Upper limit in hours for the production time of one order per celestial (shipyard and nanite level included). 0 or missing = no limit. |
 | `SupplyMoonFromPlanet` | Moons get ships from the planet at the same position. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | Skip moons; random order; skip a celestial that already has a transport coming; excluded celestials. |
 
@@ -253,6 +255,7 @@ Builds cargo ships.
 | `Active` | Switch. |
 | `DefenceToReach.*` | Target count per defence type (launchers, lasers, cannons, turret, missiles). Shield domes are `true/false`. 0 = do not build. |
 | `ExcludeMoons`, `RandomOrder`, `Exclude` | Skip moons; random order; excluded celestials. |
+| `MaxProductionHours` | Optional. Upper limit in hours for the production time of one order per celestial (shipyard and nanite level included). 0 or missing = no limit. The remainder is ordered in later runs. |
 
 ### Brain.AutoRepatriate
 
@@ -447,6 +450,30 @@ Resource farming mode with one goal: collect as much deuterium as possible. It w
 | `ShrinkDiscardPercent` | Drop a target when its fresh weighted loot is at least this many percent below the value from the full sweep (default 10). `MinLoot`/`MinDeuterium` still apply. |
 
 State and statistics are kept in `data/fastfarm_<Alias>.json` (written by the worker, shown on the overview page).
+
+## Experimental
+
+New functions that are still in test. They have their own page in the WebUI (**Testing**), so new and proven functions stay apart. When a function has proven itself it moves to the normal page of its area. The block is optional: without it the defaults below apply.
+
+| Field | Meaning |
+|---|---|
+| `BotPause.Active` | Switches the pause function on or off (default on). |
+| `BotPause.DurationMinutes` | Button **Pause** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode stop for this long (default 15), then restart on their own. `/resume` or the button ends it earlier; pressing Pause again prolongs it. Recalls, fleetsave and the Defender keep running. |
+| `BotPause.RecallMarginMinutes` | Safety distance (default 2). A pause is refused if a recall is due within the pause time plus this margin. A pause is also refused while sleeping and during an attack lockdown. |
+| `BotPause.MaxDurationMinutes` | Longest pause you can ask for with `/pause` (default 120). |
+| `DefenderRecheck.Active` | Default off. Shortly before the fleetsave the Defender fetches the attack list once more: attack recalled -> fleetsave skipped; attack later -> fleetsave moved; question fails or times out -> fleetsave sent as planned. |
+| `DefenderRecheck.TimeoutSeconds` | How long to wait for the answer (default 4, 1-10). |
+| `MinePlanRanking.Mode` | How the page Minenplan ranks the next investments (display only): `Payback` (default, like AutoMine), `Cheapest` (lowest cost first), `Npv` (highest gain over the horizon minus cost). The page can override this in your browser. |
+| `MinePlanRanking.HorizonDays` / `MaxPaybackDays` | Horizon for `Npv` (default 90 days); longest payback that counts as sensible (default 200 days). |
+| `MinePlanRanking.OnlySensible` / `IncludeResearch` | Hide steps with a longer payback than the limit; rank plasma technology next to the mine steps (default on). |
+| `FleetsaveSlot.Active` | Default on. The last free fleet slot is kept for the fleetsave (and DebrisSave): all other fleets, even forced ones, are refused when only the reserved slots are left. Refusals show in the log as `SLOTCOLLISION #n` (counter since start) - this also tells whether a central slot ledger would be worth it. |
+| `FleetsaveSlot.Slots` | Number of reserved slots (default 1). Works on top of `General.SlotsToLeaveFree`. |
+| `AsteroidHunt.Active` | Default off. Item event: once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the inventory is compared with the one from before; one short log line per attempt, no messenger message. Assumes one find per day and account. |
+| `AsteroidHunt.ShipType` / `ShipCount` | Ship sent (default `Cruiser`, 1). The planet with the most of that ship is used. |
+| `AsteroidHunt.MaxAttemptsPerDay` / `SearchSystems` | Attempts per game day (default 0 = unlimited, max 60; the hunter stops for the day after the first find); `SearchSystems` (default 10) = how many systems around the home system are searched for the asteroid (own, +1, -1, +2 ...); a refused target costs no attempt, the last hit system is tried first the next day. |
+| `AsteroidHunt` (Erkennung) | The result is read from the report of the Flottenkommando under Messages -> Sonstiges (found / no result, retry / "sleep on it" = day over). If no new report arrives or the text is not recognised, the inventory before and after the attack is compared instead. |
+| `AsteroidHunt.SaveJson` | Default on. Log of all attempts and finds in `data/asteroiden_funde_<alias>.json`. |
+
 
 ## WebUI.FormPages (settings.json)
 

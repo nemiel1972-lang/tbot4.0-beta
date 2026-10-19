@@ -514,6 +514,12 @@ func (b *Prioritize) GetExpeditionMessages(maxPage int64) ([]ogame.ExpeditionMes
 	return b.bot.getExpeditionMessages(maxPage)
 }
 
+func (b *Prioritize) GetOtherMessages() ([]ogame.OtherMessage, error) {
+	b.begin("GetOtherMessages")
+	defer b.done()
+	return b.bot.getOtherMessages()
+}
+
 func (b *Prioritize) GetExpeditionMessageAt(t time.Time) (ogame.ExpeditionMessage, error) {
 	b.begin("GetExpeditionMessageAt")
 	defer b.done()

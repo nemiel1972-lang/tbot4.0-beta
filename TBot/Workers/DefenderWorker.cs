@@ -72,6 +72,10 @@ namespace Tbot.Workers {
 				}
 
 				TimeSpan safetyMargin = GetFleetSaveSafetyMargin();
+
+				if (trackedAttacks == "Timer" && await RecheckBeforeDispatchAsync(celestial, celestialId, pending, safetyMargin))
+					return;
+
 				try {
 					DoLog(LogLevel.Warning, $"Dispatching FleetSave for {celestial.ToString()} (tracked attacks: {trackedAttacks}), earliest impact {pending.EarliestImpactUtc:u}, safety margin {safetyMargin.TotalSeconds:0}s.");
 					await _fleetScheduler.AutoFleetSave(celestial, false, pending.MinFlightTimeSeconds);
@@ -88,6 +92,64 @@ namespace Tbot.Workers {
 				}
 			} finally {
 				System.Threading.Interlocked.Exchange(ref pending.Busy, 0);
+			}
+		}
+
+		private DefenderRecheckConfig ReadRecheckConfig() {
+			DefenderRecheckConfig c = new();
+			try {
+				var g = _tbotInstance.InstanceSettings;
+				if (!SettingsService.IsSettingSet(g, "Experimental") || !SettingsService.IsSettingSet(g.Experimental, "DefenderRecheck"))
+					return c;
+				var r = g.Experimental.DefenderRecheck;
+				if (SettingsService.IsSettingSet(r, "Active"))
+					c.Active = (bool) r.Active;
+				if (SettingsService.IsSettingSet(r, "TimeoutSeconds"))
+					c.TimeoutSeconds = Math.Max(1, Math.Min(10, (int) r.TimeoutSeconds));
+			} catch (Exception) {
+			}
+			return c;
+		}
+
+		private async Task<bool> RecheckBeforeDispatchAsync(Celestial celestial, int celestialId, PendingFleetSave pending, TimeSpan safetyMargin) {
+			DefenderRecheckConfig cfg = ReadRecheckConfig();
+			if (!cfg.Active)
+				return false;
+			try {
+				Task<List<AttackerFleet>> fetch = _ogameService.GetAttacks().ContinueWith(t => t.Result?.ToList() ?? new List<AttackerFleet>());
+				if (await Task.WhenAny(fetch, Task.Delay(TimeSpan.FromSeconds(cfg.TimeoutSeconds))) != fetch) {
+					DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck timed out after {cfg.TimeoutSeconds}s - sending FleetSave as planned.");
+					return false;
+				}
+				DateTime fetchedUtc = DateTime.UtcNow;
+				List<int> arriveIn = fetch.Result.Where(a => a != null && celestial.HasCoords(a.Destination)).Select(a => a.ArriveIn).ToList();
+				bool? stillUnderAttack = null;
+				if (arriveIn.Count == 0) {
+					Task<bool> check = _ogameService.IsUnderAttack();
+					if (await Task.WhenAny(check, Task.Delay(TimeSpan.FromSeconds(cfg.TimeoutSeconds))) == check)
+						stillUnderAttack = check.Result;
+				}
+				RecheckAction action = DefenderRecheck.Evaluate(arriveIn, stillUnderAttack, fetchedUtc, pending.EarliestImpactUtc, safetyMargin, DateTime.UtcNow, out DateTime newImpactUtc);
+				switch (action) {
+					case RecheckAction.Cancel:
+						DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck found no incoming attack - FleetSave skipped (attack recalled or already resolved).");
+						pending.DispatchAtUtc = DateTime.UtcNow.AddSeconds(FleetSaveFollowUpCheckSeconds);
+						ArmDispatchTimer(celestialId);
+						if (DateTime.UtcNow >= pending.EarliestImpactUtc)
+							RemovePending(celestialId);
+						return true;
+					case RecheckAction.Postpone:
+						DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck: impact moved from {pending.EarliestImpactUtc:u} to {newImpactUtc:u} - FleetSave postponed.");
+						pending.EarliestImpactUtc = newImpactUtc;
+						pending.DispatchAtUtc = newImpactUtc - safetyMargin;
+						ArmDispatchTimer(celestialId);
+						return true;
+					default:
+						return false;
+				}
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck failed ({e.Message}) - sending FleetSave as planned.");
+				return false;
 			}
 		}
 

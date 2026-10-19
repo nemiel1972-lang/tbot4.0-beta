@@ -114,6 +114,18 @@ namespace Tbot.Workers.Brain {
 							neededCargos = buildableCargos;
 						}
 
+						double maxHours = 0;
+						try { maxHours = (double) _tbotInstance.InstanceSettings.Brain.AutoCargo.MaxProductionHours; } catch (Exception) { }
+						if (maxHours > 0 && neededCargos > 0) {
+							tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Facilities);
+							long unitSeconds = Math.Max(1, _calculationService.CalcProductionTime(preferredCargoShip, 1, _tbotInstance.UserData.serverData, tempCelestial.Facilities));
+							long maxUnits = (long) (maxHours * 3600) / unitSeconds;
+							if (neededCargos > maxUnits) {
+								DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: Production time capped at {maxHours} h: {maxUnits} instead of {neededCargos}x{preferredCargoShip.ToString()}.");
+								neededCargos = maxUnits;
+							}
+						}
+
 						if (neededCargos > 0) {
 							try {
 								await _ogameService.BuildShips(tempCelestial, preferredCargoShip, neededCargos);

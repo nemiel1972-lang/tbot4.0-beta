@@ -76,6 +76,7 @@ namespace TBot.Ogame.Infrastructure {
 		Task<List<ActiveItem>> GetActiveItems(Celestial celestial);
 		Task<List<InventoryItem>> GetItems(Celestial celestial);
 		Task ActivateItem(Celestial celestial, string itemRef);
+		Task<List<OtherMessage>> GetOtherMessages();
 		Task<CharacterClass> GetUserClass();
 		Task<List<Celestial>> GetEmpirePlanets();
 		Task<List<Celestial>> GetEmpireMoons();
@@ -101,6 +102,8 @@ namespace TBot.Ogame.Infrastructure {
 		Task SendMessage(int playerID, string message);
 		Task SetUserAgent(string userAgent);
 		Task SolveCaptcha(string challengeID, int answer);
+		Task SetLoginPause(long untilUnixSeconds);
+		Task<LoginPauseStatus> GetLoginPauseStatus();
 		        Task<bool> AbandonCelestial(Celestial celestial);
                 Task<List<Coordinate>> GetPositionsAvailableForDiscoveryFleet(Celestial celestial, Coordinate coordinate);
         Task<int> GetAvailableDiscoveries(Celestial celestial);

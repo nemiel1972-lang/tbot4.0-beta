@@ -31,6 +31,9 @@ import (
 )
 
 func (b *OGame) wrapLogin() error {
+	if err := loginPauseCheck(); err != nil {
+		return err
+	}
 	fn := func() (bool, bool, error) {
 		return b.loginWithBearerToken("", "")
 	}
@@ -38,6 +41,9 @@ func (b *OGame) wrapLogin() error {
 }
 
 func (b *OGame) wrapLoginWithBearerToken(token string) (useToken, usePhpSessID bool, err error) {
+	if err = loginPauseCheck(); err != nil {
+		return
+	}
 	fn := func() (bool, bool, error) {
 		useToken, usePhpSessID, err = b.loginWithBearerToken(token, "")
 		return useToken, usePhpSessID, err
@@ -47,6 +53,9 @@ func (b *OGame) wrapLoginWithBearerToken(token string) (useToken, usePhpSessID b
 }
 
 func (b *OGame) wrapLoginWithExistingCookies() (useCookies, usePhpSessID bool, err error) {
+	if err = loginPauseCheck(); err != nil {
+		return
+	}
 	fn := func() (bool, bool, error) {
 		token := utils.Or(b.bearerToken, b.getBearerTokenFromCookie())
 		phpSessID := utils.Or(b.cache.ogameSession, b.getPhpSessIDFromCookie())

@@ -100,6 +100,19 @@ namespace Tbot.Workers.Brain {
 							DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: Not enough resources to build any defence.");
 							continue;
 						}
+						double maxHours = ReadMaxProductionHours();
+						if (maxHours > 0) {
+							tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Facilities);
+							var limited = LimitByProductionTime(defencesToBuild, tempCelestial.Facilities, (long) (maxHours * 3600));
+							if (!limited.IsEmpty() || defencesToBuild.IsEmpty()) {
+								DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: Production time capped at {maxHours} h.");
+							}
+							defencesToBuild = limited;
+							if (defencesToBuild.IsEmpty()) {
+								DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: A single unit already exceeds the production time cap.");
+								continue;
+							}
+						}
 						DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: Defences to build: {defencesToBuild.ToString()}");
 						try {
 							foreach (var (defenceType, amountNeeded) in defencesToBuild.GetDefenceTypesWithAmount()) {
@@ -133,6 +146,30 @@ namespace Tbot.Workers.Brain {
 				DoLog(LogLevel.Information, $"Next Defence check at {newTime.ToString()}");
 				await _tbotOgameBridge.CheckCelestials();
 			}
+		}
+
+		private double ReadMaxProductionHours() {
+			try {
+				return (double) _tbotInstance.InstanceSettings.Brain.AutoDefence.MaxProductionHours;
+			} catch (Exception) {
+				return 0;
+			}
+		}
+
+		private Defences LimitByProductionTime(Defences wanted, Facilities facilities, long maxSeconds) {
+			Defences output = new();
+			long usedSeconds = 0;
+			foreach (var (defenceType, amount) in wanted.GetDefenceTypesWithAmount()) {
+				if (amount <= 0)
+					continue;
+				long unitSeconds = Math.Max(1, _calculationService.CalcProductionTime(defenceType, 1, _tbotInstance.UserData.serverData, facilities));
+				long fits = Math.Min(amount, (maxSeconds - usedSeconds) / unitSeconds);
+				if (fits <= 0)
+					continue;
+				output.Add(defenceType.ToString(), fits);
+				usedSeconds += fits * unitSeconds;
+			}
+			return output;
 		}
 
 		public override bool IsWorkerEnabledBySettings() {

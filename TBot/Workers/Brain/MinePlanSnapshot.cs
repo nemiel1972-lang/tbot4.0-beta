@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Tbot.Common.IO;
+using Tbot.Common.Settings;
 using Tbot.Includes;
 using Tbot.Services;
 using TBot.Common.Logging;
@@ -49,18 +50,29 @@ namespace Tbot.Workers.Brain {
 				if (plans.Count == 0)
 					return;
 
-				var best = plans.Where(pl => !pl.Excluded)
+				var candidates = plans.Where(pl => !pl.Excluded)
 					.SelectMany(pl => pl.Next.Where(n => n.RoiDays > 0).Select(n => new BestStep {
 						Planet = pl.Name, Coord = pl.Coord, Mine = n.Mine, Level = n.Level, RoiDays = n.RoiDays,
 						CostDeut = n.CostDeut, GainPerDay = n.GainPerDay, EnergyShort = n.EnergyShort
-					}))
-					.OrderBy(s => s.RoiDays).Take(12).ToList();
+					})).ToList();
+				var research = BuildResearch(calc, planets, inst.UserData.researches, inst.UserData.serverData.Speed, inst.UserData.userInfo.Class,
+					inst.UserData.staff.Geologist, inst.UserData.staff.IsFull);
+				candidates.AddRange(research.Where(r => r.GainPerDay > 0).Select(r => new BestStep {
+					Planet = "Account", Coord = "", Mine = r.Name, Level = r.Level, RoiDays = r.RoiDays,
+					CostDeut = r.CostDeut, GainPerDay = r.GainPerDay, IsResearch = true
+				}));
+
+				RankConfig rank = ReadRankConfig(inst);
+				var best = MinePlanRanking.Rank(candidates, c => c.CostDeut, c => c.GainPerDay, c => c.IsResearch, rank, 12);
 
 				var file = new PlanFile {
 					UpdatedUtc = DateTime.UtcNow.ToString("o"),
 					Speed = inst.UserData.serverData.Speed,
 					Planets = plans,
-					Best = best
+					Best = best,
+					Candidates = candidates,
+					Research = research,
+					Ranking = new RankInfo { Mode = rank.Mode.ToString(), HorizonDays = rank.HorizonDays, MaxPaybackDays = rank.MaxPaybackDays, OnlySensible = rank.OnlySensible, IncludeResearch = rank.IncludeResearch }
 				};
 				string dataDir = Path.Combine(AppContext.BaseDirectory, "data");
 				Directory.CreateDirectory(dataDir);
@@ -68,6 +80,93 @@ namespace Tbot.Workers.Brain {
 				AtomicFile.WriteAllText(Path.Combine(dataDir, $"minenplan_{safe}.json"), JsonConvert.SerializeObject(file, Formatting.Indented));
 			} catch {
 			}
+		}
+
+		private static RankConfig ReadRankConfig(ITBotMain inst) {
+			RankConfig c = new();
+			try {
+				var g = inst.InstanceSettings;
+				if (!SettingsService.IsSettingSet(g, "Experimental") || !SettingsService.IsSettingSet(g.Experimental, "MinePlanRanking"))
+					return c;
+				var r = g.Experimental.MinePlanRanking;
+				if (SettingsService.IsSettingSet(r, "Mode"))
+					c.Mode = MinePlanRanking.ParseMode((string) r.Mode);
+				if (SettingsService.IsSettingSet(r, "HorizonDays"))
+					c.HorizonDays = Math.Max(1, (int) r.HorizonDays);
+				if (SettingsService.IsSettingSet(r, "MaxPaybackDays"))
+					c.MaxPaybackDays = Math.Max(1, (int) r.MaxPaybackDays);
+				if (SettingsService.IsSettingSet(r, "OnlySensible"))
+					c.OnlySensible = (bool) r.OnlySensible;
+				if (SettingsService.IsSettingSet(r, "IncludeResearch"))
+					c.IncludeResearch = (bool) r.IncludeResearch;
+			} catch {
+			}
+			return c;
+		}
+
+		private static float HourProdPlasma(ICalculationService calc, Buildables mine, int level, Planet p, int plasma, int speed, CharacterClass cls, bool geo, bool staff) {
+			var lf = p.LFBonuses?.Production;
+			switch (mine) {
+				case Buildables.MetalMine:
+					return calc.CalcMetalProduction(level, p.Coordinate.Position, speed, 1, plasma, lf?.Metal ?? 0, cls, geo, staff);
+				case Buildables.CrystalMine:
+					return calc.CalcCrystalProduction(level, p.Coordinate.Position, speed, 1, plasma, lf?.Crystal ?? 0, cls, geo, staff);
+				default:
+					return calc.CalcDeuteriumProduction(level, p.Temperature.Average, speed, 1, plasma, lf?.Deuterium ?? 0, cls, geo, staff);
+			}
+		}
+
+		private static long CostDeut(Resources price) =>
+			(long) Math.Round(price.Metal / MetalPerDeut + price.Crystal / CrystalPerDeut + price.Deuterium);
+
+		private static List<ResearchStep> BuildResearch(ICalculationService calc, List<Planet> planets, Researches r, int speed, CharacterClass cls, bool geo, bool staff) {
+			var list = new List<ResearchStep>();
+			try {
+				int plasma = r.PlasmaTechnology;
+				float plasmaGain = 0;
+				foreach (var p in planets) {
+					if (p.Buildings == null || p.Coordinate == null || p.Temperature == null)
+						continue;
+					foreach (var mine in Mines) {
+						int lvl = Level(p, mine);
+						if (lvl <= 0)
+							continue;
+						plasmaGain += ToDayDeut(mine, HourProdPlasma(calc, mine, lvl, p, plasma + 1, speed, cls, geo, staff) - HourProdPlasma(calc, mine, lvl, p, plasma, speed, cls, geo, staff));
+					}
+				}
+				long plasmaCost = CostDeut(calc.CalcPrice(Buildables.PlasmaTechnology, plasma + 1));
+				list.Add(new ResearchStep {
+					Name = "Plasma technology", Level = plasma + 1, CostDeut = plasmaCost, GainPerDay = plasmaGain,
+					RoiDays = MinePlanRanking.PaybackDays(plasmaCost, plasmaGain),
+					Note = "extra output of all mines on all planets"
+				});
+
+				int et = r.EnergyTechnology;
+				double extraEnergy = 0, savedCapital = 0;
+				int fusionPlanets = 0;
+				foreach (var p in planets) {
+					if (p.Buildings == null || p.Temperature == null || p.Buildings.FusionReactor <= 0)
+						continue;
+					int fl = p.Buildings.FusionReactor;
+					double delta = 30.0 * fl * (Math.Pow(1.05 + 0.01 * (et + 1), fl) - Math.Pow(1.05 + 0.01 * et, fl));
+					int satOut = calc.GetSolarSatelliteOutput(p);
+					if (satOut <= 0)
+						continue;
+					double pricePerEnergy = CostDeut(calc.CalcPrice(Buildables.SolarSatellite, 1)) / (double) satOut;
+					extraEnergy += delta;
+					savedCapital += delta * pricePerEnergy;
+					fusionPlanets++;
+				}
+				long etCost = CostDeut(calc.CalcPrice(Buildables.EnergyTechnology, et + 1));
+				list.Add(new ResearchStep {
+					Name = "Energy technology", Level = et + 1, CostDeut = etCost, GainPerDay = 0, RoiDays = 0,
+					ExtraEnergy = (long) Math.Round(extraEnergy), SavedCapitalDeut = (long) Math.Round(savedCapital),
+					Note = fusionPlanets == 0 ? "no fusion reactor - no effect"
+						: $"+{Math.Round(extraEnergy):0} energy on {fusionPlanets} fusion planet(s); saves about {Math.Round(savedCapital):0} D-eq of satellites once (not ranked)"
+				});
+			} catch {
+			}
+			return list;
 		}
 
 		private static readonly TimeSpan ItemMaxAge = TimeSpan.FromMinutes(15);
@@ -279,6 +378,21 @@ namespace Tbot.Workers.Brain {
 			public int Speed;
 			public List<PlanetPlan> Planets;
 			public List<BestStep> Best;
+			public List<BestStep> Candidates;
+			public List<ResearchStep> Research;
+			public RankInfo Ranking;
+		}
+		public sealed class RankInfo {
+			public string Mode;
+			public int HorizonDays, MaxPaybackDays;
+			public bool OnlySensible, IncludeResearch;
+		}
+		public sealed class ResearchStep {
+			public string Name, Note;
+			public int Level;
+			public long CostDeut;
+			public float GainPerDay, RoiDays;
+			public long ExtraEnergy, SavedCapitalDeut;
 		}
 		public sealed class PlanetPlan {
 			public string Name, Coord;
@@ -315,6 +429,7 @@ namespace Tbot.Workers.Brain {
 			public int Level;
 			public float RoiDays, GainPerDay;
 			public long CostDeut, EnergyShort;
+			public bool IsResearch;
 		}
 	}
 }

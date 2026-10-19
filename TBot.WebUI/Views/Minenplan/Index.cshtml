@@ -118,6 +118,68 @@
             return h + '</table></div></div>';
         }
 
+        // ---- Ranking (Berechnungsart): Standard aus der Config (data.Ranking), hier im Browser ueberschreibbar ----
+        function rankSettings(data) {
+            var d = data.Ranking || {};
+            var r = { mode: d.Mode || 'Payback', horizon: d.HorizonDays || 90, maxPayback: d.MaxPaybackDays || 200, onlySensible: !!d.OnlySensible, research: d.IncludeResearch !== false };
+            try {
+                var o = JSON.parse(localStorage.getItem('mp-rank') || 'null');
+                if (o) { for (var k in o) { if (o[k] !== undefined && o[k] !== null) r[k] = o[k]; } }
+            } catch (e) { }
+            return r;
+        }
+        function paybackOf(c) { return c.GainPerDay > 0 && c.CostDeut > 0 ? c.CostDeut / c.GainPerDay : 0; }
+        function npvOf(c, h) { return c.GainPerDay * h - c.CostDeut; }
+        // gleiche Regeln wie MinePlanRanking.cs
+        function rankSteps(list, r) {
+            var q = list.filter(function (c) { return c.GainPerDay > 0; });
+            if (!r.research) q = q.filter(function (c) { return !c.IsResearch; });
+            if (r.onlySensible) q = q.filter(function (c) { return paybackOf(c) <= r.maxPayback; });
+            if (r.mode === 'Cheapest') q.sort(function (a, b) { return a.CostDeut - b.CostDeut || paybackOf(a) - paybackOf(b); });
+            else if (r.mode === 'Npv') { q = q.filter(function (c) { return npvOf(c, r.horizon) > 0; }); q.sort(function (a, b) { return npvOf(b, r.horizon) - npvOf(a, r.horizon); }); }
+            else q.sort(function (a, b) { return paybackOf(a) - paybackOf(b); });
+            return q.slice(0, 12);
+        }
+        function bestCard(data) {
+            var r = rankSettings(data);
+            var list = data.Candidates ? rankSteps(data.Candidates, r) : (data.Best || []);
+            var opt = function (v, t) { return '<option value="' + v + '"' + (r.mode === v ? ' selected' : '') + '>' + t + '</option>'; };
+            var ctl = '<div class="mp-muted" style="margin-bottom:6px">Ranking: <select data-rk="mode">' + opt('Payback', 'Shortest payback') + opt('Cheapest', 'Cheapest step') + opt('Npv', 'Net gain over horizon') + '</select>'
+                + (r.mode === 'Npv' ? ' horizon <input data-rk="horizon" type="number" min="1" style="width:5em" value="' + r.horizon + '"> days' : '')
+                + ' <label><input data-rk="onlySensible" type="checkbox"' + (r.onlySensible ? ' checked' : '') + '> only sensible</label>'
+                + (r.onlySensible ? ' (payback up to <input data-rk="maxPayback" type="number" min="1" style="width:5em" value="' + r.maxPayback + '"> days)' : '')
+                + ' <label><input data-rk="research" type="checkbox"' + (r.research ? ' checked' : '') + '> include research</label></div>';
+            var h = '<div class="mp-card"><h2>Best investments right now</h2>' + ctl + '<div class="mp-scroll"><table class="mp-table"><tr><th>Planet</th><th>Step</th><th>To level</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th>'
+                + (r.mode === 'Npv' ? '<th>Net gain (' + r.horizon + ' d)</th>' : '') + '<th>Energy</th></tr>';
+            list.forEach(function (b) {
+                h += '<tr><td>' + (b.IsResearch ? 'Account' : mask(b.Planet)) + '</td><td>' + esc(b.Mine) + '</td><td>' + b.Level + '</td><td>' + n(b.CostDeut) + '</td><td>' + n(b.GainPerDay) + '</td><td>' + d1(b.RoiDays || paybackOf(b)) + '</td>'
+                    + (r.mode === 'Npv' ? '<td>' + n(npvOf(b, r.horizon)) + '</td>' : '')
+                    + '<td>' + (b.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(b.EnergyShort) + '</span>' : (b.IsResearch ? '-' : 'ok')) + '</td></tr>';
+            });
+            if (!list.length) h += '<tr><td colspan="8" class="mp-muted">No step fits these settings.</td></tr>';
+            return h + '</table></div><div class="mp-muted">Display only - AutoMine and AutoResearch keep building by their own rules.</div></div>';
+        }
+        function researchCard(data) {
+            var rs = data.Research || [];
+            if (!rs.length) return '';
+            var h = '<div class="mp-card"><h2>Research (whole account)</h2><div class="mp-scroll"><table class="mp-table"><tr><th>Research</th><th>To level</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th><th>Note</th></tr>';
+            rs.forEach(function (x) {
+                h += '<tr><td>' + esc(x.Name) + '</td><td>' + x.Level + '</td><td>' + n(x.CostDeut) + '</td><td>' + (x.GainPerDay > 0 ? n(x.GainPerDay) : '-') + '</td><td>' + d1(x.RoiDays) + '</td><td class="mp-muted">' + esc(x.Note) + '</td></tr>';
+            });
+            return h + '</table></div></div>';
+        }
+        content.addEventListener('change', function (ev) {
+            var key = ev.target && ev.target.getAttribute ? ev.target.getAttribute('data-rk') : null;
+            if (!key || !last || !last.data) return;
+            var r = rankSettings(last.data), v;
+            if (ev.target.type === 'checkbox') v = ev.target.checked;
+            else if (ev.target.type === 'number') v = Math.max(1, parseInt(ev.target.value, 10) || 1);
+            else v = ev.target.value;
+            r[key] = v;
+            try { localStorage.setItem('mp-rank', JSON.stringify(r)); } catch (e) { }
+            render(last);
+        });
+
         function render(res) {
             if (!res.available) {
                 content.innerHTML = '<p>No plan yet. The file is written by AutoMine in its next cycle' + (res.error ? ' (' + esc(res.error) + ')' : '') + '.</p>';
@@ -129,12 +191,8 @@
             updatedEl.textContent = data.UpdatedUtc ? 'Updated: ' + new Date(data.UpdatedUtc).toLocaleString() : '';
             var html = '';
 
-            html += '<div class="mp-card"><h2>Best investments right now</h2><div class="mp-scroll"><table class="mp-table"><tr><th>Planet</th><th>Mine</th><th>To level</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th><th>Energy</th></tr>';
-            (data.Best || []).forEach(function (b) {
-                html += '<tr><td>' + mask(b.Planet) + '</td><td>' + esc(b.Mine) + '</td><td>' + b.Level + '</td><td>' + n(b.CostDeut) + '</td><td>' + n(b.GainPerDay) + '</td><td>' + d1(b.RoiDays) + '</td><td>'
-                    + (b.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(b.EnergyShort) + '</span>' : 'ok') + '</td></tr>';
-            });
-            html += '</table></div></div>';
+            html += bestCard(data);
+            html += researchCard(data);
 
             html += boosterCard(res.boosters);
 

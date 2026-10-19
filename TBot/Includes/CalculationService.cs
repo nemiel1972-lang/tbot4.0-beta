@@ -4976,10 +4976,17 @@ namespace Tbot.Includes {
 					long deutLeave = celestial.Coordinate.Type == Celestials.Planet && transportSettings.DeutToLeaveOnPlanets >= 0 ? transportSettings.DeutToLeaveOnPlanets : transportSettings.DeutToLeave;
 					var available = celestial.Resources.Difference(new Resources(0, 0, deutLeave));
 					var ships = SchiffeVon(celestial);
-					var transportable = CalcMaxTransportableResources(ships, available, userData.researches.HyperspaceTechnology, userData.serverData, celestial.LFBonuses, userData.userInfo.Class, 0, userData.serverData.ProbeCargo);
+
+
+
+
+
+					var capacity = Math.Min(
+						CalcFleetCapacity(ships, userData.serverData, userData.researches.HyperspaceTechnology, celestial.LFBonuses, userData.userInfo.Class, userData.serverData.ProbeCargo),
+						available.TotalResources);
 					var distance = CalcDistance(celestial.Coordinate, destination.Coordinate, userData.serverData);
-					var selectionScore = transportSettings.MultipleOrigin.PriorityToProximityOverQuantity ? distance : -transportable.TotalResources;
-					return new ResourceSource(celestial.ID, transportable, transportable.TotalResources, distance, selectionScore);
+					var selectionScore = transportSettings.MultipleOrigin.PriorityToProximityOverQuantity ? distance : -capacity;
+					return new ResourceSource(celestial.ID, available, capacity, distance, selectionScore);
 				})
 				.Where(source => source.Available.TotalResources > 0)
 				.ToList();

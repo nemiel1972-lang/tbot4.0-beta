@@ -55,7 +55,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
-          generate_release_notes: true
+          generate_release_notes: false
           files: |
             dist/*.zip
             dist/*.tar.gz

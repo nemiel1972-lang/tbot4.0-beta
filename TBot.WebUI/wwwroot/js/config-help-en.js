@@ -359,6 +359,21 @@ window.CFG_HELP.en = {
   "CaptchaAPIKey": {
    "t": "Key of a captcha solving service. Optional, only needed if the game asks for captchas."
   },
+  "LoginPause": {
+   "t": "Protects the IP: after repeated failed logins (captcha etc.) the bot makes a pause instead of trying again and again. The pause doubles with every further failure. During the pause the manual captcha page (/bot/captcha) keeps working; if you solve the captcha there, the bot continues at once. The state is kept in a file, so a restart does not skip the pause."
+  },
+  "LoginPause.Active": {
+   "t": "Switch the login pause on or off."
+  },
+  "LoginPause.FailuresBeforePause": {
+   "t": "Failed logins in a row before the first pause."
+  },
+  "LoginPause.PauseMinutes": {
+   "t": "Length of the first pause in minutes. Doubles with every further failure."
+  },
+  "LoginPause.MaxPauseMinutes": {
+   "t": "Longest pause in minutes."
+  },
   "SlotsToLeaveFree": {
    "t": "Fleet slots no function may use. They stay free for your own manual flights.",
    "e": "2 = the bot never takes the last 2 slots."
@@ -745,6 +760,9 @@ window.CFG_HELP.en = {
   "AutoCargo.Active": {
    "t": "Builds cargo ships automatically."
   },
+  "AutoCargo.MaxProductionHours": {
+   "t": "Upper limit for the production time of one cargo order per celestial, in hours. 0 = no limit. What does not fit is built in a later run."
+  },
   "AutoCargo.SupplyMoonFromPlanet": {
    "t": "Moons get their ships from the planet at the same position."
   },
@@ -768,6 +786,9 @@ window.CFG_HELP.en = {
   },
   "AutoDefence.Active": {
    "t": "Builds defence automatically."
+  },
+  "AutoDefence.MaxProductionHours": {
+   "t": "Upper limit for the production time of one defence order per celestial, in hours. 0 = no limit. What does not fit is built in a later run."
   },
   "AutoDefence.DefenceToReach.*": {
    "t": "Number of this defence the bot builds per celestial. 0 = none. Shield domes are on or off."
@@ -1075,4 +1096,84 @@ window.CFG_HELP.en = {
    "t": "How many systems the full scan of a round visits in one step."
   }
  },
+ "Experimental": {
+  "BotPause": {
+   "t": "The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. Recalls and the Defender keep running. A pause is refused if a recall is due in that time."
+  },
+  "BotPause.Active": {
+   "t": "Switch the pause function on or off. Off: the Pause button and /pause are refused."
+  },
+  "BotPause.DurationMinutes": {
+   "t": "How long a pause lasts if you do not give a time.",
+   "e": "15 = the bot continues 15 minutes after you pressed Pause."
+  },
+  "BotPause.RecallMarginMinutes": {
+   "t": "Safety distance to a planned recall. The pause is refused if a recall is due within the pause time plus this margin.",
+   "e": "2 = with a 15 minute pause, a recall due in 17 minutes or less blocks the pause."
+  },
+  "BotPause.MaxDurationMinutes": {
+   "t": "Longest pause you can ask for with /pause."
+  },
+  "DefenderRecheck": {
+   "t": "Shortly before a fleetsave the Defender asks the game for the attack list once more. If the attack was recalled, the fleetsave is skipped; if it arrives later, the fleetsave is moved. If the question fails or takes too long, the fleetsave is sent as planned."
+  },
+  "DefenderRecheck.Active": {
+   "t": "Switch the second check on or off (default off)."
+  },
+  "MinePlanRanking": {
+   "t": "How the page Minenplan ranks the next investments (mines and research). Display only: AutoMine and AutoResearch keep building by their own rules. You can also change these values on the page itself; the page remembers its own choice in your browser."
+  },
+  "MinePlanRanking.Mode": {
+   "t": "Payback = shortest payback first (like AutoMine). Cheapest = lowest cost first. Npv = highest net gain over the horizon (gain per day times horizon days minus cost); steps that do not pay back within the horizon are left out."
+  },
+  "MinePlanRanking.HorizonDays": {
+   "t": "Horizon for the net gain ranking, in days.",
+   "e": "90 = a step counts as good if it earns more than it costs within 90 days."
+  },
+  "MinePlanRanking.MaxPaybackDays": {
+   "t": "Longest payback that still counts as sensible (used with Only sensible)."
+  },
+  "MinePlanRanking.OnlySensible": {
+   "t": "Hide steps whose payback is longer than the limit."
+  },
+  "MinePlanRanking.IncludeResearch": {
+   "t": "Rank plasma technology next to the mine steps (it raises the output of all mines on all planets)."
+  },
+  "FleetsaveSlot": {
+   "t": "Keeps the last free fleet slot for the fleetsave. Every other fleet, even a forced one, is refused when only the reserved slot is left, so an attack always finds a slot for the fleetsave."
+  },
+  "FleetsaveSlot.Active": {
+   "t": "Switch the reserved slot on or off (default on)."
+  },
+  "FleetsaveSlot.Slots": {
+   "t": "How many slots stay free for the fleetsave.",
+   "e": "1 = the last free slot is only used by the fleetsave."
+  },
+  "AsteroidHunt": {
+   "t": "Item event: once per game day one ship attacks the asteroid on position 17 of your own system and the inventory is compared afterwards. One log line per attempt, no messenger message."
+  },
+  "AsteroidHunt.Active": {
+   "t": "Switch the hunter on or off (default off)."
+  },
+  "AsteroidHunt.ShipType": {
+   "t": "Ship that is sent. The planet with the most of this ship is used (a probe cannot find items)."
+  },
+  "AsteroidHunt.ShipCount": {
+   "t": "How many ships are sent (default 1)."
+  },
+  "AsteroidHunt.MaxAttemptsPerDay": {
+   "t": "Attempts per game day (0 = unlimited, at most 60). According to the forums the number of attempts is not limited, but only one item per day can be found - the hunter stops after the first find."
+  },
+  "AsteroidHunt.SearchSystems": {
+   "t": "The asteroid is not in your home system: this many systems are tried in turn (own system, +1, -1, +2, -2 ...). A target the server refuses costs no attempt.",
+   "e": "10 = systems 0, +1, -1 ... up to 5 away."
+  },
+  "AsteroidHunt.SaveJson": {
+   "t": "Write every attempt and find to data/asteroiden_funde_<alias>.json."
+  },
+  "DefenderRecheck.TimeoutSeconds": {
+   "t": "How long the Defender waits for the answer. After that the fleetsave is sent as planned.",
+   "e": "4 = after 4 seconds without an answer the fleetsave goes out."
+  }
+ }
 };
