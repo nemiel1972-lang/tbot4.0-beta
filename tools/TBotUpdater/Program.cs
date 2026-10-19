@@ -43,6 +43,7 @@ namespace TBotUpdater {
 			var backedUp = new List<string>();
 			var added = new List<string>();
 			bool filesTouched = false;
+			var configBackedUp = new List<string>();
 			Log($"Update {from} -> {to}, Paket {package}, Ziel {_target}");
 
 			try {
@@ -66,6 +67,7 @@ namespace TBotUpdater {
 
 				Directory.CreateDirectory(backupDir);
 				filesTouched = true;
+				configBackedUp = BackupConfig(backupDir);
 				int copied = 0;
 				int unchanged = 0;
 				string extra = "";
@@ -128,6 +130,8 @@ namespace TBotUpdater {
 					KillLeftovers(restart);
 					foreach (string rel in backedUp)
 						CopyWithRetry(Path.Combine(backupDir, rel), Path.Combine(_target, rel));
+					foreach (string rel in configBackedUp)
+						CopyWithRetry(Path.Combine(backupDir, "_config", rel), Path.Combine(_target, rel));
 					foreach (string rel in added) {
 						try { File.Delete(Path.Combine(_target, rel)); } catch { }
 					}
@@ -141,6 +145,27 @@ namespace TBotUpdater {
 				}
 				return 1;
 			}
+		}
+
+		private static List<string> BackupConfig(string backupDir) {
+			var list = new List<string>();
+			try {
+				foreach (string f in Directory.EnumerateFiles(_target, "*", SearchOption.AllDirectories)) {
+					string rel = Path.GetRelativePath(_target, f).Replace('\\', '/');
+					string l = rel.ToLowerInvariant();
+					if (l.StartsWith("backups/") || l.StartsWith("update/") || l.StartsWith("data/") || l.StartsWith("log/") || l.StartsWith("logs/") || l.StartsWith("profiles/")) continue;
+					string name = Path.GetFileName(l);
+					bool cfg = l.StartsWith("conf.d/") || l.StartsWith("secrets/") || l.StartsWith("config/conf.d/") || l.StartsWith("config/secrets/")
+						|| (name.Contains("settings") && name.EndsWith(".json")) || name == "lifeform_targets.json";
+					if (!cfg) continue;
+					string dst = Path.Combine(backupDir, "_config", rel);
+					Directory.CreateDirectory(Path.GetDirectoryName(dst));
+					File.Copy(f, dst, true);
+					list.Add(rel);
+				}
+				Log($"{list.Count} config files saved in {Path.Combine(backupDir, "_config")}");
+			} catch (Exception e) { Log("Config backup incomplete: " + e.Message); }
+			return list;
 		}
 
 		private static bool SameContent(string a, string b) {
