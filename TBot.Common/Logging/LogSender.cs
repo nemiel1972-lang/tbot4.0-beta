@@ -24,6 +24,7 @@ namespace TBot.Common.Logging {
 		Expeditions,
 		Harvest,
 		AsteroidHunt,
+		ShadowFleet,
 		FleetScheduler,
 		SleepMode,
 		Colonize,

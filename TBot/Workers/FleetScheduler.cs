@@ -294,6 +294,8 @@ namespace Tbot.Workers {
 			}
 
 			celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Ships);
+			if (!isSleepTimeFleetSave)
+				ShadowFleetWorker.ExcludeFromFleetSave(_tbotInstance.InstanceSettings, celestial);
 			if (celestial.Ships.GetMovableShips().IsEmpty()) {
 				_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Skipping fleetsave from {celestial.ToString()}: there is no fleet to save!");
 				if (fromTelegram)
@@ -817,7 +819,7 @@ if (
 						payload.Deuterium = 0;
 					if (payload.Food < 0)
 						payload.Food = 0;
-					if (!ignoreLedger && !LedgerTBot.CheckOrigin(_tbotInstance, origin, payload, (long) fleetPrediction.Fuel))
+					if (!ignoreLedger && !fleetsave && !LedgerTBot.CheckOrigin(_tbotInstance, origin, payload, (long) fleetPrediction.Fuel))
 						return (int) SendFleetCode.NotEnoughRessources;
 					Fleet newFleet = await _ogameService.SendFleet(origin, ships, destination, mission, speed, payload);
 					if (newFleet == null) {
@@ -962,21 +964,7 @@ if (
 				return false;
 			}
 			if (random) {
-				debris = null;
-				for (int d = 0; d <= 10 && debris == null; d++) {
-					foreach (int sys in d == 0 ? new[] { celestial.Coordinate.System } : new[] { celestial.Coordinate.System - d, celestial.Coordinate.System + d }) {
-						if (sys < 1) continue;
-						var galaxyInfo = await _ogameService.GetGalaxyInfo(celestial.Coordinate.Galaxy, GeneralHelper.ClampSystem(sys));
-						var hit = galaxyInfo.Planets
-							.Where(pl => pl != null && pl.Debris != null && pl.Debris.Resources.TotalResources > 0)
-							.OrderBy(pl => Math.Abs(pl.Coordinate.Position - celestial.Coordinate.Position))
-							.FirstOrDefault();
-						if (hit != null) {
-							debris = new Coordinate(hit.Coordinate.Galaxy, hit.Coordinate.System, hit.Coordinate.Position, Celestials.Debris);
-							break;
-						}
-					}
-				}
+				debris = await FindNearestDebris(celestial);
 				if (debris == null) {
 					await _tbotInstance.SendTelegramMessage($"DebrisSave: no debris field with resources within 10 systems of {celestial.Coordinate}.");
 					return false;
@@ -1011,6 +999,69 @@ if (
 			_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"[DebrisSave] Fleet {fleetId} -> {debris}, recall at {recallAt}");
 			await _tbotInstance.SendTelegramMessage($"DebrisSave: fleet {fleetId} is flying to {debris}, recall at {recallAt}.");
 			return true;
+		}
+
+		private async Task<Coordinate> FindNearestDebris(Celestial celestial) {
+			for (int d = 0; d <= 10; d++) {
+				foreach (int sys in d == 0 ? new[] { celestial.Coordinate.System } : new[] { celestial.Coordinate.System - d, celestial.Coordinate.System + d }) {
+					if (sys < 1) continue;
+					var galaxyInfo = await _ogameService.GetGalaxyInfo(celestial.Coordinate.Galaxy, GeneralHelper.ClampSystem(sys));
+					var hit = galaxyInfo.Planets
+						.Where(pl => pl != null && pl.Debris != null && pl.Debris.Resources.TotalResources > 0)
+						.OrderBy(pl => Math.Abs(pl.Coordinate.Position - celestial.Coordinate.Position))
+						.FirstOrDefault();
+					if (hit != null)
+						return new Coordinate(hit.Coordinate.Galaxy, hit.Coordinate.System, hit.Coordinate.Position, Celestials.Debris);
+				}
+			}
+			return null;
+		}
+
+		public async Task<ShadowFlightResult> ShadowFlight(Celestial celestial, Ships ships, int deutFlights, long totalSeconds, decimal speed) {
+			var r = new ShadowFlightResult();
+			celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Resources);
+			Coordinate debris = await FindNearestDebris(celestial);
+			if (debris == null) { r.Problem = "no debris field with resources within 10 systems"; return r; }
+			r.Debris = debris;
+			var prediction = _calcService.CalcFleetPrediction(celestial.Coordinate, debris, ships, Missions.Harvest, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, celestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
+			long capacity = _calcService.CalcFleetCapacity(ships, _tbotInstance.UserData.serverData, _tbotInstance.UserData.researches.HyperspaceTechnology, celestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
+			var plan = ShadowFleetLogic.PlanDeuterium(celestial.Resources.Deuterium, prediction.Fuel, deutFlights, capacity);
+			r.Fuel = prediction.Fuel;
+			r.Level = plan.Level;
+			r.FlightsPossible = plan.FlightsPossible;
+			r.Payload = plan.Payload;
+			if (plan.Level == DeutLevel.None) { r.Problem = "not enough deuterium for one more flight"; return r; }
+			debris.Type = Celestials.Debris;
+			var payload = new Resources(0, 0, plan.Payload);
+			int fleetId = await SendFleet(celestial, ships, debris, Missions.Harvest, speed, payload, _tbotInstance.UserData.userInfo.Class, true, true, shrinkDeuteriumPayload: true, fleetsave: true);
+			if (fleetId <= 0) { r.Problem = $"send failed (code {fleetId})"; return r; }
+			Fleet fleet = null;
+			try {
+				_tbotInstance.UserData.fleets = await UpdateFleets();
+				fleet = _tbotInstance.UserData.fleets.SingleOrDefault(f => f.ID == fleetId);
+			} catch { }
+			fleet ??= new Fleet { ID = fleetId, Origin = celestial.Coordinate };
+			long interval = (totalSeconds / 2) * 1000;
+			if (interval <= 0)
+				interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
+			if (fleet.ArriveIn > 0) {
+				long maxIntervalMs = (long) (fleet.ArriveIn - 90) * 1000;
+				if (maxIntervalMs < 30000) maxIntervalMs = 30000;
+				if (interval > maxIntervalMs) interval = maxIntervalMs;
+			}
+			DateTime time = await _tbotOgameBridge.GetDateTime();
+			lock (_recallDepartureLock) { _recallDeparture[fleetId] = time; }
+			r.RecallAt = time.AddMilliseconds(interval);
+			r.RoundTripSeconds = interval * 2 / 1000;
+			AddTimer($"RecallTimer-{fleetId}", new Timer(RetireFleet, fleet, interval, Timeout.Infinite));
+			AddPendingRecall(fleetId, r.RecallAt, fleet.Origin?.ToString() ?? celestial.ToString());
+			r.FleetId = fleetId;
+			return r;
+		}
+
+		public void CancelPendingRecall(int fleetId) {
+			DisposeAndRemoveTimer($"RecallTimer-{fleetId}");
+			RemovePendingRecall(fleetId);
 		}
 
 		public async void RetireFleet(object fleet) { try {

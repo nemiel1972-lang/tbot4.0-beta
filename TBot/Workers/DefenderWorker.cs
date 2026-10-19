@@ -462,6 +462,8 @@ namespace Tbot.Workers {
 				DoLog(LogLevel.Warning, $"Unable to handle attack {attack.ID}: attacked celestial not found in account data.");
 				return;
 			}
+			if (ShadowFleetWorker.DefenderShouldIgnore(_tbotInstance.InstanceSettings, attackedCelestial.Coordinate))
+				DoLog(LogLevel.Information, $"{attackedCelestial.ToString()}: ShadowFleet.DefenderOff is on - the shadow fleet is not saved, resources and the other ships are.");
 			attackedCelestial = await _tbotOgameBridge.UpdatePlanet(attackedCelestial, UpdateTypes.Ships);
 			try {
 				if ((bool)_tbotInstance.InstanceSettings.Defender.IgnoreAttackIfIHave.Active) {

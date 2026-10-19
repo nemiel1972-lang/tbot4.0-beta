@@ -44,5 +44,6 @@ namespace Tbot.Services {
 		Task AttackLockdown(bool active);
 
 		void PublishAttackSnapshot(List<AttackerFleet> attacks, DateTime fetchedUtc);
+		List<AttackerFleet> GetAttackSnapshot(out DateTime fetchedUtc);
 	}
 }

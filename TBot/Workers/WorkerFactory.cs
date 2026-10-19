@@ -59,6 +59,7 @@ namespace Tbot.Workers {
 				Feature.BrainAutoFleetJumpGate => new AutoFleetJumpGateWorker(tbotMainInstance, _ogameService, tbotOgameBridge),
 				Feature.BrainKeepBoosters => new KeepBoostersWorker(tbotMainInstance, _ogameService, tbotOgameBridge, _calculationService),
 				Feature.AsteroidHunt => new AsteroidHuntWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
+				Feature.ShadowFleet => new ShadowFleetWorker(tbotMainInstance, _ogameService, _fleetScheduler, tbotOgameBridge),
 				_ => null
 			};
 

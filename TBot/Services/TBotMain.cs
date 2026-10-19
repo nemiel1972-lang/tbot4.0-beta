@@ -2463,6 +2463,13 @@ namespace Tbot.Services {
 		private List<AttackerFleet> _attackSnapshot = new();
 		private DateTime _attackSnapshotFetchedUtc = DateTime.MinValue;
 
+		public List<AttackerFleet> GetAttackSnapshot(out DateTime fetchedUtc) {
+			lock (_attackSnapshotLock) {
+				fetchedUtc = _attackSnapshotFetchedUtc;
+				return _attackSnapshot?.ToList() ?? new List<AttackerFleet>();
+			}
+		}
+
 		public void PublishAttackSnapshot(List<AttackerFleet> attacks, DateTime fetchedUtc) {
 			lock (_attackSnapshotLock) {
 				_attackSnapshot = attacks?.Where(a => a != null).ToList() ?? new List<AttackerFleet>();

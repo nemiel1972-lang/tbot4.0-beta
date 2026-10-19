@@ -839,6 +839,20 @@
             "MaxAttemptsPerDay": 0,
             "SearchSystems": 10,
             "SaveJson": true
+        },
+        "ShadowFleet": {
+            "Active": false,
+            "Celestial": { "Galaxy": 1, "System": 1, "Position": 1, "Type": "Planet" },
+            "Ships": { "Recycler": 0 },
+            "SpeedPercent": 10,
+            "MinBackInMinutes": 20,
+            "MaxBackInMinutes": 60,
+            "PauseMinSeconds": 30,
+            "PauseMaxSeconds": 180,
+            "DeuteriumFlights": 3,
+            "WindowFrom": "",
+            "WindowTo": "",
+            "DefenderOff": false
         }
     }
 }

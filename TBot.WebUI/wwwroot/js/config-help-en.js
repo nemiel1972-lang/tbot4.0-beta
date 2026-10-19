@@ -1184,6 +1184,50 @@ window.CFG_HELP.en = {
   "AsteroidHunt.SaveJson": {
    "t": "Write every attempt and find to data/asteroiden_funde_<alias>.json."
   },
+  "ShadowFleet": {
+   "t": "The chosen ships of ONE celestial fly one after another to nearby debris fields and are recalled after half of the time, so the fleet is almost never at home. Needs a deuterium reserve on that celestial."
+  },
+  "ShadowFleet.Active": {
+   "t": "Switch the shadow fleet on or off (default off). Keep deuterium on the celestial: every flight burns fuel."
+  },
+  "ShadowFleet.Celestial": {
+   "t": "The one celestial that is secured (planet or moon). Only its deuterium and one fleet slot are used."
+  },
+  "ShadowFleet.Ships": {
+   "t": "Tick the ships that fly and enter the amount (0 = all). At least one Recycler (or Pathfinder) is needed for the harvest mission."
+  },
+  "ShadowFleet.SpeedPercent": {
+   "t": "Flight speed, 10 to 100 percent. 10 is the slowest and the cheapest in fuel."
+  },
+  "ShadowFleet.MinBackInMinutes": {
+   "t": "Shortest time for one flight (out and back).",
+   "e": "20"
+  },
+  "ShadowFleet.MaxBackInMinutes": {
+   "t": "Longest time for one flight (out and back). The fleet is back home at the latest after this time - the time limit.",
+   "e": "60"
+  },
+  "ShadowFleet.PauseMinSeconds": {
+   "t": "Shortest pause at home between two flights."
+  },
+  "ShadowFleet.PauseMaxSeconds": {
+   "t": "Longest pause at home between two flights."
+  },
+  "ShadowFleet.DeuteriumFlights": {
+   "t": "Deuterium for this many flights goes along as cargo (limited by cargo space and stock). Low stock with 2 or more flights left: log warning only. Exactly one flight left: messenger warning. None: the flights wait.",
+   "e": "3"
+  },
+  "ShadowFleet.WindowFrom": {
+   "t": "Start of the time window (game time, HH:mm). Empty = always. May cross midnight, e.g. 22:00 to 07:00.",
+   "e": "22:00"
+  },
+  "ShadowFleet.WindowTo": {
+   "t": "End of the time window (HH:mm). A flight is only started if it is back before the window ends.",
+   "e": "07:00"
+  },
+  "ShadowFleet.DefenderOff": {
+   "t": "Trap mode for the shadow fleet only. On = the Defender does not send the shadow fleet away but still saves resources and all other ships. When an attack is announced, a flying shadow fleet is called home so that it is there at impact. Sleep-time fleetsaves still send everything away."
+  },
   "DefenderRecheck.TimeoutSeconds": {
    "t": "How long the Defender waits for the answer. After that the fleetsave is sent as planned.",
    "e": "4 = after 4 seconds without an answer the fleetsave goes out."

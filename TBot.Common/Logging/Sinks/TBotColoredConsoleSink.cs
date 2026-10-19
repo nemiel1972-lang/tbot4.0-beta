@@ -51,6 +51,7 @@ namespace TBot.Common.Logging.Sinks {
 				LogSender.FleetScheduler => ConsoleColor.DarkMagenta,
 				LogSender.Harvest => ConsoleColor.Green,
 				LogSender.AsteroidHunt => ConsoleColor.Green,
+				LogSender.ShadowFleet => ConsoleColor.DarkCyan,
 				LogSender.Colonize => ConsoleColor.DarkRed,
 				LogSender.AutoFarm => ConsoleColor.DarkCyan,
 				LogSender.SleepMode => ConsoleColor.DarkBlue,

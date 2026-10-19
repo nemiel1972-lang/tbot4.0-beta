@@ -772,6 +772,44 @@
                     addDefault(X, 'AsteroidHunt', { Active: false, ShipType: 'Pathfinder', ShipCount: 1, MaxAttemptsPerDay: 0, SearchSystems: 10, SaveJson: true }, 'Asteroid hunter settings', null)
                 ]));
             }
+            if (X.ShadowFleet && typeof X.ShadowFleet === 'object') {
+                var sf = X.ShadowFleet, sfp = xp.concat('ShadowFleet');
+                var cel = sf.Celestial && typeof sf.Celestial === 'object' ? sf.Celestial : (sf.Celestial = { Galaxy: 1, System: 1, Position: 1, Type: 'Planet' });
+                var celRows = [
+                    fld(cel, 'Galaxy', sfp.concat('Celestial'), 'Galaxy', null, 'num', { min: 1, sens: true }),
+                    fld(cel, 'System', sfp.concat('Celestial'), 'System', null, 'num', { min: 1, sens: true }),
+                    fld(cel, 'Position', sfp.concat('Celestial'), 'Position', null, 'num', { min: 1, sens: true }),
+                    fld(cel, 'Type', sfp.concat('Celestial'), 'Type', 'Planet or moon', 'select', { options: ['Planet', 'Moon'] })
+                ];
+                body.appendChild(sec('Shadow fleet', [
+                    el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Deuterium reserve needed. ' }), document.createTextNode('Every flight burns fuel and the fleet carries deuterium for the chosen number of flights. Keep enough deuterium on the celestial; when it is used up the flights stop (a warning comes when only one flight is left).')]),
+                    el('div', { class: 'cfg-note', text: 'The chosen ships of ONE celestial fly one after another to nearby debris fields and are recalled after half of the time, so the fleet is almost never at home. Only that celestial\'s deuterium and one fleet slot are used.' }),
+                    fld(sf, 'Active', sfp, 'Shadow fleet', 'Off by default', 'toggle')
+                ].filter(Boolean)));
+                body.appendChild(sec('Shadow fleet: celestial and ships', celRows.concat([
+                    withHelp(row('Ships', 'Tick the ships and enter the amount. At least one Recycler (or Pathfinder) is needed.', shipPicker(sf, 'Ships', sfp.concat('Ships'))), 'ShadowFleet.Ships'),
+                    fld(sf, 'SpeedPercent', sfp, 'Speed', '10 = slowest and cheapest', 'num', { min: 10, max: 100, step: 10, unit: '%' }),
+                    fld(sf, 'DeuteriumFlights', sfp, 'Deuterium as cargo for', 'Number of flights; limited by cargo space and stock', 'num', { min: 0, unit: 'flights' })
+                ]).filter(Boolean)));
+                body.appendChild(sec('Shadow fleet: time', [
+                    fld(sf, 'MinBackInMinutes', sfp, 'One flight lasts at least', 'Out and back', 'num', { min: 2, unit: 'minutes' }),
+                    fld(sf, 'MaxBackInMinutes', sfp, 'One flight lasts at most', 'Time limit: the fleet is home by then', 'num', { min: 2, unit: 'minutes' }),
+                    fld(sf, 'PauseMinSeconds', sfp, 'Pause at home, min', null, 'num', { min: 0, unit: 'seconds' }),
+                    fld(sf, 'PauseMaxSeconds', sfp, 'Pause at home, max', null, 'num', { min: 0, unit: 'seconds' }),
+                    fld(sf, 'WindowFrom', sfp, 'Time window from', 'HH:mm game time, empty = always. May cross midnight', 'text', {}),
+                    fld(sf, 'WindowTo', sfp, 'Time window to', 'HH:mm. A flight only starts if it is back before this time', 'text', {})
+                ].filter(Boolean)));
+                body.appendChild(sec('Shadow fleet: Defender', [
+                    el('div', { class: 'cfg-note', text: 'Off (default): no flight starts when an attack would land before the fleet is back, and a flying fleet stays in the air when an attack lands before its return. On (trap): the Defender does not send the shadow fleet away but still saves resources and all other ships; a flying shadow fleet is called home so that it is there when the attack lands. Sleep-time fleetsaves still send everything away.' }),
+                    fld(sf, 'DefenderOff', sfp, 'Trap: Defender leaves the shadow fleet alone', 'The fleet is away while the attacker looks and home when the attack lands', 'toggle')
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Shadow fleet', [
+                    el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Deuterium reserve needed. ' }), document.createTextNode('Every flight burns fuel; keep deuterium on the celestial.')]),
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet (off). Add it to switch it on.' }),
+                    addDefault(X, 'ShadowFleet', { Active: false, Celestial: { Galaxy: 1, System: 1, Position: 1, Type: 'Planet' }, Ships: { Recycler: 0 }, SpeedPercent: 10, MinBackInMinutes: 20, MaxBackInMinutes: 60, PauseMinSeconds: 30, PauseMaxSeconds: 180, DeuteriumFlights: 3, WindowFrom: '', WindowTo: '', DefenderOff: false }, 'Shadow fleet settings', null)
+                ]));
+            }
         }
 
         if (G && typeof G === 'object') {
@@ -1011,6 +1049,28 @@
                 el('thead', null, [el('tr', null, cols.map(function (c) { return el('th', { text: c.label }); }).concat([el('th')]))]), tbody]),
             el('button', { type: 'button', class: 'cfg-btn sm', text: addLabel, onclick: function () { arr.push(makeNew()); draw(); update(); } })
         ]);
+    }
+    var SHIP_CHOICES = ['SmallCargo', 'LargeCargo', 'Recycler', 'Pathfinder', 'LightFighter', 'HeavyFighter', 'Cruiser', 'Battleship', 'Battlecruiser', 'Bomber', 'Destroyer', 'Deathstar', 'Reaper', 'ColonyShip', 'EspionageProbe'];
+    function shipPicker(o, k, p) {
+        if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {};
+        var sel = o[k];
+        var tbody = el('tbody');
+        SHIP_CHOICES.forEach(function (name) {
+            var on = Object.prototype.hasOwnProperty.call(sel, name);
+            var cb = el('input', { type: 'checkbox' });
+            cb.checked = on;
+            var amount = el('input', { type: 'number', min: 0, step: 1, value: on ? sel[name] : 0, placeholder: '0 = all' });
+            amount.disabled = !on;
+            function mark() { var ch = JSON.stringify(sel) !== JSON.stringify(origAt(p) || {}); amount.classList.toggle('cfg-changed', ch); update(); }
+            cb.addEventListener('change', function () {
+                if (cb.checked) sel[name] = Number(amount.value) || 0; else delete sel[name];
+                amount.disabled = !cb.checked; mark();
+            });
+            amount.addEventListener('input', function () { if (cb.checked) { sel[name] = Math.max(0, Number(amount.value) || 0); mark(); } });
+            tbody.appendChild(el('tr', null, [el('td', null, [cb]), el('td', { text: name }), el('td', null, [amount])]));
+        });
+        return el('div', { style: 'overflow-x:auto' }, [
+            el('table', { class: 'cfg-table' }, [el('thead', null, [el('tr', null, [el('th', { text: 'Fly' }), el('th', { text: 'Ship' }), el('th', { text: 'Amount (0 = all)' })])]), tbody])]);
     }
     var COORD_COLS = [
         { key: 'Galaxy', label: 'Galaxy', min: 1, sens: true }, { key: 'System', label: 'System', min: 1, sens: true },

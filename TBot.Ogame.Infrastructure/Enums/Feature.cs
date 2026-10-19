@@ -25,6 +25,7 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		BrainAutoFleetJumpGate = 16,
 		BrainKeepBoosters = 19,
 		AsteroidHunt = 20,
+		ShadowFleet = 21,
 #if FASTFARM
 		FastFarm = 18,
 #endif

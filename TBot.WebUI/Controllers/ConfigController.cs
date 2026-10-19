@@ -41,6 +41,20 @@ namespace TBot.WebUI.Controllers {
 				["MaxAttemptsPerDay"] = 0,
 				["SearchSystems"] = 10,
 				["SaveJson"] = true
+			},
+			["ShadowFleet"] = new JObject {
+				["Active"] = false,
+				["Celestial"] = new JObject { ["Galaxy"] = 1, ["System"] = 1, ["Position"] = 1, ["Type"] = "Planet" },
+				["Ships"] = new JObject { ["Recycler"] = 0 },
+				["SpeedPercent"] = 10,
+				["MinBackInMinutes"] = 20,
+				["MaxBackInMinutes"] = 60,
+				["PauseMinSeconds"] = 30,
+				["PauseMaxSeconds"] = 180,
+				["DeuteriumFlights"] = 3,
+				["WindowFrom"] = "",
+				["WindowTo"] = "",
+				["DefenderOff"] = false
 			}
 		};
 		private static readonly string[] CustomPages = { "Expeditions", "AutoFarm", "Defender", "GhostSleep", "SleepMode", "Messenger", "General", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave", "FastFarm" };

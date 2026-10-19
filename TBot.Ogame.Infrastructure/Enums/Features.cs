@@ -27,6 +27,7 @@ namespace TBot.Ogame.Infrastructure.Enums {
 			Feature.Colonize,
 			Feature.Harvest,
 			Feature.AsteroidHunt,
+			Feature.ShadowFleet,
 			Feature.SleepMode,
 		};
 	}

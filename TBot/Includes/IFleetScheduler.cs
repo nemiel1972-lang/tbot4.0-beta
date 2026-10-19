@@ -22,6 +22,8 @@ namespace Tbot.Includes {
 		Task CancelFleet(Fleet fleet);
 		Task<List<Fleet>> UpdateFleets();
 		Task ReconcilePendingRecalls();
+		Task<ShadowFlightResult> ShadowFlight(Celestial celestial, Ships ships, int deutFlights, long totalSeconds, decimal speed);
+		void CancelPendingRecall(int fleetId);
 		Task<bool> DebrisSave(Celestial celestial, Coordinate debris, bool random, long durationSeconds, decimal speed);
 		void RetireFleet(object fleet);
 		Task<int> HandleMinerTransport(Celestial origin, Celestial destination, Celestial differentDestination, Resources resources, Buildables buildable = Buildables.Null, Buildings maxBuildings = null, Facilities maxFacilities = null, Facilities maxLunarFacilities = null, AutoMinerSettings autoMinerSettings = null);
