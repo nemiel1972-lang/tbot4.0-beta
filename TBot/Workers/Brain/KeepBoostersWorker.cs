@@ -36,7 +36,6 @@ namespace Tbot.Workers.Brain {
 		private bool _logItems = true;
 		private Dictionary<string, int> _reserve = new();
 		private Dictionary<BoosterType, int> _minLevel = new();
-		private bool _inventoryLogged;
 
 		private IDictionary<string, object> Settings() {
 			if (_tbotInstance.InstanceSettings.Brain is IDictionary<string, object> brain
@@ -145,7 +144,6 @@ namespace Tbot.Workers.Brain {
 			_logItems = GetBool(cfg, "LogItems", true);
 			_reserve = GetReserves(cfg);
 			_minLevel = GetMinLevels(cfg);
-			_inventoryLogged = false;
 			try {
 				if (types.Count == 0) {
 					DoLog(LogLevel.Information, "No booster types selected.");
@@ -181,7 +179,6 @@ namespace Tbot.Workers.Brain {
 					inventory = await _ogameService.GetItems(planets[0]) ?? new List<InventoryItem>();
 					WriteStock(inventory);
 					if (_logItems) {
-						_inventoryLogged = true;
 						var boosters = inventory.Where(i => i.Amount > 0).ToList();
 						DoLog(LogLevel.Information, "Inventory (in stock): " + (boosters.Count == 0 ? "nothing" : string.Join("; ", boosters.Select(i => $"\"{i.Name}\" x{i.Amount}"))));
 					}

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+@{ var uiLang = Tbot.Common.Settings.UiLanguage.Read(); }
+<html lang="@uiLang" data-lang="@uiLang">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -24,6 +25,11 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (uiLang != "en")
+    {
+        <script src="@Url.Action("LangScript", "Config", new { lang = uiLang })"></script>
+    }
+    <script src="~/js/i18n-ui.js" asp-append-version="true"></script>
 </head>
 <body>
     <header>
@@ -55,6 +61,12 @@
                             <a class="nav-link text-light" asp-area="" asp-controller="Minenplan" asp-action="Index">Mine plan</a>
                         </li>
                     </ul>
+                    <select id="ui-langsel" class="form-select form-select-sm w-auto me-2" title="Language" data-setlang="@Url.Action("SetLanguage", "Config")">
+                        @foreach (var l in Tbot.Common.Settings.UiLanguage.Available())
+                        {
+                            <option value="@l.Code" selected="@(uiLang == l.Code)">@l.Name</option>
+                        }
+                    </select>
                 </div>
             </div>
         </nav>
@@ -82,6 +94,16 @@
     @await RenderSectionAsync("Scripts", required: false)
 
     <script type="text/javascript">
+        (function () {
+            var s = document.getElementById("ui-langsel");
+            if (!s) return;
+            s.addEventListener("change", function () {
+                fetch(s.dataset.setlang, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "lang=" + encodeURIComponent(s.value) })
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) { if (j && j.success) location.reload(); else alert("Language not saved: " + ((j && j.error) || "settings.json not found")); })
+                    .catch(function (e) { alert("Language not saved: " + e); });
+            });
+        })();
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", function () {
                 navigator.serviceWorker

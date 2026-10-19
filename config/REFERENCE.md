@@ -477,7 +477,7 @@ New functions that are still in test. They have their own page in the WebUI (**T
 
 ## WebUI.Language (settings.json)
 
-`"WebUI": { "Language": "en" }` sets the interface language: `en` (default) or `de`. It is changed with the language selector on the Config page, which writes this value. It controls (1) the help texts on the Config page (`config-help-de.js`, missing keys fall back to English per key) and (2) the texts of the browser tiles (ogamed). More languages: add `lang/<code>.json` next to the ogamed binary (map of English tile text to translated text) and a `CFG_HELP.<code>` file. Logs and Telegram messages stay English.
+`"WebUI": { "Language": "en" }` sets the interface language: `en` (built in, default) or the code of a language file. It is changed with the language selector in the menu bar, which writes this value. Language files are `lang/<code>.json` next to `settings.json` (shipped: `lang/de.json`). One file holds (1) all WebUI texts - menu, pages, labels, messages, (2) the help texts of the Config page and (3) the texts of the browser tiles (ogamed reads the same file from the folder of the `ogamed` binary). Texts without a translation stay English. A new language is a copy of `de.json` with another `name` and translated values; it then shows up in the selector. Changes need no rebuild (reload the page). Logs, Telegram messages and texts that the bot itself writes into its status files stay English. See `config/lang/README.md`.
 
 ## WebUI.FormPages (settings.json)
 

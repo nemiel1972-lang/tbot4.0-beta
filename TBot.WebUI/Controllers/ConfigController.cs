@@ -511,6 +511,22 @@ namespace TBot.WebUI.Controllers {
 		}
 #endif
 
+		[HttpGet]
+		public IActionResult LangScript(string lang) {
+			Response.Headers["Cache-Control"] = "no-cache";
+			string l = UiLanguage.Normalize(lang);
+			var data = UiLanguage.LoadFile(l);
+			if (data == null)
+				return Content("", "application/javascript");
+			var sb = new System.Text.StringBuilder();
+			string code = Newtonsoft.Json.JsonConvert.ToString(l);
+			if (data["ui"] != null)
+				sb.Append("window.UI_I18N=window.UI_I18N||{};window.UI_I18N[").Append(code).Append("]=").Append(data["ui"]!.ToString(Newtonsoft.Json.Formatting.None)).Append(";\n");
+			if (data["help"] != null)
+				sb.Append("window.CFG_HELP=window.CFG_HELP||{};window.CFG_HELP[").Append(code).Append("]=").Append(data["help"]!.ToString(Newtonsoft.Json.Formatting.None)).Append(";\n");
+			return Content(sb.ToString(), "application/javascript");
+		}
+
 		[HttpPost]
 		public async Task<IActionResult> SetLanguage(string lang) {
 			try {

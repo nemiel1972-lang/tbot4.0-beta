@@ -902,18 +902,7 @@
         var cb = el('input', { type: 'checkbox' });
         cb.checked = helpAll;
         cb.addEventListener('change', function () { helpAll = cb.checked; root.classList.toggle('cfg-help-all', helpAll); });
-        var sel = el('select', { class: 'cfg-langsel', title: uiText('Language') }, [
-            el('option', { value: 'en', text: 'English' }), el('option', { value: 'de', text: 'Deutsch' })
-        ]);
-        sel.value = LANG;
-        sel.addEventListener('change', function () {
-            if (!main.dataset.setlang) return;
-            fetch(main.dataset.setlang, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'lang=' + encodeURIComponent(sel.value) })
-                .then(function (r) { return r.json(); })
-                .then(function (j) { if (j && j.success) location.reload(); else alert('Language not saved: ' + ((j && j.error) || 'settings.json not found')); })
-                .catch(function (e) { alert('Language not saved: ' + e); });
-        });
-        return el('span', { class: 'cfg-masklbl' }, [el('label', { class: 'cfg-masklbl' }, [cb, ' ' + uiText('Show all help')]), ' ', sel]);
+        return el('span', { class: 'cfg-masklbl' }, [el('label', { class: 'cfg-masklbl' }, [cb, ' ' + uiText('Show all help')])]);
     }
 
     function fld(o, k, path, label, hint, kind, opts) {
@@ -1272,7 +1261,7 @@
         function refresh() {
             labels.forEach(function (l) {
                 var i = o.PriorityTechs.indexOf(l.slot);
-                l.el.textContent = i >= 0 ? 'Prio ' + (i + 1) : 'Prio';
+                l.el.textContent = 'Prio'; l.el.parentNode.title = i >= 0 ? 'Priority ' + (i + 1) : 'Research this tech first';
             });
         }
         var grid = el('div', { class: 'cfg-lfgrid' });
@@ -1297,7 +1286,7 @@
             grid.appendChild(col);
         });
         refresh();
-        return el('div', null, [el('div', { class: 'cfg-note', text: 'Level cap per slot (one tech per race in each slot, 0 = do not research). The tick marks a slot as priority: ticked slots are researched first, in the order shown (Prio 1, 2, ...); newly ticked ones go to the end.' }), grid]);
+        return el('div', null, [el('div', { class: 'cfg-note', text: 'Level cap per slot (one tech per race in each slot, 0 = do not research). The tick marks a slot as priority: ticked slots are researched first, in the order they were ticked (hover the tick to see the position).' }), grid]);
     }
     var BRAIN_HELP = {
         Transports: 'Shared settings for every Brain worker that moves resources: where it collects from, which cargo ships it uses and how many slots it may take. Pathfinders are never used.',

@@ -63,9 +63,11 @@ func TileTextsHandler(c echo.Context) error {
 	}
 	if exe, err := os.Executable(); err == nil {
 		if data, err := os.ReadFile(filepath.Join(filepath.Dir(exe), "lang", lang+".json")); err == nil {
-			extra := map[string]string{}
-			if json.Unmarshal(data, &extra) == nil {
-				for k, v := range extra {
+			var file struct {
+				Tiles map[string]string `json:"tiles"`
+			}
+			if json.Unmarshal(data, &file) == nil {
+				for k, v := range file.Tiles {
 					out[k] = v
 				}
 			}

@@ -1,0 +1,2508 @@
+{
+ "language": "de",
+ "name": "Deutsch",
+ "ui": {
+  "exact": {
+   "\" block found in the config, so nothing can be edited here.": "“-Block in der Config gefunden, hier kann also nichts bearbeitet werden.",
+   "(without tech 18)": "(ohne Tech 18)",
+   ") counts for finds.": ") zählt für Funde.",
+   "+ Add": "+ Hinzufügen",
+   "+ Add bracket": "+ Stufe hinzufügen",
+   "+ Add celestial": "+ Himmelskörper hinzufügen",
+   "+ Add exclusion": "+ Ausschluss hinzufügen",
+   "+ Add item type": "+ Gegenstandstyp hinzufügen",
+   "+ Add origin": "+ Ursprung hinzufügen",
+   "+ Add planet": "+ Planet hinzufügen",
+   "+ Add range": "+ Bereich hinzufügen",
+   "+ Add target": "+ Ziel hinzufügen",
+   "+ Add word": "+ Wort hinzufügen",
+   ", economy speed": ", Wirtschaftsgeschwindigkeit",
+   "0 % (not researched)": "0 % (nicht erforscht)",
+   "0 = no limit. One order per celestial never takes longer than this; the rest follows in the next run": "0 = kein Limit. Ein Auftrag pro Himmelskörper dauert nie länger; der Rest folgt im nächsten Durchlauf",
+   "10 minutes before wake-up": "10 Minuten vor dem Aufwachen",
+   "15 minutes after wake-up": "15 Minuten nach dem Aufwachen",
+   ": each listed celestial sends its fleet to the nearest debris field and recalls it so it is back after the duration.": ": Jeder aufgeführte Himmelskörper schickt seine Flotte zum nächsten Trümmerfeld und ruft sie zurück, sodass sie nach der Dauer wieder da ist.",
+   ": superfluous - only the strongest combat ship (": ": überflüssig – nur das stärkste Kampfschiff (",
+   "A random time between min and max is used": "Es wird eine Zufallszeit zwischen Min und Max genutzt",
+   "A recall due within the pause time plus this margin blocks the pause": "Ein Rückruf innerhalb der Pausenzeit plus diesem Abstand blockiert die Pause",
+   "Abandon bad planets": "Schlechte Planeten aufgeben",
+   "Abandons new planets that are too small or have the wrong temperature. The home planet is never abandoned.": "Gibt neue Planeten auf, die zu klein sind oder die falsche Temperatur haben. Der Heimatplanet wird nie aufgegeben.",
+   "Absolute cap for this ship type (empty = Max escort ships)": "Absolute Obergrenze für diesen Schiffstyp (leer = Max. Begleitschiffe)",
+   "Add with default": "Mit Standardwert hinzufügen",
+   "Added on top of the expected loot": "Wird auf die erwartete Beute aufgeschlagen",
+   "Address of the local ogamed connector the bot talks to.": "Adresse des lokalen ogamed-Connectors, mit dem der Bot spricht.",
+   "Advanced options": "Erweiterte Optionen",
+   "Advanced options: deliberately kept at the end of the page and not part of the normal setup. The built-in default values are enough for almost everyone, so there is no need to touch these.": "Erweiterte Optionen: bewusst am Seitenende und nicht Teil der normalen Einrichtung. Die eingebauten Standardwerte reichen fast allen, daran muss man nichts ändern.",
+   "After recycler fuel": "Nach Recycler-Treibstoff",
+   "After repeated failed logins (captcha etc.) the bot waits instead of trying again and again. The pause doubles with every further failure. The manual captcha page (/bot/captcha) stays usable; solving the captcha by hand ends the pause.": "Nach wiederholten Login-Fehlern (Captcha usw.) wartet der Bot, statt es immer wieder zu versuchen. Die Pause verdoppelt sich mit jedem weiteren Fehler. Die manuelle Captcha-Seite (/bot/captcha) bleibt nutzbar; löst du das Captcha von Hand, endet die Pause.",
+   "After this the fleetsave is sent as planned": "Danach wird der Fleetsave wie geplant gesendet",
+   "Alarm level in the alert": "Alarmstufe in der Meldung",
+   "Alliance whitelist": "Allianz-Whitelist",
+   "Allow this worker to move resources from other celestials when it lacks them": "Diesem Worker erlauben, fehlende Rohstoffe per Transport von anderen Himmelskörpern zu holen",
+   "An expedition may be back this long after go-to-sleep": "Eine Expedition darf so lange nach dem Schlafengehen zurückkommen",
+   "Around the origin; replaces the scan range (0 = off)": "Um den Ursprung; ersetzt den Scanbereich (0 = aus)",
+   "As of": "Stand",
+   "Asteroid hunter settings": "Einstellungen des Asteroiden-Jägers",
+   "Asteroid item hunter (item event)": "Asteroiden-Item-Jäger (Item-Event)",
+   "At bed time, at most": "Zur Schlafenszeit höchstens",
+   "Attack defended targets": "Verteidigte Ziele angreifen",
+   "Attack fleet and recyclers fly as slowly as sensible (flight time limit kept, recycler arrives right behind the fleet)": "Angriffsflotte und Recycler fliegen so langsam wie sinnvoll (Flugzeitlimit bleibt, Recycler kommt direkt hinter der Flotte an)",
+   "Attacker points below your fleet points / ratio": "Angreiferpunkte unter deinen Flottenpunkten / Verhältnis",
+   "Attempts per game day": "Versuche pro Spieltag",
+   "Auto ping": "Auto-Ping",
+   "Auto: cargo count from server top score and Lifeform bonus, plus 1 probe and the strongest combat ship (Pathfinder if none).": "Auto: Transporterzahl aus Server-Topscore und Lebensform-Bonus, plus 1 Sonde und das stärkste Kampfschiff (Pathfinder, falls keins).",
+   "AutoCargo / AutoDefence": "AutoCargo / AutoDefence",
+   "AutoColonize active": "AutoColonize aktiv",
+   "AutoDiscovery active": "AutoDiscovery aktiv",
+   "AutoFarm active": "AutoFarm aktiv",
+   "AutoHarvest active": "AutoHarvest aktiv",
+   "AutoMine / AutoResearch": "AutoMine / AutoResearch",
+   "AutoMine: energy planning": "AutoMine: Energieplanung",
+   "Automatic: as many cargo ships as needed to carry the largest possible find, plus 1 probe and the strongest combat ship. Or a fixed fleet per expedition.": "Automatisch: so viele Transporter wie nötig für den größtmöglichen Fund, plus 1 Sonde und das stärkste Kampfschiff. Oder eine feste Flotte pro Expedition.",
+   "Automation of building, research and transports. Each sub-worker has its own switch.": "Automatik für Bau, Forschung und Transporte. Jeder Unter-Worker hat einen eigenen Schalter.",
+   "Battles per check": "Kämpfe pro Prüfung",
+   "Below the minimum on the start celestial: no speed fleet, no attacks on defended targets": "Unter dem Minimum auf dem Start-Himmelskörper: keine Speed-Flotte, keine Angriffe auf verteidigte Ziele",
+   "Blacklist active": "Blacklist aktiv",
+   "Booster tiers: use + reserve (Bronze is used first)": "Booster-Stufen: nutzen + Reserve (Bronze zuerst)",
+   "Booster types to keep running": "Booster-Typen, die laufen sollen",
+   "Bot pause (Pause button and /pause)": "Bot-Pause (Pause-Knopf und /pause)",
+   "Bot pause settings": "Einstellungen der Bot-Pause",
+   "Bot token": "Bot-Token",
+   "Both are switched on in the config - they should not run at the same time. Pick one.": "Beide sind in der Config eingeschaltet – sie sollten nicht gleichzeitig laufen. Wähle einen.",
+   "Brain active": "Brain aktiv",
+   "Build cargo ships and defence up to target amounts.": "Transporter und Verteidigung bis zu den Zielmengen bauen.",
+   "Build lifeform buildings and research lifeform techs from the target table.": "Lebensform-Gebäude bauen und Lebensform-Techs aus der Zieltabelle erforschen.",
+   "Build missing cargo ships": "Fehlende Transporter bauen",
+   "Build missing probes": "Fehlende Sonden bauen",
+   "Build options": "Bau-Optionen",
+   "Builds cargo ships on your celestials, up to the amounts you set.": "Baut Transporter auf deinen Himmelskörpern, bis zu den eingestellten Mengen.",
+   "Builds defence until the target counts are reached. 0 = do not build, shield domes are on/off.": "Baut Verteidigung, bis die Zielanzahlen erreicht sind. 0 = nicht bauen, Schilde sind an/aus.",
+   "Builds lifeform buildings towards the target row of lifeform_targets.json, once the crystal mine of a planet is high enough.": "Baut Lebensform-Gebäude auf die Zielzeile der lifeform_targets.json hin, sobald die Kristallmine eines Planeten hoch genug ist.",
+   "Builds mines and facilities and researches technologies up to your caps.": "Baut Minen und Anlagen und erforscht Technologien bis zu deinen Limits.",
+   "Builds mines, storage, energy and facilities up to the caps you set. 0 = do not build. The caps at the top are for the home world, \"Colony\" is for all other planets, single planets can get their own caps.": "Baut Minen, Lager, Energie und Anlagen bis zu den gesetzten Limits. 0 = nicht bauen. Die Limits oben gelten für den Hauptplaneten, „Colony“ für alle anderen Planeten, einzelne Planeten können eigene Limits bekommen.",
+   "Buys the daily merchant offer.": "Kauft das Tagesangebot des Händlers.",
+   "Buys the daily merchant offer; jumps the fleet through the jump gate.": "Kauft das Tagesangebot des Händlers; springt mit der Flotte durch das Sprungtor.",
+   "Caps for all other planets (Colony)": "Limits für alle anderen Planeten (Colony)",
+   "Caps for the home world": "Limits für den Hauptplaneten",
+   "Cargo and fleet": "Transporter und Flotte",
+   "Cargo reserve": "Transporter-Reserve",
+   "Cargo ship": "Transportschiff",
+   "Cargo ship to build": "Zu bauendes Transportschiff",
+   "Cargo ships": "Transportschiffe",
+   "Cargo ships and optional escort; slot budget for AutoFarm.": "Transportschiffe und optionale Begleitung; Slot-Budget für AutoFarm.",
+   "Cargo ships kept at home": "Transporter, die zu Hause bleiben",
+   "Cargo type that is calculated": "Transportertyp, der berechnet wird",
+   "Celestials the discovery missions start from.": "Himmelskörper, von denen die Entdeckungsmissionen starten.",
+   "Celestials the fleets start from.": "Himmelskörper, von denen die Flotten starten.",
+   "Celestials the probes and cargo ships start from. The nearest origin with enough ships is used for every target.": "Himmelskörper, von denen Sonden und Transporter starten. Für jedes Ziel wird der nächste Ursprung mit genug Schiffen genutzt.",
+   "Changes are kept while you switch pages - \"Save all\" (banner at the top) writes every changed block at once. Backup (.bak) is created.": "Änderungen bleiben beim Seitenwechsel erhalten – „Alle speichern“ (Banner oben) schreibt jeden geänderten Block auf einmal. Es wird ein Backup (.bak) angelegt.",
+   "Channel settings > Integrations > Webhooks": "Kanaleinstellungen > Integrationen > Webhooks",
+   "Chat ID": "Chat-ID",
+   "Check again before the fleetsave": "Vor dem Fleetsave noch einmal prüfen",
+   "Check interval by time left": "Prüfintervall nach Restzeit",
+   "Check interval while paused": "Prüfintervall während der Pause",
+   "Check interval, max": "Prüfintervall, max",
+   "Check interval, min": "Prüfintervall, min",
+   "Check moon or planet first": "Zuerst Mond oder Planet prüfen",
+   "Classic sleep window. The bot sends no fleets at all (most workers pause) and can fleetsave your ships once when going to sleep; the fleet can be recalled at wake-up.": "Klassisches Schlaffenster. Der Bot sendet keine Flotten (die meisten Worker pausieren) und kann beim Schlafengehen einmal deine Schiffe per Fleetsave sichern; beim Aufwachen kann die Flotte zurückgerufen werden.",
+   "Collect from several celestials": "Von mehreren Himmelskörpern einsammeln",
+   "Collects resources from your planets on one target celestial.": "Sammelt Rohstoffe von deinen Planeten auf einem Ziel-Himmelskörper.",
+   "Colonises in bursts with several ships at once.": "Kolonisiert in Schüben mit mehreren Schiffen gleichzeitig.",
+   "Colonises planets in the configured ranges and can abandon colonies that are too small or the wrong temperature.": "Kolonisiert Planeten in den eingestellten Bereichen und kann zu kleine oder falsch temperierte Kolonien aufgeben.",
+   "Comma separated": "Kommagetrennt",
+   "Comma separated (e.g. NAP partners)": "Kommagetrennt (z. B. NAP-Partner)",
+   "Comma separated, e.g. AutoFarm, Expeditions": "Kommagetrennt, z. B. AutoFarm, Expeditions",
+   "Comma separated, in order of preference": "Kommagetrennt, nach Vorrang",
+   "Compact slot plan": "Kompakter Slot-Plan",
+   "Debris credit": "Trümmergutschrift",
+   "Deep space": "Deep Space",
+   "Deep space range": "Deep-Space-Reichweite",
+   "Defender active": "Defender aktiv",
+   "Defender and sleep mode always stay on": "Defender und Schlafmodus bleiben immer an",
+   "Defender check while asleep": "Defender-Prüfung im Schlaf",
+   "Defender recheck settings": "Einstellungen der Defender-Nachprüfung",
+   "Defender: check again before the fleetsave": "Defender: vor dem Fleetsave noch einmal prüfen",
+   "Delay sleep while fleets are out": "Schlaf verzögern, solange Flotten unterwegs sind",
+   "Delete reports after reading": "Berichte nach dem Lesen löschen",
+   "Deliver to the moon at the target": "Am Ziel zum Mond liefern",
+   "Deliver to the moon if there is one": "Zum Mond liefern, wenn es einen gibt",
+   "Deploy target": "Stationierungsziel",
+   "Deuterium and speed fleet": "Deuterium und Speed-Flotte",
+   "Deuterium left behind": "Zurückgelassenes Deuterium",
+   "Deuterium left on moons": "Deuterium auf Monden belassen",
+   "Deuterium left on planets": "Deuterium auf Planeten belassen",
+   "Deuterium that can be taken": "Deuterium, das mitgenommen werden kann",
+   "Deuterium to leave": "Zu belassendes Deuterium",
+   "Diese Option erklaeren": "Diese Option erklären",
+   "Discard & reload": "Verwerfen und neu laden",
+   "Discard all unsaved changes in": "Alle ungespeicherten Änderungen verwerfen in",
+   "Discord alert": "Discord-Alarm",
+   "Discord webhook": "Discord-Webhook",
+   "Discoverer class bonus (tech 18)": "Entdecker-Klassenbonus (Tech 18)",
+   "Display name": "Anzeigename",
+   "Doubles with every further failure": "Verdoppelt sich mit jedem weiteren Fehler",
+   "Drop target when loot shrank by": "Ziel verwerfen, wenn die Beute geschrumpft ist um",
+   "Duration until measured": "Dauer bis zur Messung",
+   "Each worker below has its own switch. Open a worker to see its options; a switched-off worker only shows its help.": "Jeder Worker unten hat einen eigenen Schalter. Öffne einen Worker, um seine Optionen zu sehen; ein ausgeschalteter Worker zeigt nur die Hilfe.",
+   "Early-game order": "Reihenfolge für den Spielstart",
+   "Energy is built ahead of a mine or facility upgrade (Terraformer and others), so the upgrade does not run into an energy shortage. Solar satellites are built in batches. The other AutoMine settings stay on the Brain page.": "Energie wird vor einem Minen- oder Anlagenausbau (Terraformer u. a.) gebaut, damit der Ausbau nicht in einen Energiemangel läuft. Solarsatelliten werden in Bündeln gebaut. Die übrigen AutoMine-Einstellungen bleiben auf der Brain-Seite.",
+   "Energy reserve in advance": "Energiereserve im Voraus",
+   "Escort = the warships that go along with the cargo ships. The escort declares the fleet composition for attacks on defended targets (see \"Escort and simulation\"). Click the ? next to an option for a plain explanation, or switch on \"Show all help\" at the top.": "Escort = die Kriegsschiffe, die mit den Transportern fliegen. Die Escort legt die Flottenzusammensetzung für Angriffe auf verteidigte Ziele fest (siehe „Escort und Simulation“). Klicke das ? neben einer Option für eine einfache Erklärung oder schalte oben „Alle Hilfen zeigen“ ein.",
+   "Escort and simulation (defended targets only)": "Escort und Simulation (nur verteidigte Ziele)",
+   "Escort reserve": "Escort-Reserve",
+   "Escort ships": "Escort-Schiffe",
+   "Escort step size": "Escort-Schrittgröße",
+   "Examples (click to use):": "Beispiele (zum Übernehmen klicken):",
+   "Excluded celestials": "Ausgeschlossene Himmelskörper",
+   "Excluded coordinates": "Ausgeschlossene Koordinaten",
+   "Excluded planets": "Ausgeschlossene Planeten",
+   "Expeditions active": "Expeditionen aktiv",
+   "Explain this option": "Diese Option erklären",
+   "Extra cargo": "Zusatzfracht",
+   "Extra cargo space": "Zusätzlicher Laderaum",
+   "Extra energy built before the upgrade that needs it, in percent of the missing energy": "Zusätzliche Energie, die vor dem nötigen Ausbau gebaut wird, in Prozent der fehlenden Energie",
+   "Extra limit for small accounts; the lower of table and limit counts. 0 = no extra limit": "Zusatzlimit für kleine Konten; der niedrigere Wert aus Tabelle und Limit zählt. 0 = kein Zusatzlimit",
+   "Extra log lines": "Zusätzliche Logzeilen",
+   "Failed logins before the first pause": "Fehlgeschlagene Logins bis zur ersten Pause",
+   "Fallback cargo ships": "Ersatz-Transporter",
+   "Fallback escort ships": "Ersatz-Escort-Schiffe",
+   "FastFarm active": "FastFarm aktiv",
+   "FastFarm works in rounds: scan one galaxy, spy every target, sort by loot, then check the best ones again with fresh probes right before the attack. Targets whose loot shrank by the set share are dropped.": "FastFarm arbeitet in Runden: eine Galaxie scannen, jedes Ziel ausspionieren, nach Beute sortieren, dann die besten kurz vor dem Angriff mit frischen Sonden erneut prüfen. Ziele, deren Beute um den eingestellten Anteil geschrumpft ist, fallen weg.",
+   "Fetch missing resources by transport": "Fehlende Rohstoffe per Transport holen",
+   "Fetches resources back out of the repatriate target when a build needs them. It never builds ships. It only starts if the free cargo space is large enough. It needs AutoRepatriate to be switched on on the Brain page.": "Holt Rohstoffe aus dem Repatriierungsziel zurück, wenn ein Bau sie braucht. Es baut nie Schiffe. Es startet nur, wenn der freie Laderaum groß genug ist. AutoRepatriate muss auf der Brain-Seite eingeschaltet sein.",
+   "First pause": "Erste Pause",
+   "Fleet (global)": "Flotte (global)",
+   "Fleet loss that becomes debris": "Flottenverlust, der zu Trümmern wird",
+   "Fleet must be gone this long before impact": "Die Flotte muss so lange vor dem Einschlag weg sein",
+   "Fleet slots": "Flottenslots",
+   "Fleet speed": "Fluggeschwindigkeit",
+   "Fleetsave (Autofleet)": "Fleetsave (Autofleet)",
+   "Fleetsave slot settings": "Einstellungen des Fleetsave-Slots",
+   "Fleetsave the attacked celestial": "Den angegriffenen Himmelskörper per Fleetsave sichern",
+   "Fleetsave when going to sleep": "Fleetsave beim Schlafengehen",
+   "Foreign debris fields": "Fremde Trümmerfelder",
+   "From @BotFather": "Von @BotFather",
+   "From pos.": "Ab Pos.",
+   "From system": "Ab System",
+   "Galaxy / system ranges": "Galaxie- / Systembereiche",
+   "Generate activity for defender calls": "Aktivität für Defender-Aufrufe erzeugen",
+   "Generates normal-looking page visits during the defender checks.": "Erzeugt normal aussehende Seitenaufrufe während der Defender-Prüfungen.",
+   "GhostSleep is a second, independent sleep window (the timed version of the Telegram command /ghost). During it the bot stops everything except Expeditions, Defender and SleepMode and fleetsaves all ships with a ghost flight, so your fleet is never at home. Expeditions keep flying; the Defender only alerts (no automatic fleetsave) and polls rarely to look inactive, and switches to full defence if an attack wave is detected. Use it when you want to look inactive but keep expeditions running.": "GhostSleep ist ein zweites, unabhängiges Schlaffenster (die zeitgesteuerte Version des Telegram-Befehls /ghost). Währenddessen stoppt der Bot alles außer Expeditionen, Defender und SleepMode und sichert alle Schiffe per Geisterflug, sodass deine Flotte nie zu Hause ist. Expeditionen fliegen weiter; der Defender meldet nur (kein automatischer Fleetsave), prüft selten, um inaktiv zu wirken, und schaltet bei erkannter Angriffswelle auf volle Verteidigung. Nutze es, wenn du inaktiv wirken, aber Expeditionen weiterlaufen lassen willst.",
+   "GhostSleep only reduces activity: the account keeps making requests (expeditions keep flying, the Defender checks around expedition returns, everything restarts at wake-up). It looks quieter than a normal bot, but not like a player who is really offline. Do not leave it on every day - use it now and then, and keep real offline time or the normal SleepMode for regular nights.": "GhostSleep verringert nur die Aktivität: Das Konto sendet weiter Anfragen (Expeditionen fliegen, der Defender prüft um die Expeditionsrückkehr, beim Aufwachen startet alles neu). Es wirkt ruhiger als ein normaler Bot, aber nicht wie ein Spieler, der wirklich offline ist. Nicht jeden Tag nutzen – hin und wieder, und für regelmäßige Nächte echte Offline-Zeit oder den normalen SleepMode.",
+   "GhostSleep: expeditions before sleep": "GhostSleep: Expeditionen vor dem Schlafen",
+   "GhostSleep: in the window all ships are fleetsaved with a ghost flight; expeditions keep flying and the Defender stays on watch. Warning: this is NOT a real sleep, only reduced activity - do not leave it on every day.": "GhostSleep: Im Fenster werden alle Schiffe per Geisterflug gesichert; Expeditionen fliegen weiter und der Defender bleibt wachsam. Achtung: Das ist KEIN echter Schlaf, nur verringerte Aktivität – nicht jeden Tag nutzen.",
+   "GhostSleep: more settings (": "GhostSleep: weitere Einstellungen (",
+   "GhostSleep: priority fleetsave celestials": "GhostSleep: Fleetsave-Himmelskörper mit Vorrang",
+   "Global spacing": "Globaler Abstand",
+   "Go to sleep": "Schlafen gehen",
+   "Growth inside the window": "Wachstum im Fenster",
+   "Growth that starts a war": "Wachstum, das ein Gefecht auslöst",
+   "Guard: bridge manually": "Wächter: manuell überbrücken",
+   "Guard: minimum deuterium": "Wächter: Mindest-Deuterium",
+   "HH:mm, WakeUp or WakeUp+15 (minutes); empty = fixed speed": "HH:mm, WakeUp oder WakeUp+15 (Minuten); leer = feste Geschwindigkeit",
+   "Harvest debris after attack": "Trümmer nach dem Angriff einsammeln",
+   "Hide data is on - switch it off to edit": "„Daten verbergen“ ist an – schalte es aus, um zu bearbeiten",
+   "Hide steps with a payback longer than the limit": "Schritte mit längerer Amortisation als das Limit ausblenden",
+   "Highest level per tech": "Höchste Stufe pro Tech",
+   "Highest simulated loss, as a share of the value of the whole attack fleet. 0 = limit OFF (any loss is accepted)": "Höchster simulierter Verlust, als Anteil am Wert der gesamten Angriffsflotte. 0 = Limit AUS (jeder Verlust wird akzeptiert)",
+   "Home celestial": "Heimat-Himmelskörper",
+   "Home world": "Hauptplanet",
+   "Horizon (Npv)": "Horizont (Npv)",
+   "Host of your universe": "Host deines Universums",
+   "How many targets are probed at once in sequential mode (minimum 1). Only used when Sequential mode is on.": "Wie viele Ziele im sequenziellen Modus gleichzeitig ausgespäht werden (mindestens 1). Wird nur genutzt, wenn der sequenzielle Modus an ist.",
+   "How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. Display only: AutoMine and AutoResearch build by their own rules.": "Wie die Seite Minenplan die besten nächsten Investitionen sortiert. Minen und Forschung (Plasmatechnologie) werden zusammen gereiht. Nur Anzeige: AutoMine und AutoResearch bauen nach ihren eigenen Regeln.",
+   "Hunt asteroids": "Asteroiden jagen",
+   "Identical log lines at most this often (0 = always)": "Gleiche Logzeilen höchstens so oft (0 = immer)",
+   "If one ship type is not enough": "Wenn ein Schiffstyp nicht reicht",
+   "Ignore if nothing worth saving": "Ignorieren, wenn nichts Rettenswertes da ist",
+   "Ignore players ranked better than this": "Spieler ignorieren, die besser platziert sind als",
+   "Ignore spy probes": "Spionagesonden ignorieren",
+   "Ignore spy probes, weak attackers, attacks where there is nothing worth saving; whitelist.": "Spionagesonden, schwache Angreifer und Angriffe ignorieren, bei denen nichts Rettenswertes liegt; Whitelist.",
+   "Ignore these bronze items": "Diese Bronze-Gegenstände ignorieren",
+   "Ignore weak attackers": "Schwache Angreifer ignorieren",
+   "Include research": "Forschung einbeziehen",
+   "Intensive mode": "Intensivmodus",
+   "Intensive mode (bursts)": "Intensivmodus (Schübe)",
+   "Item rules": "Gegenstandsregeln",
+   "Jump factor": "Sprungfaktor",
+   "Jumps the fleet from the moon to a target moon through the jump gate, if enough fleet points would go.": "Springt mit der Flotte vom Mond zu einem Ziel-Mond durchs Sprungtor, wenn genug Flottenpunkte mitgehen.",
+   "Kaelesh: raises the class bonus": "Kaelesh: erhöht den Klassenbonus",
+   "Keep a JSON log": "JSON-Protokoll führen",
+   "Keep all slots busy": "Alle Slots belegt halten",
+   "Keep amount": "Behalten-Menge",
+   "Keep at home": "Zu Hause lassen",
+   "Keep expeditions running": "Expeditionen weiterlaufen lassen",
+   "Keeps resource boosters running: when none of a type is active on a planet, one from your inventory is activated. Nothing is bought with Dark Matter. Start with test mode on and read the log.": "Hält Rohstoff-Booster am Laufen: Läuft von einem Typ keiner auf einem Planeten, wird einer aus deinem Inventar aktiviert. Es wird nichts mit Dunkler Materie gekauft. Starte mit eingeschaltetem Testmodus und lies das Log.",
+   "Keeps the inbox empty so it does not fill up": "Hält das Postfach leer, damit es nicht überläuft",
+   "Kept free for the Defender": "Für den Defender freigehalten",
+   "Kept free for this worker's rounds": "Für die Runden dieses Workers freigehalten",
+   "Language not saved:": "Sprache nicht gespeichert:",
+   "Large cargo capacity": "Kapazität großer Transporter",
+   "Last step if one type is not enough; flies at the speed of the slowest": "Letzter Schritt, wenn ein Typ nicht reicht; fliegt mit der Geschwindigkeit des langsamsten",
+   "Let expeditions finish before sleep": "Expeditionen vor dem Schlafen beenden lassen",
+   "Lifeform buildings start once the crystal mine of a planet reaches this level": "Lebensform-Gebäude starten, sobald die Kristallmine eines Planeten diese Stufe erreicht",
+   "Lifeform effects on expeditions": "Lebensform-Effekte auf Expeditionen",
+   "Lifeform panel": "Lebensform-Panel",
+   "Lifeform workers": "Lebensform-Worker",
+   "Log Telegram traffic": "Telegram-Verkehr loggen",
+   "Log found items": "Gefundene Gegenstände loggen",
+   "Login pause (protects the IP)": "Login-Pause (schützt die IP)",
+   "Login pause active": "Login-Pause aktiv",
+   "Login pause settings": "Einstellungen der Login-Pause",
+   "Longest pause": "Längste Pause",
+   "Longest postponement to fit the timing": "Längste Verschiebung, um den Zeitplan einzuhalten",
+   "Longest production time": "Längste Produktionszeit",
+   "Longest sensible payback": "Längste sinnvolle Amortisation",
+   "Loss weight vs. fuel": "Verlustgewicht gegenüber Treibstoff",
+   "Losses and profit": "Verluste und Gewinn",
+   "Low-deuterium guard": "Wächter bei wenig Deuterium",
+   "Lowest speed when saving deuterium": "Niedrigste Geschwindigkeit beim Deuterium-Sparen",
+   "Make sure there are expedition slots": "Für freie Expeditionsslots sorgen",
+   "Margin before a recall": "Abstand vor einem Rückruf",
+   "Master switch": "Hauptschalter",
+   "Master switch for all Brain workers below": "Hauptschalter für alle Brain-Worker unten",
+   "Master switch for the expedition worker": "Hauptschalter für den Expeditions-Worker",
+   "Max accepted cargo loss": "Höchster akzeptierter Frachtverlust",
+   "Max attack delay": "Längste Angriffsverzögerung",
+   "Max defence points": "Max. Verteidigungspunkte",
+   "Max escort loss (% of fleet value)": "Max. Escort-Verlust (% des Flottenwerts)",
+   "Max escort ships": "Max. Escort-Schiffe",
+   "Max expeditions": "Max. Expeditionen",
+   "Max find per expedition": "Max. Fund pro Expedition",
+   "Max flight time": "Max. Flugzeit",
+   "Max food building": "Max. Nahrungsgebäude",
+   "Max planets": "Max. Planeten",
+   "Max population building": "Max. Bevölkerungsgebäude",
+   "Max report age": "Max. Berichtsalter",
+   "Max report age for attack": "Max. Berichtsalter für Angriff",
+   "Max share of the fleet": "Max. Anteil der Flotte",
+   "Max slots": "Max. Slots",
+   "Max slots for AutoFarm": "Max. Slots für AutoFarm",
+   "Max tech building": "Max. Technologiegebäude",
+   "Max temperature": "Max. Temperatur",
+   "Max wait for probe reports": "Max. Wartezeit auf Sondenberichte",
+   "Member list is read from the public game API": "Die Mitgliederliste wird aus der öffentlichen Spiel-API gelesen",
+   "Message the attacker": "Dem Angreifer eine Nachricht schicken",
+   "Metal + crystal + deuterium that can be taken": "Metall + Kristall + Deuterium, das mitgenommen werden kann",
+   "Min cargo ships per attack": "Min. Transporter pro Angriff",
+   "Min debris to harvest": "Min. Trümmer zum Einsammeln",
+   "Min fields": "Min. Felder",
+   "Min fleet points to jump": "Min. Flottenpunkte zum Springen",
+   "Min fleet points to save": "Min. Flottenpunkte zum Sichern",
+   "Min loot / fuel ratio": "Min. Verhältnis Beute / Treibstoff",
+   "Min loot per defence point": "Min. Beute pro Verteidigungspunkt",
+   "Min resources to save": "Min. Rohstoffe zum Sichern",
+   "Min resources to send": "Min. Rohstoffe zum Senden",
+   "Min speed for profit re-check": "Min. Geschwindigkeit für die Gewinn-Neuprüfung",
+   "Min temperature": "Min. Temperatur",
+   "Min win rate": "Min. Siegquote",
+   "Mine plan ranking settings": "Einstellungen der Minenplan-Reihung",
+   "Mine plan: ranking of the next steps": "Minenplan: Reihung der nächsten Schritte",
+   "Minimum content (deep space)": "Mindestinhalt (Deep Space)",
+   "Minimum content (foreign)": "Mindestinhalt (fremd)",
+   "Minimum content (own)": "Mindestinhalt (eigen)",
+   "Minimum deuterium": "Mindest-Deuterium",
+   "Minimum fill": "Mindestfüllung",
+   "Minimum loot": "Mindestbeute",
+   "Minimum loot (defended)": "Mindestbeute (verteidigt)",
+   "Minimum loot, defence limits, flight time and loot/fuel ratio decide what is attacked.": "Mindestbeute, Verteidigungslimits, Flugzeit und Beute/Treibstoff-Verhältnis entscheiden, was angegriffen wird.",
+   "Minimum mine level (no booster below it, 0 = always)": "Mindest-Minenstufe (darunter kein Booster, 0 = immer)",
+   "Minimum player rank": "Mindestrang des Spielers",
+   "Minimum to send": "Mindestmenge zum Senden",
+   "Mirrors every Telegram message to a Discord channel as an embed (send only, commands still go through Telegram). The webhook URL is stored in secrets/discord and shows as ***** while Hide data is on. The Defender also has its own Discord attack alert.": "Spiegelt jede Telegram-Nachricht als Embed in einen Discord-Kanal (nur Senden, Befehle laufen weiter über Telegram). Die Webhook-URL liegt in secrets/discord und wird als ***** gezeigt, solange „Daten verbergen“ an ist. Der Defender hat außerdem einen eigenen Discord-Angriffsalarm.",
+   "Missing options (": "Fehlende Optionen (",
+   "Mix small and large cargo": "Kleine und große Transporter mischen",
+   "Moon and planet coordinates that are fleetsaved first.": "Mond- und Planetenkoordinaten, die zuerst per Fleetsave gesichert werden.",
+   "Moons get ships from the planet": "Monde bekommen ihre Schiffe vom Planeten",
+   "More settings": "Weitere Einstellungen",
+   "More settings (": "Weitere Einstellungen (",
+   "Name shown on the Discord posts": "Name, der bei den Discord-Beiträgen angezeigt wird",
+   "Nearest systems first": "Nächste Systeme zuerst",
+   "Needs the escort simulation": "Braucht die Escort-Simulation",
+   "Net = actual loot (cargo of the returning fleet) − ship losses − fuel (deuterium), per resource. Unobserved fleets are not counted.": "Netto = tatsächliche Beute (Fracht der zurückkehrenden Flotte) − Schiffsverluste − Treibstoff (Deuterium), pro Rohstoff. Unbeobachtete Flotten zählen nicht.",
+   "Never below 30 %": "Nie unter 30 %",
+   "Never collected from": "Nie von dort eingesammelt",
+   "Never spy or attack members": "Mitglieder nie ausspionieren oder angreifen",
+   "Never touched": "Nie angefasst",
+   "New functions that are still in testing. They are kept apart from the normal pages (General, Brain) until they have proven themselves. Switch one on, watch the log and report problems. When a function has proven itself it moves back to its normal page.": "Neue Funktionen, die noch im Test sind. Sie sind von den normalen Seiten (General, Brain) getrennt, bis sie sich bewährt haben. Schalte eine ein, beobachte das Log und melde Probleme. Hat sich eine Funktion bewährt, wandert sie zurück auf ihre normale Seite.",
+   "No \"": "Kein „",
+   "No changes.": "Keine Änderungen.",
+   "No data yet - AutoFarm has to send and receive attacks first.": "Noch keine Daten – AutoFarm muss erst Angriffe senden und empfangen.",
+   "No sleep window: the bot runs around the clock.": "Kein Schlaffenster: Der Bot läuft rund um die Uhr.",
+   "No worker may use these slots - they stay free for you": "Kein Worker darf diese Slots nutzen – sie bleiben für dich frei",
+   "Not if dearer than the next mine upgrade": "Nicht, wenn teurer als der nächste Minenausbau",
+   "Not in your config yet (off). Add it to switch it on.": "Noch nicht in deiner Config (aus). Füge es hinzu, um es einzuschalten.",
+   "Not in your config yet - the default (1 slot reserved) applies. Add it to change that.": "Noch nicht in deiner Config – der Standard (1 Slot reserviert) gilt. Füge es hinzu, um das zu ändern.",
+   "Not in your config yet - the default (shortest payback, research included) applies. Add it to change that.": "Noch nicht in deiner Config – der Standard (kürzeste Amortisation, Forschung eingeschlossen) gilt. Füge es hinzu, um das zu ändern.",
+   "Not in your config yet - the default is used until you add one": "Noch nicht in deiner Config – der Standard gilt, bis du einen hinzufügst",
+   "Not in your config yet - the defaults (15 minutes, margin 2, longest 120) are used. Add it to change them.": "Noch nicht in deiner Config – die Standards (15 Minuten, Abstand 2, längste 120) gelten. Füge es hinzu, um sie zu ändern.",
+   "Not in your config yet - the defaults (pause after 2 failed logins, 30 minutes, doubling up to 120) are used. Add it to change them.": "Noch nicht in deiner Config – die Standards (Pause nach 2 fehlgeschlagenen Logins, 30 Minuten, Verdopplung bis 120) gelten. Füge es hinzu, um sie zu ändern.",
+   "Not shown here: it is stored in secrets/ or not present. Edit it directly in the config file.": "Hier nicht angezeigt: liegt in secrets/ oder ist nicht vorhanden. Bearbeite es direkt in der Config-Datei.",
+   "Nothing worth saving": "Nichts Rettenswertes",
+   "Number of ships": "Anzahl der Schiffe",
+   "Off by default": "Standardmäßig aus",
+   "Off by default. Only useful while the item event runs": "Standardmäßig aus. Nur sinnvoll, solange das Item-Event läuft",
+   "Off: the Pause button and /pause are refused": "Aus: Der Pause-Knopf und /pause werden abgelehnt",
+   "Offer / JumpGate": "Angebot / Sprungtor",
+   "Older reports are not attacked": "Ältere Berichte werden nicht angegriffen",
+   "Older reports are not attacked (0 = off)": "Ältere Berichte werden nicht angegriffen (0 = aus)",
+   "On by default": "Standardmäßig an",
+   "On going to sleep and waking up": "Beim Schlafengehen und Aufwachen",
+   "On top of the calculated amount": "Zusätzlich zur berechneten Menge",
+   "On: each defender check opens the defences page of a random celestial. Off: it always opens the one from \"Home celestial\". Either way it only creates normal-looking activity (the check itself is already a page visit) and does not change how attacks are handled.": "An: Jede Defender-Prüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus: Es wird immer der unter „Heimat-Himmelskörper“ geöffnet. In beiden Fällen entsteht nur normal aussehende Aktivität (die Prüfung ist selbst schon ein Seitenaufruf); die Behandlung von Angriffen ändert sich nicht.",
+   "On: game requests do not go through the proxy": "An: Spielanfragen laufen nicht über den Proxy",
+   "Once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the bot checks whether the inventory grew. One short log line per attempt, no messenger message.": "Einmal pro Spieltag greift ein Schiff den Asteroiden auf Position 17 deines eigenen Systems an. Nach der Ankunft prüft der Bot, ob das Inventar gewachsen ist. Eine kurze Logzeile pro Versuch, keine Messenger-Nachricht.",
+   "One extra wave right before the bot falls asleep, timed to return around wake-up.": "Eine zusätzliche Welle kurz vor dem Schlafengehen, so getaktet, dass sie etwa beim Aufwachen zurück ist.",
+   "One of the messages is sent": "Eine der Nachrichten wird gesendet",
+   "One origin: the global limit (MaxExpeditionsPerOrigin) applies. Several origins: the expedition slots are distributed round-robin (13 slots: 7+6, with 3 origins 5+4+4); a value here overrides it for that origin (empty/0 = automatic).": "Ein Ursprung: Es gilt das globale Limit (MaxExpeditionsPerOrigin). Mehrere Ursprünge: Die Expeditionsslots werden reihum verteilt (13 Slots: 7+6, bei 3 Ursprüngen 5+4+4); ein Wert hier überschreibt das für diesen Ursprung (leer/0 = automatisch).",
+   "One per line": "Einer pro Zeile",
+   "One word per line": "Ein Wort pro Zeile",
+   "Only as many as the stock needs": "Nur so viele, wie der Vorrat braucht",
+   "Only for the login": "Nur für den Login",
+   "Only from moons": "Nur von Monden",
+   "Only moons": "Nur Monde",
+   "Only one of them can be active": "Nur eines davon kann aktiv sein",
+   "Only send if at least this much can go": "Nur senden, wenn mindestens so viel mitgehen kann",
+   "Only sensible steps": "Nur sinnvolle Schritte",
+   "Only the log shows what would be activated": "Nur das Log zeigt, was aktiviert würde",
+   "Only used when the other workers are switched off": "Wird nur genutzt, wenn die anderen Worker ausgeschaltet sind",
+   "Only what matters for the cargo count: finds per expedition (resources, class bonus) and cargo capacity. The auto fleet calculation uses Resources and cargo; the tech-18 class bonus is not used yet.": "Nur was für die Transporterzahl zählt: Funde pro Expedition (Rohstoffe, Klassenbonus) und Laderaum. Die Auto-Flottenberechnung nutzt Rohstoffe und Fracht; der Klassenbonus von Tech 18 wird noch nicht genutzt.",
+   "Outbound capacity factor": "Faktor der Hinflug-Kapazität",
+   "Own debris fields": "Eigene Trümmerfelder",
+   "Own limits per item type": "Eigene Limits pro Gegenstandstyp",
+   "Partner alliance IDs": "IDs der Partner-Allianzen",
+   "Pathfinder: 1 is enough - more than 1 adds nothing.": "Pathfinder: 1 reicht – mehr als 1 bringt nichts.",
+   "Pause after braking": "Pause nach dem Bremsen",
+   "Pause function active": "Pausenfunktion aktiv",
+   "Pause length": "Pausenlänge",
+   "Pause other workers at the end": "Andere Worker am Ende pausieren",
+   "Pause other workers in the last 5 minutes": "Andere Worker in den letzten 5 Minuten pausieren",
+   "Pay from": "Bezahlen von",
+   "Pay with": "Bezahlen mit",
+   "Pending request valid for": "Offene Anfrage gültig für",
+   "Per run": "Pro Durchlauf",
+   "Permanent: reset after": "Dauerhaft: zurücksetzen nach",
+   "Pick Sleep or GhostSleep above to show its options. Your settings of both are kept.": "Wähle oben Sleep oder GhostSleep, um dessen Optionen zu zeigen. Deine Einstellungen beider bleiben erhalten.",
+   "Ping every": "Ping alle",
+   "Plan transports as a chain": "Transporte als Kette planen",
+   "Planets with own caps (": "Planeten mit eigenen Limits (",
+   "Player IDs": "Spieler-IDs",
+   "Player IDs that are never treated as attackers (0 = placeholder).": "Spieler-IDs, die nie als Angreifer gelten (0 = Platzhalter).",
+   "Prefer near over large": "Nähe vor Menge bevorzugen",
+   "Preferred resource": "Bevorzugter Rohstoff",
+   "Primary ship": "Hauptschiff",
+   "PrimaryToKeep: ships of the primary type that stay home": "PrimaryToKeep: Schiffe des Haupttyps, die zu Hause bleiben",
+   "Priorities (researched first)": "Prioritäten (zuerst erforscht)",
+   "Probes and slots": "Sonden und Slots",
+   "Probes per cycle (sequential)": "Sonden pro Zyklus (sequenziell)",
+   "Probes per spy mission": "Sonden pro Spionagemission",
+   "Probes per target": "Sonden pro Ziel",
+   "Protect own alliance": "Eigene Allianz schützen",
+   "Proxy user name and password and the captcha key are neither shown nor editable in the web UI. Set them directly in the config file (secrets/).": "Proxy-Benutzername und -Passwort sowie der Captcha-Schlüssel werden in der Web-Oberfläche weder angezeigt noch sind sie bearbeitbar. Setze sie direkt in der Config-Datei (secrets/).",
+   "Raises in a row that start a war": "Erhöhungen in Folge, die ein Gefecht auslösen",
+   "Random order": "Zufällige Reihenfolge",
+   "Random position in the targets": "Zufällige Position in den Zielen",
+   "Ranges to colonise. Max planets = stop after this many colonies in that range.": "Zu kolonisierende Bereiche. Max. Planeten = Stopp nach so vielen Kolonien in diesem Bereich.",
+   "Rank plasma technology next to the mine steps": "Plasmatechnologie neben den Minenschritten einordnen",
+   "Rarity words": "Seltenheits-Wörter",
+   "React to missile attacks": "Auf Raketenangriffe reagieren",
+   "Reaction time": "Reaktionszeit",
+   "Reaction to the attacker": "Reaktion auf den Angreifer",
+   "Recall at wake-up": "Beim Aufwachen zurückrufen",
+   "Recall the saving fleet so it is back when you wake up": "Die sichernde Flotte zurückrufen, damit sie beim Aufwachen da ist",
+   "Recycler reserve": "Recycler-Reserve",
+   "Refill expeditions before sleep": "Expeditionen vor dem Schlafen auffüllen",
+   "Remove this planet": "Diesen Planeten entfernen",
+   "Repeat log interval": "Wiederholungsintervall des Logs",
+   "Replaces the time-based refill above. Shortly before sleeping no expedition is started that would not be back in time (duration is measured). At bed time the bot waits for stragglers, sends one simultaneous wave and goes to sleep.": "Ersetzt das zeitbasierte Auffüllen oben. Kurz vor dem Schlafen startet keine Expedition mehr, die nicht rechtzeitig zurück wäre (die Dauer wird gemessen). Zur Schlafenszeit wartet der Bot auf Nachzügler, sendet eine gleichzeitige Welle und geht schlafen.",
+   "Replan with fewer shipments if slots are short": "Mit weniger Sendungen neu planen, wenn Slots knapp sind",
+   "Report query limit (not attackable)": "Berichtsabfrage-Limit (nicht angreifbar)",
+   "Report valid for": "Bericht gültig für",
+   "Reports and timing": "Berichte und Timing",
+   "Research caps (0 = do not research)": "Forschungslimits (0 = nicht erforschen)",
+   "Research even with a low lab": "Auch mit niedrigem Labor forschen",
+   "Research planet": "Forschungsplanet",
+   "Research this tech first": "Diese Tech zuerst erforschen",
+   "Researched first, top to bottom": "Zuerst erforscht, von oben nach unten",
+   "Researches Computer Technology / Astrophysics as needed": "Erforscht Computertechnik / Astrophysik nach Bedarf",
+   "Researches lifeform techs from the priority list up to the level caps. It does not start new techs on its own.": "Erforscht Lebensform-Techs aus der Prioritätenliste bis zu den Level-Caps. Es startet nicht von selbst neue Techs.",
+   "Researches technologies up to the caps you set on the chosen planet. 0 = do not research. The priority switches decide what is researched first.": "Erforscht Technologien bis zu den Limits auf dem gewählten Planeten. 0 = nicht erforschen. Die Prioritätsschalter bestimmen, was zuerst erforscht wird.",
+   "Reserve a slot for the fleetsave": "Einen Slot für den Fleetsave reservieren",
+   "Reserved slot for the fleetsave": "Reservierter Slot für den Fleetsave",
+   "Reserved slots": "Reservierte Slots",
+   "Reset after": "Zurücksetzen nach",
+   "Resource farming mode with one goal: collect as much deuterium as possible. It scans the galaxy for inactive players, spies them with a fixed number of probes and raids the best ones with cargo ships. While it is on, all other workers except the Defender stay off.": "Rohstoff-Farmmodus mit einem Ziel: so viel Deuterium wie möglich sammeln. Er scannt die Galaxie nach inaktiven Spielern, spioniert sie mit einer festen Sondenzahl aus und raidet die besten mit Transportern. Solange er an ist, bleiben alle anderen Worker außer dem Defender aus.",
+   "Resource farming mode: scans for inactive players, spies them with a fixed number of probes and raids the best ones with cargo ships, aiming at deuterium. All other workers except the Defender stay off while it runs.": "Rohstoff-Farmmodus: scannt nach inaktiven Spielern, spioniert sie mit einer festen Sondenzahl aus und raidet die besten mit Transportern, auf Deuterium ausgerichtet. Alle anderen Worker außer dem Defender bleiben aus, solange er läuft.",
+   "Resources found": "Gefundene Rohstoffe",
+   "Return all ships": "Alle Schiffe zurückbringen",
+   "Return at": "Rückkehr um",
+   "Return fuel factor": "Rückflug-Treibstofffaktor",
+   "Reverse repatriation": "Umgekehrte Repatriierung",
+   "Round the amount sent": "Gesendete Menge runden",
+   "Run interval, max": "Laufintervall, max",
+   "Run interval, min": "Laufintervall, min",
+   "Safety margin": "Sicherheitsabstand",
+   "Safety margin in simulations": "Sicherheitsabstand in Simulationen",
+   "Same reserve for transports out of a planet (0 = keep nothing)": "Gleiche Reserve für Transporte von einem Planeten (0 = nichts zurückhalten)",
+   "Satellites per batch": "Satelliten pro Bündel",
+   "Save all": "Alle speichern",
+   "Save deuterium": "Deuterium sparen",
+   "Save deuterium: attack fleet and recyclers fly as slowly as sensible (never below the lowest speed). Low-deuterium guard: when a start celestial has less deuterium than the minimum, attacks on defended targets from there are paused and the speed fleet is switched off. The AutoFarm page shows the stock and a warning.": "Deuterium sparen: Angriffsflotte und Recycler fliegen so langsam wie sinnvoll (nie unter der niedrigsten Geschwindigkeit). Wächter bei wenig Deuterium: Hat ein Start-Himmelskörper weniger Deuterium als das Minimum, pausieren Angriffe auf verteidigte Ziele von dort und die Speed-Flotte wird ausgeschaltet. Die AutoFarm-Seite zeigt den Vorrat und eine Warnung.",
+   "Save failed (": "Speichern fehlgeschlagen (",
+   "Save failed:": "Speichern fehlgeschlagen:",
+   "Saves the fleet of the attacked celestial shortly before impact (safety margin).": "Sichert die Flotte des angegriffenen Himmelskörpers kurz vor dem Einschlag (Sicherheitsabstand).",
+   "Scan and spy": "Scannen und Spionieren",
+   "Scan area": "Scanbereich",
+   "Scan block size": "Scan-Blockgröße",
+   "Scan range": "Scanbereich",
+   "Scans systems for inactive players, spies them and attacks the profitable ones.": "Scannt Systeme nach inaktiven Spielern, spioniert sie aus und greift die lohnenden an.",
+   "Search: bisection iterations": "Suche: Bisektions-Iterationen",
+   "Search: fine-tune simulations": "Suche: Feinabstimmungs-Simulationen",
+   "Search: max iterations": "Suche: max. Iterationen",
+   "Second, independent window (timed version of /ghost). Everything stops except Expeditions, Defender and SleepMode, and all ships are fleetsaved with a ghost flight. Expeditions keep flying, the Defender only alerts (no automatic fleetsave) and polls rarely, and escalates to full defence if an attack wave is detected.": "Zweites, unabhängiges Fenster (zeitgesteuerte Version von /ghost). Alles stoppt außer Expeditionen, Defender und SleepMode, und alle Schiffe werden per Geisterflug gesichert. Expeditionen fliegen weiter, der Defender meldet nur (kein automatischer Fleetsave), prüft selten und schaltet bei erkannter Angriffswelle auf volle Verteidigung.",
+   "Seconds between two checks; key = time left (and rarity in the last 5 minutes)": "Sekunden zwischen zwei Prüfungen; Schlüssel = Restzeit (und Seltenheit in den letzten 5 Minuten)",
+   "Sends a regular \"still alive\" message": "Sendet regelmäßig eine „lebt noch“-Nachricht",
+   "Sends discovery missions from the origin celestials.": "Sendet Entdeckungsmissionen von den Ursprungs-Himmelskörpern.",
+   "Sends expeditions automatically from your origin celestials and refills the slots as the fleets return.": "Sendet Expeditionen automatisch von deinen Ursprungs-Himmelskörpern und füllt die Slots auf, wenn die Flotten zurückkehren.",
+   "Sends recyclers to debris fields that are worth the trip: your own, foreign ones and deep space.": "Schickt Recycler zu Trümmerfeldern, die die Reise lohnen: eigene, fremde und Deep Space.",
+   "Sends resources from your planets to one target (for example the home moon) once enough has piled up.": "Schickt Rohstoffe von deinen Planeten zu einem Ziel (z. B. dem Heimatmond), sobald genug zusammengekommen ist.",
+   "Sequential mode": "Sequenzieller Modus",
+   "Server host": "Server-Host",
+   "Server time, HH:mm": "Serverzeit, HH:mm",
+   "Set it on the Messenger page": "Auf der Messenger-Seite einstellen",
+   "Several transports from one position": "Mehrere Transporte von einer Position",
+   "Share of debris counted as profit": "Anteil der Trümmer, der als Gewinn zählt",
+   "Shared settings for every Brain worker that moves resources: where it collects from, which cargo ships it uses and how many slots it may take. Pathfinders are never used.": "Gemeinsame Einstellungen für jeden Brain-Worker, der Rohstoffe bewegt: woher er einsammelt, welche Transporter er nutzt und wie viele Slots er nehmen darf. Pathfinder werden nie genutzt.",
+   "Shared settings for moving resources between your celestials.": "Gemeinsame Einstellungen für das Bewegen von Rohstoffen zwischen deinen Himmelskörpern.",
+   "Ship losses": "Schiffsverluste",
+   "Ships and slots": "Schiffe und Slots",
+   "Ships kept on the origin": "Am Ursprung belassene Schiffe",
+   "Ships that stay on the moon": "Schiffe, die auf dem Mond bleiben",
+   "Shortly before a fleetsave the Defender asks the game for the attack list once more. Attack recalled: no fleetsave. Attack later: the fleetsave is moved. If the question fails or takes too long, the fleetsave goes out as planned.": "Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Angriff zurückgerufen: kein Fleetsave. Angriff später: Der Fleetsave wird verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus.",
+   "Show all help": "Alle Hilfen zeigen",
+   "Shows which lifeform bonuses currently raise finds and cargo.": "Zeigt, welche Lebensform-Boni gerade Funde und Fracht erhöhen.",
+   "Single planets with their own caps. Matched by exact coordinate; only the fields you set replace the Colony caps.": "Einzelne Planeten mit eigenen Limits. Zuordnung über exakte Koordinaten; nur Felder, die du setzt, ersetzen die Colony-Limits.",
+   "Skip if a transport is on its way": "Überspringen, wenn ein Transport unterwegs ist",
+   "Skip moons": "Monde überspringen",
+   "Sleep / GhostSleep": "Sleep / GhostSleep",
+   "Sleep mode": "Schlafmodus",
+   "Sleep wave": "Schlafwelle",
+   "SleepMode is the classic sleep: in the window below the bot sends no fleets at all (most workers pause) and can fleetsave your ships once when going to sleep. Compare GhostSleep further down, which keeps expeditions and defence running.": "SleepMode ist der klassische Schlaf: Im Fenster unten sendet der Bot keine Flotten (die meisten Worker pausieren) und kann beim Schlafengehen einmal deine Schiffe per Fleetsave sichern. Vergleiche GhostSleep weiter unten, das Expeditionen und Verteidigung weiterlaufen lässt.",
+   "SleepMode: fleetsave": "SleepMode: Fleetsave",
+   "SleepMode: in the window the bot sends no fleets at all and can fleetsave once when going to sleep.": "SleepMode: Im Fenster sendet der Bot keine Flotten und kann beim Schlafengehen einmal per Fleetsave sichern.",
+   "SleepMode: more settings (": "SleepMode: weitere Einstellungen (",
+   "Slot priority": "Slot-Priorität",
+   "Slots Brain transports may use at the same time": "Slots, die Brain-Transporte gleichzeitig nutzen dürfen",
+   "Slots to leave free": "Freizulassende Slots",
+   "Slow, careful mode: sends probe(s), waits until their report is evaluated (and attacked if worthwhile), and only then probes the next target. Fill slots is ignored while on.": "Langsamer, vorsichtiger Modus: sendet Sonde(n), wartet, bis der Bericht ausgewertet ist (und angegriffen wird, wenn es lohnt), und prüft erst dann das nächste Ziel. „Slots füllen“ wird ignoriert, solange er an ist.",
+   "Smaller fields are not worth a trip": "Kleinere Felder lohnen die Reise nicht",
+   "Smallest jump that counts": "Kleinster Sprung, der zählt",
+   "Snipe window before the end": "Snipe-Fenster vor dem Ende",
+   "Solar satellites are built in multiples of this number (0 or 1 = one by one)": "Solarsatelliten werden in Vielfachen dieser Zahl gebaut (0 oder 1 = einzeln)",
+   "Sorts targets by it": "Sortiert die Ziele danach",
+   "Speed (fallback)": "Geschwindigkeit (Ersatz)",
+   "Speed fleet (UseSpeedFleet)": "Speed-Flotte (UseSpeedFleet)",
+   "Split systems": "Systeme aufteilen",
+   "Spread several bot instances over different start points": "Mehrere Bot-Instanzen auf verschiedene Startpunkte verteilen",
+   "Spreads the targets over systems in a range.": "Verteilt die Ziele auf Systeme in einem Bereich.",
+   "Spy the attacker": "Den Angreifer ausspionieren",
+   "Spy the attacker or send a message.": "Den Angreifer ausspionieren oder eine Nachricht senden.",
+   "Start at crystal mine level": "Ab Kristallminenstufe",
+   "Steps that do not pay back within this time are left out": "Schritte, die sich in dieser Zeit nicht amortisieren, entfallen",
+   "Stop after one full pass": "Nach einem vollen Durchlauf stoppen",
+   "Stops the scan after this many scanned systems and attacks with the targets found so far; the next cycle continues where it stopped. Keeps a cycle short in dense or empty areas. 0 = off (scan the whole range first).": "Stoppt den Scan nach so vielen gescannten Systemen und greift mit den bisher gefundenen Zielen an; der nächste Zyklus macht dort weiter. Hält einen Zyklus in dichten oder leeren Gegenden kurz. 0 = aus (erst den ganzen Bereich scannen).",
+   "Switch = may be used. The number is kept in the inventory.": "Schalter = darf genutzt werden. Die Zahl bleibt im Inventar.",
+   "Switch it on to show and edit the options": "Einschalten, um die Optionen zu zeigen und zu bearbeiten",
+   "Switch off all other workers": "Alle anderen Worker ausschalten",
+   "System radius": "Systemradius",
+   "Systems around the origin that are searched": "Systeme um den Ursprung, die durchsucht werden",
+   "Systems per scan step": "Systeme pro Scanschritt",
+   "Systems that are scanned for inactive players, nearest to your origins first. Leave empty to scan 100 systems around every origin.": "Systeme, die nach inaktiven Spielern gescannt werden, die nächsten zu deinen Ursprüngen zuerst. Leer lassen, um 100 Systeme um jeden Ursprung zu scannen.",
+   "Systems to search": "Zu durchsuchende Systeme",
+   "Target amount": "Zielmenge",
+   "Target celestials": "Ziel-Himmelskörper",
+   "Target choice": "Zielwahl",
+   "Target combat tech bonus": "Zielwert Kampftechnik-Bonus",
+   "Target moons": "Ziel-Monde",
+   "Target per defence type (0 = do not build)": "Ziel pro Verteidigungstyp (0 = nicht bauen)",
+   "Target ranges": "Zielbereiche",
+   "Target row": "Zielzeile",
+   "Targets are ranked by loot value = metal x weight + crystal x weight + deuterium x weight. The best ones are attacked first.": "Ziele werden nach Beutewert gereiht = Metall x Gewicht + Kristall x Gewicht + Deuterium x Gewicht. Die besten werden zuerst angegriffen.",
+   "Targets probed before attack": "Ausgespähte Ziele vor dem Angriff",
+   "Targets with a fresh report are ranked by weighted loot and raided with small and/or large cargos.": "Ziele mit frischem Bericht werden nach gewichteter Beute gereiht und mit kleinen und/oder großen Transportern geraidet.",
+   "Telegram alert": "Telegram-Alarm",
+   "Telegram and Discord messages, optional alarm level.": "Telegram- und Discord-Nachrichten, optionale Alarmstufe.",
+   "Telegram bot: sends alerts (attacks, fleetsaves, sleep and wake-up, ...) and takes commands such as /ghost and /debrissave. Bot token and chat ID are stored in secrets/telegram; they show as ***** while Hide data is on.": "Telegram-Bot: sendet Meldungen (Angriffe, Fleetsaves, Schlafen und Aufwachen, ...) und nimmt Befehle wie /ghost und /debrissave an. Bot-Token und Chat-ID liegen in secrets/telegram; sie werden als ***** gezeigt, solange „Daten verbergen“ an ist.",
+   "Telegram message": "Telegram-Nachricht",
+   "Telegram message on fleetsave": "Telegram-Nachricht beim Fleetsave",
+   "Telegram message when braking": "Telegram-Nachricht beim Bremsen",
+   "Telegram message when won": "Telegram-Nachricht bei Gewinn",
+   "Telekinetic Drive": "Telekinetischer Antrieb",
+   "Test field / dry run (placeholder)": "Testfeld / Trockenlauf (Platzhalter)",
+   "Test mode (nothing activated)": "Testmodus (nichts wird aktiviert)",
+   "The AutoFarm page shows targets, attacks, blacklist, maintenance and the losses and profit list.": "Die AutoFarm-Seite zeigt Ziele, Angriffe, Blacklist, Wartung und die Liste von Verlusten und Gewinn.",
+   "The General and Brain blocks were not found in the config, so nothing can be shown here.": "Die Blöcke General und Brain wurden in der Config nicht gefunden, hier kann also nichts angezeigt werden.",
+   "The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
+   "The asteroid is rarely in the home system. Tried: own, +1, -1, +2 ...": "Der Asteroid ist selten im Heimatsystem. Versucht: eigenes, +1, -1, +2 ...",
+   "The background scan keeps a list of inactive players; every free slot sends one probe fleet.": "Der Hintergrund-Scan führt eine Liste inaktiver Spieler; jeder freie Slot sendet eine Sondenflotte.",
+   "The celestial the defender looks at for its activity calls when \"Generate activity\" is off. AutoHarvest also uses it as the default origin (the moon at these coordinates) if it has no Origin of its own. Set it to your main planet or moon.": "Der Himmelskörper, den der Defender für seine Aktivitätsaufrufe ansieht, wenn „Aktivität erzeugen“ aus ist. AutoHarvest nutzt ihn auch als Standard-Ursprung (der Mond an diesen Koordinaten), wenn es keinen eigenen Ursprung hat. Setze ihn auf deinen Hauptplaneten oder -mond.",
+   "The chat the bot talks to": "Der Chat, mit dem der Bot spricht",
+   "The escort (warships) decides the fleet composition for attacks on defended targets: the bot simulates the fight and adds warships to the cargo ships until the attack is safe enough.": "Die Escort (Kriegsschiffe) legt die Flottenzusammensetzung für Angriffe auf verteidigte Ziele fest: Der Bot simuliert den Kampf und ergänzt die Transporter um Kriegsschiffe, bis der Angriff sicher genug ist.",
+   "The last free fleet slot is kept for the fleetsave. All other fleets, even forced ones, are refused when only the reserved slot is left. Refusals appear in the log as SLOTCOLLISION.": "Der letzte freie Flottenslot bleibt für den Fleetsave. Alle anderen Flotten, auch erzwungene, werden abgelehnt, wenn nur noch der reservierte Slot übrig ist. Ablehnungen erscheinen im Log als SLOTCOLLISION.",
+   "The rest goes with the fleet as fuel": "Der Rest fliegt als Treibstoff mit der Flotte",
+   "This function has no description yet.": "Diese Funktion hat noch keine Beschreibung.",
+   "This is not a real sleep.": "Das ist kein echter Schlaf.",
+   "Time left": "Restzeit",
+   "To attack a target": "Um ein Ziel anzugreifen",
+   "To pos.": "Bis Pos.",
+   "To system": "Bis System",
+   "Top 1 highscore": "Top-1-Highscore",
+   "Top targets per round": "Top-Ziele pro Runde",
+   "Transports (shared)": "Transporte (gemeinsam)",
+   "Transports out of a moon only go if payload + this reserve + the flight fuel fit": "Transporte von einem Mond starten nur, wenn Nutzlast + diese Reserve + Flugtreibstoff passen",
+   "Type the ship name exactly as in the game (English), e.g. Pathfinder, Cruiser, Reaper, Destroyer. No espionage probes. The planet with the most of this ship sends it.": "Schreibe den Schiffsnamen genau wie im Spiel (englisch), z. B. Pathfinder, Cruiser, Reaper, Destroyer. Keine Spionagesonden. Der Planet mit den meisten dieser Schiffe sendet es.",
+   "Unprofitable: reset after": "Unrentabel: zurücksetzen nach",
+   "Upper limit for /pause with a time": "Obergrenze für /pause mit Zeitangabe",
+   "Upper limit of espionage probes per cycle; once reached, the scan pauses and the attacks run. 0 = no limit.": "Obergrenze an Spionagesonden pro Zyklus; ist sie erreicht, pausiert der Scan und die Angriffe laufen. 0 = kein Limit.",
+   "Use Pathfinders as cargo ships; switched off automatically while the low-deuterium guard is active": "Pathfinder als Transporter nutzen; wird automatisch ausgeschaltet, solange der Wächter bei wenig Deuterium aktiv ist",
+   "Use a proxy": "Proxy nutzen",
+   "Used by the Telegram command /debrissave": "Wird vom Telegram-Befehl /debrissave genutzt",
+   "Used until 3 real durations are known": "Wird genutzt, bis 3 echte Dauern bekannt sind",
+   "Used when ReturnAt is empty": "Wird genutzt, wenn ReturnAt leer ist",
+   "Used when you press the button or send /pause without a time": "Wird genutzt, wenn du den Knopf drückst oder /pause ohne Zeit sendest",
+   "Wait between fleets, max": "Wartezeit zwischen Flotten, max",
+   "Wait between fleets, min": "Wartezeit zwischen Flotten, min",
+   "Wait for stragglers": "Auf Nachzügler warten",
+   "Wait for the answer": "Auf die Antwort warten",
+   "Wait while fleets would come back during the sleep window": "Warten, solange Flotten im Schlaffenster zurückkämen",
+   "Wake up": "Aufwachen",
+   "Watch window": "Beobachtungsfenster",
+   "Watches for incoming attacks and reacts to them.": "Achtet auf eingehende Angriffe und reagiert darauf.",
+   "Wave of expeditions that returns around wake-up": "Expeditionswelle, die um das Aufwachen zurückkommt",
+   "Weak attack ratio": "Verhältnis schwacher Angriff",
+   "Weak attacks": "Schwache Angriffe",
+   "Webhook URL": "Webhook-URL",
+   "Webhook URL is not shown here (credentials)": "Die Webhook-URL wird hier nicht gezeigt (Zugangsdaten)",
+   "Weight crystal": "Gewicht Kristall",
+   "Weight deuterium": "Gewicht Deuterium",
+   "Weight metal": "Gewicht Metall",
+   "What it does": "Was es tut",
+   "What they do": "Was sie tun",
+   "Where the colony ships start.": "Wo die Kolonieschiffe starten.",
+   "Where the fleet jumps to (jump gates exist on moons only)": "Wohin die Flotte springt (Sprungtore gibt es nur auf Monden)",
+   "Where the resources go": "Wohin die Rohstoffe gehen",
+   "Which debris fields": "Welche Trümmerfelder",
+   "Which systems are scanned, in which order and how many per cycle.": "Welche Systeme in welcher Reihenfolge und wie viele pro Zyklus gescannt werden.",
+   "Who gets a free slot first when several workers compete. Lower number = served first.": "Wer zuerst einen freien Slot bekommt, wenn mehrere Worker konkurrieren. Kleinere Zahl = zuerst bedient.",
+   "Will show the fleet the bot would send right now, without sending it.": "Zeigt die Flotte, die der Bot jetzt senden würde, ohne sie zu senden.",
+   "With several origins the expedition slots are shared round-robin (13 slots: 7+6, with 3 origins 5+4+4).": "Bei mehreren Ursprüngen werden die Expeditionsslots reihum verteilt (13 Slots: 7+6, bei 3 Ursprüngen 5+4+4).",
+   "Without an Origin of its own the moon at the Defender \"Home\" coordinates is used as the start.": "Ohne eigenen Ursprung wird der Mond an den „Home“-Koordinaten des Defenders als Start genutzt.",
+   "Word in item name": "Wort im Gegenstandsnamen",
+   "Word in the item name, then a limit per rarity": "Wort im Gegenstandsnamen, dann ein Limit pro Seltenheit",
+   "Words (any language) that tell the rarity of an item": "Wörter (beliebige Sprache), die die Seltenheit eines Gegenstands verraten",
+   "Workers to pause": "Zu pausierende Worker",
+   "Works on top of \"Slots to leave free\"": "Wirkt zusätzlich zu „Freizulassende Slots“",
+   "Write messages sent and received to the log": "Gesendete und empfangene Nachrichten ins Log schreiben",
+   "Writes the active items of each planet and the inventory to the log": "Schreibt die aktiven Items jedes Planeten und das Inventar ins Log",
+   "Your own alliance ID is neither shown nor editable in the web UI. Set it directly in the config file (secrets/alliance).": "Deine eigene Allianz-ID wird in der Web-Oberfläche weder angezeigt noch ist sie bearbeitbar. Setze sie direkt in der Config-Datei (secrets/alliance).",
+   "auto: slots / origins": "Auto: Slots / Ursprünge",
+   "back exactly at wake-up": "genau beim Aufwachen zurück",
+   "e.g. LargeCargo, SmallCargo": "z. B. LargeCargo, SmallCargo",
+   "e.g. WakeUp+15": "z. B. WakeUp+15",
+   "fixed time of day": "feste Tageszeit",
+   "is switched off - only help is shown. Your settings are kept.": "ist ausgeschaltet – nur die Hilfe wird gezeigt. Deine Einstellungen bleiben erhalten.",
+   "name not loaded yet": "Name noch nicht geladen",
+   "no loot recorded yet": "noch keine Beute erfasst",
+   "one entry per line": "ein Eintrag pro Zeile",
+   "unsaved block": "ungespeicherter Block",
+   "| Deut": "| Deut",
+   "| Kris": "| Kris",
+   "| fuel Deut": "| Treibstoff-Deut",
+   "| lost:": "| verloren:",
+   "○ off": "○ aus",
+   "● on": "● an",
+   "● unsaved changes": "● ungespeicherte Änderungen",
+   "⚠ Active, but the server host looks like a placeholder - nothing will be filtered.": "⚠ Aktiv, aber der Server-Host sieht wie ein Platzhalter aus – es wird nichts gefiltert.",
+   "⚠ No combat ship set - Pathfinder recommended.": "⚠ Kein Kampfschiff gesetzt – Pathfinder empfohlen.",
+   "⚠ No probe set (optional, sometimes useful).": "⚠ Keine Sonde gesetzt (optional, manchmal nützlich).",
+   "⚠ Not saved yet -": "⚠ Noch nicht gespeichert –",
+   "✓ Strongest combat ship:": "✓ Stärkstes Kampfschiff:",
+   "✓ saved": "✓ gespeichert",
+   "✓ set": "✓ gesetzt",
+   "✗ Fleet is empty.": "✗ Flotte ist leer.",
+   "Array/complex - edit in the JSON tab": "Array/komplex – im JSON-Tab bearbeiten",
+   "Decides the maximum find per expedition": "Legt die maximale Fundmenge pro Expedition fest",
+   "Invalid JSON:": "Ungültiges JSON:",
+   "Skip a target when the available ships carry less than this share of its loot": "Ziel überspringen, wenn die verfügbaren Schiffe weniger als diesen Anteil der Beute tragen können",
+   "(first 300 shown)": "(die ersten 300 gezeigt)",
+   ") on the server.": ") auf dem Server.",
+   ", next impact in": ", nächster Einschlag in",
+   "- energy balance": "– Energiebilanz",
+   "- excluded from AutoMine": "– von AutoMine ausgeschlossen",
+   "/ Crystal": "/ Kristall",
+   "/ Deuterium": "/ Deuterium",
+   "A special mode is active: AutoFarm and the other workers are switched off.": "Ein Sondermodus ist aktiv: AutoFarm und die anderen Worker sind ausgeschaltet.",
+   "Active items:": "Aktive Items:",
+   "Add FastFarm block (switched off)": "FastFarm-Block hinzufügen (ausgeschaltet)",
+   "All": "Alle",
+   "All blocks have their own form. Credentials (login, passwords, own alliance ID, captcha key, proxy login) are not shown or editable here - set them directly in the config file. Every block also has a JSON tab.": "Alle Blöcke haben ein eigenes Formular. Zugangsdaten (Login, Passwörter, eigene Allianz-ID, Captcha-Schlüssel, Proxy-Login) werden hier weder angezeigt noch sind sie bearbeitbar – setze sie direkt in der Config-Datei. Jeder Block hat außerdem einen JSON-Tab.",
+   "All other workers are off; the Defender and the sleep mode keep running.": "Alle anderen Worker sind aus; Defender und Schlafmodus laufen weiter.",
+   "All requests": "Alle Anfragen",
+   "All values in deuterium equivalents at the official trade rate 3 : 2 : 1 (metal : crystal : deuterium), prices without lifeform discount. Extra bonus from active items (resource boosters), crawlers etc. is derived from the real hourly production and is included in \"Payback\"; \"Payback w/o bonus\" leaves that bonus out. It is only derived while the energy balance is not negative. Payback = cost / extra yield per day. \"Short\" = energy missing after the step (a power source is needed first).": "Alle Werte in Deuterium-Äquivalenten zum offiziellen Handelskurs 3 : 2 : 1 (Metall : Kristall : Deuterium), Preise ohne Lebensform-Rabatt. Der Zusatzbonus aus aktiven Items (Rohstoff-Booster), Crawlern usw. wird aus der echten Stundenproduktion abgeleitet und ist in „Amortisation“ enthalten; „Amortisation ohne Bonus“ lässt ihn weg. Er wird nur abgeleitet, solange die Energiebilanz nicht negativ ist. Amortisation = Kosten / Zusatzertrag pro Tag. „Knapp“ = nach dem Schritt fehlt Energie (zuerst wird eine Energiequelle gebraucht).",
+   "An error occurred while processing your request.": "Bei der Verarbeitung deiner Anfrage ist ein Fehler aufgetreten.",
+   "Attacks (AutoFarm)": "Angriffe (AutoFarm)",
+   "AutoFarm": "AutoFarm",
+   "Autobuilds": "Autobuilds",
+   "Automatic refresh active (30 s)": "Automatische Aktualisierung aktiv (30 s)",
+   "Best ROI (fewest days)": "Beste Rendite (wenigste Tage)",
+   "Best investments right now": "Beste Investitionen jetzt",
+   "Blacklist & maintenance": "Blacklist & Wartung",
+   "Bot status": "Bot-Status",
+   "Bridged manually": "Manuell überbrückt",
+   "By coordinates": "Nach Koordinaten",
+   "By coordinates, smallest first": "Nach Koordinaten, kleinste zuerst",
+   "By name": "Nach Name",
+   "By name, A-Z / 1-9": "Nach Name, A-Z / 1-9",
+   "Cheapest step": "Günstigster Schritt",
+   "Check now": "Jetzt prüfen",
+   "Clear the system cache and restart the scan from the beginning?": "Den Systemcache leeren und den Scan von vorn beginnen?",
+   "Clear the whole blacklist?": "Die ganze Blacklist leeren?",
+   "Command queued - AutoFarm runs it at its next cycle.": "Befehl eingereiht – AutoFarm führt ihn im nächsten Zyklus aus.",
+   "Config": "Config",
+   "Copy failed": "Kopieren fehlgeschlagen",
+   "Copy logs": "Logs kopieren",
+   "Cost (D-eq)": "Kosten (D-Äq)",
+   "Could not add the block:": "Block konnte nicht hinzugefügt werden:",
+   "Could not delete:": "Konnte nicht gelöscht werden:",
+   "Could not load data": "Daten konnten nicht geladen werden",
+   "Could not load data:": "Daten konnten nicht geladen werden:",
+   "Could not read the data:": "Daten konnten nicht gelesen werden:",
+   "Could not switch:": "Konnte nicht umgeschaltet werden:",
+   "Credentials: edit the config file directly": "Zugangsdaten: direkt in der Config-Datei bearbeiten",
+   "Crystal": "Kristall",
+   "Dark matter": "Dunkle Materie",
+   "Data available": "Daten vorhanden",
+   "Debug": "Debug",
+   "Delivery in transit": "Lieferung unterwegs",
+   "Deut": "Deut",
+   "Development Mode": "Entwicklungsmodus",
+   "Development build - latest release is": "Entwicklungs-Build – neuestes Release ist",
+   "Diagnostics for scans, decisions and fleets sent by AutoFarm, plus blacklist and database maintenance.": "Diagnose zu Scans, Entscheidungen und von AutoFarm gesendeten Flotten, dazu Blacklist- und Datenbankwartung.",
+   "Display only - AutoMine and AutoResearch keep building by their own rules.": "Nur Anzeige – AutoMine und AutoResearch bauen weiter nach ihren eigenen Regeln.",
+   "Enable it in": "Aktiviere es in",
+   "Energy after": "Energie danach",
+   "Error": "Fehler",
+   "Error.": "Fehler.",
+   "Everything is ok": "Alles in Ordnung",
+   "Extra bonus (items, crawlers ...):": "Zusatzbonus (Items, Crawler ...):",
+   "FastFarm": "FastFarm",
+   "FastFarm is built in, but your config has no FastFarm block yet.": "FastFarm ist eingebaut, aber deine Config hat noch keinen FastFarm-Block.",
+   "FastFarm mode is": "Der FastFarm-Modus ist",
+   "FastFarm mode is off.": "Der FastFarm-Modus ist aus.",
+   "FastFarm mode is on.": "Der FastFarm-Modus ist an.",
+   "File saved successfully!": "Datei erfolgreich gespeichert!",
+   "Filter by status": "Nach Status filtern",
+   "Flotte gesendet": "Flotte gesendet",
+   "Gain/day": "Gewinn/Tag",
+   "Ghost sleep": "Ghost-Sleep",
+   "Guard off": "Wächter aus",
+   "Has ships or defence.": "Hat Schiffe oder Verteidigung.",
+   "Hide data": "Daten verbergen",
+   "Iframe loaded": "Iframe geladen",
+   "In progress": "In Arbeit",
+   "Information": "Information",
+   "Install update": "Update installieren",
+   "Installing…": "Wird installiert…",
+   "Instance": "Instanz",
+   "Instance:": "Instanz:",
+   "It can result in displaying sensitive information from exceptions to end users. For local debugging, enable the": "Das kann dazu führen, dass sensible Informationen aus Ausnahmen Endnutzern angezeigt werden. Zum lokalen Debuggen aktiviere die",
+   "It is saved right away and takes effect when the bot re-reads the config.": "Es wird sofort gespeichert und wirkt, sobald der Bot die Config neu liest.",
+   "Last update failed:": "Letztes Update fehlgeschlagen:",
+   "Last update installed:": "Letztes Update installiert:",
+   "Latest events": "Letzte Ereignisse",
+   "Learn about": "Mehr erfahren über",
+   "Live update failed. The last known data is still shown.": "Live-Aktualisierung fehlgeschlagen. Die zuletzt bekannten Daten werden weiter angezeigt.",
+   "Live updates enabled": "Live-Aktualisierung aktiv",
+   "Load more logs": "Mehr Logs laden",
+   "Loading current data...": "Aktuelle Daten werden geladen...",
+   "Loading data...": "Daten werden geladen...",
+   "Loading…": "Lädt…",
+   "Logging": "Logging",
+   "Logs & errors": "Logs & Fehler",
+   "Lootable amounts, ranked by weighted value": "Plünderbare Mengen, nach gewichtetem Wert gereiht",
+   "Metal": "Metall",
+   "Mine": "Mine",
+   "Mine plan": "Minenplan",
+   "Net gain (": "Nettogewinn (",
+   "Net gain over horizon": "Nettogewinn über den Horizont",
+   "New version": "Neue Version",
+   "Next build": "Nächster Bau",
+   "Next mine upgrades per planet: cost, extra yield, payback time and energy. Preview only - nothing is built or changed by this page.": "Nächste Minenausbauten pro Planet: Kosten, Zusatzertrag, Amortisationszeit und Energie. Nur Vorschau – diese Seite baut oder ändert nichts.",
+   "Next step per mine": "Nächster Schritt pro Mine",
+   "No account data yet.": "Noch keine Kontodaten.",
+   "No attack sent yet.": "Noch kein Angriff gesendet.",
+   "No cached systems are stored.": "Keine Systeme im Cache gespeichert.",
+   "No data": "Keine Daten",
+   "No data yet - FastFarm writes its state with the first cycle.": "Noch keine Daten – FastFarm schreibt seinen Zustand mit dem ersten Zyklus.",
+   "No fleet dispatch has been recorded yet.": "Es wurde noch kein Flottenversand erfasst.",
+   "No log entries today yet.": "Heute noch keine Logeinträge.",
+   "No logs available.": "Keine Logs verfügbar.",
+   "No logs to show.": "Keine Logs anzuzeigen.",
+   "No loss data yet.": "Noch keine Verlustdaten.",
+   "No plan yet. The file is written by AutoMine in its next cycle": "Noch kein Plan. Die Datei wird von AutoMine im nächsten Zyklus geschrieben",
+   "No reason recorded": "Kein Grund erfasst",
+   "No recent AutoFarm errors or warnings.": "Keine aktuellen AutoFarm-Fehler oder -Warnungen.",
+   "No release information yet.": "Noch keine Release-Informationen.",
+   "No report arrived (probes lost).": "Kein Bericht eingetroffen (Sonden verloren).",
+   "No reports for this selection.": "Keine Berichte für diese Auswahl.",
+   "No resource data yet.": "Noch keine Rohstoffdaten.",
+   "No slot data yet.": "Noch keine Slotdaten.",
+   "No start celestials.": "Keine Start-Himmelskörper.",
+   "No status from the bot yet. The bot writes it every 30 seconds - is it running?": "Noch kein Status vom Bot. Der Bot schreibt ihn alle 30 Sekunden – läuft er?",
+   "No step fits these settings.": "Kein Schritt passt zu diesen Einstellungen.",
+   "No stored target with known loot yet.": "Noch kein gespeichertes Ziel mit bekannter Beute.",
+   "No target above the minimum loot yet.": "Noch kein Ziel über der Mindestbeute.",
+   "Not available": "Nicht verfügbar",
+   "Note": "Hinweis",
+   "Nothing to copy": "Nichts zu kopieren",
+   "Ogame": "Ogame",
+   "Old config detected - only the Defender is running. Stop the bot, run MigrateConfig (main folder), check the config and restart. Already migrated by hand? Add \"ConfigVersion\": 4 at the top of instance_settings.json.": "Alte Config erkannt – nur der Defender läuft. Stoppe den Bot, starte MigrateConfig (Hauptordner), prüfe die Config und starte neu. Schon von Hand migriert? Füge \"ConfigVersion\": 4 oben in die instance_settings.json ein.",
+   "Old configuration detected: only Defender and SleepMode run. Update the config with MigrateConfig (see config/README.md).": "Alte Konfiguration erkannt: Nur Defender und SleepMode laufen. Aktualisiere die Config mit MigrateConfig (siehe config/README.md).",
+   "Open": "Öffnen",
+   "Open the FastFarm overview": "Die FastFarm-Übersicht öffnen",
+   "Page updated": "Seite aktualisiert",
+   "Payback (days)": "Amortisation (Tage)",
+   "Payback w/o bonus": "Amortisation ohne Bonus",
+   "Pays back fastest": "Amortisiert sich am schnellsten",
+   "Pays back slowest": "Amortisiert sich am langsamsten",
+   "Pending recalls": "Ausstehende Rückrufe",
+   "Placeholder - enable in settings.json": "Platzhalter – in settings.json aktivieren",
+   "Planet": "Planet",
+   "Planets / moons": "Planeten / Monde",
+   "Planned order (best payback first, like AutoMine)": "Geplante Reihenfolge (beste Amortisation zuerst, wie AutoMine)",
+   "Recycler (...) gesendet": "Recycler (...) gesendet",
+   "Recycler ... gesendet": "Recycler ... gesendet",
+   "Refresh failed, last data stays visible.": "Aktualisierung fehlgeschlagen, die letzten Daten bleiben sichtbar.",
+   "Release page": "Release-Seite",
+   "Request ID:": "Anfrage-ID:",
+   "Research": "Forschung",
+   "Research (whole account)": "Forschung (ganzes Konto)",
+   "Reset the whole AutoFarm database and the blacklist? This cannot be undone.": "Die ganze AutoFarm-Datenbank und die Blacklist zurücksetzen? Das kann nicht rückgängig gemacht werden.",
+   "Resource farming mode: scans for inactive players, spies them and raids the best ones, aiming at deuterium. This page replaces the AutoFarm report while the mode is on.": "Rohstoff-Farmmodus: scannt nach inaktiven Spielern, spioniert sie aus und raidet die besten, auf Deuterium ausgerichtet. Diese Seite ersetzt den AutoFarm-Bericht, solange der Modus an ist.",
+   "Resources (all planets and moons)": "Rohstoffe (alle Planeten und Monde)",
+   "Run this command?": "Diesen Befehl ausführen?",
+   "Search blocks…": "Blöcke suchen…",
+   "Search...": "Suchen...",
+   "Shortest payback": "Kürzeste Amortisation",
+   "Show the AutoFarm report": "Den AutoFarm-Bericht zeigen",
+   "SignalR Connected.": "SignalR verbunden.",
+   "Sleep starts in": "Schlaf beginnt in",
+   "Sort:": "Sortierung:",
+   "Step": "Schritt",
+   "Stock covered": "Bestand gedeckt",
+   "Swapping to": "Wechsel zu",
+   "Switch FastFarm OFF? The other workers start again.": "FastFarm AUSschalten? Die anderen Worker starten wieder.",
+   "Switch FastFarm ON? All other workers except the Defender stop.": "FastFarm EINschalten? Alle anderen Worker außer dem Defender stoppen.",
+   "Switch FastFarm ON? All other workers except the Defender stop. It is saved right away and takes effect when the bot re-reads the config.": "FastFarm EINschalten? Alle anderen Worker außer dem Defender stoppen. Es wird sofort gespeichert und wirkt, sobald der Bot die Config neu liest.",
+   "Switch FastFarm off": "FastFarm ausschalten",
+   "Switch FastFarm on": "FastFarm einschalten",
+   "Switching it on stops all other workers except the Defender and shows this page under AutoFarm.": "Einschalten stoppt alle anderen Worker außer dem Defender und zeigt diese Seite unter AutoFarm.",
+   "T-Bot": "T-Bot",
+   "The Development environment shouldn't be enabled for deployed applications.": "Die Development-Umgebung sollte nicht für veröffentlichte Anwendungen aktiviert sein.",
+   "The blacklist is empty.": "Die Blacklist ist leer.",
+   "The bot is not back after 10 minutes. Check the folder update\\updater.log.": "Der Bot ist nach 10 Minuten nicht zurück. Prüfe die Datei update\\updater.log.",
+   "The form view for this block is a placeholder and not enabled yet.": "Die Formularansicht dieses Blocks ist ein Platzhalter und noch nicht aktiviert.",
+   "The order shown here is the order the bot works through (from its next cycle). Click a column head to sort. Deleted targets are not taken in again for 24 hours.": "Die hier gezeigte Reihenfolge ist die, in der der Bot arbeitet (ab seinem nächsten Zyklus). Klicke auf eine Spaltenüberschrift zum Sortieren. Gelöschte Ziele werden 24 Stunden lang nicht wieder aufgenommen.",
+   "The other workers keep running and compete for fleet slots.": "Die anderen Worker laufen weiter und konkurrieren um Flottenslots.",
+   "The report was incomplete.": "Der Bericht war unvollständig.",
+   "The status is": "Der Status ist",
+   "This page reloads by itself when the bot is back.": "Diese Seite lädt sich selbst neu, sobald der Bot zurück ist.",
+   "To level": "Auf Stufe",
+   "Toggle navigation": "Navigation umschalten",
+   "Total cost": "Gesamtkosten",
+   "Total gain/day": "Gesamtgewinn/Tag",
+   "Total payback": "Gesamtamortisation",
+   "Trace": "Trace",
+   "Turned active again.": "Wieder aktiv geworden.",
+   "Type DELETE to confirm.": "Gib DELETE zum Bestätigen ein.",
+   "Unnamed target": "Unbenanntes Ziel",
+   "Until then, edit the file directly on the server.": "Bis dahin bearbeite die Datei direkt auf dem Server.",
+   "Update check failed:": "Update-Prüfung fehlgeschlagen:",
+   "Update could not be started:": "Update konnte nicht gestartet werden:",
+   "Use this page to detail your site's privacy policy.": "Auf dieser Seite kannst du die Datenschutzerklärung deiner Website beschreiben.",
+   "Waiting for delivery": "Warten auf Lieferung",
+   "Wakes up in": "Wacht auf in",
+   "Warning": "Warnung",
+   "Welcome": "Willkommen",
+   "What the Brain workers (AutoMine, AutoResearch, LF-AutoMine, LF-AutoResearch) want to build per celestial and what they started last. Read only.": "Was die Brain-Worker (AutoMine, AutoResearch, LF-AutoMine, LF-AutoResearch) pro Himmelskörper bauen wollen und was sie zuletzt gestartet haben. Nur lesen.",
+   "When it is on, this menu entry shows the FastFarm overview instead of this report, and all other workers except the Defender stop.": "Wenn er an ist, zeigt dieser Menüpunkt die FastFarm-Übersicht statt dieses Berichts, und alle anderen Worker außer dem Defender stoppen.",
+   "Worst ROI (most days)": "Schlechteste Rendite (meiste Tage)",
+   "Wrong JSON Format:": "Falsches JSON-Format:",
+   "You are looking at the AutoFarm report; the other workers are off while FastFarm runs.": "Du siehst den AutoFarm-Bericht; die anderen Worker sind aus, solange FastFarm läuft.",
+   "You are on the latest version (": "Du hast die neueste Version (",
+   "and restarting the app.": "und starte die Anwendung neu.",
+   "and the speed fleet is switched off": "und die Speed-Flotte ist ausgeschaltet",
+   "building Web apps with ASP.NET Core": "Web-Apps mit ASP.NET Core bauen",
+   "environment by setting the": "Umgebung, indem du die",
+   "environment variable to": "Umgebungsvariable auf",
+   "environment will display more detailed information about the error that occurred.": "Umgebung zeigt ausführlichere Informationen zu dem aufgetretenen Fehler.",
+   "h ago": "Std. her",
+   "incoming attack": "eingehender Angriff",
+   "min ago": "Min. her",
+   "not recorded yet": "noch nicht erfasst",
+   "now? The bot stops, the files are replaced (config, data and logins stay) and the bot restarts. This takes about a minute. If the new version does not start, the old one is restored automatically.": "jetzt? Der Bot stoppt, die Dateien werden ersetzt (Config, Daten und Logins bleiben) und der Bot startet neu. Das dauert etwa eine Minute. Startet die neue Version nicht, wird die alte automatisch wiederhergestellt.",
+   "off (override)": "aus (überschrieben)",
+   "old. The bot may be stopped or stuck.": "alt. Der Bot ist möglicherweise gestoppt oder hängt.",
+   "running / due now": "läuft / jetzt fällig",
+   "s ago": "Sek. her",
+   "secrets/credentials.json": "secrets/credentials.json",
+   "service worker not registered": "Service Worker nicht registriert",
+   "service worker registered": "Service Worker registriert",
+   "settings.json": "settings.json",
+   "soon": "bald",
+   "verpasste Eintraege nachgeladen.": "verpasste Einträge nachgeladen.",
+   "· status": "· Status",
+   "🔒 This block contains credentials (login, password, user name). It is neither shown nor editable in the web UI - change it only directly in the config file (": "🔒 Dieser Block enthält Zugangsdaten (Login, Passwort, Benutzername). Er wird in der Web-Oberfläche weder angezeigt noch ist er bearbeitbar – ändere ihn nur direkt in der Config-Datei (",
+   "Active": "Aktiv",
+   "Galaxy": "Galaxie",
+   "System": "System",
+   "Position": "Position",
+   "Type": "Typ",
+   "Moon": "Mond",
+   "Language": "Sprache",
+   "Back": "Zurück",
+   "Save": "Speichern",
+   "Cancel": "Abbrechen",
+   "Delete": "Löschen",
+   "Refresh": "Aktualisieren",
+   "Yes": "Ja",
+   "No": "Nein",
+   "Close": "Schließen",
+   "Apply": "Übernehmen",
+   "Reload": "Neu laden",
+   "Status": "Status",
+   "Search": "Suchen",
+   "Name": "Name",
+   "Coordinates": "Koordinaten",
+   "Slot": "Slot",
+   "Ships": "Schiffe",
+   "Defence": "Verteidigung",
+   "Priority": "Priorität",
+   "Level": "Stufe",
+   "Cost": "Kosten",
+   "Deuterium": "Deuterium",
+   "Energy": "Energie",
+   "Short": "Knapp",
+   "Sort": "Sortieren",
+   "JSON": "JSON",
+   "Form": "Formular",
+   "Backup": "Backup",
+   "Time": "Zeit",
+   "Date": "Datum",
+   "Level (D)": "Stufe",
+   "Level cap per slot (one tech per race in each slot, 0 = do not research). The tick marks a slot as priority: ticked slots are researched first, in the order they were ticked (hover the tick to see the position).": "Level-Cap pro Slot (eine Tech pro Rasse in jedem Slot, 0 = nicht erforschen). Der Haken markiert einen Slot als Priorität: Angehakte Slots werden zuerst erforscht, in der Reihenfolge des Anhakens (Position im Tooltip des Hakens).",
+   "Priority 1": "Priorität 1",
+   "Priority 2": "Priorität 2",
+   "Priority 3": "Priorität 3",
+   "Priority 4": "Priorität 4",
+   "Priority 5": "Priorität 5",
+   "Priority 6": "Priorität 6",
+   "Priority 7": "Priorität 7",
+   "Priority 8": "Priorität 8",
+   "Priority 9": "Priorität 9",
+   "Priority 10": "Priorität 10",
+   "Priority 11": "Priorität 11",
+   "Priority 12": "Priorität 12",
+   "Priority 13": "Priorität 13",
+   "Priority 14": "Priorität 14",
+   "Priority 15": "Priorität 15",
+   "Priority 16": "Priorität 16",
+   "Priority 17": "Priorität 17",
+   "Priority 18": "Priorität 18"
+  },
+  "phrases": [
+   [
+    "Light Fighter",
+    "Leichter Jäger"
+   ],
+   [
+    "Heavy Fighter",
+    "Schwerer Jäger"
+   ],
+   [
+    "Cruiser",
+    "Kreuzer"
+   ],
+   [
+    "Battleship",
+    "Schlachtschiff"
+   ],
+   [
+    "Battlecruiser",
+    "Schlachtkreuzer"
+   ],
+   [
+    "Bomber",
+    "Bomber"
+   ],
+   [
+    "Destroyer",
+    "Zerstörer"
+   ],
+   [
+    "Deathstar",
+    "Todesstern"
+   ],
+   [
+    "Small Cargo",
+    "Kleiner Transporter"
+   ],
+   [
+    "Large Cargo",
+    "Großer Transporter"
+   ],
+   [
+    "Colony Ship",
+    "Kolonieschiff"
+   ],
+   [
+    "Recycler",
+    "Recycler"
+   ],
+   [
+    "Espionage Probe",
+    "Spionagesonde"
+   ],
+   [
+    "Solar Satellite",
+    "Solarsatellit"
+   ],
+   [
+    "Crawler",
+    "Crawler"
+   ],
+   [
+    "Reaper",
+    "Reaper"
+   ],
+   [
+    "Pathfinder",
+    "Pathfinder"
+   ],
+   [
+    "Metal Mine",
+    "Metallmine"
+   ],
+   [
+    "Crystal Mine",
+    "Kristallmine"
+   ],
+   [
+    "Deuterium Synthetizer",
+    "Deuterium-Synthetisierer"
+   ],
+   [
+    "Solar Plant",
+    "Solarkraftwerk"
+   ],
+   [
+    "Fusion Reactor",
+    "Fusionskraftwerk"
+   ],
+   [
+    "Metal Storage",
+    "Metallspeicher"
+   ],
+   [
+    "Crystal Storage",
+    "Kristallspeicher"
+   ],
+   [
+    "Deuterium Tank",
+    "Deuterium-Tank"
+   ],
+   [
+    "Robotics Factory",
+    "Roboterfabrik"
+   ],
+   [
+    "Shipyard",
+    "Raumschiffwerft"
+   ],
+   [
+    "Research Lab",
+    "Forschungslabor"
+   ],
+   [
+    "Missile Silo",
+    "Raketensilo"
+   ],
+   [
+    "Nanite Factory",
+    "Nanitenfabrik"
+   ],
+   [
+    "Terraformer",
+    "Terraformer"
+   ],
+   [
+    "Space Dock",
+    "Raumschiffdock"
+   ],
+   [
+    "Lunar Base",
+    "Mondbasis"
+   ],
+   [
+    "Lunar Shipyard",
+    "Mond-Raumschiffwerft"
+   ],
+   [
+    "Lunar Robotics Factory",
+    "Mond-Roboterfabrik"
+   ],
+   [
+    "Sensor Phalanx",
+    "Sensorphalanx"
+   ],
+   [
+    "Jump Gate",
+    "Sprungtor"
+   ],
+   [
+    "Alliance Depot",
+    "Allianzdepot"
+   ],
+   [
+    "Rocket Launcher",
+    "Raketenwerfer"
+   ],
+   [
+    "Light Laser",
+    "Leichter Laser"
+   ],
+   [
+    "Heavy Laser",
+    "Schwerer Laser"
+   ],
+   [
+    "Gauss Cannon",
+    "Gaußkanone"
+   ],
+   [
+    "Ion Cannon",
+    "Ionengeschütz"
+   ],
+   [
+    "Plasma Turret",
+    "Plasmawerfer"
+   ],
+   [
+    "Small Shield Dome",
+    "Kleine Schildkuppel"
+   ],
+   [
+    "Large Shield Dome",
+    "Große Schildkuppel"
+   ],
+   [
+    "Anti Ballistic Missiles",
+    "Abfangraketen"
+   ],
+   [
+    "Interplanetary Missiles",
+    "Interplanetarraketen"
+   ],
+   [
+    "Energy Technology",
+    "Energietechnik"
+   ],
+   [
+    "Laser Technology",
+    "Lasertechnik"
+   ],
+   [
+    "Ion Technology",
+    "Ionentechnik"
+   ],
+   [
+    "Hyperspace Technology",
+    "Hyperraumtechnik"
+   ],
+   [
+    "Plasma Technology",
+    "Plasmatechnologie"
+   ],
+   [
+    "Combustion Drive",
+    "Verbrennungstriebwerk"
+   ],
+   [
+    "Impulse Drive",
+    "Impulstriebwerk"
+   ],
+   [
+    "Hyperspace Drive",
+    "Hyperraumantrieb"
+   ],
+   [
+    "Espionage Technology",
+    "Spionagetechnik"
+   ],
+   [
+    "Computer Technology",
+    "Computertechnik"
+   ],
+   [
+    "Astrophysics",
+    "Astrophysik"
+   ],
+   [
+    "Intergalactic Research Network",
+    "Intergalaktisches Forschungsnetzwerk"
+   ],
+   [
+    "Graviton Technology",
+    "Gravitonforschung"
+   ],
+   [
+    "Weapons Technology",
+    "Waffentechnik"
+   ],
+   [
+    "Shielding Technology",
+    "Schildtechnik"
+   ],
+   [
+    "Armour Technology",
+    "Raumschiffpanzerung"
+   ],
+   [
+    "Max",
+    "Max."
+   ],
+   [
+    "Min",
+    "Min."
+   ],
+   [
+    "Colony",
+    "Kolonie"
+   ],
+   [
+    "Check Interval",
+    "Prüfintervall"
+   ],
+   [
+    "Home World",
+    "Hauptplanet"
+   ],
+   [
+    "Exclude",
+    "Ausschließen"
+   ],
+   [
+    "Origin",
+    "Ursprung"
+   ],
+   [
+    "Target",
+    "Ziel"
+   ],
+   [
+    "Active",
+    "Aktiv"
+   ],
+   [
+    "Metal",
+    "Metall"
+   ],
+   [
+    "Crystal",
+    "Kristall"
+   ],
+   [
+    "Deuterium",
+    "Deuterium"
+   ],
+   [
+    "Mine",
+    "Mine"
+   ],
+   [
+    "Storage",
+    "Speicher"
+   ],
+   [
+    "Level",
+    "Stufe"
+   ],
+   [
+    "Random Order",
+    "Zufällige Reihenfolge"
+   ],
+   [
+    "Slots",
+    "Slots"
+   ],
+   [
+    "Transports",
+    "Transporte"
+   ],
+   [
+    "Reserve",
+    "Reserve"
+   ],
+   [
+    "Minutes",
+    "Minuten"
+   ],
+   [
+    "Seconds",
+    "Sekunden"
+   ],
+   [
+    "Hours",
+    "Stunden"
+   ],
+   [
+    "Days",
+    "Tage"
+   ]
+  ],
+  "rx": [
+   [
+    "^Slot (\\d+)$",
+    "Slot $1"
+   ],
+   [
+    "^(\\d+) s ago$",
+    "vor $1 s"
+   ],
+   [
+    "^(\\d+) min ago$",
+    "vor $1 Min."
+   ],
+   [
+    "^(\\d+) h ago$",
+    "vor $1 Std."
+   ]
+  ]
+ },
+ "help": {
+  "AutoFarm": {
+   "SystemRange": {
+    "t": "Nur Systeme innerhalb dieser Entfernung von deinen Start-Himmelskörpern scannen, statt des festen Scan-Bereichs. 0 = Scan-Bereich verwenden.",
+    "e": "5 = bis zu 5 Systeme in jede Richtung um jeden Start-Himmelskörper."
+   },
+   "ExcludeMoons": {
+    "t": "Monde werden weder ausspioniert noch angegriffen, nur Planeten."
+   },
+   "DistanceBasedScanOrder": {
+    "t": "Die nächsten Systeme zuerst scannen. Nahe Ziele bedeuten kürzere Flüge und weniger Treibstoff."
+   },
+   "ScanBlockSize": {
+    "t": "Nach so vielen Systemen den Scan unterbrechen, mit dem Gefundenen angreifen und dann weitermachen. 0 = aus."
+   },
+   "TargetsProbedBeforeAttack": {
+    "t": "Sobald so viele Ziele ausspioniert sind, mit dem Angriff beginnen, statt erst den Scan zu beenden. 0 = aus."
+   },
+   "SequentialMode": {
+    "t": "Ein Ziel nach dem anderen bearbeiten (Sonde, auf den Bericht warten, angreifen), statt zuerst zu scannen. Langsamer, braucht aber sehr wenige Flottenslots."
+   },
+   "SequentialModeProbesPerCycle": {
+    "t": "Nur im sequenziellen Modus: wie viele Ziele pro Durchlauf ausspioniert werden."
+   },
+   "StopAfterFullScan": {
+    "t": "AutoFarm hört von selbst auf, nachdem es den ganzen Bereich einmal gescannt hat."
+   },
+   "MinimumResources": {
+    "t": "Ein unverteidigtes Ziel wird nur angegriffen, wenn mindestens so viel Beute zu holen ist (laut Spionagebericht).",
+    "e": "2.000.000 = Ziele mit weniger Beute werden ignoriert."
+   },
+   "MinimumResourcesDefended": {
+    "t": "Dasselbe Minimum für Ziele mit Schiffen oder Verteidigung. Setze es höher als den Wert darüber, weil diese Kämpfe Schiffe kosten können."
+   },
+   "MinimumPlayerRank": {
+    "t": "Spieler mit einem besseren Rang (kleinere Zahl) als diesem werden übersprungen.",
+    "e": "3000 = ein Spieler auf Rang 1500 wird übersprungen, einer auf Rang 5000 wird gefarmt."
+   },
+   "MaxFlightTime": {
+    "t": "Längste erlaubte einfache Flugzeit in Sekunden. Weiter entfernte Ziele werden übersprungen. 0 = keine Grenze.",
+    "e": "7200 = 2 Stunden."
+   },
+   "MinLootFuelRatio": {
+    "t": "Die Beute muss mindestens so viel wert sein wie der Treibstoff, multipliziert mit diesem Faktor. Der Bot wählt die schnellste Geschwindigkeit, die das noch erfüllt.",
+    "e": "1,5 = bei 100.000 Deuterium Treibstoff müssen mindestens 150.000 Beute da sein."
+   },
+   "PreferedResource": {
+    "t": "Ziele mit dem meisten dieses Rohstoffs kommen zuerst. Leer = keine Vorliebe."
+   },
+   "AttackDefendedTargets": {
+    "t": "Auch Ziele mit Schiffen oder Verteidigung angreifen. Der Bot simuliert den Kampf und schickt eine Eskorte aus Kriegsschiffen mit den Frachtern. Braucht die Eskorte-Einstellungen weiter unten.",
+    "e": "Kostet mehr Deuterium und kann Schiffe verlieren."
+   },
+   "MaxDefensePoints": {
+    "t": "Ziele, deren Verteidigung mehr wert ist als dieser Wert, werden übersprungen."
+   },
+   "MinLootPerDefensePoint": {
+    "t": "Verteidigte Ziele werden übersprungen, wenn ihre Beute im Verhältnis zur Verteidigung zu klein ist. Höher = wählerischer."
+   },
+   "KeepReportFor": {
+    "t": "Minuten, die ein Spionagebericht gültig bleibt, bevor das Ziel erneut ausspioniert werden muss."
+   },
+   "MaxReportAgeMinutesForAttack": {
+    "t": "Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus."
+   },
+   "MaxAttackDelaySec": {
+    "t": "Längste Zeit in Sekunden, die ein Angriff zurückgehalten werden darf, damit die Recycler direkt dahinter ankommen."
+   },
+   "DebrisCreditPercent": {
+    "t": "Wie viel des erwarteten Trümmerfelds als Gewinn zählt, wenn der Bot entscheidet, ob sich ein Angriff lohnt (nach dem Treibstoff der Recycler).",
+    "e": "80 = 80 % der Trümmer werden angerechnet."
+   },
+   "MinDebrisToHarvest": {
+    "t": "Recycler werden nur geschickt, wenn das Trümmerfeld nach ihren Treibstoffkosten größer als dieser Wert ist. 0 = immer, wenn Trümmer da sind."
+   },
+   "MinSpeedPercentForProfitRetry": {
+    "t": "Lohnt sich ein Angriff bei der gewählten Geschwindigkeit nicht, probiert der Bot langsamere Geschwindigkeiten bis zu diesem Wert, weil langsamere Flüge weniger Treibstoff verbrennen."
+   },
+   "GlobalSpacing": {
+    "t": "Nur für mehrere Bot-Instanzen: verteilt sie auf verschiedene Startpunkte im Scan-Bereich. Bei einer Instanz aus lassen."
+   },
+   "ReportQueryLimitForNonActionable": {
+    "t": "Wie viele Berichte von nicht angreifbaren Zielen pro Durchlauf gelesen werden. Niedriger = schnellere Durchläufe."
+   },
+   "RepeatedLogIntervalMinutes": {
+    "t": "Dieselbe Log-Meldung erscheint höchstens so oft. 0 = jedes Mal."
+   },
+   "NumProbes": {
+    "t": "Spionagesonden, die pro Ziel geschickt werden."
+   },
+   "BuildProbes": {
+    "t": "Sonden automatisch bauen, wenn zu wenige zu Hause sind."
+   },
+   "FillSlots": {
+    "t": "Alle erlaubten Flottenslots mit Sonden und Angriffen belegt halten."
+   },
+   "FillSlotsMaxProbeWaitSec": {
+    "t": "Wie lange (in Sekunden) auf Sondenberichte gewartet wird, bevor freie Slots anders genutzt werden."
+   },
+   "MaxSlots": {
+    "t": "Die meisten Flottenslots, die AutoFarm gleichzeitig nutzen darf."
+   },
+   "SlotsToLeaveFree": {
+    "t": "Flottenslots, die AutoFarm nie nutzt, damit Expeditionen und andere Worker noch Platz haben."
+   },
+   "FleetSpeed": {
+    "t": "Feste Geschwindigkeit für Angriffe, wenn keine bessere berechnet wird. 100 % ist am schnellsten und verbrennt am meisten Deuterium."
+   },
+   "CargoType": {
+    "t": "Der Frachtertyp, der die Beute trägt."
+   },
+   "MinCargosToSend": {
+    "t": "Es wird kein Angriff mit weniger Frachtern als diesem Wert gestartet."
+   },
+   "MinCargosToKeep": {
+    "t": "Frachter, die immer zu Hause bleiben."
+   },
+   "CargoSurplusPercentage": {
+    "t": "Zusätzlicher Laderaum über die berechnete Menge hinaus, als Sicherheitsreserve."
+   },
+   "CargoReservePercent": {
+    "t": "Anteil der Frachter, der als Reserve zurückgehalten wird."
+   },
+   "RecyclerReservePercent": {
+    "t": "Anteil der Recycler, der als Reserve zurückgehalten wird."
+   },
+   "BuildCargos": {
+    "t": "Frachter bauen, wenn nicht genug da sind."
+   },
+   "UseSpeedFleet": {
+    "t": "Schnelle Schiffe (Pathfinder) als Frachter nutzen, damit Angriffe früher ankommen. Sie verbrennen mehr Deuterium. Die Deuterium-Sperre schaltet das von selbst ab, wenn das Deuterium knapp ist."
+   },
+   "SpeedFleetCargoTypes": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden. Die Schnellflotte besteht immer aus Pathfindern."
+   },
+   "ReduceDeuterium": {
+    "t": "Deuterium sparen: Angriffsflotte und Recycler fliegen so langsam, wie es sinnvoll ist, nie unter der unten eingestellten niedrigsten Geschwindigkeit. Flüge dauern länger und Slots bleiben länger belegt.",
+    "e": "Nützlich, wenn Deuterium knapp ist."
+   },
+   "ReduceDeuteriumMinSpeedPercent": {
+    "t": "Die langsamste Geschwindigkeit, die „Deuterium sparen“ nutzen darf. Nie unter 30 %."
+   },
+   "DeuteriumGuard": {
+    "t": "Hat ein Start-Himmelskörper weniger Deuterium als das Minimum darunter, werden Angriffe auf verteidigte Ziele von dort pausiert. Hat keiner genug, wird auch die Schnellflotte abgeschaltet. Die AutoFarm-Seite zeigt dann „Deuterium too low for bigger fleets“."
+   },
+   "DeuteriumGuardMin": {
+    "t": "Die Deuterium-Schwelle der Sperre.",
+    "e": "10.000.000 = die Sperre greift unter 10 Millionen Deuterium."
+   },
+   "DeuteriumGuardOverride": {
+    "t": "Die Sperre von Hand überbrücken und auch bei wenig Deuterium weiterfarmen. Die Seite zeigt weiterhin einen Hinweis."
+   },
+   "TargetCombatTechBonus": {
+    "t": "Zusätzliche Waffentechnik-Stufen, die für das Ziel in Kampfsimulationen angenommen werden, als Sicherheitsreserve. Höher = vorsichtiger."
+   },
+   "EscortShipTypes": {
+    "t": "Kriegsschiffe, die als Eskorte mitfliegen dürfen, in der Reihenfolge der Vorliebe. Mit Komma getrennt."
+   },
+   "EscortFallbackShipTypes": {
+    "t": "Wird nur genutzt, wenn die Eskortschiffe darüber nicht ausreichen."
+   },
+   "EscortShipsStep": {
+    "t": "Die Eskorte wird in Schritten von so vielen Schiffen gesucht. Kleiner = genauer, aber langsamer."
+   },
+   "MaxEscortShips": {
+    "t": "Größte Zahl Schiffe eines Typs in einer Eskorte, wenn unten für diesen Typ keine Obergrenze gesetzt ist."
+   },
+   "MaxEscortFleetPercent": {
+    "t": "Höchstens so viel Prozent der Schiffe eines Typs, die zu Hause stehen, dürfen als Eskorte mitfliegen.",
+    "e": "100 = keine Grenze nach Anteil; 20 = höchstens ein Fünftel davon."
+   },
+   "EscortReservePercent": {
+    "t": "Sicherheitspuffer: Auf die berechnete Eskorte kommt so viel zusätzlich, wo Schiffe verfügbar sind."
+   },
+   "MaxEscortLossPercent": {
+    "t": "Höchster simulierter Verlust, als Anteil am Wert der ganzen Angriffsflotte. Eskorten, die mehr verlieren würden, werden abgelehnt. 0 = Grenze aus (jeder Verlust wird akzeptiert).",
+    "e": "10 = eine Eskorte ablehnen, die mehr als 10 % des Flottenwerts verlieren würde."
+   },
+   "EscortLossWeight": {
+    "t": "Wie stark Schiffsverluste im Vergleich zum Treibstoff zählen, wenn der Bot die günstigste Eskorte wählt. Höher = er bevorzugt eine größere Eskorte, die weniger verliert.",
+    "e": "3 = ein verlorenes Schiff zählt dreimal so viel wie derselbe Wert in Treibstoff."
+   },
+   "MinWinRate": {
+    "t": "Der simulierte Kampf muss mindestens so oft gewonnen werden.",
+    "e": "0,9 = in 90 % der simulierten Kämpfe."
+   },
+   "SimulationRuns": {
+    "t": "Wie viele Kämpfe pro Prüfung simuliert werden. Mehr = zuverlässiger, aber langsamer."
+   },
+   "EscortMaxIterations": {
+    "t": "Suchaufwand für die beste Eskortengröße: höchste Zahl an Schritten. Höher = besseres Ergebnis, mehr Rechenzeit."
+   },
+   "EscortBisectionIterations": {
+    "t": "Suchaufwand: wie fein die Eskortengröße eingegrenzt wird. Höher = genauer, langsamer."
+   },
+   "EscortFineTuneMaxSims": {
+    "t": "Suchaufwand: Simulationen für die letzte Feinabstimmung der Eskorte."
+   },
+   "FleetToDebrisPercent": {
+    "t": "Erwarteter Anteil der Flottenverluste, der als Trümmerfeld übrig bleibt. Wird für die Planung der Recycler genutzt."
+   },
+   "MaxCargoLossPercent": {
+    "t": "Höchster akzeptierter Verlust an Frachtern in der Simulation, als Anteil an ihrem Wert."
+   },
+   "AutoHarvestDebrisAfterAttack": {
+    "t": "Nach dem Angriff Recycler zum Trümmerfeld schicken."
+   },
+   "CheckIntervalMin": {
+    "t": "Minuten zwischen zwei AutoFarm-Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum."
+   },
+   "CheckIntervalMax": {
+    "t": "Minuten zwischen zwei AutoFarm-Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum."
+   },
+   "ScanRange": {
+    "t": "Galaxie- und Systembereiche, die nach Zielen gescannt werden."
+   },
+   "Exclude": {
+    "t": "Koordinaten, die nie ausspioniert oder angegriffen werden."
+   },
+   "Blacklist.ResetAfterHours": {
+    "t": "Stunden, bis ein Ziel auf der Sperrliste wieder erlaubt ist."
+   },
+   "Blacklist.UnprofitableResetAfterHours": {
+    "t": "Stunden, bis ein Ziel, das sich nicht gelohnt hat, erneut geprüft wird."
+   },
+   "Blacklist.PermanentResetAfterHours": {
+    "t": "Stunden, bis ein dauerhaft gesperrtes Ziel freigegeben wird. 0 = nie."
+   },
+   "ServerHost": {
+    "t": "Hostname deines Universums, um die Allianzen anderer Spieler zu lesen."
+   },
+   "AdditionalAllianceIds": {
+    "t": "Allianz-IDs, die nie angegriffen werden, zum Beispiel NAP-Partner."
+   },
+   "EscortCap": {
+    "t": "Absolute Obergrenze für diesen Eskortschiff-Typ. Leer = nur die allgemeine Grenze „Max escort ships“ zählt."
+   }
+  },
+  "*": {
+   "Active": {
+    "t": "Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts."
+   },
+   "CheckIntervalMin": {
+    "t": "Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion."
+   },
+   "CheckIntervalMax": {
+    "t": "Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet."
+   },
+   "Galaxy": {
+    "t": "Galaxienummer der Koordinaten."
+   },
+   "System": {
+    "t": "Systemnummer der Koordinaten."
+   },
+   "Position": {
+    "t": "Position (1-15) im System."
+   },
+   "Type": {
+    "t": "Planet oder Mond an diesen Koordinaten."
+   },
+   "Exclude": {
+    "t": "Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper."
+   },
+   "Transports.Active": {
+    "t": "Dieser Funktion erlauben, fehlende Rohstoffe per Transport von deinen anderen Himmelskörpern zu holen."
+   },
+   "RandomOrder": {
+    "t": "Die Himmelskörper in zufälliger Reihenfolge bearbeiten, statt immer denselben zuerst."
+   },
+   "ExcludeMoons": {
+    "t": "Monde überspringen, nur Planeten werden bearbeitet."
+   },
+   "MaxSlots": {
+    "t": "Größte Zahl an Flottenslots, die diese Funktion gleichzeitig nutzen darf."
+   },
+   "SlotsToLeaveFree": {
+    "t": "Flottenslots, die diese Funktion nie nutzt, damit sie für dich frei bleiben."
+   },
+   "CustomTitle": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "SecondaryShip": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "MinSecondaryToSend": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "SecondaryToPrimaryRatio": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "MaxWaitTime": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "MaxFailures": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "RandomizeDestination": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "ResourceReserve.*": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "ResourceReserve": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   }
+  },
+  "Credentials": {
+   "Universe": {
+    "t": "Name deines Universums genau so, wie er in der Gameforge-Lobby steht.",
+    "e": "Fornax"
+   },
+   "Email": {
+    "t": "E-Mail-Adresse deines Gameforge-Kontos."
+   },
+   "Password": {
+    "t": "Passwort deines Gameforge-Kontos. Es steht in secrets/credentials, nicht in der normalen Config."
+   },
+   "Language": {
+    "t": "Sprachcode des Spielservers.",
+    "e": "en oder de"
+   },
+   "LobbyPioneers": {
+    "t": "Nur einschalten, wenn dein Konto über die Pioneers-Lobby einloggt."
+   },
+   "BasicAuth.*": {
+    "t": "Nur nötig, wenn ein Proxy oder Server einen HTTP-Login verlangt. Normalerweise leer."
+   },
+   "DeviceConf.*": {
+    "t": "Browser-Fingerabdruck, den der Bot beim Login dem Spiel zeigt (Gerätename, Browser, Bildschirmgröße und so weiter). Über die Zeit gleich lassen und nicht oft ändern."
+   }
+  },
+  "General": {
+   "Host": {
+    "t": "Adresse des lokalen ogamed-Connectors, mit dem der Bot spricht. Normalerweise 127.0.0.1."
+   },
+   "Port": {
+    "t": "Port des lokalen ogamed-Connectors. Nur ändern, wenn dieser Port schon belegt ist."
+   },
+   "Proxy.Enabled": {
+    "t": "Den Datenverkehr des Bots über einen Proxy-Server schicken."
+   },
+   "Proxy.Address": {
+    "t": "Adresse des Proxys samt Port.",
+    "e": "http://proxy.example.com:8080"
+   },
+   "Proxy.Type": {
+    "t": "Art des Proxys, zum Beispiel socks5 oder http."
+   },
+   "Proxy.Username": {
+    "t": "Login des Proxys, falls er eines braucht."
+   },
+   "Proxy.Password": {
+    "t": "Passwort des Proxys. Steht in secrets/proxy."
+   },
+   "Proxy.LoginOnly": {
+    "t": "An = der Proxy wird nur zum Einloggen genutzt, Spielanfragen gehen direkt. Aus = alles läuft über den Proxy."
+   },
+   "CaptchaAPIKey": {
+    "t": "Schlüssel eines Captcha-Lösedienstes. Optional, nur nötig, wenn das Spiel Captchas verlangt."
+   },
+   "LoginPause": {
+    "t": "Schützt die IP: Nach wiederholten Login-Fehlern (Captcha usw.) macht der Bot eine Pause, statt es immer wieder zu versuchen. Die Pause verdoppelt sich mit jedem weiteren Fehler. Während der Pause bleibt die manuelle Captcha-Seite (/bot/captcha) nutzbar; löst du dort das Captcha, macht der Bot sofort weiter. Der Zustand liegt in einer Datei, ein Neustart überspringt die Pause also nicht."
+   },
+   "LoginPause.Active": {
+    "t": "Die Login-Pause an- oder ausschalten."
+   },
+   "LoginPause.FailuresBeforePause": {
+    "t": "Fehlgeschlagene Logins in Folge bis zur ersten Pause."
+   },
+   "LoginPause.PauseMinutes": {
+    "t": "Länge der ersten Pause in Minuten. Verdoppelt sich mit jedem weiteren Fehler."
+   },
+   "LoginPause.MaxPauseMinutes": {
+    "t": "Längste Pause in Minuten."
+   },
+   "SlotsToLeaveFree": {
+    "t": "Flottenslots, die keine Funktion nutzen darf. Sie bleiben für deine eigenen manuellen Flüge frei.",
+    "e": "2 = der Bot nimmt nie die letzten 2 Slots."
+   },
+   "SlotPriorityLevel.*": {
+    "t": "Wer zuerst einen freien Slot bekommt, wenn mehrere Funktionen einen wollen. Eine kleinere Zahl wird zuerst bedient."
+   },
+   "ResourceReserve.*": {
+    "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   }
+  },
+  "DiscordWebhook": {
+   "Url": {
+    "t": "Webhook-Adresse deines Discord-Kanals. Behandle sie wie ein Passwort."
+   },
+   "Username": {
+    "t": "Name, der als Absender der Discord-Nachrichten angezeigt wird."
+   },
+   "Active": {
+    "t": "Die Telegram-Nachrichten nach Discord kopieren. Das sendet nur; Befehle laufen weiter über Telegram."
+   }
+  },
+  "TelegramMessenger": {
+   "Active": {
+    "t": "Telegram-Nachrichten und -Befehle an- oder ausschalten."
+   },
+   "API": {
+    "t": "Token deines Telegram-Bots. Du bekommst ihn bei @BotFather. Steht in secrets/telegram."
+   },
+   "ChatId": {
+    "t": "ID des Chats, mit dem der Bot spricht. Nur dieser Chat darf Befehle senden."
+   },
+   "Logging": {
+    "t": "Gesendete und empfangene Telegram-Nachrichten ins Bot-Log schreiben."
+   },
+   "TelegramAutoPing.Active": {
+    "t": "Regelmäßig eine „lebt noch“-Nachricht senden."
+   },
+   "TelegramAutoPing.EveryHours": {
+    "t": "Stunden zwischen zwei Lebenszeichen.",
+    "e": "6"
+   }
+  },
+  "Messenger": {},
+  "SleepMode": {
+   "GoToSleep": {
+    "t": "Tageszeit, zu der der Bot schlafen geht (Serverzeit).",
+    "e": "23:00"
+   },
+   "WakeUp": {
+    "t": "Tageszeit, zu der der Bot wieder aufwacht (Serverzeit).",
+    "e": "07:00"
+   },
+   "Mode": {
+    "t": "Wähle, wie der Bot schläft. SleepMode stoppt alles. GhostSleep versteckt die Flotte, lässt aber Expeditionen und Defender weiterarbeiten. Nur einer kann aktiv sein."
+   },
+   "Active": {
+    "t": "Festes tägliches Schlaffenster. Solange der Bot schläft, werden keine Flotten geschickt. Nur SleepMode oder GhostSleep darf aktiv sein."
+   },
+   "PreventIfThereAreFleets": {
+    "t": "Das Schlafengehen verzögern, wenn Flotten im Schlaffenster noch zurückkämen."
+   },
+   "TelegramMessenger.Active": {
+    "t": "Eine Telegram-Nachricht senden, wenn der Bot schlafen geht und wenn er aufwacht."
+   },
+   "AutoFleetSave.Active": {
+    "t": "Beim Schlafengehen alle Schiffe wegschicken, damit sie nicht angegriffen werden können, während du nicht zusiehst."
+   },
+   "AutoFleetSave.OnlyMoons": {
+    "t": "Nur die Flotten sichern, die auf Monden stehen."
+   },
+   "AutoFleetSave.DeutToLeave": {
+    "t": "Deuterium, das auf dem Himmelskörper bleibt. Alles darüber fliegt als Treibstoff mit der Flotte mit.",
+    "e": "1000000"
+   },
+   "AutoFleetSave.Recall": {
+    "t": "Die Flotte vom Fleetsave zurückrufen, damit sie beim Aufwachen wieder zu Hause ist."
+   },
+   "AutoFleetSave.DefaultMission": {
+    "t": "Mission für den Fleetsave-Flug, normalerweise Stationieren (Deploy)."
+   },
+   "AutoFleetSave.DeployTarget.*": {
+    "t": "Koordinaten, zu denen der Fleetsave fliegt."
+   }
+  },
+  "GhostSleep": {
+   "GoToSleep": {
+    "t": "Tageszeit, zu der der Bot schlafen geht (Serverzeit).",
+    "e": "23:00"
+   },
+   "WakeUp": {
+    "t": "Tageszeit, zu der der Bot wieder aufwacht (Serverzeit).",
+    "e": "07:00"
+   },
+   "Active": {
+    "t": "Schlafvariante: Alle Schiffe werden mit einem Geisterflug gesichert, aber Expeditionen und Defender arbeiten die Nacht über weiter."
+   },
+   "PreSleepExpeditionMinutes": {
+    "t": "Alte zeitbasierte Vorphase. Minuten vor dem Schlafen, in denen alle Expeditionsslots aufgefüllt werden. Wird ignoriert, solange „Let expeditions finish before sleep“ an ist. 0 = aus."
+   },
+   "AnchorMode": {
+    "t": "Wie der Defender entscheidet, wann er im Schlaf auf Angriffe prüft. LastFleet = eine Prüfung kurz bevor die letzte Expedition landet. Random = eine zufällige zurückkehrende Expedition, 60 Sekunden bevor sie landet."
+   },
+   "PriorityFleetsaveCelestials": {
+    "t": "Himmelskörper (Mond und Planet), deren Flotten zur Schlafenszeit zuerst gesichert werden."
+   },
+   "ExpeditionDrain.Active": {
+    "t": "Kurz vor der Schlafenszeit startet keine neue Expedition mehr, wenn sie nicht rechtzeitig zurück sein könnte. Zur Schlafenszeit wartet der Bot auf die letzten, schickt eine Welle Expeditionen und schläft dann."
+   },
+   "ExpeditionDrain.BufferMinutes": {
+    "t": "Eine Expedition darf noch starten, wenn sie höchstens so viele Minuten nach der Schlafenszeit zurück ist.",
+    "e": "10"
+   },
+   "ExpeditionDrain.StragglerWaitMinutes": {
+    "t": "Zur Schlafenszeit wartet der Bot höchstens so lange auf Expeditionen, die noch draußen sind. Spätere kommen nachts heim.",
+    "e": "20"
+   },
+   "ExpeditionDrain.DefaultDurationMinutes": {
+    "t": "Expeditionsdauer, die der Bot annimmt, bis er mindestens 3 echte gemessen hat.",
+    "e": "90"
+   }
+  },
+  "DebrisSave": {
+   "Celestials": {
+    "t": "Himmelskörper, die der Telegram-Befehl /debrissave nutzt. Jeder schickt seine Flotte zum nächsten Trümmerfeld und ruft sie zurück, sodass sie nach der gewählten Zeit wieder da ist."
+   }
+  },
+  "Defender": {
+   "Active": {
+    "t": "Achtet auf eingehende Angriffe und reagiert."
+   },
+   "IgnoreProbes": {
+    "t": "Nicht auf Spionagesonden reagieren."
+   },
+   "DefendFromMissiles": {
+    "t": "Auch auf Raketenangriffe reagieren."
+   },
+   "IgnoreWeakAttack": {
+    "t": "Angreifer ignorieren, die viel schwächer sind als du."
+   },
+   "WeakAttackRatio": {
+    "t": "Ein Angreifer ist schwach, wenn seine Flottenpunkte kleiner sind als deine geteilt durch diese Zahl.",
+    "e": "10 = Angreifer mit weniger als einem Zehntel deiner Flottenpunkte ignorieren."
+   },
+   "IgnoreAttackIfIHave.Active": {
+    "t": "Einen Angriff auf einen Himmelskörper ignorieren, auf dem nichts Rettenswertes liegt."
+   },
+   "IgnoreAttackIfIHave.MinResourcesToSave": {
+    "t": "Der Angriff wird ignoriert, wenn der Himmelskörper weniger Rohstoffe hält als dieser Wert ..."
+   },
+   "IgnoreAttackIfIHave.MinFleetToSave": {
+    "t": "... und weniger Flottenpunkte als dieser Wert."
+   },
+   "RandomActivity": {
+    "t": "An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = immer der Heimat-Himmelskörper. Lässt die Aktivität des Bots nur normal aussehen."
+   },
+   "Home.*": {
+    "t": "Dein Heimat-Himmelskörper. Wird für den Aktivitätsaufruf genutzt, wenn die zufällige Aktivität aus ist, und als Standard-Startpunkt von AutoHarvest."
+   },
+   "Autofleet.Active": {
+    "t": "Den angegriffenen Himmelskörper automatisch per Fleetsave sichern."
+   },
+   "Autofleet.SafetyMarginSeconds": {
+    "t": "Die Flotte muss so viele Sekunden vor dem Einschlag weg sein.",
+    "e": "120"
+   },
+   "Autofleet.TelegramMessenger.Active": {
+    "t": "Bei jedem Fleetsave eine Telegram-Nachricht senden."
+   },
+   "Discord.Active": {
+    "t": "Angriffsmeldungen an einen Discord-Webhook senden."
+   },
+   "Discord.WebhookUrl": {
+    "t": "Discord-Webhook-Adresse. Behandle sie wie ein Passwort."
+   },
+   "WhiteList": {
+    "t": "Spieler-IDs, die nie als Angreifer behandelt werden, zum Beispiel Freunde oder Allianzmitglieder."
+   },
+   "SpyAttacker.Active": {
+    "t": "Den Angreifer mit Sonden ausspionieren, wenn ein Angriff eingeht."
+   },
+   "SpyAttacker.Probes": {
+    "t": "Zahl der Sonden, die den Angreifer ausspionieren."
+   },
+   "MessageAttacker.Active": {
+    "t": "Dem Angreifer eine Nachricht schicken."
+   },
+   "MessageAttacker.Messages": {
+    "t": "Mögliche Nachrichten, eine pro Zeile. Der Bot sendet eine davon."
+   },
+   "TelegramMessenger.Active": {
+    "t": "Angriffsmeldungen per Telegram senden."
+   },
+   "Alarm.Active": {
+    "t": "Die Meldung mit hoher Alarmstufe markieren, damit sie auffällt."
+   }
+  },
+  "Brain": {
+   "AutoMine.ColonyOverrides.*": {
+    "t": "Eigene Stufenlimits für genau diesen einen Planeten. Nur Felder, die du setzt, ersetzen die Colony-Werte."
+   },
+   "Active": {
+    "t": "Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter."
+   },
+   "Transports.Active": {
+    "t": "Brain-Funktionen erlauben, Rohstoffe zwischen deinen Planeten zu bewegen."
+   },
+   "Transports.Origin.*": {
+    "t": "Standard-Himmelskörper, von dem Rohstoffe geholt werden."
+   },
+   "Transports.CargoType": {
+    "t": "Bevorzugtes Transportschiff. Pathfinder werden nie für Transporte benutzt."
+   },
+   "Transports.CargoFallback": {
+    "t": "Transportschiff, das genutzt wird, wenn der bevorzugte Typ nicht verfügbar ist."
+   },
+   "Transports.KeepOnOrigin.*": {
+    "t": "Schiffe, die am Ursprung bleiben und nicht für Transporte benutzt werden."
+   },
+   "Transports.MixFleet": {
+    "t": "Als letzten Schritt kleine und große Transporter mischen. Die Flotte fliegt mit der Geschwindigkeit des langsamsten Schiffs."
+   },
+   "Transports.UseTransportChain": {
+    "t": "Die Transporte als Kette planen, einen nach dem anderen."
+   },
+   "Transports.CompactSlotPlan": {
+    "t": "Wenn Slots knapp sind, neu mit weniger, größeren Sendungen planen."
+   },
+   "Transports.DeutToLeaveOnMoons": {
+    "t": "Deuterium, das auf Monden bleibt. Ein Transport verlässt einen Mond nur, wenn Fracht, diese Reserve und der Flugtreibstoff zusammen passen, die Reserve wird also nie als Treibstoff verbraucht."
+   },
+   "Transports.DeutToLeaveOnPlanets": {
+    "t": "Deuterium, das auf einem Planeten bleibt, wenn er Rohstoffe wegschickt. Der Transport startet nur, wenn Fracht, diese Reserve und der Flugtreibstoff zusammen passen. 0 = nichts zurückhalten."
+   },
+   "Transports.RoundResources": {
+    "t": "Die gesendete Menge runden, damit wegen eines winzigen Unterschieds keine Flotte fliegt."
+   },
+   "Transports.SendToTheMoonIfPossible": {
+    "t": "Zum Mond liefern statt zum Planeten, wenn es einen Mond gibt."
+   },
+   "Transports.MaxSlots": {
+    "t": "Flottenslots, die Brain-Transporte gleichzeitig nutzen dürfen."
+   },
+   "Transports.CheckMoonOrPlanetFirst": {
+    "t": "Was bei der Rohstoffsuche zuerst geprüft wird, Mond oder Planet."
+   },
+   "Transports.DoMultipleTransportIsNotEnoughShipButSamePosition": {
+    "t": "Reicht ein Schiffstyp nicht, mehrere Transporte von derselben Position senden."
+   },
+   "Transports.MultipleOrigins.Active": {
+    "t": "Rohstoffe von mehreren Himmelskörpern einsammeln statt nur von einem."
+   },
+   "Transports.MultipleOrigins.OnlyFromMoons": {
+    "t": "Nur von Monden einsammeln."
+   },
+   "Transports.MultipleOrigins.MinimumResourcesToSend": {
+    "t": "Ein Himmelskörper macht nur mit, wenn er mindestens so viel senden kann."
+   },
+   "Transports.MultipleOrigins.PriorityToProximityOverQuantity": {
+    "t": "An = nähere Himmelskörper werden bevorzugt. Aus = der Himmelskörper mit den meisten Rohstoffen wird bevorzugt."
+   },
+   "Transports.MultipleOrigins.Exclude": {
+    "t": "Himmelskörper, die nie als Quelle dienen."
+   },
+   "AutoMine.Active": {
+    "t": "Baut Minen, Lager, Energie und Anlagen auf allen deinen Planeten."
+   },
+   "AutoMine.HomeWorld.*": {
+    "t": "Dein Hauptplanet. Er nutzt die Stufenlimits des obersten Blocks, alle anderen Planeten nutzen den Colony-Block."
+   },
+   "AutoMine.Max*": {
+    "t": "Höchste Stufe, die der Bot auf dem Hauptplaneten baut. 0 = nie bauen."
+   },
+   "AutoMine.Colony.Max*": {
+    "t": "Höchste Stufe, die der Bot auf allen anderen Planeten baut. 0 = nie bauen."
+   },
+   "AutoMine.ColonyOverrides": {
+    "t": "Einzelne Planeten mit eigenen Limits. Zuordnung über exakte Koordinaten; nur Felder, die du setzt, ersetzen die Colony-Werte."
+   },
+   "AutoMine.RandomOrder": {
+    "t": "Die Planeten in zufälliger Reihenfolge bearbeiten."
+   },
+   "AutoMine.OptimizeForStart": {
+    "t": "Die Bauordnung für den Spielstart nutzen (erst Roboterfabrik und Raumschiffwerft)."
+   },
+   "AutoMine.PrioritizeRobotsAndNanites": {
+    "t": "Roboterfabrik und Nanitenfabrik früh bauen."
+   },
+   "AutoMine.BuildDepositIfFull": {
+    "t": "Ein Lager bauen, wenn es voll ist."
+   },
+   "AutoMine.BuildSolarSatellites": {
+    "t": "Solarsatelliten bauen, wenn Energie fehlt."
+   },
+   "AutoMine.SolarSatelliteBatch": {
+    "t": "Solarsatelliten werden in Bündeln dieser Größe gebaut (die fehlende Menge wird aufgerundet) statt einzeln. Standard 20; 0 oder 1 = genau die fehlende Menge."
+   },
+   "AutoMine.EnergyReservePercent": {
+    "t": "Vor einem Minenausbau, der die Energiebilanz ins Minus drücken würde, wird zuerst die Energiequelle (Solarkraftwerk, Fusion oder Satelliten) gebaut, bemessen auf die fehlende Energie plus diesen Prozentsatz als Puffer. Standard 10; 0 = genau die fehlende Menge."
+   },
+   "AutoMine.BuildCrawlers": {
+    "t": "Crawler bauen."
+   },
+   "AutoMine.DepositHours": {
+    "t": "Ein Lager soll so viele Stunden Produktion fassen.",
+    "e": "24"
+   },
+   "AutoMine.MaxDaysOfInvestmentReturn": {
+    "t": "Bauten überspringen, die länger als diese Tage brauchen, um sich zu amortisieren. 9999 = kein Limit."
+   },
+   "AutoMine.DeutToLeaveOnMoons": {
+    "t": "Deuterium, das auf Monden bleibt."
+   },
+   "AutoMine.Exclude": {
+    "t": "Planeten und Monde, die AutoMine nie anfasst."
+   },
+   "AutoMine.FixedCrawlerTarget": {
+    "t": "Feste Crawler-Zahl pro Planet. 0 = der Bot rechnet selbst."
+   },
+   "LifeformAutoMine.Active": {
+    "t": "Baut Lebensform-Gebäude nach der Tabelle in lifeform_targets.json."
+   },
+   "LifeformAutoMine.StartFromCrystalMineLvl": {
+    "t": "Ein Planet beginnt mit Lebensform-Gebäuden, sobald seine Kristallmine diese Stufe hat.",
+    "e": "20"
+   },
+   "LifeformAutoMine.TargetSlot": {
+    "t": "Zeile (1-18) der Zieltabelle, auf die hingebaut wird. 0 = nur die Ersatzlimits."
+   },
+   "LifeformAutoMine.MaxBasePopulationBuilding": {
+    "t": "Zusätzliche Obergrenze für das erste Bevölkerungsgebäude. Der kleinere Wert aus Tabelle und Limit zählt. Für kleine Konten."
+   },
+   "LifeformAutoMine.MaxBaseFoodBuilding": {
+    "t": "Zusätzliche Obergrenze für das erste Nahrungsgebäude."
+   },
+   "LifeformAutoMine.MaxBaseTechBuilding": {
+    "t": "Zusätzliche Obergrenze für das erste Technologiegebäude."
+   },
+   "LifeformAutoMine.PreventIfMoreExpensiveThanNextMine": {
+    "t": "Kein Lebensform-Gebäude bauen, das mehr kostet als der nächste Minenausbau."
+   },
+   "LifeformAutoMine.Exclude": {
+    "t": "Planeten ohne Lebensform-Gebäude."
+   },
+   "LifeformAutoResearch.Active": {
+    "t": "Erforscht Lebensform-Technologien."
+   },
+   "LifeformAutoResearch.PriorityTechs": {
+    "t": "Lebensform-Techs, die zuerst erforscht werden, in dieser Reihenfolge."
+   },
+   "LifeformAutoResearch.MaxResearchLevel": {
+    "t": "Höchste Stufe, die für jede Lebensform-Tech erforscht wird."
+   },
+   "LifeformAutoResearch.MaxTechs*": {
+    "t": "Eigenes Stufenlimit für diesen Tech-Slot. Erste Ziffer = Rasse, zweite = Slot."
+   },
+   "LifeformAutoResearch.Exclude": {
+    "t": "Planeten, die nie für Lebensform-Forschung genutzt werden."
+   },
+   "AutoResearch.Active": {
+    "t": "Erforscht Technologien automatisch."
+   },
+   "AutoResearch.Max*": {
+    "t": "Höchste Stufe, die erforscht wird. 0 = nie erforschen."
+   },
+   "AutoResearch.Target.*": {
+    "t": "Planet, auf dem die Forschung gestartet wird, meist der mit dem besten Forschungslabor."
+   },
+   "AutoResearch.OptimizeForStart": {
+    "t": "Die Forschungsreihenfolge für den Spielstart nutzen."
+   },
+   "AutoResearch.EnsureExpoSlots": {
+    "t": "Computertechnik und Astrophysik nach Bedarf erforschen, um genug Expeditionsslots zu haben."
+   },
+   "AutoResearch.ForceResearchWhateverTheLabLevel": {
+    "t": "Auch forschen, wenn das Forschungslabor noch niedrig ist."
+   },
+   "AutoResearch.Prioritize*": {
+    "t": "Diese Technologie vor den anderen erforschen."
+   },
+   "AutoResearch.Exclude": {
+    "t": "Planeten, die nie für Forschung genutzt werden."
+   },
+   "AutoCargo.Active": {
+    "t": "Baut Transportschiffe automatisch."
+   },
+   "AutoCargo.MaxProductionHours": {
+    "t": "Obergrenze der Produktionszeit eines Transporter-Auftrags pro Himmelskörper in Stunden. 0 = kein Limit. Was nicht passt, wird in einem späteren Durchlauf gebaut."
+   },
+   "AutoCargo.SupplyMoonFromPlanet": {
+    "t": "Monde bekommen ihre Schiffe vom Planeten an derselben Position."
+   },
+   "AutoCargo.CargoType": {
+    "t": "Schiffstyp, der gebaut wird."
+   },
+   "AutoCargo.MaxCargosToBuild": {
+    "t": "Gesamtzahl an Transportern, die erreicht werden soll."
+   },
+   "AutoCargo.MaxCargosToKeep": {
+    "t": "Wie viele Transporter behalten werden."
+   },
+   "AutoCargo.LimitToCapacity": {
+    "t": "Nur so viele bauen, wie die gelagerten Rohstoffe brauchen."
+   },
+   "AutoCargo.SkipIfIncomingTransport": {
+    "t": "Himmelskörper überspringen, zu dem schon ein Transport unterwegs ist."
+   },
+   "AutoCargo.Exclude": {
+    "t": "Himmelskörper, die keine Transporter bauen."
+   },
+   "AutoDefence.Active": {
+    "t": "Baut Verteidigung automatisch."
+   },
+   "AutoDefence.MaxProductionHours": {
+    "t": "Obergrenze der Produktionszeit eines Verteidigungsauftrags pro Himmelskörper in Stunden. 0 = kein Limit. Was nicht passt, wird in einem späteren Durchlauf gebaut."
+   },
+   "AutoDefence.DefenceToReach.*": {
+    "t": "Anzahl dieser Verteidigungsanlage, die der Bot pro Himmelskörper baut. 0 = keine. Schilde sind an oder aus."
+   },
+   "AutoDefence.Exclude": {
+    "t": "Himmelskörper ohne Verteidigung."
+   },
+   "AutoRepatriate.Active": {
+    "t": "Schickt Rohstoffe von deinen Planeten zu einem Ziel-Himmelskörper."
+   },
+   "AutoRepatriate.Target": {
+    "t": "Ziel-Himmelskörper für die Rohstoffe."
+   },
+   "AutoRepatriate.TargetAssociateMoon": {
+    "t": "Zum Mond an der Zielposition liefern."
+   },
+   "AutoRepatriate.MinimumResources": {
+    "t": "Nur senden, wenn mindestens so viel gesendet werden kann."
+   },
+   "AutoRepatriate.LeaveDeut.OnlyOnMoons": {
+    "t": "Die Deuterium-Reserve nur auf Monden behalten."
+   },
+   "AutoRepatriate.LeaveDeut.DeutToLeave": {
+    "t": "Deuterium, das zurückbleibt."
+   },
+   "AutoRepatriate.CargoType": {
+    "t": "Schiffstyp für die Transporte."
+   },
+   "AutoRepatriate.SkipIfIncomingTransport": {
+    "t": "Himmelskörper überspringen, zu dem schon ein Transport unterwegs ist."
+   },
+   "AutoRepatriate.Exclude": {
+    "t": "Himmelskörper, die nichts senden."
+   },
+   "AutoRepatriate.Reverse.Active": {
+    "t": "Umgekehrte Repatriierung: Rohstoffe aus dem Ziel zurückholen, wenn sie für einen Bau gebraucht werden. Fortgeschritten."
+   },
+   "AutoRepatriate.Reverse.ReturnFuelFactor": {
+    "t": "Faktor für den Treibstoff, der für den Rückflug reserviert wird."
+   },
+   "AutoRepatriate.Reverse.ReturnAllShips": {
+    "t": "Alle Schiffe zurückbringen, nicht nur die benötigten."
+   },
+   "AutoRepatriate.Reverse.KeepShips": {
+    "t": "Schiffe, die am Ziel bleiben."
+   },
+   "AutoRepatriate.Reverse.PendingTtlMinutes": {
+    "t": "Wie lange ein geplanter Rückholtransport gültig bleibt."
+   },
+   "AutoRepatriate.Reverse.OutboundCapacityFactor": {
+    "t": "Anteil der Frachtkapazität, der für den Hinflug genutzt wird."
+   },
+   "BuyOfferOfTheDay.Active": {
+    "t": "Kauft das Tagesangebot des Händlers."
+   },
+   "KeepBoosters.Active": {
+    "t": "Aktiviert einen Booster aus dem Inventar, wenn keiner dieses Typs läuft."
+   },
+   "KeepBoosters.DryRun": {
+    "t": "Schreibt nur ins Log, was aktiviert würde."
+   },
+   "KeepBoosters.MinMineLevel.*": {
+    "t": "Ein Booster dieses Typs wird nur genutzt, wenn die passende Mine auf dem Planeten mindestens diese Stufe hat."
+   },
+   "KeepBoosters.Reserve": {
+    "t": "Booster pro Typ, die im Inventar bleiben."
+   },
+   "KeepBoosters.LogItems": {
+    "t": "Loggt aktive Items pro Planet und das Inventar."
+   },
+   "KeepBoosters.Tiers": {
+    "t": "Erlaubte Stufen, die erste wird zuerst genutzt."
+   },
+   "AutoFleetJumpGate.Active": {
+    "t": "Springt mit der Flotte automatisch durch das Sprungtor."
+   },
+   "AutoFleetJumpGate.Target": {
+    "t": "Mond, zu dem die Flotte springt."
+   },
+   "AutoFleetJumpGate.MinimumAmountOfShipsToBeLeftOnMoon.*": {
+    "t": "Schiffe dieses Typs, die auf dem Mond zurückbleiben."
+   },
+   "AutoFleetJumpGate.MinimumAmountOfShipPointsToTeleport": {
+    "t": "Nur springen, wenn mindestens so viele Flottenpunkte mitgehen."
+   }
+  },
+  "Expeditions": {
+   "Active": {
+    "t": "Hauptschalter des Expeditions-Workers."
+   },
+   "Origin": {
+    "t": "Himmelskörper, von denen die Expeditionen starten."
+   },
+   "PrimaryShip": {
+    "t": "Automatikmodus: Haupt-Transportschiff pro Expedition. Der Bot sendet so viele, wie für den größtmöglichen Fund nötig sind, oder alle verfügbaren, dazu eine Sonde und das stärkste Kampfschiff."
+   },
+   "PrimaryToKeep": {
+    "t": "Automatikmodus: So viele Hauptschiffe bleiben immer zu Hause.",
+    "e": "10"
+   },
+   "MinPrimaryToSend": {
+    "t": "Automatikmodus: Mindestzahl an Hauptschiffen pro Expedition. Sind weniger übrig, wird von diesem Ursprung nichts gesendet. 0 = kein Minimum."
+   },
+   "ManualShips.Active": {
+    "t": "Eine feste Flotte pro Expedition nutzen statt der automatischen."
+   },
+   "ManualShips.Ships.*": {
+    "t": "Anzahl dieses Schiffstyps in jeder Expedition."
+   },
+   "FuelToCarry": {
+    "t": "Deuterium, das jede Expedition mitnimmt."
+   },
+   "MaxExpeditionsPerOrigin": {
+    "t": "Höchstzahl an Expeditionen, die gleichzeitig von einem Ursprung fliegen."
+   },
+   "SplitExpeditionsBetweenSystems.Active": {
+    "t": "Die Expeditionsziele auf mehrere Systeme verteilen."
+   },
+   "SplitExpeditionsBetweenSystems.Range": {
+    "t": "Systeme um den Ursprung, die als Ziel dienen dürfen.",
+    "e": "2 = bis zu 2 Systeme in jede Richtung."
+   },
+   "RandomizeOrder": {
+    "t": "Die Ursprünge in zufälliger Reihenfolge bearbeiten."
+   },
+   "IgnoreSleep": {
+    "t": "Auch im SleepMode weiter Expeditionen senden."
+   },
+   "SleepWave.Active": {
+    "t": "Eine zusätzliche Expeditionswelle kurz bevor der Bot schlafen geht."
+   },
+   "SleepWave.ReturnAt": {
+    "t": "Zeit, zu der die Welle zurück sein soll.",
+    "e": "WakeUp+15 = 15 Minuten nach dem Aufwachen."
+   },
+   "SleepWave.SpeedPercent": {
+    "t": "Fluggeschwindigkeit der Welle, wenn keine Rückkehrzeit gesetzt ist (10 bis 100 in 10er-Schritten)."
+   },
+   "WaitForAllExpeditions": {
+    "t": "Eine neue Runde erst starten, wenn alle Expeditionen zurück sind."
+   },
+   "WaitForMajorityOfExpeditions": {
+    "t": "Eine neue Runde starten, wenn mehr als die Hälfte der Expeditionen zurück ist."
+   },
+   "MinWaitNextFleet": {
+    "t": "Kürzeste Pause in Sekunden zwischen zwei Flotten einer Runde."
+   },
+   "MaxWaitNextFleet": {
+    "t": "Längste Pause in Sekunden zwischen zwei Flotten einer Runde."
+   },
+   "MinWaitNextRound": {
+    "t": "Kürzeste zusätzliche Pause in Sekunden nach der ersten Rückkehr vor der nächsten Runde."
+   },
+   "MaxWaitNextRound": {
+    "t": "Längste zusätzliche Pause in Sekunden nach der ersten Rückkehr vor der nächsten Runde."
+   }
+  },
+  "AutoHarvest": {
+   "Active": {
+    "t": "Sammelt Trümmerfelder mit Recyclern ein."
+   },
+   "HarvestOwnDF": {
+    "t": "Trümmerfelder deiner eigenen Planeten und Monde einsammeln."
+   },
+   "HarvestForeignDF": {
+    "t": "Trümmerfelder anderer Spieler einsammeln."
+   },
+   "HarvestDeepSpace": {
+    "t": "Trümmerfelder im Weltraum (Deep Space) einsammeln."
+   },
+   "MinimumResourcesOwnDF": {
+    "t": "Ein eigenes Feld lohnt die Reise erst ab diesem Inhalt."
+   },
+   "MinimumResourcesForeignDF": {
+    "t": "Ein fremdes Feld lohnt die Reise erst ab diesem Inhalt."
+   },
+   "MinimumResourcesDeepSpace": {
+    "t": "Ein Deep-Space-Feld lohnt die Reise erst ab diesem Inhalt."
+   },
+   "DeepSpaceRange": {
+    "t": "Systeme um den Start-Himmelskörper, die nach Deep-Space-Feldern abgesucht werden."
+   },
+   "MaxSlots": {
+    "t": "Flottenslots, die das Einsammeln gleichzeitig nutzen darf."
+   }
+  },
+  "AutoColonize": {
+   "Active": {
+    "t": "Kolonisiert neue Planeten automatisch."
+   },
+   "Origin.*": {
+    "t": "Himmelskörper, von dem die Kolonieschiffe starten."
+   },
+   "SlotsToLeaveFree": {
+    "t": "Slots, die für die Runden dieser Funktion frei bleiben."
+   },
+   "Abandon.Active": {
+    "t": "Neue Planeten aufgeben, die zu klein sind oder die falsche Temperatur haben. Dein Heimatplanet wird nie aufgegeben."
+   },
+   "Abandon.MinFields": {
+    "t": "Kleinste akzeptable Planetengröße in Feldern."
+   },
+   "Abandon.MinTemperatureAcceptable": {
+    "t": "Niedrigste akzeptable Temperatur."
+   },
+   "Abandon.MaxTemperatureAcceptable": {
+    "t": "Höchste akzeptable Temperatur."
+   },
+   "IntensiveResearch.Active": {
+    "t": "In Schüben kolonisieren."
+   },
+   "IntensiveResearch.MaxSlots": {
+    "t": "Slots, die während eines Schubs genutzt werden."
+   },
+   "IntensiveResearch.MinWaitNextFleet": {
+    "t": "Kürzeste Pause in Sekunden zwischen zwei Koloniflotten in einem Schub."
+   },
+   "IntensiveResearch.MaxWaitNextFleet": {
+    "t": "Längste Pause in Sekunden zwischen zwei Koloniflotten in einem Schub."
+   },
+   "Targets": {
+    "t": "Bereiche, die kolonisiert werden. Jeder hat Galaxie, Start- und Endsystem sowie Position und die größte Zahl an Planeten, die in diesem Bereich gegründet werden."
+   },
+   "RandomPosition": {
+    "t": "Positionen innerhalb der Zielbereiche zufällig wählen."
+   }
+  },
+  "AutoDiscovery": {
+   "Active": {
+    "t": "Sendet Entdeckungsmissionen."
+   },
+   "Origin": {
+    "t": "Himmelskörper, von denen die Entdeckungsmissionen starten."
+   },
+   "MaxSlots": {
+    "t": "Flottenslots, die Entdeckungen gleichzeitig nutzen dürfen."
+   }
+  },
+  "FastFarm": {
+   "Active": {
+    "t": "Schaltet den Rohstoff-Farmmodus ein. Er scannt nach inaktiven Spielern, spioniert sie aus und raidet die besten. Defender und Schlafmodus arbeiten weiter."
+   },
+   "OnlyWorker": {
+    "t": "Hält alle anderen Worker (Brain, AutoFarm, Expeditionen, Harvest, ...) aus, solange FastFarm aktiv ist, damit alle Flottenslots zum Farmen frei sind. Aus = die anderen Worker laufen wie konfiguriert und konkurrieren um Slots."
+   },
+   "KeepExpeditions": {
+    "t": "Lässt die Expeditionen weiterlaufen, obwohl die anderen Worker aus sind. Sie belegen ihre eigenen Flottenslots."
+   },
+   "Origin": {
+    "t": "Himmelskörper, von denen Sonden und Transporter starten. Für jedes Ziel wird der nächste Ursprung mit genug Schiffen genommen. Leer = alle deine Planeten."
+   },
+   "ScanRange": {
+    "t": "Galaxie- und Systembereiche, die nach inaktiven Spielern gescannt werden, die nächsten zu deinen Ursprüngen zuerst. Leer = 100 Systeme um jeden Ursprung."
+   },
+   "CargoType": {
+    "t": "Schiffe, die die Beute transportieren. Both = erst kleine Transporter, große nur für das, was die kleinen nicht tragen können.",
+    "e": "SmallCargo ist für die meisten Ziele am sparsamsten im Treibstoff."
+   },
+   "ProbesPerTarget": {
+    "t": "Spionagesonden pro Ziel. Mehr Sonden liefern auch gegen hohe Spionagestufen einen vollen Bericht (Flotte und Verteidigung), aber einige können verloren gehen."
+   },
+   "SlotsToLeaveFree": {
+    "t": "Flottenslots, die FastFarm nie nutzt, damit der Defender immer eine Flotte senden kann.",
+    "e": "1 = von 37 Slots werden 36 genutzt."
+   },
+   "FleetSpeedPercent": {
+    "t": "Geschwindigkeit der Transportflotten. 100 ist am schnellsten; niedrigere Werte sparen Deuterium, belegen den Slot aber länger."
+   },
+   "CargoSurplusPercent": {
+    "t": "Zusätzlicher Laderaum über die erwartete Beute hinaus, in Prozent. Deckt Rohstoffe ab, die während des Fluges produziert werden."
+   },
+   "MinFillPercent": {
+    "t": "Ein Ziel wird übersprungen, wenn die übrigen Schiffe weniger als diesen Anteil seiner Beute tragen können, damit nicht ein paar Transporter zu einem großen Ziel fliegen."
+   },
+   "WeightMetal": {
+    "t": "Wie viel ein Metall im Beutewert zählt, der die Ziele einordnet."
+   },
+   "WeightCrystal": {
+    "t": "Wie viel ein Kristall im Beutewert zählt."
+   },
+   "WeightDeuterium": {
+    "t": "Wie viel ein Deuterium im Beutewert zählt. Ein höherer Wert stellt deuteriumreiche Ziele nach vorn.",
+    "e": "Nur das Verhältnis der drei Gewichte zählt, Standard 3 : 2 : 1 (MSE-Verhältnis); erhöhe das Deuterium-Gewicht, um deuteriumreiche Ziele nach vorn zu stellen."
+   },
+   "ShrinkDiscardPercent": {
+    "t": "Ein Ziel fällt weg, wenn sein frischer Beutewert mindestens so viele Prozent unter dem Wert aus dem vollen Durchlauf liegt (oder unter der Mindestbeute).",
+    "e": "10 = alles verwerfen, was 10 % oder mehr verloren hat."
+   },
+   "MinLoot": {
+    "t": "Ziele mit weniger plünderbaren Rohstoffen als diesem Wert (Metall + Kristall + Deuterium, nach der Plünderquote) werden nicht angegriffen."
+   },
+   "MinDeuterium": {
+    "t": "Ziele mit weniger plünderbarem Deuterium als diesem Wert werden nicht angegriffen. 0 = kein Limit."
+   },
+   "TopTargets": {
+    "t": "Höchstzahl an Angriffen pro Runde, die besten Ziele zuerst."
+   },
+   "DeleteReports": {
+    "t": "Löscht jeden Spionagebericht, nachdem er gelesen wurde. Das Postfach hat ein Limit; ist es voll, gehen neue Berichte verloren."
+   },
+   "ReportMaxAgeMinutes": {
+    "t": "Sweep-Modus: Ein frischer Prüfbericht, der älter als das ist, wird nicht für einen Angriff genutzt (z. B. wenn lange kein Transporter frei war); das Ziel wird neu geprüft."
+   },
+   "MaxSystemsPerScanStep": {
+    "t": "Wie viele Systeme der volle Scan einer Runde in einem Schritt besucht."
+   }
+  },
+  "Experimental": {
+   "BotPause": {
+    "t": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist."
+   },
+   "BotPause.Active": {
+    "t": "Die Pausenfunktion an- oder ausschalten. Aus: Der Pause-Knopf und /pause werden abgelehnt."
+   },
+   "BotPause.DurationMinutes": {
+    "t": "Wie lange eine Pause dauert, wenn du keine Zeit angibst.",
+    "e": "15 = der Bot macht 15 Minuten nach dem Druck auf Pause weiter."
+   },
+   "BotPause.RecallMarginMinutes": {
+    "t": "Sicherheitsabstand zu einem geplanten Rückruf. Die Pause wird abgelehnt, wenn innerhalb der Pausenzeit plus diesem Abstand ein Rückruf fällig ist.",
+    "e": "2 = bei 15 Minuten Pause blockiert ein Rückruf, der in 17 Minuten oder früher fällig ist, die Pause."
+   },
+   "BotPause.MaxDurationMinutes": {
+    "t": "Längste Pause, die du mit /pause anfordern kannst."
+   },
+   "DefenderRecheck": {
+    "t": "Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Wurde der Angriff zurückgerufen, entfällt der Fleetsave; kommt er später an, wird der Fleetsave verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus."
+   },
+   "DefenderRecheck.Active": {
+    "t": "Die zweite Prüfung an- oder ausschalten (Standard aus)."
+   },
+   "DefenderRecheck.TimeoutSeconds": {
+    "t": "Wie lange der Defender auf die Antwort wartet. Danach geht der Fleetsave wie geplant raus.",
+    "e": "4 = nach 4 Sekunden ohne Antwort geht der Fleetsave raus."
+   },
+   "MinePlanRanking": {
+    "t": "Wie die Seite Minenplan die nächsten Investitionen (Minen und Forschung) einordnet. Nur Anzeige: AutoMine und AutoResearch bauen weiter nach ihren eigenen Regeln. Du kannst diese Werte auch auf der Seite selbst ändern; die Seite merkt sich ihre Wahl in deinem Browser."
+   },
+   "MinePlanRanking.Mode": {
+    "t": "Payback = kürzeste Amortisation zuerst (wie AutoMine). Cheapest = niedrigste Kosten zuerst. Npv = höchster Nettogewinn über den Horizont (Gewinn pro Tag mal Horizonttage minus Kosten); Schritte, die sich im Horizont nicht amortisieren, entfallen."
+   },
+   "MinePlanRanking.HorizonDays": {
+    "t": "Horizont für die Nettogewinn-Reihung, in Tagen.",
+    "e": "90 = ein Schritt ist gut, wenn er innerhalb von 90 Tagen mehr einbringt, als er kostet."
+   },
+   "MinePlanRanking.MaxPaybackDays": {
+    "t": "Längste Amortisation, die noch als sinnvoll gilt (genutzt mit „Nur sinnvolle“)."
+   },
+   "MinePlanRanking.OnlySensible": {
+    "t": "Schritte ausblenden, deren Amortisation länger als das Limit ist."
+   },
+   "MinePlanRanking.IncludeResearch": {
+    "t": "Plasmatechnologie neben den Minenschritten einordnen (sie erhöht den Ertrag aller Minen auf allen Planeten)."
+   },
+   "FleetsaveSlot": {
+    "t": "Hält den letzten freien Flottenslot für den Fleetsave frei. Jede andere Flotte, auch eine erzwungene, wird abgelehnt, wenn nur noch der reservierte Slot übrig ist, damit ein Angriff immer einen Slot für den Fleetsave findet."
+   },
+   "FleetsaveSlot.Active": {
+    "t": "Den reservierten Slot an- oder ausschalten (Standard an)."
+   },
+   "FleetsaveSlot.Slots": {
+    "t": "Wie viele Slots für den Fleetsave frei bleiben.",
+    "e": "1 = der letzte freie Slot wird nur vom Fleetsave genutzt."
+   },
+   "AsteroidHunt": {
+    "t": "Item-Event: Einmal pro Spieltag greift ein Schiff den Asteroiden auf Position 17 deines eigenen Systems an, danach wird das Inventar verglichen. Eine Logzeile pro Versuch, keine Messenger-Nachricht."
+   },
+   "AsteroidHunt.Active": {
+    "t": "Den Jäger an- oder ausschalten (Standard aus)."
+   },
+   "AsteroidHunt.ShipType": {
+    "t": "Schiff, das gesendet wird, so geschrieben wie im Spiel (englischer Name). Jedes Schiff geht, z. B. Pathfinder, Cruiser, Reaper, Destroyer; eine Sonde kann keine Items finden. Es wird der Planet mit den meisten dieser Schiffe genutzt. Ein unbekannter Name fällt auf Pathfinder zurück.",
+    "e": "Pathfinder"
+   },
+   "AsteroidHunt.ShipCount": {
+    "t": "Wie viele Schiffe gesendet werden (Standard 1)."
+   },
+   "AsteroidHunt.MaxAttemptsPerDay": {
+    "t": "Versuche pro Spieltag (0 = unbegrenzt, höchstens 60). Laut Foren ist die Zahl der Versuche nicht begrenzt, aber pro Tag kann nur ein Item gefunden werden – der Jäger hört nach dem ersten Fund auf."
+   },
+   "AsteroidHunt.SearchSystems": {
+    "t": "Der Asteroid ist nicht in deinem Heimatsystem: So viele Systeme werden der Reihe nach versucht (eigenes System, +1, -1, +2, -2 ...). Ein Ziel, das der Server ablehnt, kostet keinen Versuch.",
+    "e": "10 = Systeme 0, +1, -1 ... bis zu 5 entfernt."
+   },
+   "AsteroidHunt.SaveJson": {
+    "t": "Jeden Versuch und Fund nach data/asteroiden_funde_<alias>.json schreiben."
+   }
+  }
+ },
+ "tiles": {
+  "Pause": "Pause",
+  "Resume": "Fortsetzen",
+  "Tiles": "Kacheln",
+  "on": "an",
+  "off": "aus",
+  "AutoFarm override active": "AutoFarm-Sondermodus aktiv",
+  "INCOMING ATTACK": "ANGRIFF UNTERWEGS",
+  "in": "in",
+  "and {n} more": "und {n} weitere",
+  "Ghost sleep on": "Ghost-Schlaf an",
+  "Sleep mode on": "Schlafmodus an",
+  "Recalls due": "Rückrufe fällig",
+  "Wake up in": "Aufwachen in",
+  "Back to sleep in": "Schlafen in",
+  "ACS": "Verbandsangriff",
+  "Missile": "Raketen",
+  "Destroy": "Zerstörung",
+  "Attack": "Angriff",
+  "Slots": "Slots",
+  "free": "frei",
+  "ok": "ok",
+  "Error": "Fehler",
+  "Keep free": "Frei halten",
+  "Exp": "Exp",
+  "Workers (priority: lower = more important)": "Worker (Priorität: kleiner = wichtiger)",
+  "Slot priority (lower = more important)": "Slot-Priorität (kleiner = wichtiger)",
+  "On": "An",
+  "Off": "Aus",
+  "Cargo build": "Frachterbau",
+  "Mines": "Minen",
+  "Research": "Forschung",
+  "LF mines": "LF-Minen",
+  "LF research": "LF-Forschung",
+  "Daily offer": "Tagesangebot",
+  "Colonizer": "Kolonisierer"
+ }
+}
