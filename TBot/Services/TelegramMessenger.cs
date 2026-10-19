@@ -164,11 +164,13 @@ namespace Tbot.Services {
 		public async Task SendMessage(string message, ParseMode parseMode = ParseMode.Html, CancellationToken cancellationToken = default) {
 			try {
 				isTyping = false;
-				await Client.SendMessage(
-					chatId: Channel,
-					text: message,
-					parseMode: parseMode,
-					cancellationToken: cancellationToken);
+				foreach (string teil in TeileNachricht(message)) {
+					await Client.SendMessage(
+						chatId: Channel,
+						text: teil,
+						parseMode: parseMode,
+						cancellationToken: cancellationToken);
+				}
 			} catch (Exception e) {
 				_logger.WriteLog(LogLevel.Error, LogSender.Tbot, $"Could not send Telegram message: an exception has occurred: {e.Message}");
 			}
@@ -194,10 +196,32 @@ namespace Tbot.Services {
 			return Task.CompletedTask;
 		}
 
+		private static List<string> TeileNachricht(string text, int max = 3500) {
+			var teile = new List<string>();
+			if (text == null || text.Length <= max) {
+				teile.Add(text ?? "");
+				return teile;
+			}
+			var sb = new System.Text.StringBuilder();
+			foreach (string zeile in text.Split('\n')) {
+				if (sb.Length > 0 && sb.Length + zeile.Length + 1 > max) {
+					teile.Add(sb.ToString());
+					sb.Clear();
+				}
+				if (sb.Length > 0)
+					sb.Append('\n');
+				sb.Append(zeile);
+			}
+			if (sb.Length > 0)
+				teile.Add(sb.ToString());
+			return teile;
+		}
+
 		public async Task SendMessage(ITelegramBotClient client, Chat chat, string message, ParseMode parseMode = ParseMode.Html) {
 			try {
 				isTyping = false;
-				await client.SendMessage(chat, message, parseMode);
+				foreach (string teil in TeileNachricht(message))
+					await client.SendMessage(chat, teil, parseMode);
 			} catch (Exception e) {
 				_logger.WriteLog(LogLevel.Error, LogSender.Tbot, $"Could not send Telegram message: an exception has occurred: {e.Message}");
 			}
@@ -286,6 +310,8 @@ namespace Tbot.Services {
 			} else {
 				await SendTyping(ct);
 				var message = update.Message;
+				if (message?.Text != null)
+					message.Text = System.Text.RegularExpressions.Regex.Replace(message.Text.Trim(), @"[ \t]+", " ");
 				var arg = "";
 				var test = "";
 				decimal speed;
@@ -425,8 +451,8 @@ namespace Tbot.Services {
 								"/cancelghostsleep - Cancel planned /ghostsleep(expe) if not already sent\n" +
 								"/spycrash - Create a debris field by crashing a probe on target or automatically selected planet. Format: <code>/spycrash 2:41:9/auto</code>\n" +
 								"/recall - Enable/disable fleet auto recall. Format: <code>/recall true/false</code>\n" +
-								"/collect - Collect planets resources to JSON setting celestial\n" +
-								"/collectall - Collect planets resources to JSON setting celestial with no MinimumResources\n" +
+								"/collect [planet|moon] [skip] - Collect planets resources to JSON setting celestial\n" +
+								"/collectall [planet|moon] [skip] - Collect planets resources to JSON setting celestial with no MinimumResources\n" +
 								"/build - Try to build buildable on each planet. Build max possible if no number value sent <code>/build LightFighter [100]</code>\n" +
 								"/collectdeut - Collect planets only deut resources -> to JSON repatriate setting celestial\n" +
 								"/msg - Send a message to current attacker. Format: <code>/msg hello dude</code>\n" +
@@ -927,22 +953,24 @@ namespace Tbot.Services {
 							}
 
 							case "/collect":
-								if (message.Text.Split(' ').Length != 1) {
-									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
-									return;
+							case "/collectall": {
+								string[] sammelArgs = message.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+								string sammelFilter = null;
+								bool sammelSkip = false;
+								foreach (string a in sammelArgs.Skip(1)) {
+									if (a is "planet" or "moon" && sammelFilter == null)
+										sammelFilter = a;
+									else if (a == "skip" && !sammelSkip)
+										sammelSkip = true;
+									else {
+										await SendMessage(botClient, message.Chat, "Optional arguments: <code>planet</code> or <code>moon</code>, and <code>skip</code> (skip celestials with a transport already on the way), e.g. <code>/collect moon skip</code>");
+										return;
+									}
 								}
 
-								await currInstance.TelegramCollect();
+								await currInstance.TelegramCollect(arg == "/collectall", sammelFilter, sammelSkip);
 								return;
-
-							case "/collectall":
-								if (message.Text.Split(' ').Length != 1) {
-									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");
-									return;
-								}
-
-								await currInstance.TelegramCollect(true);
-								return;
+							}
 
 							case "/collectdeut":
 								if (message.Text.Split(' ').Length != 2) {

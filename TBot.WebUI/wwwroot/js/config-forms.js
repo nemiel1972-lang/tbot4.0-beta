@@ -104,7 +104,7 @@
         return key && ALWAYS_MASK.test(key) && o !== null && o !== '' ? '*****' : o;
     }
     function applyMask() { sensNodes.forEach(function (n) { setMasked(n, mask); }); }
-    var original = null, state = null, originalText = '', view = 'form', file = '';
+    var original = null, state = null, originalText = '', view = 'form', file = '', addedDefaults = [];
 
     var SHIPS = ['LightFighter', 'HeavyFighter', 'Cruiser', 'Battleship', 'Battlecruiser', 'Bomber', 'Destroyer', 'Reaper', 'Pathfinder', 'SmallCargo', 'LargeCargo', 'EspionageProbe'];
     var COMBAT = ['Reaper', 'Destroyer', 'Bomber', 'Battlecruiser', 'Battleship', 'Pathfinder', 'Cruiser', 'HeavyFighter', 'LightFighter'];
@@ -172,7 +172,14 @@
     loading
         .then(function (r) {
             if (!r.success) { root.innerHTML = ''; root.appendChild(el('div', { class: 'cfg-error', text: r.error })); return; }
-            original = JSON.parse(r.data); state = clone(original); originalText = JSON.stringify(original, null, 2); file = r.file;
+            original = JSON.parse(r.data); state = clone(original); file = r.file;
+            addedDefaults = (!COMBINED && r.added) || [];
+            addedDefaults.forEach(function (p) {
+                var parts = p.split('.').slice(1), o = original;
+                for (var i = 0; i < parts.length - 1 && o; i++) o = o[parts[i]];
+                if (o && typeof o === 'object') delete o[parts[parts.length - 1]];
+            });
+            originalText = JSON.stringify(original, null, 2);
             var dr = readDrafts();
             if (!COMBINED && dr.__active && dr.__active[block] !== undefined && dr[block] === undefined && typeof state.Active === 'boolean') state.Active = !!dr.__active[block];
             onSidebarActive = function (name, v) { if (!COMBINED && name === block && state && typeof state.Active === 'boolean') { state.Active = v; render(); } };
@@ -536,6 +543,10 @@
         if (tg) al.push(fld(tg, 'Active', ['TelegramMessenger'], 'Telegram alert', null, 'toggle'));
         var alarm = sub('Alarm');
         if (alarm) al.push(fld(alarm, 'Active', ['Alarm'], 'Alarm level in the alert', null, 'toggle'));
+        if (alarm) {
+            if (!has(alarm, 'SoundFile')) alarm.SoundFile = '';
+            al.push(fld(alarm, 'SoundFile', ['Alarm'], 'Alarm sound (WAV file)', 'Full path to a WAV file played on an attack; empty = beep', 'text'));
+        }
         foldTo(body, 'Alerts', al);
 
         var re = [];
@@ -642,11 +653,12 @@
                 fld(fs, 'OnlyMoons', fp, 'Only moons', null, 'toggle'),
                 fld(fs, 'DeutToLeave', fp, 'Deuterium to leave', 'The rest goes with the fleet as fuel', 'num', { min: 0 }),
                 fld(fs, 'Recall', fp, 'Recall at wake-up', 'Recall the saving fleet so it is back when you wake up', 'toggle'),
-                fld(fs, 'DefaultMission', fp, 'Mission', null, 'text')
+                fld(fs, 'DefaultMission', fp, 'Mission', 'Deploy = station the ships at another of your moons (recommended)', 'select', { options: ['Deploy', 'Harvest', 'Transport', 'Spy', 'Colonize'].concat(['Deploy', 'Harvest', 'Transport', 'Spy', 'Colonize'].indexOf(fs.DefaultMission) < 0 && fs.DefaultMission ? [fs.DefaultMission] : []) })
             ];
             var dt = fs.DeployTarget && typeof fs.DeployTarget === 'object' ? fs.DeployTarget : null, dp = fp.concat('DeployTarget');
             if (dt) {
                 kids.push(el('div', { class: 'cfg-gname', text: 'Deploy target' }));
+                kids.push(el('div', { class: 'cfg-note', text: 'Optional fixed target moon. If these coordinates are not one of your moons, or the flight does not fit, the bot picks a suitable moon of yours on its own - you do not have to choose one.' }));
                 kids.push(fld(dt, 'Galaxy', dp, 'Galaxy', null, 'num', { min: 1, sens: true }));
                 kids.push(fld(dt, 'System', dp, 'System', null, 'num', { min: 1, sens: true }));
                 kids.push(fld(dt, 'Position', dp, 'Position', null, 'num', { min: 1, sens: true }));
@@ -826,7 +838,47 @@
         sens(i);
         return withHelp(row(label, hint, i), fullKey(path, key));
     }
+    function renderCommandPrompt(body) {
+        var input = el('input', { type: 'text', class: 'cfg-cmd-input', placeholder: '/collect moon skip', spellcheck: 'false', autocomplete: 'off' });
+        var out = el('div', { class: 'cfg-note', text: 'Check only - nothing is sent to the game or to Telegram.' });
+        var list = el('div', { class: 'cfg-cmd-list' });
+        var timer = null, seq = 0;
+        function show(r) {
+            out.textContent = '';
+            out.style.color = r.ok ? 'var(--tb-ok, #2e7d32)' : (r.known ? 'var(--tb-bad, #c62828)' : '');
+            out.appendChild(el('b', { text: (r.ok ? '✓ ' : r.known ? '✗ ' : '') + r.message }));
+            if (r.syntax) out.appendChild(el('div', { class: 'cfg-note', text: r.syntax + (r.short ? '  -  ' + r.short : '') }));
+            if (r.preview) out.appendChild(el('pre', { class: 'cfg-cmd-preview', text: r.preview }));
+            else if (r.note) out.appendChild(el('div', { class: 'cfg-note', text: r.note }));
+        }
+        function check() {
+            var mine = ++seq, fd = new URLSearchParams(); fd.set('line', input.value); fd.set('instance', instance || '');
+            if (!input.value.trim()) { out.style.color = ''; out.textContent = 'Check only - nothing is sent to the game or to Telegram.'; return; }
+            fetch(main.dataset.cmdcheck, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() })
+                .then(function (r) { return r.json(); }).then(function (r) { if (mine === seq) show(r); })
+                .catch(function () { if (mine === seq) out.textContent = 'The check failed (WebUI not reachable).'; });
+        }
+        input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(check, 250); });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); check(); } });
+        body.appendChild(sec('Command line (check only)', [
+            el('div', { class: 'cfg-note', text: 'Type a Telegram command to see whether the syntax is right. It is only checked, never executed. Click a command in the list to copy its example.' }),
+            input, out, list
+        ]));
+        if (!main.dataset.cmdlist) return;
+        fetch(main.dataset.cmdlist, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (cmds) {
+            var box = el('details', { class: 'cfg-inner' }, [el('summary', { text: 'All commands' })]);
+            cmds.forEach(function (c) {
+                var row1 = el('div', { class: 'cfg-cmd-row', title: c.syntax }, [el('code', { text: '/' + c.name }), document.createTextNode('  ' + c.description)]);
+                row1.style.cursor = 'pointer';
+                row1.addEventListener('click', function () { input.value = c.example; input.focus(); check(); });
+                box.appendChild(row1);
+            });
+            list.appendChild(box);
+        }).catch(function () { });
+    }
+
     function renderMessengerPage(body) {
+        renderCommandPrompt(body);
         function block1(name, title, d, build) {
             if (!d) {
                 body.appendChild(sec(title, [el('div', { class: 'cfg-note', text: 'No "' + name + '" block found in the config, so nothing can be edited here.' })]));
@@ -1351,7 +1403,7 @@
             var tp = p.concat('Types');
             k.push(inner('brain:Boost:types', 'Booster types to keep running', autoRows(o.Types, tp, ['Metal', 'Crystal', 'Deuterium', 'Energy'])));
         }
-        k.push(fld(o, 'LogItems', p, 'Log found items', 'Writes the active items of each planet and the inventory to the log', 'toggle'));
+        k.push(fld(o, 'LogItems', p, 'Log found items', 'Writes the active items of each planet and the inventory to the log, at most every 12 hours', 'toggle'));
         boosterTiers(k, o, p);
         if (o.MinMineLevel && typeof o.MinMineLevel === 'object') {
             k.push(inner('brain:Boost:minlevel', 'Minimum mine level (no booster below it, 0 = always)', autoRows(o.MinMineLevel, p.concat('MinMineLevel'), ['Metal', 'Crystal', 'Deuterium'])));
@@ -1509,15 +1561,17 @@
         });
 
         brainSub(body, 'AutoFleetJumpGate', 'AutoFleetJumpGate', function (k, o, p) {
-            if (Array.isArray(o.Target)) k.push(withHelp(row('Target moons', 'Where the fleet jumps to (jump gates exist on moons only)',
+            if (Array.isArray(o.Target)) k.push(withHelp(row('Target moons', 'Where the fleet jumps to (jump gates exist on moons only; only the first entry is used)',
                 listTable(o.Target, COORD_COLS.slice(0, 3), function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Moon' }; }, '+ Add target', ['Target'])), fullKey(p, 'Target')));
             k.push(fld(o, 'MinimumAmountOfShipPointsToTeleport', p, 'Min fleet points to jump', null, 'num', { min: 0 }));
+            if (!Array.isArray(o.Exclude)) o.Exclude = [];
+            k.push(withHelp(row('Excluded moons', 'These moons never jump', listTable(o.Exclude, COORD_COLS.slice(0, 3), function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Moon' }; }, '+ Add exclusion', ['Exclude'])), fullKey(p, 'Exclude')));
             if (o.MinimumAmountOfShipsToBeLeftOnMoon && typeof o.MinimumAmountOfShipsToBeLeftOnMoon === 'object') {
                 var mp = p.concat('MinimumAmountOfShipsToBeLeftOnMoon'), M = o.MinimumAmountOfShipsToBeLeftOnMoon;
                 k.push(inner('brain:Jump:left', 'Ships that stay on the moon', autoRows(M, mp, Object.keys(M))));
             }
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'Target', 'MinimumAmountOfShipPointsToTeleport', 'MinimumAmountOfShipsToBeLeftOnMoon', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Target', 'Exclude', 'MinimumAmountOfShipPointsToTeleport', 'MinimumAmountOfShipsToBeLeftOnMoon', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         var known = ['Active', 'Transports', 'AutoMine', 'AutoResearch', 'LifeformAutoMine', 'LifeformAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'KeepBoosters', 'AutoFleetJumpGate'];
@@ -1618,16 +1672,18 @@
 
     function renderAutoDiscovery(body) {
         var d = state, P = [];
+        if (!has(d, 'StopAtArtifacts')) d.StopAtArtifacts = 0;
         body.appendChild(sec('AutoDiscovery', [
             fld(d, 'Active', P, 'AutoDiscovery active', 'Master switch', 'toggle'),
-            fld(d, 'MaxSlots', P, 'Max slots', null, 'num', { min: 0 })
+            fld(d, 'MaxSlots', P, 'Max slots', null, 'num', { min: 0 }),
+            fld(d, 'StopAtArtifacts', P, 'Stop at artifacts', 'No more discoveries from this many collected artifacts (0 = no limit)', 'num', { min: 0 })
         ].filter(Boolean)));
         if (Array.isArray(d.Origin)) body.appendChild(sec('Origins', [
             el('div', { class: 'cfg-note', text: 'Celestials the discovery missions start from.' }),
             listTable(d.Origin, COORD_COLS, newCoord, '+ Add origin', ['Origin'])
         ]));
         foldTo(body, 'Timing', intervalRows(d, P));
-        var rest = Object.keys(d).filter(function (k) { return ['Active', 'MaxSlots', 'Origin', 'CheckIntervalMin', 'CheckIntervalMax'].indexOf(k) < 0; });
+        var rest = Object.keys(d).filter(function (k) { return ['Active', 'MaxSlots', 'StopAtArtifacts', 'Origin', 'CheckIntervalMin', 'CheckIntervalMax'].indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
@@ -1787,6 +1843,10 @@
         });
         root.appendChild(el('div', { class: 'cfg-head' }, [
             el('h1', { text: COMBINED ? COMBINED_TITLE : block }), sens(el('span', { class: 'sub grow', text: file })), helpLabel(), maskLabel(), tabs
+        ]));
+        if (addedDefaults.length) root.appendChild(el('div', { class: 'cfg-note' }, [
+            el('b', { text: 'New options added with default values (saved with the next Save):' }), document.createTextNode(' '),
+            el('span', { text: addedDefaults.map(function (p) { return p.split('.').slice(1).join('.'); }).join(', ') })
         ]));
         var body = el('div', { class: 'cfg-body' }), ta;
         if (view === 'form') {

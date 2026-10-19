@@ -153,7 +153,16 @@
    "Escort ships": "Escort-Schiffe",
    "Escort step size": "Escort-Schrittgröße",
    "Examples (click to use):": "Beispiele (zum Übernehmen klicken):",
+   "Alarm sound (WAV file)": "Alarmton (WAV-Datei)",
+   "Full path to a WAV file played on an attack; empty = beep": "Vollständiger Pfad zu einer WAV-Datei, die bei einem Angriff abgespielt wird; leer = Piepton",
+   "Command line (check only)": "Befehlszeile (nur Prüfung)",
+   "All commands": "Alle Befehle",
+   "Type a Telegram command to see whether the syntax is right. It is only checked, never executed. Click a command in the list to copy its example.": "Gib einen Telegram-Befehl ein, um zu sehen, ob die Syntax stimmt. Er wird nur geprüft, nie ausgeführt. Ein Klick auf einen Befehl in der Liste übernimmt sein Beispiel.",
+   "Check only - nothing is sent to the game or to Telegram.": "Nur Prüfung – es wird nichts an das Spiel oder an Telegram gesendet.",
+   "The check failed (WebUI not reachable).": "Die Prüfung ist fehlgeschlagen (WebUI nicht erreichbar).",
    "Excluded celestials": "Ausgeschlossene Himmelskörper",
+   "Excluded moons": "Ausgeschlossene Monde",
+   "These moons never jump": "Diese Monde springen nie",
    "Excluded coordinates": "Ausgeschlossene Koordinaten",
    "Excluded planets": "Ausgeschlossene Planeten",
    "Expeditions active": "Expeditionen aktiv",
@@ -277,6 +286,11 @@
    "Max report age for attack": "Max. Berichtsalter für Angriff",
    "Max share of the fleet": "Max. Anteil der Flotte",
    "Max slots": "Max. Slots",
+   "Stop at artifacts": "Stopp bei Artefakten",
+   "Calculating…": "Berechne…",
+   "Artifacts": "Artefakte",
+   "New options added with default values (saved with the next Save):": "Neue Optionen mit Standardwert ergänzt (werden mit dem nächsten Speichern gesichert):",
+   "No more discoveries from this many collected artifacts (0 = no limit)": "Keine Entdeckungen mehr ab so vielen gesammelten Artefakten (0 = keine Grenze)",
    "Max slots for AutoFarm": "Max. Slots für AutoFarm",
    "Max tech building": "Max. Technologiegebäude",
    "Max temperature": "Max. Temperatur",
@@ -589,7 +603,6 @@
    "What it does": "Was es tut",
    "What they do": "Was sie tun",
    "Where the colony ships start.": "Wo die Kolonieschiffe starten.",
-   "Where the fleet jumps to (jump gates exist on moons only)": "Wohin die Flotte springt (Sprungtore gibt es nur auf Monden)",
    "Where the resources go": "Wohin die Rohstoffe gehen",
    "Which debris fields": "Welche Trümmerfelder",
    "Which systems are scanned, in which order and how many per cycle.": "Welche Systeme in welcher Reihenfolge und wie viele pro Zyklus gescannt werden.",
@@ -603,7 +616,6 @@
    "Workers to pause": "Zu pausierende Worker",
    "Works on top of \"Slots to leave free\"": "Wirkt zusätzlich zu „Freizulassende Slots“",
    "Write messages sent and received to the log": "Gesendete und empfangene Nachrichten ins Log schreiben",
-   "Writes the active items of each planet and the inventory to the log": "Schreibt die aktiven Items jedes Planeten und das Inventar ins Log",
    "Your own alliance ID is neither shown nor editable in the web UI. Set it directly in the config file (secrets/alliance).": "Deine eigene Allianz-ID wird in der Web-Oberfläche weder angezeigt noch ist sie bearbeitbar. Setze sie direkt in der Config-Datei (secrets/alliance).",
    "auto: slots / origins": "Auto: Slots / Ursprünge",
    "back exactly at wake-up": "genau beim Aufwachen zurück",
@@ -918,7 +930,11 @@
    "Priority 15": "Priorität 15",
    "Priority 16": "Priorität 16",
    "Priority 17": "Priorität 17",
-   "Priority 18": "Priorität 18"
+   "Priority 18": "Priorität 18",
+   "Where the fleet jumps to (jump gates exist on moons only; only the first entry is used)": "Wohin die Flotte springt (Sprungtore gibt es nur auf Monden; nur der erste Eintrag zählt)",
+   "Writes the active items of each planet and the inventory to the log, at most every 12 hours": "Schreibt die aktiven Items jedes Planeten und das Inventar ins Log, höchstens alle 12 Stunden",
+   "Deploy = station the ships at another of your moons (recommended)": "Deploy = die Schiffe auf einem anderen deiner Monde stationieren (empfohlen)",
+   "Optional fixed target moon. If these coordinates are not one of your moons, or the flight does not fit, the bot picks a suitable moon of yours on its own - you do not have to choose one.": "Optionaler fester Ziel-Mond. Gehören die Koordinaten keinem deiner Monde oder passt der Flug nicht, wählt der Bot selbst einen passenden Mond von dir – du musst keinen auswählen."
   },
   "phrases": [
    [
@@ -1859,6 +1875,9 @@
    },
    "Alarm.Active": {
     "t": "Die Meldung mit hoher Alarmstufe markieren, damit sie auffällt."
+   },
+   "Alarm.SoundFile": {
+    "t": "Vollständiger Pfad zu einer WAV-Datei, die bei einem Angriff abgespielt wird (auf dem Rechner mit dem Bot). Leer, nicht vorhanden oder nicht abspielbar: wie bisher der Piepton."
    }
   },
   "Brain": {
@@ -2071,6 +2090,9 @@
    "AutoCargo.SkipIfIncomingTransport": {
     "t": "Himmelskörper überspringen, zu dem schon ein Transport unterwegs ist."
    },
+   "AutoFleetJumpGate.Exclude": {
+    "t": "Monde, die nie springen."
+   },
    "AutoCargo.Exclude": {
     "t": "Himmelskörper, die keine Transporter bauen."
    },
@@ -2147,7 +2169,7 @@
     "t": "Booster pro Typ, die im Inventar bleiben."
    },
    "KeepBoosters.LogItems": {
-    "t": "Loggt aktive Items pro Planet und das Inventar."
+    "t": "Loggt aktive Items pro Planet und das Inventar, höchstens alle 12 Stunden."
    },
    "KeepBoosters.Tiers": {
     "t": "Erlaubte Stufen, die erste wird zuerst genutzt."
@@ -2187,6 +2209,9 @@
    },
    "ManualShips.Ships.*": {
     "t": "Anzahl dieses Schiffstyps in jeder Expedition."
+   },
+   "MinDeuteriumOnMoon": {
+    "t": "Ein Mond braucht mindestens so viel Deuterium, um Expeditionen zu starten (0 = keine Prüfung). Darunter wird der Mond übersprungen und du bekommst eine Meldung."
    },
    "FuelToCarry": {
     "t": "Deuterium, das jede Expedition mitnimmt."
@@ -2315,6 +2340,9 @@
    },
    "MaxSlots": {
     "t": "Flottenslots, die Entdeckungen gleichzeitig nutzen dürfen."
+   },
+   "StopAtArtifacts": {
+    "t": "Schickt keine Entdeckungen mehr, sobald so viele Artefakte gesammelt sind (Anzeige „Gesammelte Artefakte: 1840 / 3600“ auf den Lebensform-Seiten). 0 = keine Grenze. Fällt der Bestand wieder darunter, geht es weiter. Lässt sich die Anzeige nicht lesen, laufen die Entdeckungen weiter (Warnung im Log)."
    }
   },
   "FastFarm": {

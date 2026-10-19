@@ -80,7 +80,10 @@
             c.body.appendChild(row('Rank', num(acc.rank) + (acc.total ? ' / ' + num(acc.total) : '')));
             c.body.appendChild(row('Points', compact(acc.points)));
             c.body.appendChild(row('Planets / moons', acc.planets + ' / ' + acc.moons));
-            c.body.appendChild(row('Dark matter', num(acc.darkmatter)));
+            c.body.appendChild(row('Dark matter', (acc.darkmatter === null || acc.darkmatter === undefined) ? 'Calculating…' : num(acc.darkmatter)));
+            var discoveryOn = (d.workers || []).some(function (w) { return w.name === 'AutoDiscovery' && w.active; });
+            if (acc.artifacts !== null && acc.artifacts !== undefined) c.body.appendChild(row('Artifacts', num(acc.artifacts) + (acc.artifactsLimit ? ' / ' + num(acc.artifactsLimit) : '')));
+            else if (discoveryOn) c.body.appendChild(row('Artifacts', 'Calculating…'));
         } else c.body.appendChild(el('div', 'st-mut', 'No account data yet.'));
 
         c = card('Fleets'); grid.appendChild(c.root);
@@ -97,7 +100,8 @@
         if (acc) {
             var rr = el('div', 'st-res');
             [['Metal', acc.metal], ['Crystal', acc.crystal], ['Deuterium', acc.deuterium]].forEach(function (x) {
-                var w = el('div'); w.appendChild(el('div', 'st-mut', x[0])); w.appendChild(el('div', 'st-big', compact(x[1]))); w.title = num(x[1]); rr.appendChild(w);
+                var none = x[1] === null || x[1] === undefined;
+                var w = el('div'); w.appendChild(el('div', 'st-mut', x[0])); w.appendChild(el('div', 'st-big', none ? 'Calculating…' : compact(x[1]))); if (!none) w.title = num(x[1]); rr.appendChild(w);
             });
             c.body.appendChild(rr);
         } else c.body.appendChild(el('div', 'st-mut', 'No resource data yet.'));

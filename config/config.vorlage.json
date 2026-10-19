@@ -156,7 +156,8 @@
             "Active": true
         },
         "Alarm": {
-            "Active": true
+            "Active": true,
+            "SoundFile": ""
         },
         "CheckIntervalMin": 10,
         "CheckIntervalMax": 20
@@ -536,6 +537,7 @@
                     "Type": "Planet"
                 }
             ],
+            "Exclude": [],
             "MinimumAmountOfShipsToBeLeftOnMoon": {
                 "LightFighter": 0,
                 "HeavyFighter": 0,
@@ -582,6 +584,7 @@
             }
         },
         "FuelToCarry": 30000,
+        "MinDeuteriumOnMoon": 0,
         "MaxExpeditionsPerOrigin": 5,
         "SplitExpeditionsBetweenSystems": {
             "Active": true,
@@ -803,6 +806,7 @@
             }
         ],
         "MaxSlots": 2,
+        "StopAtArtifacts": 0,
         "CheckIntervalMin": 15,
         "CheckIntervalMax": 25
     },

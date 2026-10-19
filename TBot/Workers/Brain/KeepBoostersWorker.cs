@@ -34,6 +34,8 @@ namespace Tbot.Workers.Brain {
 		protected override TimeSpan ExecuteTimeout => TimeSpan.FromMinutes(10);
 
 		private bool _logItems = true;
+		private static readonly TimeSpan ItemLogInterval = TimeSpan.FromHours(12);
+		private DateTime _nextItemLog = DateTime.MinValue;
 		private Dictionary<string, int> _reserve = new();
 		private Dictionary<BoosterType, int> _minLevel = new();
 
@@ -142,6 +144,10 @@ namespace Tbot.Workers.Brain {
 			var tiers = GetTiers(cfg);
 			var types = GetTypes(cfg);
 			_logItems = GetBool(cfg, "LogItems", true);
+			if (_logItems && DateTime.UtcNow >= _nextItemLog)
+				_nextItemLog = DateTime.UtcNow + ItemLogInterval;
+			else
+				_logItems = false;
 			_reserve = GetReserves(cfg);
 			_minLevel = GetMinLevels(cfg);
 			try {
@@ -204,9 +210,18 @@ namespace Tbot.Workers.Brain {
 					DoLog(LogLevel.Information, $"Active items on {planet}: {text}");
 				}
 
+				Celestial leveled = planet;
+				if (planet is Planet pl && pl.Buildings == null) {
+					try {
+						leveled = await _tbotOgameBridge.UpdatePlanet(planet, UpdateTypes.Buildings) ?? planet;
+					} catch (Exception e) {
+						DoLog(LogLevel.Warning, $"Could not read buildings of {planet}: {e.Message}");
+					}
+				}
+
 				var cells = new Dictionary<string, object>();
 				foreach (var type in types) {
-					int level = LevelOf(planet, type);
+					int level = LevelOf(leveled, type);
 					int minLevel = _minLevel.TryGetValue(type, out var ml) ? ml : 0;
 					var running = BoosterMatcher.ActiveItemOf(active, type);
 					if (running != null) {

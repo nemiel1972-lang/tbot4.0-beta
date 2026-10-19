@@ -241,6 +241,36 @@ namespace Tbot.Workers {
 			return autoFleet;
 		}
 
+		private static readonly Dictionary<string, DateTime> _deutMeldung = new();
+		private async Task<bool> ExpeditionDeuteriumReicht(Celestial origin) {
+			try {
+				if (origin.Coordinate.Type != Celestials.Moon)
+					return true;
+				var exp = _tbotInstance.InstanceSettings.Expeditions;
+				if (!SettingsService.IsSettingSet(exp, "MinDeuteriumOnMoon"))
+					return true;
+				long min = (long) exp.MinDeuteriumOnMoon;
+				if (min <= 0)
+					return true;
+				var aktuell = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
+				long vorhanden = (long) (aktuell?.Resources?.Deuterium ?? 0);
+				if (vorhanden >= min)
+					return true;
+				DoLog(LogLevel.Warning, $"Expedition from {origin.Coordinate} skipped: deuterium {vorhanden:N0} is below the minimum {min:N0} on this moon.");
+				string schluessel = origin.Coordinate.ToString();
+				lock (_deutMeldung) {
+					if (_deutMeldung.TryGetValue(schluessel, out DateTime zuletzt) && (DateTime.UtcNow - zuletzt).TotalHours < 6)
+						return false;
+					_deutMeldung[schluessel] = DateTime.UtcNow;
+				}
+				await _tbotInstance.SendTelegramMessage($"Expeditions from moon {origin.Coordinate} paused: deuterium {vorhanden:N0} is below the minimum {min:N0}.");
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"Deuterium check for {origin.Coordinate} failed: {e.Message}");
+				return true;
+			}
+			return false;
+		}
+
 		private async Task<Ships> RefreshExpeditionShips(Celestial origin) {
 			try {
 				origin.Ships = await _ogameService.GetShips(origin);
@@ -633,6 +663,11 @@ namespace Tbot.Workers {
 								$"No usable expedition fleet on {origin.Coordinate}; excluding this origin until the bounded retry.");
 							unavailableOrigins[originIndex] = true;
 							retryableUnavailableOrigins[originIndex] = true;
+							break;
+						}
+
+						if (!await ExpeditionDeuteriumReicht(origin)) {
+							unavailableOrigins[originIndex] = true;
 							break;
 						}
 

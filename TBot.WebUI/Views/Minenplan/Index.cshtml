@@ -118,7 +118,6 @@
             return h + '</table></div></div>';
         }
 
-        // ---- Ranking (Berechnungsart): Standard aus der Config (data.Ranking), hier im Browser ueberschreibbar ----
         function rankSettings(data) {
             var d = data.Ranking || {};
             var r = { mode: d.Mode || 'Payback', horizon: d.HorizonDays || 90, maxPayback: d.MaxPaybackDays || 200, onlySensible: !!d.OnlySensible, research: d.IncludeResearch !== false };
@@ -130,7 +129,6 @@
         }
         function paybackOf(c) { return c.GainPerDay > 0 && c.CostDeut > 0 ? c.CostDeut / c.GainPerDay : 0; }
         function npvOf(c, h) { return c.GainPerDay * h - c.CostDeut; }
-        // gleiche Regeln wie MinePlanRanking.cs
         function rankSteps(list, r) {
             var q = list.filter(function (c) { return c.GainPerDay > 0; });
             if (!r.research) q = q.filter(function (c) { return !c.IsResearch; });

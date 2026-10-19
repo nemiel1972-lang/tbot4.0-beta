@@ -1564,7 +1564,6 @@ func GetCaptchaSolverHandler(c echo.Context) error {
 		bot.error(err)
 	}
 
-
 	ClearLoginPause()
 	if !bot.IsLoggedIn() {
 		if err := bot.Login(); err != nil {

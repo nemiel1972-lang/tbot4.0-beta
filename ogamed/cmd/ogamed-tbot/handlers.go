@@ -618,6 +618,52 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
 	return []byte(tmpHTML)
 }
 
+var (
+	artifactTagRx = regexp.MustCompile(`(?s)<[^>]*>`)
+	artifactRx    = regexp.MustCompile(`(?is)(?:artefakt|artifact)[a-z]*\s*(?:collected)?\s*:?\s*([0-9][0-9.,]*)\s*/\s*([0-9][0-9.,]*)`)
+)
+
+func parseArtifactNumber(s string) int64 {
+	s = strings.NewReplacer(".", "", ",", "").Replace(s)
+	n, _ := strconv.ParseInt(s, 10, 64)
+	return n
+}
+
+func ParseArtifacts(html string) (collected, limit int64, ok bool) {
+	text := strings.ReplaceAll(html, "&nbsp;", " ")
+	for _, candidate := range []string{artifactTagRx.ReplaceAllString(text, " "), text} {
+		if m := artifactRx.FindStringSubmatch(candidate); m != nil {
+			return parseArtifactNumber(m[1]), parseArtifactNumber(m[2]), true
+		}
+	}
+	return 0, 0, false
+}
+
+func GetArtifactsHandler(c echo.Context) error {
+	bot := c.Get("bot").(*wrapper.OGame)
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid planet id"))
+	}
+	var lastErr error
+	for _, component := range []string{"lfsettings", "lfresearch", "lfbuildings"} {
+		vals := url.Values{"page": {"ingame"}, "component": {component}, "cp": {utils.FI64(planetID)}}
+		pageHTML, err := bot.GetPageContent(vals)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if collected, limit, ok := ParseArtifacts(string(pageHTML)); ok {
+			return c.JSON(http.StatusOK, wrapper.SuccessResp(map[string]int64{"ArtifactsCollected": collected, "ArtifactsLimit": limit}))
+		}
+	}
+	msg := "artifact count not found on the lifeform pages"
+	if lastErr != nil {
+		msg += ": " + lastErr.Error()
+	}
+	return c.JSON(http.StatusNotFound, wrapper.ErrorResp(404, msg))
+}
+
 func GetLfBonusesTbotHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))

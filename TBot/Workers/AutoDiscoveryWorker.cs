@@ -311,6 +311,31 @@ namespace Tbot.Workers {
 				DateTime now = await _tbotOgameBridge.GetDateTime();
 				CleanupExpiredBlacklistAll(now);
 
+				int stopAtArtifacts = 0;
+				try { stopAtArtifacts = (int)_tbotInstance.InstanceSettings.AutoDiscovery.StopAtArtifacts; } catch { }
+				{
+					var artifactPlanet = _tbotInstance.UserData.celestials?.FirstOrDefault(c => c.Coordinate.Type == Celestials.Planet);
+					if (artifactPlanet != null) {
+						try {
+							var artifacts = await _ogameService.GetArtifactInventory(artifactPlanet);
+							if (artifacts != null) {
+								_tbotInstance.UserData.artifactsCollected = artifacts.ArtifactsCollected;
+								_tbotInstance.UserData.artifactsLimit = artifacts.ArtifactsLimit;
+								DoLog(LogLevel.Information, stopAtArtifacts > 0
+									? $"Artifacts: {artifacts.ArtifactsCollected} / {artifacts.ArtifactsLimit} (discoveries stop at {stopAtArtifacts})."
+									: $"Artifacts: {artifacts.ArtifactsCollected} / {artifacts.ArtifactsLimit}.");
+								if (stopAtArtifacts > 0 && artifacts.ArtifactsCollected >= stopAtArtifacts) {
+									delay = true;
+									DoLog(LogLevel.Information, "Discoveries paused: artifact limit reached.");
+									return;
+								}
+							}
+						} catch (Exception e) {
+							DoLog(LogLevel.Warning, $"Could not read the artifact count{(stopAtArtifacts > 0 ? ", continuing without the artifact limit" : "")}: {e.Message}");
+						}
+					}
+				}
+
 				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 
@@ -371,6 +396,7 @@ namespace Tbot.Workers {
 
 				var availabilityOrigin = origins.FirstOrDefault(origin =>
 					origin?.Coordinate?.Type == Celestials.Planet) ?? origins[0];
+
 				int discoveries = await _ogameService.GetAvailableDiscoveries(availabilityOrigin);
 				if (discoveries <= 0) {
 					delay = true;

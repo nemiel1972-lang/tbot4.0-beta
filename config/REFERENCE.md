@@ -147,6 +147,7 @@ Detects incoming attacks and reacts.
 | `MessageAttacker.Active`, `Messages` | Send one of these messages to the attacker. |
 | `TelegramMessenger.Active` | Attack alert via Telegram. |
 | `Alarm.Active` | Raise an audible/visible alarm level in the alert. |
+| `Alarm.SoundFile` | Optional full path to a WAV file played on an attack (Windows SoundPlayer; Linux `paplay`/`aplay`; macOS `afplay`). Empty, missing or unplayable = the old beep. |
 
 ## Brain
 
@@ -284,7 +285,7 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 | `Tiers.bronze`, `.silver`, `.gold`, `.platinum` | Which tiers may be used. Bronze is used first, then silver, gold, platinum. (An old list like `["bronze","silver"]` still works.) |
 | `Reserve.bronze`, `.silver`, `.gold`, `.platinum` | Per tier: this many of each booster stay in the inventory; one is only activated while the stock is above it. The Config page shows the current stock next to it. (A single number for all tiers still works.) |
 | `MinMineLevel.Metal`, `.Crystal`, `.Deuterium` | A booster is only used on a planet whose matching mine has at least this level (0 = no limit). Saves boosters on planets where the mine is too low to profit. The overview of running boosters is on the Mine plan page. |
-| `LogItems` | Log the active items of every planet and the inventory once per run (shows event and special items too). |
+| `LogItems` | Log the active items of every planet and the inventory at most every 12 hours (shows event and special items too). |
 | `Exclude` | Planets that are left alone. |
 | `CheckIntervalMin`, `CheckIntervalMax` | Minutes between checks. |
 
@@ -295,6 +296,7 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 | `BuyOfferOfTheDay.Active` | Buys the daily merchant offer. |
 | `AutoFleetJumpGate.Active` | Switch. |
 | `AutoFleetJumpGate.Target` | Moon the fleet jumps to. |
+| `AutoFleetJumpGate.Exclude` | Moons that never jump (optional list of coordinates with `Type: Moon`). |
 | `MinimumAmountOfShipsToBeLeftOnMoon.*` | Ships per type that stay behind. |
 | `MinimumAmountOfShipPointsToTeleport` | Only jump if at least this many fleet points would go. |
 
@@ -309,6 +311,7 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 | `MinPrimaryToSend` | Auto mode: minimum number of primary ships per expedition. If the origin has fewer left after `PrimaryToKeep`, no expedition is sent from it (0 = no minimum). |
 | `ManualShips.Active`, `Ships` | Use a fixed fleet per expedition instead of the automatic one. |
 | `FuelToCarry` | Deuterium taken along. |
+| `MinDeuteriumOnMoon` | Moons used as expedition origin need at least this much deuterium (0 = no check). Below it the moon is skipped and a Telegram/Discord message is sent (at most every 6 h per moon). |
 | `MaxExpeditionsPerOrigin` | Max parallel expeditions per origin. |
 | `Origin[].MaxExpeditions` | Optional per origin: max parallel expeditions for this origin. Absent or 0: with one origin `MaxExpeditionsPerOrigin` applies; with several origins the expedition slots are distributed round-robin (13 slots: 2 origins 7+6, 3 origins 5+4+4; capped by `MaxExpeditionsPerOrigin`). |
 | `SplitExpeditionsBetweenSystems.Active`, `Range` | Spread targets over systems within this range. |
@@ -422,6 +425,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `Active` | Switch. |
 | `Origin` | Celestials discovery missions start from. |
 | `MaxSlots` | Slots used. |
+| `StopAtArtifacts` | Stops sending discoveries once at least this many artifacts are collected (the "Collected artifacts: 1840 / 3600" counter on the lifeform pages). `0` = no limit. Discoveries resume when the count drops below again. If the counter cannot be read, discoveries keep running (warning in the log). |
 
 ## FastFarm
 
@@ -469,11 +473,10 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | `FleetsaveSlot.Active` | Default on. The last free fleet slot is kept for the fleetsave (and DebrisSave): all other fleets, even forced ones, are refused when only the reserved slots are left. Refusals show in the log as `SLOTCOLLISION #n` (counter since start) - this also tells whether a central slot ledger would be worth it. |
 | `FleetsaveSlot.Slots` | Number of reserved slots (default 1). Works on top of `General.SlotsToLeaveFree`. |
 | `AsteroidHunt.Active` | Default off. Item event: once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the inventory is compared with the one from before; one short log line per attempt, no messenger message. Assumes one find per day and account. |
-| `AsteroidHunt.ShipType` / `ShipCount` | Ship sent, typed as in the game (English name, default `Pathfinder`; an unknown name falls back to Pathfinder), count default 1. The planet with the most of that ship is used. |
+| `AsteroidHunt.ShipType` / `ShipCount` | Ship sent (default `Pathfinder`, 1). Any ship name of the game works (e.g. `Cruiser`, `Reaper`, `Destroyer`); no espionage probes. The planet with the most of that ship is used. |
 | `AsteroidHunt.MaxAttemptsPerDay` / `SearchSystems` | Attempts per game day (default 0 = unlimited, max 60; the hunter stops for the day after the first find); `SearchSystems` (default 10) = how many systems around the home system are searched for the asteroid (own, +1, -1, +2 ...); a refused target costs no attempt, the last hit system is tried first the next day. |
 | `AsteroidHunt` (Erkennung) | The result is read from the report of the Flottenkommando under Messages -> Sonstiges (found / no result, retry / "sleep on it" = day over). If no new report arrives or the text is not recognised, the inventory before and after the attack is compared instead. |
 | `AsteroidHunt.SaveJson` | Default on. Log of all attempts and finds in `data/asteroiden_funde_<alias>.json`. |
-
 
 ## WebUI.Language (settings.json)
 

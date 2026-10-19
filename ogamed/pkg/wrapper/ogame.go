@@ -1926,7 +1926,7 @@ func (b *OGame) executeJumpGate(originMoonID, destMoonID ogame.MoonID, ships oga
 	}
 
 	if !utils.InArr(destMoonID, dests) {
-		return false, 0, errors.New("destination moon id invalid")
+		return false, 0, fmt.Errorf("destination moon id invalid (%d is not offered by the jump gate of %d, offered: %v)", destMoonID, originMoonID, dests)
 	}
 
 	payload := url.Values{"token": {token}, "targetSpaceObjectId": {utils.FI64(destMoonID)}}
@@ -1938,7 +1938,7 @@ func (b *OGame) executeJumpGate(originMoonID, destMoonID ogame.MoonID, ships oga
 		}
 	}
 
-	if _, err := b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"jumpgate"}, "action": {"executeJump"}, "asJson": {"1"}}, payload); err != nil {
+	if _, err := b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"jumpgate"}, "action": {"executeJump"}, "asJson": {"1"}}, payload, ChangePlanet(ogame.CelestialID(originMoonID))); err != nil {
 		return false, 0, err
 	}
 	return true, 0, nil
@@ -2343,7 +2343,7 @@ func (b *OGame) activateItem(ref string, celestialID ogame.CelestialID) error {
 	}
 	params = url.Values{"page": {"ajax"}, "component": {"buffactivation"}, "ajax": {"1"}}
 	payload := url.Values{"type": {ref}}
-	if _, err := b.postPageContent(params, payload); err != nil {
+	if _, err := b.postPageContent(params, payload, ChangePlanet(celestialID)); err != nil {
 		return err
 	}
 	return nil
@@ -3149,7 +3149,7 @@ func (b *OGame) tearDown(celestialID ogame.CelestialID, id ogame.ID) error {
 		"mode":         {"3"},
 		"token":        {token},
 	}
-	_, err = b.postPageContent(vals, payload)
+	_, err = b.postPageContent(vals, payload, ChangePlanet(celestialID))
 	return err
 }
 
@@ -3208,7 +3208,7 @@ func (b *OGame) build(celestialID ogame.CelestialID, id ogame.ID, nbr int64) err
 		NewAjaxToken string        `json:"newAjaxToken"`
 	}
 
-	by, err := b.postPageContent(vals, payload)
+	by, err := b.postPageContent(vals, payload, ChangePlanet(celestialID))
 	if err != nil {
 		return err
 	}
@@ -3276,9 +3276,9 @@ func (b *OGame) constructionsBeingBuilt(celestialID ogame.CelestialID) (ogame.Co
 	return page.ExtractConstructions()
 }
 
-func (b *OGame) cancel(token string, techID, listID int64) error {
+func (b *OGame) cancel(celestialID ogame.CelestialID, token string, techID, listID int64) error {
 	_, err := b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"buildlistactions"}, "action": {"cancelEntry"}, "asJson": {"1"}},
-		url.Values{"technologyId": {utils.FI64(techID)}, "listId": {utils.FI64(listID)}, "token": {token}})
+		url.Values{"technologyId": {utils.FI64(techID)}, "listId": {utils.FI64(listID)}, "token": {token}}, ChangePlanet(celestialID))
 	if err != nil {
 		return err
 	}
@@ -3291,7 +3291,7 @@ func (b *OGame) cancelBuilding(celestialID ogame.CelestialID) error {
 		return err
 	}
 	token, techID, listID, _ := page.ExtractCancelBuildingInfos()
-	return b.cancel(token, techID, listID)
+	return b.cancel(celestialID, token, techID, listID)
 }
 
 func (b *OGame) cancelLfBuilding(celestialID ogame.CelestialID) error {
@@ -3300,7 +3300,7 @@ func (b *OGame) cancelLfBuilding(celestialID ogame.CelestialID) error {
 		return err
 	}
 	token, id, listID, _ := page.ExtractCancelLfBuildingInfos()
-	return b.cancel(token, id, listID)
+	return b.cancel(celestialID, token, id, listID)
 }
 
 func (b *OGame) cancelResearch(celestialID ogame.CelestialID) error {
@@ -3309,7 +3309,7 @@ func (b *OGame) cancelResearch(celestialID ogame.CelestialID) error {
 		return err
 	}
 	token, techID, listID, _ := page.ExtractCancelResearchInfos()
-	return b.cancel(token, techID, listID)
+	return b.cancel(celestialID, token, techID, listID)
 }
 
 func (b *OGame) fetchResources(celestialID ogame.CelestialID) (ogame.ResourcesDetails, error) {
@@ -3634,7 +3634,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		mission = ogame.GroupedAttack
 	}
 
-	by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload)
+	by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload, ChangePlanet(celestialID))
 	if err != nil {
 		return zeroFleet, err
 	}
@@ -3692,7 +3692,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		payload.Set("holdingtime", utils.FI64(holdingTime))
 	}
 
-	res, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"sendFleet"}, "ajax": {"1"}, "asJson": {"1"}}, payload)
+	res, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"sendFleet"}, "ajax": {"1"}, "asJson": {"1"}}, payload, ChangePlanet(celestialID))
 	if err != nil {
 		return zeroFleet, err
 	}
@@ -3840,7 +3840,6 @@ func (b *OGame) getCombatReportMessages(maxPage int64) ([]ogame.CombatReportSumm
 func (b *OGame) getExpeditionMessages(maxPage int64) ([]ogame.ExpeditionMessage, error) {
 	return getMessages(b, maxPage, ExpeditionsMessagesTabID, b.extractor.ExtractExpeditionMessages)
 }
-
 
 func (b *OGame) getOtherMessages() ([]ogame.OtherMessage, error) {
 	var res struct {

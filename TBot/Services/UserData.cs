@@ -27,6 +27,8 @@ namespace Tbot.Services {
 		public float nextDOIR;
 		public Staff staff;
 		public bool isSleeping = false;
+		public long artifactsCollected = -1;
+		public long artifactsLimit = 0;
 
         public int autoFarmLastGalaxy = 0;
         public int autoFarmLastSystem = 0;

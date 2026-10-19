@@ -198,10 +198,20 @@ namespace Tbot.Services {
 			await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds));
 		}
 
-
 		private void LogCaptchaHint() {
 			try {
 				log(LogLevel.Warning, LogSender.Tbot, $"Captcha required. If the automatic solver fails, solve it by hand: {CaptchaPageAddress()}. The bot logs in afterwards.");
+			} catch (Exception) {
+			}
+		}
+
+		private DateTime _letzteCaptchaMeldung = DateTime.MinValue;
+		private void MeldeLoginPause(string text) {
+			try {
+				if ((DateTime.UtcNow - _letzteCaptchaMeldung).TotalMinutes < 30)
+					return;
+				_letzteCaptchaMeldung = DateTime.UtcNow;
+				_ = SendTelegramMessage(text);
 			} catch (Exception) {
 			}
 		}
@@ -225,8 +235,6 @@ namespace Tbot.Services {
 			}
 			return c;
 		}
-
-
 
 		private async Task WaitLoginPauseAsync() {
 			LoginPauseConfig c = ReadLoginPauseConfig();
@@ -269,6 +277,7 @@ namespace Tbot.Services {
 				if (until.HasValue) {
 					_ = _ogameService.SetLoginPause(new DateTimeOffset(until.Value, TimeSpan.Zero).ToUnixTimeSeconds());
 					log(LogLevel.Warning, LogSender.Tbot, $"Login failed repeatedly - no further login attempts until {until.Value.ToLocalTime():HH:mm} (pause). Manual captcha: {CaptchaPageAddress()}");
+					MeldeLoginPause($"Login failed repeatedly - paused until {until.Value.ToLocalTime():HH:mm}. Solve the captcha by hand to skip the pause: {CaptchaPageAddress()}");
 				}
 			} catch (Exception) {
 			}
@@ -514,8 +523,6 @@ namespace Tbot.Services {
 			if (feat == Feature.SleepMode) {
 				return;
 			}
-
-
 			if (_pauseActive && feat != Feature.Defender) {
 				lock (_pauseSync) {
 					_pauseStoppedFeatures.Add(feat);
@@ -1367,7 +1374,6 @@ namespace Tbot.Services {
 				_attackLockdownLock.Release();
 			}
 		}
-
 		private readonly SemaphoreSlim _pauseLock = new SemaphoreSlim(1, 1);
 		private readonly object _pauseSync = new();
 		private volatile bool _pauseActive = false;
@@ -1397,8 +1403,6 @@ namespace Tbot.Services {
 				c.MaxDurationMinutes = c.DurationMinutes;
 			return c;
 		}
-
-
 
 		private List<PendingRecall> ReadPendingRecalls() {
 			var list = new List<PendingRecall>();
@@ -1451,7 +1455,6 @@ namespace Tbot.Services {
 		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandlePauseTimer: {asyncVoidEx}"); }
 		}
 
-
 		public async Task<(bool Ok, string Text)> PauseBot(int? minutes = null) {
 			await _pauseLock.WaitAsync();
 			try {
@@ -1492,7 +1495,6 @@ namespace Tbot.Services {
 				var toStop = Features.AllFeatures
 					.Where(f => f != Feature.Defender && f != Feature.SleepMode && IsFeatureRunning(f))
 					.ToList();
-
 				lock (_pauseSync) {
 					_pauseStoppedFeatures.Clear();
 					foreach (var f in toStop)
@@ -1533,7 +1535,6 @@ namespace Tbot.Services {
 					_pauseStoppedFeatures.Clear();
 				}
 
-
 				await _attackLockdownLock.WaitAsync();
 				try {
 					if (_attackLockdownActive) {
@@ -1547,7 +1548,6 @@ namespace Tbot.Services {
 				} finally {
 					_attackLockdownLock.Release();
 				}
-
 
 				if (_ghostSleeping) {
 					foreach (var f in toStart)
@@ -1581,9 +1581,6 @@ namespace Tbot.Services {
 				_pauseLock.Release();
 			}
 		}
-
-
-
 
 
 		public void RemoveTelegramMessenger() {
@@ -1698,9 +1695,13 @@ namespace Tbot.Services {
 		}
 
 
-		public async Task TelegramCollect(bool noLimit = false) {
-			await SendTelegramMessage("Collecting...");
-			await _fleetScheduler.Collect(noLimit);
+		public string PreviewCollect(bool noLimit = false, string typFilter = null, bool skipIncoming = false) {
+			return _fleetScheduler.PreviewCollect(noLimit, typFilter, skipIncoming);
+		}
+
+		public async Task TelegramCollect(bool noLimit = false, string typFilter = null, bool skipIncoming = false) {
+			await SendTelegramMessage(typFilter == null ? "Collecting..." : $"Collecting ({typFilter}s only)...");
+			await _fleetScheduler.Collect(noLimit, typFilter, skipIncoming);
 		}
 
 		public async Task TelegramCancelGhostSleep() {
@@ -2295,6 +2296,7 @@ namespace Tbot.Services {
 				return;
 			try {
 				string dir = AppContext.BaseDirectory;
+				HandlePreviewRequests(dir);
 				foreach (string file in Directory.GetFiles(dir, "slotcmd_*.json").OrderBy(f => f)) {
 					try {
 						JObject cmd = JObject.Parse(File.ReadAllText(file));
@@ -2302,7 +2304,6 @@ namespace Tbot.Services {
 						string key = (string) cmd["key"] ?? "";
 						int value = (int) cmd["value"];
 						if (key == "pause") {
-
 							if (value != 0)
 								await PauseBot(null);
 							else
@@ -2330,6 +2331,46 @@ namespace Tbot.Services {
 				Interlocked.Exchange(ref _slotCmdBusy, 0);
 			}
 		} catch (Exception asyncVoidEx) { log(LogLevel.Error, LogSender.Tbot, $"Unhandled error in HandleSlotCmd: {asyncVoidEx}"); }
+		}
+
+		private void HandlePreviewRequests(string dir) {
+			try {
+				foreach (string file in Directory.GetFiles(dir, "cmdpreview_*.json")) {
+					try {
+						JObject req = JObject.Parse(File.ReadAllText(file));
+						string alias = (string) req["instance"] ?? "";
+						if (!string.Equals(alias, InstanceAlias ?? "", StringComparison.OrdinalIgnoreCase)) {
+							if ((DateTime.UtcNow - File.GetLastWriteTimeUtc(file)).TotalSeconds > 60)
+								File.Delete(file);
+							continue;
+						}
+						string id = (string) req["id"] ?? "";
+						string text = PreviewForLine((string) req["line"] ?? "");
+						if (id.Length == 0 || id.Any(ch => !char.IsLetterOrDigit(ch)))
+							continue;
+						string ziel = Path.Combine(dir, $"cmdresult_{id}.json");
+						File.WriteAllText(ziel + ".tmp", new JObject { ["id"] = id, ["text"] = text }.ToString(Newtonsoft.Json.Formatting.None));
+						File.Move(ziel + ".tmp", ziel, true);
+						File.Delete(file);
+					} catch (Exception e) {
+						log(LogLevel.Debug, LogSender.Tbot, $"Command preview request {Path.GetFileName(file)} failed: {e.Message}");
+					}
+				}
+			} catch (Exception e) {
+				log(LogLevel.Debug, LogSender.Tbot, $"Command preview: directory not readable: {e.Message}");
+			}
+		}
+
+		private string PreviewForLine(string line) {
+			string[] t = line.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			if (t.Length == 0)
+				return "";
+			string cmd = t[0].Split('@')[0];
+			if (cmd is "/collect" or "/collectall") {
+				string filter = t.Skip(1).FirstOrDefault(x => x is "planet" or "moon");
+				return PreviewCollect(cmd == "/collectall", filter, t.Skip(1).Contains("skip"));
+			}
+			return "";
 		}
 
 		private async Task ApplySlotSettingAsync(string path, int value) {
@@ -2448,7 +2489,7 @@ namespace Tbot.Services {
 			int more = 0;
 			try {
 				var list = ReadPendingRecalls()
-					.Where(r => r.At >= gameNow.AddMinutes(-10)) 
+					.Where(r => r.At >= gameNow.AddMinutes(-10))
 					.OrderBy(r => r.At)
 					.ToList();
 				more = Math.Max(0, list.Count - 6);
@@ -2572,11 +2613,12 @@ namespace Tbot.Services {
 				var cel = userData?.celestials;
 				if (ui != null) {
 					long m = 0, k = 0, d = 0, dm = 0;
-					int planets = 0, moons = 0;
+					int planets = 0, moons = 0, withResources = 0;
 					if (cel != null) {
 						foreach (var c in cel) {
 							if (c?.Coordinate?.Type == Celestials.Moon) moons++; else planets++;
 							if (c?.Resources != null) {
+								withResources++;
 								m += c.Resources.Metal; k += c.Resources.Crystal; d += c.Resources.Deuterium;
 								dm = Math.Max(dm, c.Resources.Darkmatter);
 							}
@@ -2588,11 +2630,13 @@ namespace Tbot.Services {
 						playerClass = ui.Class.ToString(),
 						rank = ui.Rank, total = ui.Total, points = ui.Points,
 						planets, moons,
-						metal = m, crystal = k, deuterium = d, darkmatter = dm
+						metal = withResources > 0 ? (long?) m : null, crystal = withResources > 0 ? (long?) k : null,
+						deuterium = withResources > 0 ? (long?) d : null, darkmatter = withResources > 0 ? (long?) dm : null,
+						artifacts = userData.artifactsCollected >= 0 ? (long?) userData.artifactsCollected : null,
+						artifactsLimit = userData.artifactsCollected >= 0 ? (long?) userData.artifactsLimit : null
 					};
 				}
 			} catch { account = null; }
-
 
 			var pauseInfo = new {
 				active = _pauseActive,

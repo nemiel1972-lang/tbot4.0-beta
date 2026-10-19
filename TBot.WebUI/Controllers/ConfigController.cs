@@ -151,6 +151,60 @@ namespace TBot.WebUI.Controllers {
 			}
 		}
 
+		private static readonly Lazy<JObject?> DefaultsTemplate = new(() => {
+			try {
+				foreach (var path in new[] { System.IO.Path.Combine(BaseDir, "config.vorlage.json"), System.IO.Path.Combine(BaseDir, "config", "config.vorlage.json") })
+					if (System.IO.File.Exists(path))
+						return ParseObject(System.IO.File.ReadAllText(path));
+			} catch {
+			}
+			return null;
+		});
+
+		private static List<string> FillDefaults(string block, JObject data) {
+			var added = new List<string>();
+			if (NeverForm.Contains(block) || ProtectedBlocks.Contains(block) || string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase))
+				return added;
+			if (DefaultsTemplate.Value?[block] is JObject template)
+				FillDefaultsInto(data, template, block, added);
+			return added;
+		}
+
+		private static void FillDefaultsInto(JObject target, JObject template, string path, List<string> added) {
+			foreach (var prop in template.Properties()) {
+				if (prop.Name == "Load" || ProtectedKeys.Contains(prop.Name))
+					continue;
+				string childPath = path + "." + prop.Name;
+				var existing = target[prop.Name];
+				if (existing is JObject existingObj && prop.Value is JObject templateObj) {
+					FillDefaultsInto(existingObj, templateObj, childPath, added);
+				} else if (existing == null) {
+					if (prop.Value is JObject newObj) {
+						if (newObj["Active"] == null)
+							continue;
+						var copy = (JObject) newObj.DeepClone();
+						StripArraysAndSecrets(copy);
+						if (copy["Active"] is JValue)
+							copy["Active"] = false;
+						target[prop.Name] = copy;
+						added.Add(childPath);
+					} else if (prop.Value is JValue value) {
+						target[prop.Name] = prop.Name == "Active" && value.Type == JTokenType.Boolean ? new JValue(false) : value.DeepClone();
+						added.Add(childPath);
+					}
+				}
+			}
+		}
+
+		private static void StripArraysAndSecrets(JObject obj) {
+			foreach (var prop in obj.Properties().ToList()) {
+				if (prop.Value is JArray || ProtectedKeys.Contains(prop.Name))
+					prop.Remove();
+				else if (prop.Value is JObject child)
+					StripArraysAndSecrets(child);
+			}
+		}
+
 		private static JObject ParseObject(string json) {
 			using var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None };
 			return JObject.Load(reader);
@@ -332,6 +386,45 @@ namespace TBot.WebUI.Controllers {
 
 		[HttpGet]
 		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+		public IActionResult CommandList() {
+			return Json(Tbot.Common.Commands.CommandCatalog.Commands.Select(c => new { name = c.Name, group = c.Group, description = c.Short, syntax = c.Syntax, example = c.Example }));
+		}
+
+		[HttpPost]
+		public async Task<IActionResult> CheckCommand(string? line, string? instance) {
+			var result = Tbot.Common.Commands.CommandCatalog.Check(line);
+			string? preview = null;
+			string? note = null;
+			if (result.Ok && result.Command is "/collect" or "/collectall" && !string.IsNullOrEmpty(instance)) {
+				try {
+					string dir = AppContext.BaseDirectory;
+					string id = Guid.NewGuid().ToString("N");
+					string request = System.IO.Path.Combine(dir, $"cmdpreview_{id}.json");
+					string answer = System.IO.Path.Combine(dir, $"cmdresult_{id}.json");
+					System.IO.File.WriteAllText(request, new JObject { ["id"] = id, ["instance"] = instance, ["line"] = line }.ToString(Formatting.None));
+					for (int i = 0; i < 24 && preview == null; i++) {
+						await Task.Delay(250);
+						if (System.IO.File.Exists(answer)) {
+							try {
+								preview = (string?) JObject.Parse(System.IO.File.ReadAllText(answer))["text"];
+								System.IO.File.Delete(answer);
+							} catch (IOException) {
+							}
+						}
+					}
+					if (preview == null) {
+						try { System.IO.File.Delete(request); } catch { }
+						note = "No preview: the bot did not answer in time (is it running?).";
+					}
+				} catch (Exception e) {
+					note = "No preview: " + e.Message;
+				}
+			}
+			return Json(new { result.Known, result.Ok, result.Command, result.Message, result.Syntax, result.Short, preview, note });
+		}
+
+		[HttpGet]
+		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 		public IActionResult BoosterStock(string? instance) {
 			try {
 				var chosen = GetInstances().FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
@@ -412,10 +505,12 @@ namespace TBot.WebUI.Controllers {
 				}
 				var data = ReadBlock(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!, out var targetFile, out var secretRefs);
 				MergeSecrets(SecretFileOf(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!), data);
+				var addedDefaults = FillDefaults(block, data);
 				HideFields(block, data);
 				StripUndefined(data);
 				return Json(new {
 					success = true,
+					added = addedDefaults,
 					data = data.ToString(Formatting.None),
 					file = targetFile == null ? "(inside the instance file)" : System.IO.Path.GetRelativePath(BaseDir, targetFile).Replace('\\', '/'),
 					secretRefs

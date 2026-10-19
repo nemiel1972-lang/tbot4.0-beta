@@ -569,6 +569,9 @@ window.CFG_HELP.en = {
   },
   "Alarm.Active": {
    "t": "Mark the alert with a high alarm level so it stands out."
+  },
+  "Alarm.SoundFile": {
+   "t": "Full path to a WAV file that is played on an attack (the PC running the bot). Empty, missing or unplayable: the old beep."
   }
  },
  "Brain": {
@@ -857,7 +860,7 @@ window.CFG_HELP.en = {
    "t": "Boosters of each type that stay in the inventory."
   },
   "KeepBoosters.LogItems": {
-   "t": "Logs active items per planet and the inventory."
+   "t": "Logs active items per planet and the inventory, at most every 12 hours."
   },
   "KeepBoosters.Tiers": {
    "t": "Allowed tiers, the first one is used first."
@@ -870,6 +873,9 @@ window.CFG_HELP.en = {
   },
   "AutoFleetJumpGate.MinimumAmountOfShipsToBeLeftOnMoon.*": {
    "t": "Ships of this type that stay behind on the moon."
+  },
+  "AutoFleetJumpGate.Exclude": {
+   "t": "Moons that never jump."
   },
   "AutoFleetJumpGate.MinimumAmountOfShipPointsToTeleport": {
    "t": "Only jump if at least this many fleet points would go."
@@ -900,6 +906,9 @@ window.CFG_HELP.en = {
   },
   "FuelToCarry": {
    "t": "Deuterium taken along on each expedition."
+  },
+  "MinDeuteriumOnMoon": {
+   "t": "A moon needs at least this much deuterium to start expeditions (0 = no check). Below it the moon is skipped and you get a message."
   },
   "MaxExpeditionsPerOrigin": {
    "t": "Most expeditions that fly from one origin at the same time."
@@ -1025,6 +1034,9 @@ window.CFG_HELP.en = {
   },
   "MaxSlots": {
    "t": "Fleet slots discovery may use at the same time."
+  },
+  "StopAtArtifacts": {
+   "t": "Stops sending discoveries once this many artifacts are collected (the \"Collected artifacts: 1840 / 3600\" counter on the lifeform pages). 0 = no limit. Discoveries resume when the count drops below again. If the counter cannot be read, discoveries keep running (warning in the log)."
   }
  },
  "FastFarm": {

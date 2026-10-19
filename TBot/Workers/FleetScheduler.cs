@@ -1880,8 +1880,37 @@ if (
 			}
 		}
 
-		public async Task Collect(bool noLimit = false) {
-			await CollectImpl(true, noLimit);
+		public async Task Collect(bool noLimit = false, string typFilter = null, bool skipIncoming = false) {
+			await CollectImpl(true, noLimit, typFilter, skipIncoming);
+		}
+
+		public string PreviewCollect(bool noLimit = false, string typFilter = null, bool skipIncoming = false) {
+			try {
+				var rp = _tbotInstance.InstanceSettings.Brain.AutoRepatriate;
+				if (rp.Target.Length == 0)
+					return "No repatriate target is set (Brain.AutoRepatriate.Target).";
+				List<Celestial> ziele = _calcService.ParseCelestialsList(rp.Target, _tbotInstance.UserData.celestials);
+				List<Celestial> ausgenommen = _calcService.ParseCelestialsList(rp.Exclude, _tbotInstance.UserData.celestials);
+				bool ohneMonde = (bool) rp.ExcludeMoons;
+				var kommen = new List<string>();
+				var uebersprungen = new List<string>();
+				foreach (Celestial c in _tbotInstance.UserData.celestials.ToList()) {
+					string name = c.ToString();
+					if (ziele.Any(z => z.Coordinate.IsSame(c.Coordinate))) { uebersprungen.Add(name + " (target)"); continue; }
+					if (ausgenommen.Has(c)) { uebersprungen.Add(name + " (excluded)"); continue; }
+					if (typFilter != null && ((typFilter == "moon") != (c.Coordinate.Type == Celestials.Moon))) { uebersprungen.Add(name + " (" + typFilter + " only)"); continue; }
+					if (c.Coordinate.Type == Celestials.Moon && ohneMonde) { uebersprungen.Add(name + " (ExcludeMoons)"); continue; }
+					if (skipIncoming && _calcService.IsThereTransportTowardsCelestial(c, _tbotInstance.UserData.fleets)) { uebersprungen.Add(name + " (transport incoming)"); continue; }
+					kommen.Add(name);
+				}
+				string text = $"Target: {string.Join(", ", ziele.Select(z => z.ToString()))}\n" +
+					$"Would be checked ({kommen.Count}): {(kommen.Count > 0 ? string.Join(", ", kommen) : "none")}\n" +
+					$"Skipped ({uebersprungen.Count}): {(uebersprungen.Count > 0 ? string.Join(", ", uebersprungen) : "none")}\n" +
+					(noLimit ? "Minimum resources are ignored." : "Minimum resources and the ledger still apply when running.");
+				return text;
+			} catch (Exception e) {
+				return "Preview not possible: " + e.Message;
+			}
 		}
 
 		public async Task CollectDeut(long MinAmount = 0) {
@@ -2083,7 +2112,7 @@ if (
 			};
 		}
 
-		public async Task<RepatriateCode> CollectImpl(bool fromTelegram, bool noLimit = false) {
+		public async Task<RepatriateCode> CollectImpl(bool fromTelegram, bool noLimit = false, string typFilter = null, bool skipIncoming = false) {
 			try {
 				_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "Repatriating resources...");
 
@@ -2122,6 +2151,7 @@ if (
 					long TotalDeut = 0;
 					DateTime rpStart = DateTime.UtcNow;
 					int rpGesendet = 0;
+					int rpFehlgeschlagen = 0;
 					bool samePosition = (bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.TargetAssociateMoon;
 					List<Celestial> newCelestials = _tbotInstance.UserData.celestials.ToList();
 					List<Celestial> celestialsToExclude = _calcService.ParseCelestialsList(_tbotInstance.InstanceSettings.Brain.AutoRepatriate.Exclude, _tbotInstance.UserData.celestials);
@@ -2159,6 +2189,9 @@ if (
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {celestial.ToString()}: celestial is the target.");
 							continue;
 						}
+						if (typFilter != null && ((typFilter == "moon") != (celestial.Coordinate.Type == Celestials.Moon))) {
+							continue;
+						}
 
 						if (celestial.Coordinate.Type == Celestials.Moon && (bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.ExcludeMoons) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {celestial.ToString()}: celestial is a moon.");
@@ -2174,6 +2207,10 @@ if (
 
 						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.SkipIfIncomingTransport && _calcService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets) && (!fromTelegram)) {
 							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {tempCelestial.ToString()}: there is a transport incoming.");
+							continue;
+						}
+						if (fromTelegram && skipIncoming && _calcService.IsThereTransportTowardsCelestial(celestial, _tbotInstance.UserData.fleets)) {
+							_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Skipping {tempCelestial.ToString()}: there is a transport incoming (skip).");
 							continue;
 						}
 
@@ -2278,6 +2315,7 @@ if (
 									TotalDeut += payload.Deuterium;
 									rpGesendet++;
 								} else {
+									rpFehlgeschlagen++;
 									_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Repatriate: sending {tempCelestial.ToString()} to {destinationCoordinate.ToString()} failed (code {fleetId}), deuterium there: {tempCelestial.Resources.Deuterium:N0} - the reason is in the preceding 'Unable to send fleet' line.");
 								}
 							}
@@ -2290,10 +2328,13 @@ if (
 					}
 					_tbotInstance.UserData.celestials = newCelestials;
 					if (fromTelegram) {
+						int rpGesamt = celestialList.Count;
+						int rpOhneVersand = Math.Max(0, rpGesamt - rpGesendet - rpFehlgeschlagen);
+						string zusammenfassung = $"\n{rpGesamt} celestials, {rpGesendet} fleet(s) sent, {rpOhneVersand} without shipment" + (rpFehlgeschlagen > 0 ? $", {rpFehlgeschlagen} failed" : "") + $" ({(DateTime.UtcNow - rpStart).TotalSeconds:F0} s)";
 						if ((TotalMet > 0) || (TotalCri > 0) || (TotalDeut > 0)) {
-							await _tbotInstance.SendTelegramMessage($"Resources sent!:\n{TotalMet:N0} Metal\n{TotalCri:N0} Crystal\n{TotalDeut:N0} Deuterium");
+							await _tbotInstance.SendTelegramMessage($"Resources sent!:\n{TotalMet:N0} Metal\n{TotalCri:N0} Crystal\n{TotalDeut:N0} Deuterium" + zusammenfassung);
 						} else {
-							await _tbotInstance.SendTelegramMessage("No resources sent");
+							await _tbotInstance.SendTelegramMessage("No resources sent" + zusammenfassung);
 						}
 					}
 					_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Repatriate: cycle finished after {(DateTime.UtcNow - rpStart).TotalSeconds:F0} s, {rpGesendet} fleet(s) sent.");

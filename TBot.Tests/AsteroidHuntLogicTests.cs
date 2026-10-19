@@ -83,7 +83,7 @@ namespace TBot.Tests {
 			Assert.Equal(3600, AsteroidHuntLogic.SecondsUntilNextDay(new DateTime(2026, 10, 19, 23, 0, 0), 300));
 			Assert.Equal(300, AsteroidHuntLogic.SecondsUntilNextDay(new DateTime(2026, 10, 19, 23, 59, 0), 300));
 		}
-
+	
 		[Fact]
 		public void Unbegrenzt_versucht_weiter_bis_zum_Fund_oder_zur_Suchsperre() {
 			var cfg = new AsteroidHuntConfig { Active = true };
@@ -97,6 +97,8 @@ namespace TBot.Tests {
 		[InlineData("Bericht von Surprisma Item geborgen: Deuterium-Booster Gold", ReportKind.Found)]
 		[InlineData("Eine schnelle Untersuchung des Planeten hat leider kein Ergebnis geliefert und so ist unsere Flotte wieder auf dem Rückweg. Wir sollten es aber noch einmal versuchen.", ReportKind.Retry)]
 		[InlineData("Auch nach weiteren Versuchen bleibt unsere Flotte leider erfolglos. Wir sollten eine Nacht darüber schlafen und es morgen nochmal versuchen.", ReportKind.Locked)]
+		[InlineData("Auch nach weiteren Versuchen bleibt unsere Flotte leider erfolglos. Wir sollten eine Nacht dar&uuml;ber schlafen und es morgen nochmal versuchen.", ReportKind.Locked)]
+		[InlineData("Auch nach weiteren Versuchen bleibt unsere Flotte leider erfolglos. Wir sollten eine Nacht darueber  schlafen und es morgen nochmal versuchen.", ReportKind.Locked)]
 		[InlineData("", ReportKind.Unknown)]
 		[InlineData("irgendwas anderes", ReportKind.Unknown)]
 		public void Bericht_wird_eingeordnet(string text, ReportKind erwartet) {

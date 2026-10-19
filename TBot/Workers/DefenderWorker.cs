@@ -20,6 +20,16 @@ using Tbot.Common.Settings;
 
 namespace Tbot.Workers {
 	internal class DefenderWorker : WorkerBase {
+		private string LiesAlarmDatei() {
+			try {
+				var alarm = _tbotInstance.InstanceSettings.Defender.Alarm;
+				if (SettingsService.IsSettingSet(alarm, "SoundFile"))
+					return (string) alarm.SoundFile;
+			} catch (Exception) {
+			}
+			return "";
+		}
+
 		private static readonly ConcurrentDictionary<int, DateTime> _handledAttackIds = new();
 		private static readonly TimeSpan _handledAttackTtl = TimeSpan.FromMinutes(60);
 
@@ -212,7 +222,7 @@ namespace Tbot.Workers {
 				DateTime attacksFetchedUtc = DateTime.UtcNow;
 				if (isUnderAttack) {
 					if ((bool) _tbotInstance.InstanceSettings.Defender.Alarm.Active)
-						await Task.Run(() => ConsoleHelpers.PlayAlarm(), _ct);
+						await Task.Run(() => ConsoleHelpers.PlayAlarm(LiesAlarmDatei()), _ct);
 					DoLog(LogLevel.Warning, "ENEMY ACTIVITY!!!");
 					_tbotInstance.UserData.attacks = await _ogameService.GetAttacks();
 					attacksFetchedUtc = DateTime.UtcNow;

@@ -4976,11 +4976,6 @@ namespace Tbot.Includes {
 					long deutLeave = celestial.Coordinate.Type == Celestials.Planet && transportSettings.DeutToLeaveOnPlanets >= 0 ? transportSettings.DeutToLeaveOnPlanets : transportSettings.DeutToLeave;
 					var available = celestial.Resources.Difference(new Resources(0, 0, deutLeave));
 					var ships = SchiffeVon(celestial);
-
-
-
-
-
 					var capacity = Math.Min(
 						CalcFleetCapacity(ships, userData.serverData, userData.researches.HyperspaceTechnology, celestial.LFBonuses, userData.userInfo.Class, userData.serverData.ProbeCargo),
 						available.TotalResources);

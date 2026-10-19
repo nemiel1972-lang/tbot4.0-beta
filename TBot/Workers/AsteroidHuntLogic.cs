@@ -91,14 +91,28 @@ namespace Tbot.Workers {
 		public static ReportKind Classify(string text) {
 			if (string.IsNullOrWhiteSpace(text))
 				return ReportKind.Unknown;
-			string t = text.ToLowerInvariant();
+			string t = Normalize(text);
 			if (t.Contains("geborgen") || t.Contains("im inventar"))
 				return ReportKind.Found;
-			if (t.Contains("nacht darüber schlafen") || t.Contains("nacht darueber schlafen") || t.Contains("morgen nochmal") || t.Contains("morgen noch einmal"))
+			if ((t.Contains("nacht") && t.Contains("schlafen")) || t.Contains("morgen nochmal") || t.Contains("morgen noch einmal") || t.Contains("morgen wieder versuchen")
+				|| t.Contains("sleep on it") || t.Contains("try again tomorrow"))
 				return ReportKind.Locked;
-			if (t.Contains("kein ergebnis") || t.Contains("erfolglos") || t.Contains("noch einmal versuchen") || t.Contains("nochmal versuchen") || t.Contains("rückweg") || t.Contains("rueckweg"))
+			if (t.Contains("kein ergebnis") || t.Contains("erfolglos") || t.Contains("noch einmal versuchen") || t.Contains("nochmal versuchen") || t.Contains("ruckweg"))
 				return ReportKind.Retry;
 			return ReportKind.Unknown;
+		}
+
+		public static string Normalize(string text) {
+			string t = System.Net.WebUtility.HtmlDecode(text ?? "").ToLowerInvariant().Replace("ß", "ss");
+			t = t.Replace("ä", "a").Replace("ö", "o").Replace("ü", "u").Replace("ae", "a").Replace("oe", "o").Replace("ue", "u");
+			var sb = new System.Text.StringBuilder(t.Length);
+			foreach (char c in t.Normalize(System.Text.NormalizationForm.FormD)) {
+				var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+				if (cat == System.Globalization.UnicodeCategory.NonSpacingMark)
+					continue;
+				sb.Append(char.IsWhiteSpace(c) ? ' ' : c);
+			}
+			return System.Text.RegularExpressions.Regex.Replace(sb.ToString(), @"\s+", " ");
 		}
 
 		public static List<string> NewItems(IDictionary<string, long> before, IDictionary<string, long> after) {

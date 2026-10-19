@@ -166,8 +166,9 @@ namespace Tbot.Workers {
 			if (p.ReportBaseKnown) {
 				try {
 					var msgs = await _ogameService.GetOtherMessages() ?? new List<OtherMessage>();
-					var report = msgs.Where(m => m.ID > p.LastMsgId && m.Title != null && m.Title.Contains("Bericht", StringComparison.OrdinalIgnoreCase))
-						.OrderByDescending(m => m.ID).FirstOrDefault();
+					var fresh = msgs.Where(m => m.ID > p.LastMsgId && m.Title != null).OrderByDescending(m => m.ID).ToList();
+					var report = fresh.FirstOrDefault(m => m.Title.Contains("Bericht", StringComparison.OrdinalIgnoreCase))
+						?? fresh.FirstOrDefault(m => AsteroidHuntLogic.Classify((m.Title + " " + m.Content).Trim()) != ReportKind.Unknown);
 					if (report == null && p.ReportWaits < 3) {
 						p.ReportWaits++;
 						return 30 * 1000;
@@ -185,6 +186,9 @@ namespace Tbot.Workers {
 								break;
 							case ReportKind.Retry:
 								result = "none";
+								break;
+							default:
+								DoLog(LogLevel.Information, $"Asteroid {p.Target}: report not recognised, using the inventory: \"{Shorten(text)}\"");
 								break;
 						}
 					}

@@ -12,6 +12,7 @@ using TBot.Ogame.Infrastructure;
 using TBot.Ogame.Infrastructure.Enums;
 using TBot.Ogame.Infrastructure.Models;
 using Tbot.Services;
+using Tbot.Common.Settings;
 
 namespace Tbot.Workers.Brain {
 	public class AutoFleetJumpGateWorker : WorkerBase {
@@ -45,12 +46,7 @@ namespace Tbot.Workers.Brain {
 			if (!(jumpGateSettings is IDictionary<string, object> settings))
 				throw new InvalidOperationException("Brain.AutoFleetJumpGate settings are invalid.");
 
-			var target = JumpGateTargetResolver.Resolve(settings, out var usedLegacyArray);
-			if (usedLegacyArray)
-				DoLog(LogLevel.Warning,
-					"Brain.AutoFleetJumpGate.Target should be an object; using the first entry from the legacy array format.");
-
-			return target;
+			return JumpGateTargetResolver.Resolve(settings, out _);
 		}
 
 		protected override async Task Execute() {
@@ -147,8 +143,20 @@ namespace Tbot.Workers.Brain {
 
 					var moonsWithTeleportablePoints = new List<(Moon moon, long teleportablePoints)>();
 
+					List<(int g, int s, int p)> ausgenommen = new();
+					try {
+						dynamic jg = GetJumpGateSettings();
+						if (SettingsService.IsSettingSet(jg, "Exclude")) {
+							foreach (var e in jg.Exclude)
+								ausgenommen.Add(((int) e.Galaxy, (int) e.System, (int) e.Position));
+						}
+					} catch (Exception) {
+						ausgenommen = new();
+					}
+
 					foreach (var celestial in _tbotInstance.UserData.celestials.Where(c =>
-						         c is Moon && c.ID != moondest.ID)) {
+						         c is Moon && c.ID != moondest.ID &&
+						         !ausgenommen.Contains(((int) c.Coordinate.Galaxy, (int) c.Coordinate.System, (int) c.Coordinate.Position)))) {
 						var moon = celestial as Moon;
 						moon = await _tbotOgameBridge.UpdatePlanet(moon, UpdateTypes.Ships) as Moon;
 						moon = await _tbotOgameBridge.UpdatePlanet(moon, UpdateTypes.Facilities) as Moon;
@@ -223,9 +231,12 @@ namespace Tbot.Workers.Brain {
 
 								jumpGateSucceeded = true;
 							} else {
-								if (!string.IsNullOrWhiteSpace(result.Error)) {
+								if (!string.IsNullOrWhiteSpace(result.Error) && result.Error.Contains("destination moon id invalid")) {
+									DoLog(LogLevel.Warning,
+										$"JumpGate {origin.Coordinate} -> {destination.Coordinate} skipped: the game does not offer the destination (its jump gate is probably still recharging, or it is not a jump-gate moon). {result.Error}");
+								} else if (!string.IsNullOrWhiteSpace(result.Error)) {
 									DoLog(LogLevel.Error,
-										$"JumpGate failed from {origin.Coordinate}: {result.Error}");
+										$"JumpGate failed from {origin.Coordinate} to {destination.Coordinate}: {result.Error}");
 								} else {
 									DoLog(LogLevel.Information,
 										$"JumpGate not available from {origin.Coordinate} (cooldown: {result.RechargeCountdown}s)");
