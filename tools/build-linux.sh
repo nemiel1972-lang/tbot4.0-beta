@@ -5,7 +5,7 @@
 #   --multi-file: normal folder with many DLLs instead of a single executable
 #   --framework-dependent: smaller, but needs the .NET 9 runtime on the target machine
 #   --arm64: build for linux-arm64 (e.g. Raspberry Pi) instead of linux-x64
-# Result: dist/TBot-linux-<arch>/ and dist/TBot-linux-<arch>.tar.gz
+# Result: dist/TBot-linux-<arch>/ and dist/TBot-linux-<arch>.zip
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -57,6 +57,11 @@ echo "== MigrateConfig ("$RID") =="
 (cd tools/MigrateConfig && dotnet publish -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \
   -p:TemplatePath="$OLDPWD/$AUSGABE/config/config.vorlage.json" -p:DebugType=none -p:DebugSymbols=false \
   -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: MigrateConfig build failed (package is built without it)."
+
+# Helper for "Install update" in the WebUI (unpacks the zip, replaces files, restarts or leaves the restart to systemd)
+echo "== TBotUpdater ($RID) =="
+(cd tools/TBotUpdater && dotnet publish -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \
+  -p:DebugType=none -p:DebugSymbols=false -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: TBotUpdater build failed (package is built without the update button)."
 rm -f "$AUSGABE"/*.pdb
 
 # Version for the update check on the start page: the release tag when built by the release workflow (TBOT_VERSION), otherwise "dev"
@@ -118,6 +123,7 @@ Folder contents
   start.sh                 starts the bot in this folder
   tbot.service.example     optional systemd unit
   lifeform_targets.json    target table for Lifeform AutoMine (keep it next to TBot)
+  TBotUpdater              helper for "Install update" in the WebUI (do not start it by hand)
   MigrateConfig            takes an old config over into the new template (see "Updating from an older version")
   config/config.vorlage.json   anonymised template as ONE file (alternative)
   config/split/                the same template pre-split: instance_settings.json, settings.json, conf.d/, secrets/
@@ -125,7 +131,7 @@ Folder contents
   (the native libraries next to TBot, e.g. libe_sqlite3.so, belong to the bot - do not delete them)
 
 First start (recommended: split config - secrets are kept in their own files)
-  0. Unpack:  tar xzf TBot-linux-*.tar.gz && cd TBot-linux-*   and read config/REFERENCE.md.
+  0. Unpack:  unzip TBot-linux-*.zip && cd TBot-linux-*   and read config/REFERENCE.md.
   1. cp -a config/split/. .      (gives you instance_settings.json, settings.json, conf.d/ and secrets/)
   2. Enter your account data in secrets/credentials.json (email, password) and, if used, secrets/telegram.json,
      secrets/discord.json, secrets/proxy.json, secrets/captcha.json. Set your universe, language and your own
@@ -166,6 +172,6 @@ TXT
 chmod +x "$AUSGABE/start.sh" "$AUSGABE/ogamed"
 [ -f "$AUSGABE/TBot" ] && chmod +x "$AUSGABE/TBot"
 
-(cd dist && rm -f "$NAME.tar.gz" && tar czf "$NAME.tar.gz" "$NAME")
-echo "Package: dist/$NAME.tar.gz"
+(cd dist && rm -f "$NAME.zip" && zip -qr "$NAME.zip" "$NAME")
+echo "Package: dist/$NAME.zip"
 echo "Done."

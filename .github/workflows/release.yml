@@ -39,7 +39,7 @@ jobs:
           ls -la dist
 
       - name: Pruefsummen
-        run: cd dist && sha256sum *.zip *.tar.gz > SHA256SUMS.txt && cat SHA256SUMS.txt
+        run: cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - name: Artefakte hochladen (Build-Lauf)
         uses: actions/upload-artifact@v4
@@ -47,7 +47,6 @@ jobs:
           name: pakete
           path: |
             dist/*.zip
-            dist/*.tar.gz
             dist/SHA256SUMS.txt
 
       - name: Release anlegen
@@ -58,5 +57,4 @@ jobs:
           generate_release_notes: false
           files: |
             dist/*.zip
-            dist/*.tar.gz
             dist/SHA256SUMS.txt

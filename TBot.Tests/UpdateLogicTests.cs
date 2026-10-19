@@ -179,5 +179,12 @@ namespace TBot.Tests {
 			File.WriteAllText(Path.Combine(_dir, "TBotUpdater"), "");
 			Assert.NotNull(UpdateLogic.FindUpdater(_dir));
 		}
-	}
+	
+		[Fact]
+		public void IsPackageName_AcceptsZipAndTarGz() {
+			Assert.True(UpdateLogic.IsPackageName("TBot-v4.0-beta8-win-x64.zip"));
+			Assert.True(UpdateLogic.IsPackageName("TBot-v4.0-beta8-linux-x64.tar.gz"));
+			Assert.False(UpdateLogic.IsPackageName("SHA256SUMS.txt"));
+		}
+}
 }

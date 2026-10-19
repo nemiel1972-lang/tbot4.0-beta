@@ -70,7 +70,13 @@ namespace TBot.WebUI.Services {
 			return string.CompareOrdinal(x, y);
 		}
 
-		public static string DefaultAssetPattern() => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" : "";
+		public static string DefaultAssetPattern() {
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "win-x64";
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+				return RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "linux-arm64" : RuntimeInformation.OSArchitecture == Architecture.X64 ? "linux-x64" : "";
+			return "";
+		}
+		public static bool IsPackageName(string name) => name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase);
 
 		public static async Task<UpdateInfo> CheckAsync(string feed, string current, string assetPattern, string appDir, HttpClient http) {
 			var info = new UpdateInfo { Current = current, Feed = feed, CheckedAt = DateTime.Now.ToString("s") };
@@ -118,7 +124,7 @@ namespace TBot.WebUI.Services {
 						if (url.Length == 0) url = GetStr(a, "url");
 						url = ResolveUrl(url, feedDir);
 						if (name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase)) sums = url;
-						else if (info.AssetUrl.Length == 0 && assetPattern.Length > 0 && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+						else if (info.AssetUrl.Length == 0 && assetPattern.Length > 0 && IsPackageName(name)
 							&& name.IndexOf(assetPattern, StringComparison.OrdinalIgnoreCase) >= 0) {
 							info.AssetName = name; info.AssetUrl = url;
 						}
@@ -128,8 +134,8 @@ namespace TBot.WebUI.Services {
 
 				if (dev) info.InstallBlock = "This is a development build (no version.txt), so the version cannot be compared.";
 				else if (!info.Available) info.InstallBlock = "You are on the latest version.";
-				else if (assetPattern.Length == 0) info.InstallBlock = "Automatic installation is only available for the Windows package so far. Download the release manually.";
-				else if (info.AssetUrl.Length == 0) info.InstallBlock = "This release has no package for this system (looked for \"" + assetPattern + "\" .zip).";
+				else if (assetPattern.Length == 0) info.InstallBlock = "Automatic installation is only available for Windows and Linux (x64/arm64). Download the release manually.";
+				else if (info.AssetUrl.Length == 0) info.InstallBlock = "This release has no package for this system (looked for \"" + assetPattern + "\" .zip/.tar.gz).";
 				else if (sums.Length == 0) info.InstallBlock = "This release has no SHA256SUMS.txt, so the download cannot be verified.";
 				else if (FindUpdater(appDir) == null) info.InstallBlock = "The helper program (TBotUpdater) is missing next to the bot.";
 				else info.CanInstall = true;

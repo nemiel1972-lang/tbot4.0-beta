@@ -2125,6 +2125,8 @@ if (
 					tempCelestials = _calcService.ParseCelestialsList(_tbotInstance.InstanceSettings.Brain.AutoRepatriate.Target, _tbotInstance.UserData.celestials);
 				} else {
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping autorepatriate: no custom destination");
+					if (fromTelegram)
+						await _tbotInstance.SendTelegramMessage("Collect aborted: no target configured. Set <code>Brain.AutoRepatriate.Target</code> in the settings (or via /editsettings).");
 					return RepatriateCode.Failure;
 				}
 				try {
@@ -2341,11 +2343,15 @@ if (
 					return RepatriateCode.Success;
 				} else {
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping autorepatriate: unable to parse custom destination");
+					if (fromTelegram)
+						await _tbotInstance.SendTelegramMessage("Collect aborted: the configured target (Brain.AutoRepatriate.Target) matches none of your celestials.");
 					return RepatriateCode.Failure;
 				}
 			} catch (Exception e) {
 				_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Unable to complete repatriate: {e.Message}");
 				_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Stacktrace: {e.StackTrace}");
+				if (fromTelegram)
+					await _tbotInstance.SendTelegramMessage($"Collect failed: {e.Message}");
 				return RepatriateCode.Failure;
 			}
 		}

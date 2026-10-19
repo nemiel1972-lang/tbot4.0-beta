@@ -76,7 +76,7 @@ if [ "${NO_LINUX:-0}" != "1" ]; then
   echo "== Building Linux package =="
   # shellcheck disable=SC2086
   if tools/build-linux.sh ${LINUX_ARGS:-}; then
-    echo "Linux package: $(pwd)/dist/ (TBot-linux-*.tar.gz)"
+    echo "Linux package: $(pwd)/dist/ (TBot-linux-*.zip)"
   else
     echo "WARNING: Linux build failed (server is unaffected)."
   fi

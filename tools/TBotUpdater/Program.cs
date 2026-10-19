@@ -53,7 +53,11 @@ namespace TBotUpdater {
 				KillLeftovers();
 
 				Directory.CreateDirectory(staging);
-				ZipFile.ExtractToDirectory(package, staging, true);
+				if (package.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) || package.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase)) {
+					using var fs = File.OpenRead(package);
+					using var gz = new System.IO.Compression.GZipStream(fs, System.IO.Compression.CompressionMode.Decompress);
+					System.Formats.Tar.TarFile.ExtractToDirectory(gz, staging, true);
+				} else ZipFile.ExtractToDirectory(package, staging, true);
 				string root = FindPackageRoot(staging);
 				if (root == null) {
 					Fail(false, "The package contains no TBot.exe / TBot.dll. Nothing was changed.", from, to, null);
@@ -91,6 +95,13 @@ namespace TBotUpdater {
 					copied++;
 				}
 				Log($"{copied} files replaced/added, {unchanged} unchanged, backup in {backupDir}");
+
+				if (!OperatingSystem.IsWindows()) {
+					foreach (string n in new[] { "TBot", "ogamed", "MigrateConfig", "TBotUpdater", "start.sh" }) {
+						string f = Path.Combine(_target, n);
+						try { if (File.Exists(f)) File.SetUnixFileMode(f, File.GetUnixFileMode(f) | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute); } catch { }
+					}
+				}
 
 				RunMigrateConfig();
 
@@ -226,7 +237,7 @@ namespace TBotUpdater {
 
 		private static void Cleanup(string staging, string updateDir) {
 			try { Directory.Delete(staging, true); } catch { }
-			try { foreach (string z in Directory.GetFiles(updateDir, "*.zip")) File.Delete(z); } catch { }
+			try { foreach (string z in Directory.GetFiles(updateDir, "*.zip").Concat(Directory.GetFiles(updateDir, "*.tar.gz"))) File.Delete(z); } catch { }
 		}
 
 		private static void PruneBackups() {
