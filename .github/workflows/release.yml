@@ -1,5 +1,4 @@
-# Baut beim Anlegen eines Tags (z. B. v4.0-beta1) die Pakete und haengt sie an ein GitHub-Release.
-# Start auch manuell moeglich: Actions -> Release -> Run workflow (dann nur Build, kein Release).
+
 name: Release
 
 on:
@@ -11,50 +10,144 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
+    name: Build and package
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    timeout-minutes: 45
 
-      - uses: actions/setup-dotnet@v4
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: .NET 9 einrichten
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
 
-      - uses: actions/setup-go@v5
+      - name: Go einrichten
+        uses: actions/setup-go@v5
         with:
           go-version: "1.23"
+          cache: true
+          cache-dependency-path: ogamed/go.sum
 
-      - name: Pakete bauen
+      - name: Go-Abhängigkeiten herunterladen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ogamed
+
+          for attempt in 1 2 3; do
+            echo "Go dependency download: Versuch ${attempt}/3"
+
+            if GOPROXY=https://proxy.golang.org go mod download; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 10))
+            fi
+          done
+
+          echo "::error::Go-Abhängigkeiten konnten nicht geladen werden."
+          exit 1
+
+      - name: Pakete bauen (mit Wiederholungen)
+        shell: bash
         env:
-          # ImageSharp 4.x prueft den Lizenzschluessel beim Build (Repo-Secret SIXLABORS_LICENSE_KEY)
           SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-          # Versionsname fuer die Update-Pruefung im WebUI (version.txt im Paket)
           TBOT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
         run: |
+          set -euo pipefail
           chmod +x tools/*.sh
-          tools/build-windows.sh
-          tools/build-linux.sh
-          tools/build-linux.sh --arm64
-          ls -la dist
+          mkdir -p dist
 
-      - name: Pruefsummen
-        run: cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
+          retry_build() {
+            local attempt
+            for attempt in 1 2 3; do
+              echo "Starte: $* (Versuch ${attempt}/3)"
 
-      - name: Artefakte hochladen (Build-Lauf)
+              if "$@"; then
+                return 0
+              fi
+
+              if [ "$attempt" -lt 3 ]; then
+                echo "::warning::Build fehlgeschlagen. Neuer Versuch in $((attempt * 15)) Sekunden."
+                sleep $((attempt * 15))
+              fi
+            done
+
+            echo "::error::Build endgültig fehlgeschlagen: $*"
+            return 1
+          }
+
+          retry_build tools/build-windows.sh
+          retry_build tools/build-linux.sh
+          retry_build tools/build-linux.sh --arm64
+
+      - name: Release-Dateien validieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "dist/TBot-win-x64.zip"
+            "dist/TBot-linux-x64.zip"
+            "dist/TBot-linux-arm64.zip"
+          )
+
+          for file in "${required[@]}"; do
+            if [ ! -s "$file" ]; then
+              echo "::error::Paket fehlt oder ist leer: $file"
+              exit 1
+            fi
+
+            unzip -t "$file"
+            echo "OK: $file ($(stat -c '%s' "$file") Bytes)"
+          done
+
+          echo "Alle drei Pakete sind vorhanden und lesbar."
+
+      - name: SHA-256-Prüfsummen erstellen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum \
+            TBot-win-x64.zip \
+            TBot-linux-x64.zip \
+            TBot-linux-arm64.zip \
+            > SHA256SUMS.txt
+
+          cat SHA256SUMS.txt
+
+      - name: Build-Artefakte hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: pakete
+          name: tbot-release-packages
           path: |
-            dist/*.zip
+            dist/TBot-win-x64.zip
+            dist/TBot-linux-x64.zip
+            dist/TBot-linux-arm64.zip
             dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
 
-      - name: Release anlegen
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: GitHub-Release aktualisieren
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           generate_release_notes: false
+          fail_on_unmatched_files: true
+          overwrite_files: true
           files: |
-            dist/*.zip
+            dist/TBot-win-x64.zip
+            dist/TBot-linux-x64.zip
+            dist/TBot-linux-arm64.zip
             dist/SHA256SUMS.txt
