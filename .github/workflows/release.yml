@@ -32,24 +32,25 @@ jobs:
       - name: Go einrichten
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version-file: ogamed/go.mod
           cache: true
           cache-dependency-path: ogamed/go.sum
 
       - name: Go-Abhängigkeiten herunterladen
         shell: bash
+        working-directory: ogamed
         run: |
           set -euo pipefail
-          cd ogamed
 
           for attempt in 1 2 3; do
             echo "Go dependency download: Versuch ${attempt}/3"
 
-            if GOPROXY=https://proxy.golang.org go mod download; then
+            if go mod download; then
               exit 0
             fi
 
             if [ "$attempt" -lt 3 ]; then
+              echo "::warning::Download fehlgeschlagen. Neuer Versuch."
               sleep $((attempt * 10))
             fi
           done
@@ -64,11 +65,13 @@ jobs:
           TBOT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
         run: |
           set -euo pipefail
+
           chmod +x tools/*.sh
           mkdir -p dist
 
           retry_build() {
             local attempt
+
             for attempt in 1 2 3; do
               echo "Starte: $* (Versuch ${attempt}/3)"
 
@@ -95,21 +98,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          required=(
+          required_files=(
             "dist/TBot-win-x64.zip"
-            "dist/TBot-linux-x64.zip"
-            "dist/TBot-linux-arm64.zip"
+            "dist/TBot-linux-x64.tar.gz"
+            "dist/TBot-linux-arm64.tar.gz"
           )
 
-          for file in "${required[@]}"; do
+          for file in "${required_files[@]}"; do
             if [ ! -s "$file" ]; then
               echo "::error::Paket fehlt oder ist leer: $file"
               exit 1
             fi
-
-            unzip -t "$file"
-            echo "OK: $file ($(stat -c '%s' "$file") Bytes)"
           done
+
+          echo "Prüfe Windows-Paket..."
+          unzip -t dist/TBot-win-x64.zip
+
+          echo "Prüfe Linux-x64-Paket..."
+          tar -tzf dist/TBot-linux-x64.tar.gz > /dev/null
+
+          echo "Prüfe Linux-ARM64-Paket..."
+          tar -tzf dist/TBot-linux-arm64.tar.gz > /dev/null
 
           echo "Alle drei Pakete sind vorhanden und lesbar."
 
@@ -118,10 +127,11 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
+
           sha256sum \
             TBot-win-x64.zip \
-            TBot-linux-x64.zip \
-            TBot-linux-arm64.zip \
+            TBot-linux-x64.tar.gz \
+            TBot-linux-arm64.tar.gz \
             > SHA256SUMS.txt
 
           cat SHA256SUMS.txt
@@ -132,8 +142,8 @@ jobs:
           name: tbot-release-packages
           path: |
             dist/TBot-win-x64.zip
-            dist/TBot-linux-x64.zip
-            dist/TBot-linux-arm64.zip
+            dist/TBot-linux-x64.tar.gz
+            dist/TBot-linux-arm64.tar.gz
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
@@ -148,6 +158,6 @@ jobs:
           overwrite_files: true
           files: |
             dist/TBot-win-x64.zip
-            dist/TBot-linux-x64.zip
-            dist/TBot-linux-arm64.zip
+            dist/TBot-linux-x64.tar.gz
+            dist/TBot-linux-arm64.tar.gz
             dist/SHA256SUMS.txt
