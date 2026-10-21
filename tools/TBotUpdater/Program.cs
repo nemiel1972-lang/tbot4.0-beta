@@ -61,7 +61,7 @@ namespace TBotUpdater {
 				} else ZipFile.ExtractToDirectory(package, staging, true);
 				string root = FindPackageRoot(staging);
 				if (root == null) {
-					Fail(false, "The package contains no TBot.exe / TBot.dll. Nothing was changed.", from, to, null);
+					Fail(false, "The package contains no TBot executable (TBot, TBot.exe or TBot.dll). Nothing was changed.", from, to, null);
 					return 1;
 				}
 
@@ -196,7 +196,7 @@ namespace TBotUpdater {
 			return null;
 		}
 		private static bool HasBot(string dir) {
-			foreach (string n in new[] { "TBot.exe", "TBot.dll" }) {
+			foreach (string n in new[] { "TBot.exe", "TBot.dll", "TBot" }) {
 				var f = new FileInfo(Path.Combine(dir, n));
 				if (f.Exists && f.Length > 0) return true;
 			}

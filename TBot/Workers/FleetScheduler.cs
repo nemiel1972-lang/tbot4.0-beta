@@ -843,9 +843,11 @@ if (
 					_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 					return newFleet.ID;
 				} catch (Exception e) {
-					_tbotInstance.log(LogLevel.Error, LogSender.FleetScheduler, $"Unable to send fleet: an exception has occurred: {e.Message}");
-					if (e.Message.Contains("(140035)") || e.Message.Contains("(140010)") || e.Message.Contains("(140016)"))
+					if (e.Message.Contains("(140035)") || e.Message.Contains("(140010)") || e.Message.Contains("(140016)")) {
+						_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Target {destination} cannot be used for {mission} (server: {e.Message.Substring(e.Message.LastIndexOf("Message:") >= 0 ? e.Message.LastIndexOf("Message:") + 8 : 0).Trim()}) - the worker drops it.");
 						return (int) SendFleetCode.TargetInvalid;
+					}
+					_tbotInstance.log(LogLevel.Error, LogSender.FleetScheduler, $"Unable to send fleet: an exception has occurred: {e.Message}");
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Stacktrace: {e.StackTrace}");
 					return (int) SendFleetCode.GenericError;
 				}

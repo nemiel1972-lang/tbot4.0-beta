@@ -8,6 +8,8 @@ namespace TBot.WebUI {
 	public static class WebApp {
 		static WebApp() {
 			_builder = WebApplication.CreateBuilder();
+			_builder.Logging.AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Warning);
+			_builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", Microsoft.Extensions.Logging.LogLevel.Information);
 		}
 
 		private static WebApplicationBuilder _builder;

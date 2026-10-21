@@ -16,6 +16,10 @@
       "New: galaxy cache - shared galaxy scans, slow background scan, warns about new colonies and moves of other players",
       "New: extra debug log (on by default, own file, anonymized, readable in the Log tab under \"Developer\")",
       "New: update notice (this message), shadow fleet help and collapsible sections, all lifeform images, thousand separators",
+      "Fix: the in-app updater now recognises the Linux single-file package (no more \"contains no TBot.exe / TBot.dll\"). Update by hand once, then the button works again",
+      "Spy/attack targets the server rejects (140035, 140010, 140016) are logged as one info line without stacktrace and dropped from the target list; Colonize blocks them for 12 h and tries the next",
+      "Telegram log level works again: only warnings and errors by default (/setloglevel changes it)",
+      "Console no longer flooded with ASP.NET request lines",
       "More German UI and help texts"
     ],
     "de": [
@@ -28,6 +32,10 @@
       "Neu: Galaxie-Cache - gemeinsame Galaxie-Scans, langsamer Hintergrund-Scan, Warnung bei neuen Kolonien und Umzügen anderer Spieler",
       "Neu: Extra-Debug-Log (standardmäßig an, eigene Datei, anonymisiert, im Log-Tab unter \"Developer\" lesbar)",
       "Neu: Update-Meldung (diese Nachricht), Schattenflotte mit Hilfe und einklappbaren Bereichen, alle Lebensform-Bilder, Tausendertrennzeichen",
+      "Fix: Der Update-Button erkennt jetzt das Linux-Einzeldatei-Paket (kein \"contains no TBot.exe / TBot.dll\" mehr). Einmal von Hand aktualisieren, danach geht der Button wieder",
+      "Vom Server abgelehnte Spionage-/Angriffsziele (140035, 140010, 140016) erscheinen als eine Info-Zeile ohne Stacktrace und fliegen aus der Zielliste; Colonize sperrt sie 12 h und nimmt das nächste",
+      "Telegram-Loglevel wirkt wieder: standardmäßig nur Warnungen und Fehler (/setloglevel ändert es)",
+      "Konsole nicht mehr mit ASP.NET-Anfragezeilen überflutet",
       "Mehr deutsche Oberflächen- und Hilfetexte"
     ]
   }
