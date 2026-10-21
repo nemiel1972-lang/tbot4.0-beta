@@ -66,8 +66,13 @@ namespace Tbot.Workers.Brain {
 				var best = MinePlanRanking.Rank(candidates, c => c.CostDeut, c => c.GainPerDay, c => c.IsResearch, rank, 12);
 				Tbot.Workers.ExtraLog.Write(inst, "MinePlanRanking", $"mode={rank.Mode}, horizon={rank.HorizonDays}d, maxPayback={rank.MaxPaybackDays}d, onlySensible={rank.OnlySensible}, research={rank.IncludeResearch}: {candidates.Count} candidates, top: " + string.Join(" | ", best.Take(5).Select(b => $"{b.Planet} {b.Mine} {b.Level} cost={b.CostDeut:N0} gain/d={b.GainPerDay:N0} payback={b.RoiDays:F1}d")));
 
+				var buildPlan = BuildGlobalPlan(calc, planets, plans.Where(pl => pl.Excluded).Select(pl => pl.Name).ToHashSet(), inst.UserData.researches,
+					inst.UserData.serverData.Speed, inst.UserData.userInfo.Class, inst.UserData.staff.Geologist, inst.UserData.staff.IsFull, rank);
+
 				var file = new PlanFile {
 					UpdatedUtc = DateTime.UtcNow.ToString("o"),
+					BudgetDeutPerDay = ReadBudget(inst),
+					BuildPlan = buildPlan,
 					Speed = inst.UserData.serverData.Speed,
 					Planets = plans,
 					Best = best,
@@ -81,6 +86,85 @@ namespace Tbot.Workers.Brain {
 				AtomicFile.WriteAllText(Path.Combine(dataDir, $"minenplan_{safe}.json"), JsonConvert.SerializeObject(file, Formatting.Indented));
 			} catch {
 			}
+		}
+
+		private static long ReadBudget(ITBotMain inst) {
+			try {
+				var g = inst.InstanceSettings;
+				if (SettingsService.IsSettingSet(g, "Experimental") && SettingsService.IsSettingSet(g.Experimental, "MinePlanRanking")
+					&& SettingsService.IsSettingSet(g.Experimental.MinePlanRanking, "DailyBudgetDeut"))
+					return Math.Max(0L, (long) g.Experimental.MinePlanRanking.DailyBudgetDeut);
+			} catch {
+			}
+			return 0;
+		}
+
+		private static List<PlanStep> BuildGlobalPlan(ICalculationService calc, List<Planet> planets, HashSet<string> excludedNames, Researches r, int speed,
+			CharacterClass cls, bool geo, bool staff, RankConfig rank) {
+			var result = new List<PlanStep>();
+			try {
+				var ps = planets.Where(p => p.Buildings != null && p.Coordinate != null && p.Temperature != null && !excludedNames.Contains(p.ToString())).ToList();
+				if (ps.Count == 0)
+					return result;
+				int n = ps.Count;
+				var lv = new int[n][];
+				var en = new long[n];
+				var extras = new float[n][];
+				for (int i = 0; i < n; i++) {
+					lv[i] = new[] { ps[i].Buildings.MetalMine, ps[i].Buildings.CrystalMine, ps[i].Buildings.DeuteriumSynthesizer };
+					en[i] = ps[i].Resources?.Energy ?? 0;
+					extras[i] = new float[3];
+					for (int k = 0; k < 3; k++)
+						extras[i][k] = ExtraBonus(calc, Mines[k], ps[i], r, speed, cls, geo, staff, out _);
+				}
+				int plasma = r.PlasmaTechnology;
+				try {
+					for (int no = 1; no <= 60; no++) {
+						_plasmaSim = plasma;
+						PlanStep best = null;
+						int bi = -1, bk = -1;
+						StepInfo bs = null;
+						for (int i = 0; i < n; i++) {
+							for (int k = 0; k < 3; k++) {
+								var st = Step(calc, ps[i], Mines[k], lv[i][k] + 1, en[i], r, speed, cls, geo, staff, extras[i][k]);
+								if (st.RoiDays <= 0 || st.RoiDays > rank.MaxPaybackDays)
+									continue;
+								if (best == null || st.RoiDays < best.RoiDays || (st.RoiDays == best.RoiDays && st.CostDeut < best.CostDeut)) {
+									best = new PlanStep { Planet = ps[i].ToString(), Coord = ps[i].Coordinate.ToString(), What = MineName(Mines[k]) + " mine", Level = st.Level, CostDeut = st.CostDeut, GainPerDay = st.GainPerDay, RoiDays = st.RoiDays, EnergyShort = st.EnergyShort };
+									bi = i; bk = k; bs = st;
+								}
+							}
+						}
+						if (rank.IncludeResearch) {
+							float gain = 0;
+							for (int i = 0; i < n; i++)
+								for (int k = 0; k < 3; k++)
+									if (lv[i][k] > 0)
+										gain += ToDayDeut(Mines[k], HourProdPlasma(calc, Mines[k], lv[i][k], ps[i], plasma + 1, speed, cls, geo, staff) - HourProdPlasma(calc, Mines[k], lv[i][k], ps[i], plasma, speed, cls, geo, staff));
+							long cost = PlasmaCost(calc, planets, plasma + 1);
+							float roi = MinePlanRanking.PaybackDays(cost, gain);
+							if (roi > 0 && roi <= rank.MaxPaybackDays && (best == null || roi < best.RoiDays)) {
+								best = new PlanStep { Planet = "Account", Coord = "", What = "Plasma technology", Level = plasma + 1, CostDeut = cost, GainPerDay = gain, RoiDays = roi, IsResearch = true };
+								bi = -1; bs = null;
+							}
+						}
+						if (best == null)
+							break;
+						best.No = no;
+						if (best.IsResearch)
+							plasma++;
+						else {
+							lv[bi][bk]++;
+							en[bi] = bs.EnergyAfter;
+						}
+						result.Add(best);
+					}
+				} finally {
+					_plasmaSim = 0;
+				}
+			} catch {
+			}
+			return result;
 		}
 
 		private static RankConfig ReadRankConfig(ITBotMain inst) {
@@ -117,6 +201,18 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
+		private static long PlasmaCost(ICalculationService calc, List<Planet> planets, int level) {
+			long best = CostDeut(calc.CalcPrice(Buildables.PlasmaTechnology, level));
+			foreach (var p in planets) {
+				if (p.LFBonuses == null)
+					continue;
+				long c = CostDeut(calc.CalcPrice(Buildables.PlasmaTechnology, level, p.LFBonuses));
+				if (c > 0 && c < best)
+					best = c;
+			}
+			return best;
+		}
+
 		private static long CostDeut(Resources price) =>
 			(long) Math.Round(price.Metal / MetalPerDeut + price.Crystal / CrystalPerDeut + price.Deuterium);
 
@@ -135,7 +231,7 @@ namespace Tbot.Workers.Brain {
 						plasmaGain += ToDayDeut(mine, HourProdPlasma(calc, mine, lvl, p, plasma + 1, speed, cls, geo, staff) - HourProdPlasma(calc, mine, lvl, p, plasma, speed, cls, geo, staff));
 					}
 				}
-				long plasmaCost = CostDeut(calc.CalcPrice(Buildables.PlasmaTechnology, plasma + 1));
+				long plasmaCost = PlasmaCost(calc, planets, plasma + 1);
 				list.Add(new ResearchStep {
 					Name = "Plasma technology", Level = plasma + 1, CostDeut = plasmaCost, GainPerDay = plasmaGain,
 					RoiDays = MinePlanRanking.PaybackDays(plasmaCost, plasmaGain),
@@ -228,7 +324,7 @@ namespace Tbot.Workers.Brain {
 		private static string Signature(List<ActiveItem> items) => string.Join("|", items.Select(i => i.Ref + ":" + i.ID).OrderBy(x => x));
 
 		private static float HourProd(ICalculationService calc, Buildables mine, int level, Planet p, Researches r, int speed, CharacterClass cls, bool geo, bool staff, bool bonus) {
-			int plasma = bonus ? r.PlasmaTechnology : 0;
+			int plasma = bonus ? PlasmaNow(r) : 0;
 			var lf = bonus ? p.LFBonuses?.Production : null;
 			var c = bonus ? cls : CharacterClass.NoClass;
 			bool g = bonus && geo, st = bonus && staff;
@@ -280,6 +376,9 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
+		[ThreadStatic] private static int _plasmaSim;
+		private static int PlasmaNow(Researches r) => _plasmaSim > 0 ? _plasmaSim : r.PlasmaTechnology;
+
 		private static int Level(Planet p, Buildables mine) =>
 			mine == Buildables.MetalMine ? p.Buildings.MetalMine : mine == Buildables.CrystalMine ? p.Buildings.CrystalMine : p.Buildings.DeuteriumSynthesizer;
 
@@ -287,7 +386,7 @@ namespace Tbot.Workers.Brain {
 			mine == Buildables.MetalMine ? "Metal" : mine == Buildables.CrystalMine ? "Crystal" : "Deuterium";
 
 		private static StepInfo Step(ICalculationService calc, Planet p, Buildables mine, int toLevel, long energyLeft, Researches r, int speed, CharacterClass cls, bool geo, bool staff, float extra) {
-			var price = calc.CalcPrice(mine, toLevel);
+			var price = calc.CalcPrice(mine, toLevel, p.LFBonuses);
 			long cost = (long) Math.Round(price.Metal / MetalPerDeut + price.Crystal / CrystalPerDeut + price.Deuterium);
 			float gain = DayProd(calc, mine, toLevel, p, r, speed, cls, geo, staff, extra) - DayProd(calc, mine, toLevel - 1, p, r, speed, cls, geo, staff, extra);
 			float gainBase = DayProd(calc, mine, toLevel, p, r, speed, cls, geo, staff, 0) - DayProd(calc, mine, toLevel - 1, p, r, speed, cls, geo, staff, 0);
@@ -376,12 +475,22 @@ namespace Tbot.Workers.Brain {
 
 		public sealed class PlanFile {
 			public string UpdatedUtc;
+			public long BudgetDeutPerDay;
+			public List<PlanStep> BuildPlan;
 			public int Speed;
 			public List<PlanetPlan> Planets;
 			public List<BestStep> Best;
 			public List<BestStep> Candidates;
 			public List<ResearchStep> Research;
 			public RankInfo Ranking;
+		}
+		public sealed class PlanStep {
+			public int No;
+			public string Planet, Coord, What;
+			public int Level;
+			public long CostDeut, EnergyShort;
+			public float GainPerDay, RoiDays;
+			public bool IsResearch;
 		}
 		public sealed class RankInfo {
 			public string Mode;

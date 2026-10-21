@@ -350,6 +350,18 @@
    "Let expeditions finish before sleep": "Expeditionen vor dem Schlafen beenden lassen",
    "Lifeform buildings start once the crystal mine of a planet reaches this level": "Lebensform-Gebäude starten, sobald die Kristallmine eines Planeten diese Stufe erreicht",
    "Lifeform effects on expeditions": "Lebensform-Effekte auf Expeditionen",
+   "Lifeform bonuses (expeditions)": "Lebensform-Boni (Expeditionen)",
+   "Discoverer class bonus": "Entdecker-Klassenbonus",
+   "Large cargos per expedition": "Große Transporter pro Expedition",
+   "Max find: metal": "Max. Fund: Metall",
+   "Max find: crystal": "Max. Fund: Kristall",
+   "Max find: deuterium": "Max. Fund: Deuterium",
+   "Max find: ships (value)": "Max. Fund: Schiffe (Wert)",
+   "Dark matter find": "Dunkle-Materie-Fund",
+   "No data yet - the Expeditions worker writes it on its next run.": "Noch keine Daten - der Expeditions-Worker schreibt sie bei seinem nächsten Lauf.",
+   "As reported by the game": "Wie vom Spiel gemeldet",
+   "Suggested large cargos per expedition": "Vorschlag: Große Transporter pro Expedition",
+   "To carry the maximum find (": "Um den maximalen Fund zu tragen (",
    "Lifeform panel": "Lebensform-Panel",
    "Lifeform workers": "Lebensform-Worker",
    "Log Telegram traffic": "Telegram-Verkehr loggen",
@@ -361,6 +373,9 @@
    "Longest postponement to fit the timing": "Längste Verschiebung, um den Zeitplan einzuhalten",
    "Longest production time": "Längste Produktionszeit",
    "Longest sensible payback": "Längste sinnvolle Amortisation",
+   "Daily budget (build plan)": "Tagesbudget (Aufbauplan)",
+   "Deuterium equivalent per day, e.g. expedition income; 0 = enter it on the page": "Deuterium-Äquivalent pro Tag, z. B. Expo-Einnahmen; 0 = auf der Seite eingeben",
+   "D-eq/day": "D-Äq./Tag",
    "Loss weight vs. fuel": "Verlustgewicht gegenüber Treibstoff",
    "Losses and profit": "Verluste und Gewinn",
    "Low-deuterium guard": "Wächter bei wenig Deuterium",
@@ -2579,6 +2594,9 @@
    "MinePlanRanking.HorizonDays": {
     "t": "Horizont für die Nettogewinn-Reihung, in Tagen.",
     "e": "90 = ein Schritt ist gut, wenn er innerhalb von 90 Tagen mehr einbringt, als er kostet."
+   },
+   "MinePlanRanking.DailyBudgetDeut": {
+    "t": "Tagesbudget für den Aufbauplan in Deuterium-Äquivalent (z. B. Expo-Einnahmen). 0 = auf der Seite eingeben."
    },
    "MinePlanRanking.MaxPaybackDays": {
     "t": "Längste Amortisation, die noch als sinnvoll gilt (genutzt mit „Nur sinnvolle“)."

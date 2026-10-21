@@ -856,7 +856,8 @@
             "HorizonDays": 90,
             "MaxPaybackDays": 200,
             "OnlySensible": false,
-            "IncludeResearch": true
+            "IncludeResearch": true,
+            "DailyBudgetDeut": 0
         },
         "AsteroidHunt": {
             "Active": false,

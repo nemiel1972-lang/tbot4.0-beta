@@ -7,13 +7,16 @@ type LfBonuses struct {
 	CostTimeBonuses         CostTimeBonuses
 	MiscBonuses             MiscBonuses
 
+	ExpeditionBonuses map[string]float64
+
 	PlanetLfResearchCostTimeBonus CostTimeBonus
 }
 
 func NewLfBonuses() *LfBonuses {
 	return &LfBonuses{
-		LfShipBonuses:   make(LfShipBonuses),
-		CostTimeBonuses: make(CostTimeBonuses),
+		LfShipBonuses:     make(LfShipBonuses),
+		CostTimeBonuses:   make(CostTimeBonuses),
+		ExpeditionBonuses: make(map[string]float64),
 	}
 }
 

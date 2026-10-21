@@ -494,6 +494,14 @@
                 content.appendChild(row('Top 1 highscore', 'Decides the maximum find per expedition', el('span', { text: Math.round(d.topScore).toLocaleString() + ' points' })));
                 content.appendChild(row('Max find per expedition', (disc ? 'Discoverer' : 'other class') + ', economy speed ' + (d.ecoSpeed || 1) + ' (without tech 18)', el('span', { text: cap.toLocaleString() + ' resources' })));
                 content.appendChild(row('Discoverer class bonus (tech 18)', 'Kaelesh: raises the class bonus', el('span', { text: d.discovererClass ? pct(d.discovererClass) : '0 % (not researched)', style: d.discovererClass ? 'color:var(--tb-ok)' : 'color:var(--tb-warn)' })));
+                var eb = d.expeditionBonuses || {};
+                Object.keys(eb).forEach(function (k) {
+                    if (k === 'ResultBooster') return;
+                    content.appendChild(row('Expedition bonus: ' + k, 'As reported by the game', el('span', { text: pct(Number(eb[k]) || 0) })));
+                });
+                var sg = d.suggestion || {};
+                if (sg.largeCargoPerExpedition > 0)
+                    content.appendChild(row('Suggested large cargos per expedition', 'To carry the maximum find (' + (sg.capacityPerLargeCargo || 0).toLocaleString() + ' capacity each, with research, class and lifeform bonus)', el('span', { text: sg.largeCargoPerExpedition.toLocaleString() + ' large cargos', style: 'color:var(--tb-ok)' })));
                 content.appendChild(el('div', { class: 'cfg-note', text: 'Only what matters for the cargo count: finds per expedition (resources, class bonus) and cargo capacity. The auto fleet calculation uses Resources and cargo; the tech-18 class bonus is not used yet.' }));
                 content.appendChild(el('div', { class: 'cfg-note', text: 'As of ' + new Date(d.updatedUtc).toLocaleString() + '. Values are taken from the game by the Expeditions worker.' }));
             })
@@ -808,12 +816,13 @@
                     fld(mr, 'HorizonDays', mrp, 'Horizon (Npv)', 'Steps that do not pay back within this time are left out', 'num', { min: 1, unit: 'days' }),
                     fld(mr, 'OnlySensible', mrp, 'Only sensible steps', 'Hide steps with a payback longer than the limit', 'toggle'),
                     fld(mr, 'MaxPaybackDays', mrp, 'Longest sensible payback', null, 'num', { min: 1, unit: 'days' }),
-                    fld(mr, 'IncludeResearch', mrp, 'Include research', 'Rank plasma technology next to the mine steps', 'toggle')
+                    fld(mr, 'IncludeResearch', mrp, 'Include research', 'Rank plasma technology next to the mine steps', 'toggle'),
+                    fld(mr, 'DailyBudgetDeut', mrp, 'Daily budget (build plan)', 'Deuterium equivalent per day, e.g. expedition income; 0 = enter it on the page', 'num', { min: 0, unit: 'D-eq/day' })
                 ].filter(Boolean)));
             } else {
                 body.appendChild(sec('Mine plan: ranking of the next steps', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet - the default (shortest payback, research included) applies. Add it to change that.' }),
-                    addDefault(X, 'MinePlanRanking', { Mode: 'Payback', HorizonDays: 90, MaxPaybackDays: 200, OnlySensible: false, IncludeResearch: true }, 'Mine plan ranking settings', null)
+                    addDefault(X, 'MinePlanRanking', { Mode: 'Payback', HorizonDays: 90, MaxPaybackDays: 200, OnlySensible: false, IncludeResearch: true, DailyBudgetDeut: 0 }, 'Mine plan ranking settings', null)
                 ]));
             }
             if (X.GalaxyCache && typeof X.GalaxyCache === 'object') {

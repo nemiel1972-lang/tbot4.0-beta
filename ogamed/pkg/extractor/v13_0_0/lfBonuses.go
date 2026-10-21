@@ -27,6 +27,13 @@ func extractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error) {
 		extractTimeReductionBonus(heading, b, id)
 	}
 	for _, heading := range directLfBonusHeadings(expedition).EachIter() {
+		key := heading.AttrOr("data-toggable", "")
+		if key != "" {
+			match := regexp.MustCompile(`[-+]?\d+(?:[.,]\d+)?\s*%`).FindString(heading.Find("div.subCategoryBonus").First().Text())
+			if match != "" {
+				b.ExpeditionBonuses[key] = extractBonusFromStringPercentage(match)
+			}
+		}
 		if heading.AttrOr("data-toggable", "") == "ResultBooster" {
 			b.LfResourceBonuses.ResourcesExpedition = extractBonusFromStringPercentage(heading.Find("div.subCategoryBonus").First().Text())
 		}

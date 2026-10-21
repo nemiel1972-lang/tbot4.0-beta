@@ -61,7 +61,8 @@ namespace TBotUpdater {
 				} else ZipFile.ExtractToDirectory(package, staging, true);
 				string root = FindPackageRoot(staging);
 				if (root == null) {
-					Fail(false, "The package contains no TBot executable (TBot, TBot.exe or TBot.dll). Nothing was changed.", from, to, null);
+					bool again = RestartOld(noRestart, restart, restartArgs);
+					Fail(false, "The package contains no TBot executable (TBot, TBot.exe or TBot.dll). Nothing was changed." + (again ? " The old version was started again." : ""), from, to, null);
 					return 1;
 				}
 
@@ -123,7 +124,8 @@ namespace TBotUpdater {
 			} catch (Exception e) {
 				Log("ERROR: " + e.Message);
 				if (!filesTouched) {
-					Fail(false, e.Message + " Nothing was changed.", from, to, null);
+					bool again = RestartOld(noRestart, restart, restartArgs);
+					Fail(false, e.Message + " Nothing was changed." + (again ? " The old version was started again." : ""), from, to, null);
 					return 1;
 				}
 				try {
@@ -144,6 +146,18 @@ namespace TBotUpdater {
 					Fail(false, e.Message + " Rollback failed (" + e2.Message + "). The old files are in " + backupDir + ".", from, to, backupDir);
 				}
 				return 1;
+			}
+		}
+
+		private static bool RestartOld(bool noRestart, string restart, string restartArgs) {
+			try {
+				if (noRestart || string.IsNullOrWhiteSpace(restart)) return false;
+				var p = StartBot(restart, restartArgs);
+				Log(p != null ? $"Old version started again (PID {p.Id})." : "The old version could not be started again.");
+				return p != null;
+			} catch (Exception e) {
+				Log("Restart of the old version failed: " + e.Message);
+				return false;
 			}
 		}
 

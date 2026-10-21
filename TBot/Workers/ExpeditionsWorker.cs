@@ -86,9 +86,19 @@ namespace Tbot.Workers {
 				var ex = lf.Expeditions ?? new LFBonusesExpeditions();
 				float Cargo(Buildables b) => lf.LfShipBonusesInt.TryGetValue((int) b, out var v) ? v.CargoCapacity : 0;
 				float Fuel(Buildables b) => lf.LfShipBonusesInt.TryGetValue((int) b, out var v) ? v.FuelConsumption : 0;
+				int gtNeeded = 0, gtCapacity = 0;
+				try {
+					int hyper = _tbotInstance.UserData.researches?.HyperspaceTechnology ?? 0;
+					var cls = _tbotInstance.UserData.userInfo.Class;
+					gtNeeded = _calculationService.CalcIdealExpeditionShips(Buildables.LargeCargo, hyper, lf.LfResourceBonuses?.ResourcesExpedition ?? 0, lf.LfShipBonusesInt, _tbotInstance.UserData.serverData, cls).LargeCargo;
+					gtCapacity = _calculationService.CalcShipCapacity(Buildables.LargeCargo, hyper, _tbotInstance.UserData.serverData, Cargo(Buildables.LargeCargo), cls);
+				} catch (Exception) {
+				}
 				var snapshot = new {
 					updatedUtc = DateTime.UtcNow,
-					expeditions = new { ex.Ships, ex.Resources, ex.Speed, ex.DarkMatter, ex.FleetLoss, ex.Slots, ex.LessEnemies },
+					expeditionBonuses = lf.ExpeditionBonuses,
+					suggestion = new { largeCargoPerExpedition = gtNeeded, capacityPerLargeCargo = gtCapacity },
+					expeditions = new { ex.Ships, Resources = Math.Max(ex.Resources, lf.LfResourceBonuses?.ResourcesExpedition ?? 0), ex.Speed, ex.DarkMatter, ex.FleetLoss, ex.Slots, ex.LessEnemies },
 					cargo = new { LargeCargo = Cargo(Buildables.LargeCargo), SmallCargo = Cargo(Buildables.SmallCargo), Pathfinder = Cargo(Buildables.Pathfinder) },
 					fuel = new { LargeCargo = Fuel(Buildables.LargeCargo), Pathfinder = Fuel(Buildables.Pathfinder) },
 					topScore = (float) _tbotInstance.UserData.serverData.TopScore,

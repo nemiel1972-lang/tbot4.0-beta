@@ -4,7 +4,7 @@
     var main = document.getElementById('cfg-main');
     if (!box || !main) return;
     var url = box.dataset.url, base = box.dataset.lf, instance = main.dataset.instance;
-    var last = null, upd = null, updBusy = false;
+    var last = null, upd = null, updBusy = false, lfSnap = null, lfAt = 0;
 
     function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined && text !== null) e.textContent = text; return e; }
     function masked() { return window.tbotHideData ? window.tbotHideData.get() : false; }
@@ -106,6 +106,35 @@
             c.body.appendChild(rr);
         } else c.body.appendChild(el('div', 'st-mut', 'No resource data yet.'));
 
+        c = card('Lifeform bonuses (expeditions)'); grid.appendChild(c.root);
+        var lf = lfSnap && lfSnap.success ? lfSnap.data : null;
+        if (lf) {
+            var pc = function (v) { v = Number(v) || 0; return v ? (Math.round(v * 100000) / 1000) + ' %' : '0 %'; };
+            var ex = lf.expeditions || {}, eb = lf.expeditionBonuses || {}, cg = lf.cargo || {}, sg = lf.suggestion || {};
+            c.body.appendChild(row('Resources found', pc(ex.Resources)));
+            Object.keys(eb).forEach(function (k) { if (k !== 'ResultBooster') c.body.appendChild(row('Bonus ' + k, pc(eb[k]))); });
+            c.body.appendChild(row('Large cargo capacity', pc(cg.LargeCargo)));
+            c.body.appendChild(row('Discoverer class bonus', pc(lf.discovererClass)));
+            var tiers = [[10000, 40000], [100000, 500000], [1000000, 1200000], [5000000, 1800000], [25000000, 2400000], [50000000, 3000000], [75000000, 3600000], [100000000, 4200000]];
+            var cap = 5000000;
+            for (var ti = 0; ti < tiers.length; ti++) { if (lf.topScore < tiers[ti][0]) { cap = tiers[ti][1]; break; } }
+            cap = lf.playerClass === 'Discoverer' ? cap * (lf.ecoSpeed || 1) * 3 : cap * 2;
+            var resB = Number(ex.Resources) || 0;
+            var findKey = function (re) { var ks = Object.keys(eb).filter(function (k) { return re.test(k); }); return ks.length ? ks[0] : null; };
+            var shipKey = findKey(/ship/i), dmKey = findKey(/dark|matter|^dm/i);
+            c.body.appendChild(row('Max find: metal', num(Math.ceil(cap * (1 + resB)))));
+            c.body.appendChild(row('Max find: crystal', num(Math.ceil(cap * (1 + resB) / 2))));
+            c.body.appendChild(row('Max find: deuterium', num(Math.ceil(cap * (1 + resB) / 3))));
+            if (shipKey) c.body.appendChild(row('Max find: ships (value)', num(Math.ceil(cap * (1 + (Number(eb[shipKey]) || 0)) / 2))));
+            if (dmKey) {
+                var dm = 1 + (Number(eb[dmKey]) || 0);
+                [[300, 400], [500, 700], [1000, 1800]].forEach(function (r) { c.body.appendChild(row('Dark matter find', num(Math.floor(r[0] * dm)) + ' - ' + num(Math.floor(r[1] * dm)))); });
+            }
+            if (!shipKey || !dmKey) c.body.appendChild(el('div', 'st-mut', 'Ship / dark matter finds: bonus not reported by the game under a known name yet (see the "Bonus ..." rows).'));
+            if (sg.largeCargoPerExpedition > 0) c.body.appendChild(row('Large cargos per expedition', num(sg.largeCargoPerExpedition) + ' (' + num(sg.capacityPerLargeCargo) + ' each)'));
+            c.body.appendChild(el('div', 'st-mut', 'As of ' + (lf.updatedUtc ? new Date(lf.updatedUtc).toLocaleString() : '-') + '. Details: Expeditions block.'));
+        } else c.body.appendChild(el('div', 'st-mut', 'No data yet - the Expeditions worker writes it on its next run.'));
+
         c = card('Workers'); c.root.classList.add('tall'); grid.appendChild(c.root);
         (d.workers || []).forEach(function (w) {
             var r = el('div', 'st-row'); var l = el('a', 'st-wk'); l.href = blockLink(w.name);
@@ -199,10 +228,19 @@
         }).catch(function (e) { updBusy = false; renderUpdate(); alert('Update could not be started: ' + e); });
     }
 
+    function loadLf() {
+        if (!main.dataset.lf || Date.now() - lfAt < 300000) return;
+        lfAt = Date.now();
+        fetch(main.dataset.lf + '?instance=' + encodeURIComponent(instance), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (r) { lfSnap = r; if (last) render(last); })
+            .catch(function () {  });
+    }
+
     function load() {
         fetch(url + '?instance=' + encodeURIComponent(instance), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
-            .then(function (d) { if (d.error) { box.textContent = 'Could not read the data: ' + d.error; return; } last = d; render(d); })
+            .then(function (d) { if (d.error) { box.textContent = 'Could not read the data: ' + d.error; return; } last = d; render(d); loadLf(); })
             .catch(function (e) { if (!last) box.textContent = 'Could not read the data: ' + e; });
     }
     load();

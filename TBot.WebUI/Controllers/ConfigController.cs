@@ -61,7 +61,8 @@ namespace TBot.WebUI.Controllers {
 				["HorizonDays"] = 90,
 				["MaxPaybackDays"] = 200,
 				["OnlySensible"] = false,
-				["IncludeResearch"] = true
+				["IncludeResearch"] = true,
+				["DailyBudgetDeut"] = 0
 			},
 			["AsteroidHunt"] = new JObject {
 				["Active"] = false,

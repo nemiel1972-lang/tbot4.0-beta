@@ -1180,6 +1180,9 @@ window.CFG_HELP.en = {
    "t": "Horizon for the net gain ranking, in days.",
    "e": "90 = a step counts as good if it earns more than it costs within 90 days."
   },
+  "MinePlanRanking.DailyBudgetDeut": {
+   "t": "Daily budget for the build plan in deuterium equivalent (e.g. expedition income). 0 = enter it on the page."
+  },
   "MinePlanRanking.MaxPaybackDays": {
    "t": "Longest payback that still counts as sensible (used with Only sensible)."
   },

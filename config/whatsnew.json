@@ -1,42 +1,26 @@
 {
-  "version": "4.0-beta11",
+  "version": "4.0-beta12",
   "date": "2026-10-21",
   "title": {
-    "en": "What's new in 4.0 beta11",
-    "de": "Neu in 4.0 beta11"
+    "en": "What's new in 4.0 beta12",
+    "de": "Neu in 4.0 beta12"
   },
   "lines": {
     "en": [
-      "Repatriate / Reverse Repatriate: stock reserved for far-away goals no longer blocks everything (claims count from 30 % filled, adjustable)",
-      "Repatriate logs why a celestial sends nothing (not enough free stock, reserved for X, no ship type)",
-      "Reverse Repatriate simplified: the return leg takes exactly the ships that flew out",
-      "Bot pause hardened: blocks spy, attack and expedition missions, refuses when an attack is close, Defender optionally stopped",
-      "Telegram: only the configured chat is answered, @botname is stripped",
-      "FastFarm: spy targets that no longer exist or are under noob protection are dropped from the round",
-      "New: galaxy cache - shared galaxy scans, slow background scan, warns about new colonies and moves of other players",
-      "New: extra debug log (on by default, own file, anonymized, readable in the Log tab under \"Developer\")",
-      "New: update notice (this message), shadow fleet help and collapsible sections, all lifeform images, thousand separators",
-      "Fix: the in-app updater now recognises the Linux single-file package (no more \"contains no TBot.exe / TBot.dll\"). Update by hand once, then the button works again",
-      "Spy/attack targets the server rejects (140035, 140010, 140016) are logged as one info line without stacktrace and dropped from the target list; Colonize blocks them for 12 h and tries the next",
-      "Telegram log level works again: only warnings and errors by default (/setloglevel changes it)",
-      "Console no longer flooded with ASP.NET request lines",
-      "More German UI and help texts"
+      "Fix: the in-app updater recognises the Linux single-file package and starts the old bot again if an update fails before files are replaced. The old updater cannot install this: update by hand once (unpack the new package over the bot folder), then the button works",
+      "New: start page shows lifeform bonuses for expeditions, maximum finds (metal, crystal, deuterium, ships, dark matter) and a suggested number of large cargos per expedition",
+      "Fix: the expedition find bonus showed 0 % in the config (now read correctly); all expedition bonuses reported by the game are shown",
+      "New: build plan on the Mine plan page - order by payback over all planets and plasma technology, timeline with a daily budget (e.g. expedition income)",
+      "Fix: Mine plan costs now include the lifeform cost reduction, like AutoMine",
+      "Console no longer flooded with ASP.NET request lines"
     ],
     "de": [
-      "Repatriate / Reverse Repatriate: Für weit entfernte Ziele reservierter Bestand blockiert nicht mehr alles (Reservierungen zählen ab 30 % Füllstand, einstellbar)",
-      "Repatriate loggt, warum ein Himmelskörper nichts schickt (zu wenig freier Bestand, reserviert für X, kein Schiffstyp)",
-      "Reverse Repatriate vereinfacht: Der Rückflug nimmt genau die Schiffe, die hingeflogen sind",
-      "Bot-Pause gehärtet: sperrt Spionage-, Angriffs- und Expeditionsmissionen, lehnt bei nahem Angriff ab, Defender optional gestoppt",
-      "Telegram: nur der eingestellte Chat wird beantwortet, @botname wird entfernt",
-      "FastFarm: Spionageziele, die es nicht mehr gibt oder die unter Noob-Schutz stehen, werden aus der Runde genommen",
-      "Neu: Galaxie-Cache - gemeinsame Galaxie-Scans, langsamer Hintergrund-Scan, Warnung bei neuen Kolonien und Umzügen anderer Spieler",
-      "Neu: Extra-Debug-Log (standardmäßig an, eigene Datei, anonymisiert, im Log-Tab unter \"Developer\" lesbar)",
-      "Neu: Update-Meldung (diese Nachricht), Schattenflotte mit Hilfe und einklappbaren Bereichen, alle Lebensform-Bilder, Tausendertrennzeichen",
-      "Fix: Der Update-Button erkennt jetzt das Linux-Einzeldatei-Paket (kein \"contains no TBot.exe / TBot.dll\" mehr). Einmal von Hand aktualisieren, danach geht der Button wieder",
-      "Vom Server abgelehnte Spionage-/Angriffsziele (140035, 140010, 140016) erscheinen als eine Info-Zeile ohne Stacktrace und fliegen aus der Zielliste; Colonize sperrt sie 12 h und nimmt das nächste",
-      "Telegram-Loglevel wirkt wieder: standardmäßig nur Warnungen und Fehler (/setloglevel ändert es)",
-      "Konsole nicht mehr mit ASP.NET-Anfragezeilen überflutet",
-      "Mehr deutsche Oberflächen- und Hilfetexte"
+      "Fix: Der Update-Button erkennt das Linux-Einzeldatei-Paket und startet den alten Bot wieder, wenn ein Update vor dem Ersetzen der Dateien scheitert. Der alte Updater kann das nicht installieren: einmal von Hand aktualisieren (neues Paket über den Bot-Ordner entpacken), danach geht der Button",
+      "Neu: Startseite zeigt Lebensform-Boni für Expeditionen, maximale Funde (Metall, Kristall, Deuterium, Schiffe, Dunkle Materie) und einen Vorschlag für die Anzahl großer Transporter pro Expedition",
+      "Fix: Der Fundbonus der Expeditionen stand in der Config auf 0 % (jetzt richtig gelesen); alle vom Spiel gemeldeten Expeditions-Boni werden angezeigt",
+      "Neu: Aufbauplan auf der Minenplan-Seite - Reihenfolge nach Amortisation über alle Planeten und Plasmatechnik, Zeitachse mit Tagesbudget (z. B. Expo-Einnahmen)",
+      "Fix: Minenplan-Kosten enthalten jetzt die Lebensform-Kostensenkung, wie bei AutoMine",
+      "Konsole nicht mehr mit ASP.NET-Anfragezeilen überflutet"
     ]
   }
 }

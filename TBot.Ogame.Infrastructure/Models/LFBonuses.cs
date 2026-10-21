@@ -14,6 +14,7 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public Dictionary<string, LFBonusesShip> LfShipBonuses { get; set; }
 		public Dictionary<string, LFBonusesBase> CostTimeBonuses { get; set; }
 		public LFBonusesMisc MiscBonuses { get; set; }
+		public Dictionary<string, float> ExpeditionBonuses { get; set; } = new();
 		public Dictionary<int, LFBonusesShip> LfShipBonusesInt {
 			get {
 				if (LfShipBonuses == null)
