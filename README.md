@@ -53,7 +53,7 @@ Never commit or post your real `instance_settings.json`, `secrets/` or `data/`.
 Requirements: .NET 9 SDK and Go 1.23.
 ```bash
 tools/build-windows.sh                 # dist/TBot-win-x64.zip
-tools/build-linux.sh                   # dist/TBot-linux-x64.tar.gz
+tools/build-linux.sh                   # dist/TBot-linux-x64.zip
 tools/build-linux.sh --arm64           # e.g. Raspberry Pi
 ```
 Pushing a tag like `v4.0-initial` builds all packages in GitHub Actions and attaches them to a pre-release.
