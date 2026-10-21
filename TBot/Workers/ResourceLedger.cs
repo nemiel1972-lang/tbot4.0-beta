@@ -423,7 +423,48 @@ namespace Tbot.Workers {
 			}
 		}
 
-		public static LedgerAmt AvailableExternal(string key, long cel, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log) {
+		private static bool ZaehltFuerExterne(LedgerClaim c, int minPercent) {
+			if (c.Flights.Count > 0 || c.Held.Covers(c.Reserved))
+				return true;
+			long bedarf = c.Reserved.M + c.Reserved.C + c.Reserved.D;
+			if (bedarf <= 0 || minPercent <= 0)
+				return true;
+			long gehalten = c.Held.M + c.Held.C + c.Held.D;
+			return (double) gehalten * 100.0 >= (double) bedarf * minPercent;
+		}
+
+		public static string DescribeExternal(string key, long cel, int minPercent) {
+			lock (Lock) {
+				State st = GetState(key);
+				List<LedgerClaim> list;
+				if (!st.Claims.TryGetValue(cel, out list) || list.Count == 0)
+					return "(no claims)";
+				return string.Join("; ", list.Select(c => {
+					long bedarf = c.Reserved.M + c.Reserved.C + c.Reserved.D;
+					long gehalten = c.Held.M + c.Held.C + c.Held.D;
+					double pct = bedarf > 0 ? 100.0 * gehalten / bedarf : 100.0;
+					return c.Owner + " " + c.Label + " held " + pct.ToString("F1") + "% (" + c.Held.ToString() + " of " + c.Reserved.ToString() + ") flights=" + c.Flights.Count + " counts=" + ZaehltFuerExterne(c, minPercent);
+				}));
+			}
+		}
+
+		public static string DescribeHolders(string key, long cel, int minPercent) {
+			lock (Lock) {
+				State st = GetState(key);
+				List<LedgerClaim> list;
+				if (!st.Claims.TryGetValue(cel, out list))
+					return "";
+				var teile = list.Where(c => !c.Held.IsZero()).Select(c => {
+					long bedarf = c.Reserved.M + c.Reserved.C + c.Reserved.D;
+					long gehalten = c.Held.M + c.Held.C + c.Held.D;
+					double pct = bedarf > 0 ? 100.0 * gehalten / bedarf : 100.0;
+					return c.Owner + " " + c.Label + " " + pct.ToString("F0") + "%" + (ZaehltFuerExterne(c, minPercent) ? "" : " (below limit, not blocking)");
+				}).ToList();
+				return string.Join("; ", teile);
+			}
+		}
+
+		public static LedgerAmt AvailableExternal(string key, long cel, LedgerAmt live, DateTime now, Func<int, LedgerFleetInfo> probe, Action<string> log, int minPercent = 0) {
 			lock (Lock) {
 				State st = GetState(key);
 				if (Reconcile(st, cel, live, now, probe, log))
@@ -433,18 +474,19 @@ namespace Tbot.Workers {
 					return live.Clamp0();
 				LedgerAmt held = new LedgerAmt();
 				foreach (LedgerClaim c in list)
-					held = held + c.Held;
+					if (ZaehltFuerExterne(c, minPercent))
+						held = held + c.Held;
 				return (live - held).Clamp0();
 			}
 		}
 
-		public static bool HasExternalHold(string key, long cel) {
+		public static bool HasExternalHold(string key, long cel, int minPercent = 0) {
 			lock (Lock) {
 				State st = GetState(key);
 				List<LedgerClaim> list;
 				if (!st.Claims.TryGetValue(cel, out list))
 					return false;
-				return list.Any(c => !c.Held.IsZero());
+				return list.Any(c => !c.Held.IsZero() && ZaehltFuerExterne(c, minPercent));
 			}
 		}
 

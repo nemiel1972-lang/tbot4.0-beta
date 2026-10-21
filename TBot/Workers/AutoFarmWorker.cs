@@ -2448,6 +2448,9 @@ namespace Tbot.Workers {
 									_tbotInstance.UserData.farmTargets.Insert(0, quickTarget);
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
 										$"[ActiveScan] Prioritized target {discoveredCoord} checked immediately with an espionage probe.");
+								} else if (quickFleetId == (int) SendFleetCode.TargetInvalid) {
+									_tbotInstance.UserData.farmTargets.Remove(quickTarget);
+									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"[ActiveScan] Target {discoveredCoord} is no longer a valid spy target - removed from the target list.");
 								}
 							} catch (Exception ex) {
 								_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm,
@@ -2798,6 +2801,10 @@ namespace Tbot.Workers {
 											target.State = FarmState.ProbesSent;
 											_tbotInstance.UserData.farmTargets.Add(target);
 
+											continue;
+										} else if (fleetId == (int) SendFleetCode.TargetInvalid) {
+											_tbotInstance.UserData.farmTargets.Remove(target);
+											_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Target {target.Celestial.Coordinate} is no longer a valid spy target (empty position or noob protection) - removed from the target list.");
 											continue;
 										} else if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 											stop = true;

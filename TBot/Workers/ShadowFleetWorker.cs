@@ -15,6 +15,11 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Workers {
 	internal class ShadowFleetWorker : WorkerBase {
+		private void SfLog(LogLevel level, string text) {
+			DoLog(level, text);
+			ExtraLog.Write(_tbotInstance, "ShadowFleet", $"[{level}] {text}");
+		}
+
 		private readonly IOgameService _ogameService;
 		private readonly IFleetScheduler _fleetScheduler;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
@@ -87,17 +92,17 @@ namespace Tbot.Workers {
 			try {
 				if (!_startWarned) {
 					_startWarned = true;
-					DoLog(LogLevel.Warning, $"ShadowFleet: keep a deuterium reserve on {cfg.Galaxy}:{cfg.System}:{cfg.Position} ({cfg.Type}). Every flight burns fuel and the cargo carries deuterium for {cfg.DeuteriumFlights} flights. When it is used up the flights stop.");
+					SfLog(LogLevel.Warning, $"ShadowFleet: keep a deuterium reserve on {cfg.Galaxy}:{cfg.System}:{cfg.Position} ({cfg.Type}). Every flight burns fuel and the cargo carries deuterium for {cfg.DeuteriumFlights} flights. When it is used up the flights stop.");
 				}
 				Celestial c = _tbotInstance.UserData.celestials.Unique().FirstOrDefault(x => cfg.Matches(x.Coordinate.Galaxy, x.Coordinate.System, x.Coordinate.Position, x.Coordinate.Type.ToString()));
 				if (c == null) {
-					DoLog(LogLevel.Warning, $"ShadowFleet: celestial {cfg.Galaxy}:{cfg.System}:{cfg.Position} ({cfg.Type}) not found on this account - nothing to do.");
+					SfLog(LogLevel.Warning, $"ShadowFleet: celestial {cfg.Galaxy}:{cfg.System}:{cfg.Position} ({cfg.Type}) not found on this account - nothing to do.");
 					nextMs = 10 * 60 * 1000;
 				} else {
 					nextMs = await Cycle(cfg, c);
 				}
 			} catch (Exception e) {
-				DoLog(LogLevel.Warning, $"ShadowFleet failed: {e.Message}");
+				SfLog(LogLevel.Warning, $"ShadowFleet failed: {e.Message}");
 			}
 			ChangeWorkerPeriod(Math.Max(5000, nextMs));
 		}
@@ -129,7 +134,7 @@ namespace Tbot.Workers {
 				_myFleetId = 0;
 				_recallCancelled = false;
 				_nextLaunchUtc = nowUtc.AddSeconds(Rnd.Next(cfg.PauseMinSeconds, cfg.PauseMaxSeconds + 1));
-				DoLog(LogLevel.Information, $"ShadowFleet: fleet is home again, next flight in {(int) (_nextLaunchUtc - nowUtc).TotalSeconds} s.");
+				SfLog(LogLevel.Information, $"ShadowFleet: fleet is home again, next flight in {(int) (_nextLaunchUtc - nowUtc).TotalSeconds} s.");
 			}
 			if (nowUtc < _nextLaunchUtc)
 				return Ms((long) (_nextLaunchUtc - nowUtc).TotalSeconds + 1);
@@ -138,12 +143,12 @@ namespace Tbot.Workers {
 			TimeSpan tod = gameNow.TimeOfDay;
 			if (!ShadowFleetLogic.InWindow(tod, cfg.WindowFrom, cfg.WindowTo)) {
 				long toStart = ShadowFleetLogic.SecondsToWindowStart(tod, cfg.WindowFrom, cfg.WindowTo);
-				DoLog(LogLevel.Information, $"ShadowFleet: outside the time window {cfg.WindowFrom}-{cfg.WindowTo}, next start in {toStart / 60} min.");
+				SfLog(LogLevel.Information, $"ShadowFleet: outside the time window {cfg.WindowFrom}-{cfg.WindowTo}, next start in {toStart / 60} min.");
 				return Ms(toStart + Rnd.Next(5, 60));
 			}
 			long total = ShadowFleetLogic.FlightSeconds(cfg.MinBackInMinutes, cfg.MaxBackInMinutes, ShadowFleetLogic.SecondsToWindowEnd(tod, cfg.WindowFrom, cfg.WindowTo), Rnd);
 			if (total <= 0) {
-				DoLog(LogLevel.Information, "ShadowFleet: the time window ends too soon for another flight.");
+				SfLog(LogLevel.Information, "ShadowFleet: the time window ends too soon for another flight.");
 				return Ms(Math.Max(120, ShadowFleetLogic.SecondsToWindowEnd(tod, cfg.WindowFrom, cfg.WindowTo) + 60));
 			}
 
@@ -151,21 +156,21 @@ namespace Tbot.Workers {
 				var attacks = await _ogameService.GetAttacks() ?? new List<AttackerFleet>();
 				var onMe = attacks.Where(a => a != null && a.Destination != null && a.Destination.IsSame(c.Coordinate) && !a.IsOnlyProbes()).Select(a => (long) a.ArriveIn);
 				if (ShadowFleetLogic.AttackBlocks(onMe, total, 120)) {
-					DoLog(LogLevel.Warning, $"ShadowFleet: an attack on {c.Coordinate} arrives before the fleet would be back - not starting.");
+					SfLog(LogLevel.Warning, $"ShadowFleet: an attack on {c.Coordinate} arrives before the fleet would be back - not starting.");
 					return Ms(Rnd.Next(180, 300));
 				}
 			} catch (Exception e) {
-				DoLog(LogLevel.Debug, $"ShadowFleet: attack list not readable ({e.Message}) - going on.");
+				SfLog(LogLevel.Debug, $"ShadowFleet: attack list not readable ({e.Message}) - going on.");
 			}
 
 			c = await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
 			var pick = ShadowFleetLogic.PickShips(k => Enum.TryParse(k, true, out Buildables b) ? (c.Ships?.GetAmount(b) ?? 0) : 0, cfg.Ships);
 			if (pick.Count == 0) {
-				DoLog(LogLevel.Information, $"ShadowFleet: none of the chosen ships are on {c.Coordinate}.");
+				SfLog(LogLevel.Information, $"ShadowFleet: none of the chosen ships are on {c.Coordinate}.");
 				return Ms(Rnd.Next(300, 600));
 			}
 			if (!ShadowFleetLogic.CanHarvest(pick)) {
-				DoLog(LogLevel.Warning, "ShadowFleet: the harvest mission needs at least one Recycler (or Pathfinder) in the fleet - tick it in the ship list.");
+				SfLog(LogLevel.Warning, "ShadowFleet: the harvest mission needs at least one Recycler (or Pathfinder) in the fleet - tick it in the ship list.");
 				return Ms(600);
 			}
 			Ships ships = new Ships();
@@ -179,25 +184,25 @@ namespace Tbot.Workers {
 					_noDeutWarned = true;
 					await _tbotInstance.SendTelegramMessage($"ShadowFleet stopped: not enough deuterium on {c.Coordinate} for another flight (fuel {r.Fuel}). Put deuterium on the celestial; the flights go on by themselves.");
 				}
-				DoLog(LogLevel.Warning, $"ShadowFleet: not enough deuterium on {c.Coordinate} (needs {r.Fuel} per flight) - waiting.");
+				SfLog(LogLevel.Warning, $"ShadowFleet: not enough deuterium on {c.Coordinate} (needs {r.Fuel} per flight) - waiting.");
 				return Ms(Rnd.Next(600, 900));
 			}
 			_noDeutWarned = false;
 			if (r.FleetId <= 0) {
-				DoLog(LogLevel.Warning, $"ShadowFleet: no flight - {r.Problem}.");
+				SfLog(LogLevel.Warning, $"ShadowFleet: no flight - {r.Problem}.");
 				return Ms(Rnd.Next(240, 420));
 			}
 			_myFleetId = r.FleetId;
 			_recallCancelled = false;
 			_departUtc = DateTime.UtcNow;
 			_expectedBackUtc = DateTime.UtcNow.AddSeconds(r.RoundTripSeconds);
-			DoLog(LogLevel.Information, $"ShadowFleet: fleet {r.FleetId} -> {r.Debris}, recall at {r.RecallAt:HH:mm:ss}, home in about {r.RoundTripSeconds / 60} min. Fuel {r.Fuel}, cargo {r.Payload} deuterium, {r.FlightsPossible} flights left in stock.");
+			SfLog(LogLevel.Information, $"ShadowFleet: fleet {r.FleetId} -> {r.Debris}, recall at {r.RecallAt:HH:mm:ss}, home in about {r.RoundTripSeconds / 60} min. Fuel {r.Fuel}, cargo {r.Payload} deuterium, {r.FlightsPossible} flights left in stock.");
 
 			if (r.Level == DeutLevel.Last && !_lastWarned) {
 				_lastWarned = true;
 				await _tbotInstance.SendTelegramMessage($"ShadowFleet: deuterium for ONE more flight on {c.Coordinate}. Add deuterium or the flights stop.");
 			} else if (r.Level == DeutLevel.Low) {
-				DoLog(LogLevel.Warning, $"ShadowFleet: deuterium is running low - {r.FlightsPossible} flights left in stock.");
+				SfLog(LogLevel.Warning, $"ShadowFleet: deuterium is running low - {r.FlightsPossible} flights left in stock.");
 			} else if (r.Level == DeutLevel.Ok) {
 				_lastWarned = false;
 			}
@@ -215,7 +220,7 @@ namespace Tbot.Workers {
 					if (_expectedBackUtc <= impact.AddSeconds(-20)) return;
 					double flown = (DateTime.UtcNow - _departUtc).TotalSeconds;
 					if (DateTime.UtcNow.AddSeconds(flown + 15) > impact) {
-						DoLog(LogLevel.Warning, $"ShadowFleet: attack {a.ID} on {c.Coordinate} lands too soon - the fleet cannot be home in time.");
+						SfLog(LogLevel.Warning, $"ShadowFleet: attack {a.ID} on {c.Coordinate} lands too soon - the fleet cannot be home in time.");
 						_recallCancelled = true;
 						return;
 					}
@@ -226,14 +231,14 @@ namespace Tbot.Workers {
 					_fleetScheduler.CancelPendingRecall(_myFleetId);
 					_expectedBackUtc = DateTime.UtcNow.AddSeconds(flown + 15);
 					_recallCancelled = true;
-					DoLog(LogLevel.Warning, $"ShadowFleet: attack {a.ID} on {c.Coordinate} - fleet {_myFleetId} recalled, it is home in about {(int) flown} s (before impact).");
+					SfLog(LogLevel.Warning, $"ShadowFleet: attack {a.ID} on {c.Coordinate} - fleet {_myFleetId} recalled, it is home in about {(int) flown} s (before impact).");
 					_ = _tbotInstance.SendTelegramMessage($"ShadowFleet: attack on {c.Coordinate} - fleet {_myFleetId} is called home and will be there at impact.");
 					return;
 				}
 				if (impact <= _expectedBackUtc.AddSeconds(120)) {
 					_fleetScheduler.CancelPendingRecall(_myFleetId);
 					_recallCancelled = true;
-					DoLog(LogLevel.Warning, $"ShadowFleet: attack {a.ID} on {c.Coordinate} lands before the fleet would be back - recall cancelled, the fleet stays in the air.");
+					SfLog(LogLevel.Warning, $"ShadowFleet: attack {a.ID} on {c.Coordinate} lands before the fleet would be back - recall cancelled, the fleet stays in the air.");
 					_ = _tbotInstance.SendTelegramMessage($"ShadowFleet: attack on {c.Coordinate} - fleet {_myFleetId} stays in the air (recall cancelled).");
 					return;
 				}

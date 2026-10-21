@@ -42,6 +42,7 @@ namespace TBot.Ogame.Infrastructure {
 		Task<List<Fleet>> GetFleets();
 		Task<GalaxyInfo> GetGalaxyInfo(Coordinate coordinate);
 		Task<GalaxyInfo> GetGalaxyInfo(int galaxy, int system);
+		void SetGalaxyObserver(Action<GalaxyInfo> observer);
 		Task<LFBuildings> GetLFBuildings(Celestial celestial);
 		Task<LFTechs> GetLFTechs(Celestial celestial);
 		Task<ArtifactInventory> GetArtifactInventory(Celestial celestial);

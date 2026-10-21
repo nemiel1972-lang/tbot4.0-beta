@@ -163,7 +163,7 @@ namespace Tbot.Workers {
 		private bool IsSuppressedByFastFarm() {
 			try {
 				Feature feature = GetFeature();
-				if (feature == Feature.FastFarm || feature == Feature.Defender || feature == Feature.SleepMode)
+				if (feature == Feature.FastFarm || feature == Feature.Defender || feature == Feature.SleepMode || feature == Feature.GalaxyCache)
 					return false;
 				var settings = _tbotInstance.InstanceSettings;
 				if (!SettingsService.IsSettingSet(settings, "FastFarm"))

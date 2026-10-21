@@ -37,13 +37,12 @@ namespace Tbot.Workers {
 		public DateTime Gesendet { get; set; }
 		public DateTime Ankunft { get; set; }
 		public int Versuche { get; set; }
+		public Dictionary<string, long> Schiffe { get; set; }
 	}
 
 	public class ReverseKonfig {
 		public bool Aktiv;
-		public double SpritFaktor = 2.0;
-		public bool AlleSchiffe = true;
-		public HashSet<Buildables> Behalten = new();
+		public double SpritFaktor = 1.1;
 		public int TtlMinuten = 120;
 		public double KapazitaetsFaktor = 1.1;
 	}
@@ -65,21 +64,16 @@ namespace Tbot.Workers {
 					k.Aktiv = (bool) r.Active;
 				if (SettingsService.IsSettingSet(r, "ReturnFuelFactor"))
 					k.SpritFaktor = Math.Max(1.0, (double) r.ReturnFuelFactor);
-				if (SettingsService.IsSettingSet(r, "ReturnAllShips"))
-					k.AlleSchiffe = (bool) r.ReturnAllShips;
 				if (SettingsService.IsSettingSet(r, "PendingTtlMinutes"))
 					k.TtlMinuten = Math.Max(5, (int) r.PendingTtlMinutes);
-				if (SettingsService.IsSettingSet(r, "OutboundCapacityFactor"))
-					k.KapazitaetsFaktor = Math.Max(1.0, (double) r.OutboundCapacityFactor);
-				if (SettingsService.IsSettingSet(r, "KeepShips")) {
-					foreach (var eintrag in r.KeepShips) {
-						if (Enum.TryParse<Buildables>((string) eintrag, true, out Buildables typ))
-							k.Behalten.Add(typ);
-					}
-				}
-			} catch (Exception) {
+
+			} catch (Exception ex) {
 				k.Aktiv = false;
+				inst?.log(LogLevel.Error, LogSender.FleetScheduler,
+					$"Reverse-Repatriate: config read failed; feature disabled for this cycle. Exception: {ex}");
 			}
+			inst?.log(LogLevel.Debug, LogSender.FleetScheduler,
+				$"Reverse-Repatriate: config active={k.Aktiv}, fuelFactor={k.SpritFaktor}, capacityFactor={k.KapazitaetsFaktor}, ttl={k.TtlMinuten}m.");
 			return k;
 		}
 
@@ -103,7 +97,9 @@ namespace Tbot.Workers {
 					_pfad = pfad;
 					try {
 						_eintraege = File.Exists(pfad) ? (JsonSerializer.Deserialize<List<ReverseEintrag>>(File.ReadAllText(pfad)) ?? new List<ReverseEintrag>()) : new List<ReverseEintrag>();
-					} catch (Exception) {
+					} catch (Exception ex) {
+						inst?.log(LogLevel.Warning, LogSender.FleetScheduler,
+							$"Reverse-Repatriate: loading pending file '{pfad}' failed: {ex}");
 						_eintraege = new List<ReverseEintrag>();
 					}
 				}
@@ -116,7 +112,9 @@ namespace Tbot.Workers {
 				lock (_lock) {
 					AtomicFile.WriteAllText(_pfad, JsonSerializer.Serialize(_eintraege, new JsonSerializerOptions { WriteIndented = true }));
 				}
-			} catch (Exception) {
+			} catch (Exception ex) {
+				inst?.log(LogLevel.Error, LogSender.FleetScheduler,
+					$"Reverse-Repatriate: saving pending file '{_pfad ?? "(unset)"}' failed: {ex}");
 			}
 		}
 
@@ -180,54 +178,6 @@ namespace Tbot.Workers {
 				return 0;
 			long wunsch = (long) Math.Ceiling((decimal) spritRueckflug * (decimal) Math.Max(1.0, faktor));
 			return Math.Max(0L, Math.Min(wunsch, Math.Min(Math.Max(0L, laderaum), Math.Max(0L, heimatFrei))));
-		}
-
-		internal static Dictionary<Buildables, long> KuerzeAufSprit(Dictionary<Buildables, long> alle, ISet<Buildables> transporter, long budget, Func<Dictionary<Buildables, long>, long> spritFuer, Func<Buildables, long> einzelSprit) {
-			if (alle == null || alle.Count == 0)
-				return null;
-			var aktuell = alle.Where(p => p.Value > 0).ToDictionary(p => p.Key, p => p.Value);
-			if (aktuell.Count == 0)
-				return null;
-			if (spritFuer(aktuell) <= budget)
-				return aktuell;
-
-			foreach (Buildables typ in aktuell.Keys.Where(t => !transporter.Contains(t)).OrderByDescending(t => einzelSprit(t)).ToList()) {
-				long original = aktuell[typ];
-				aktuell.Remove(typ);
-				if (aktuell.Count == 0)
-					continue;
-				if (spritFuer(aktuell) <= budget) {
-					long lo = 0, hi = original;
-					while (lo < hi) {
-						long mid = (lo + hi + 1) / 2;
-						var test = new Dictionary<Buildables, long>(aktuell) { [typ] = mid };
-						if (spritFuer(test) <= budget)
-							lo = mid;
-						else
-							hi = mid - 1;
-					}
-					if (lo > 0)
-						aktuell[typ] = lo;
-					return aktuell;
-				}
-			}
-
-			var basis = aktuell.Where(p => transporter.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value);
-			if (basis.Count == 0)
-				return null;
-			Dictionary<Buildables, long> best = null;
-			double unten = 0.0, oben = 1.0;
-			for (int i = 0; i < 30; i++) {
-				double mitte = (unten + oben) / 2.0;
-				var kandidat = basis.Select(p => new KeyValuePair<Buildables, long>(p.Key, (long) Math.Floor(p.Value * mitte))).Where(p => p.Value > 0).ToDictionary(p => p.Key, p => p.Value);
-				if (kandidat.Count > 0 && spritFuer(kandidat) <= budget) {
-					best = kandidat;
-					unten = mitte;
-				} else {
-					oben = mitte;
-				}
-			}
-			return best;
 		}
 
 
@@ -336,7 +286,7 @@ namespace Tbot.Workers {
 		}
 
 
-		public static async Task<ReverseStatus> RueckflugAsync(ITBotMain inst, ICalculationService calc, ITBotOgamedBridge bridge, ReverseHaken h, ReverseKonfig k, Celestial c, Celestial heimat, Buildables bevorzugt, bool aktualisieren = true) {
+		public static async Task<ReverseStatus> RueckflugAsync(ITBotMain inst, ICalculationService calc, ITBotOgamedBridge bridge, ReverseHaken h, ReverseKonfig k, Celestial c, Celestial heimat, Buildables bevorzugt, bool aktualisieren = true, Dictionary<string, long> vorgabe = null) {
 			try {
 				if (aktualisieren) {
 					c = await bridge.UpdatePlanet(c, UpdateTypes.Resources);
@@ -344,46 +294,38 @@ namespace Tbot.Workers {
 					c = await bridge.UpdatePlanet(c, UpdateTypes.LFBonuses);
 				}
 
-				HashSet<Buildables> transporter = new(h.Kette(bevorzugt));
-				Dictionary<Buildables, long> alle = Zaehle(c.Ships.GetMovableShips());
-				foreach (Buildables behalten in k.Behalten)
-					alle.Remove(behalten);
-				if (!k.AlleSchiffe) {
-					foreach (Buildables typ in alle.Keys.Where(t => !transporter.Contains(t)).ToList())
-						alle.Remove(typ);
+				Dictionary<Buildables, long> vorhanden = Zaehle(c.Ships.GetMovableShips());
+				Dictionary<Buildables, long> alle = new();
+				if (vorgabe != null && vorgabe.Count > 0) {
+					foreach (var p in vorgabe) {
+						if (Enum.TryParse<Buildables>(p.Key, out Buildables typ) && vorhanden.TryGetValue(typ, out long da) && da > 0)
+							alle[typ] = Math.Min(p.Value, da);
+					}
+				} else {
+					HashSet<Buildables> transporter = new(h.Kette(bevorzugt));
+					foreach (var p in vorhanden.Where(p => transporter.Contains(p.Key)))
+						alle[p.Key] = p.Value;
 				}
 				if (alle.Count == 0) {
-					Log(inst, LogLevel.Information, $"{c.ToString()}: no ships to fly home.");
+					Log(inst, LogLevel.Information, $"{c.ToString()}: none of the ships that flew out lie there - nothing to fly home.");
 					return ReverseStatus.KeineSchiffe;
 				}
 
 				Resources payload = BerechneNutzlast(inst, c);
 				long budget = FreiesDeuterium(inst, c);
+				Log(inst, LogLevel.Debug, $"{c}: return planning: ships=[{string.Join(", ", alle.Select(p => $"{p.Value} {p.Key}"))}], payload M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}, freeDeut={budget:N0}, home={heimat}.");
 
-				Func<Buildables, long> einzel = t => {
-					try {
-						Ships eins = new();
-						eins.Add(t, 1);
-						return (long) Vorhersage(inst, calc, c, heimat.Coordinate, eins).Fuel;
-					} catch (Exception) {
-						return 0;
-					}
-				};
-				Func<Dictionary<Buildables, long>, long> spritFuer = d => (long) Vorhersage(inst, calc, c, heimat.Coordinate, ZuSchiffen(d)).Fuel;
-
-				var gewaehlt = KuerzeAufSprit(alle, transporter, budget, spritFuer, einzel);
-				if (gewaehlt == null) {
-					Log(inst, LogLevel.Warning, $"{c.ToString()}: not enough deuterium for the return leg (free {budget:N0}, needed {spritFuer(alle):N0}) - ships stay, next attempt follows.");
+				Ships schiffe = ZuSchiffen(alle);
+				long sprit = (long) Vorhersage(inst, calc, c, heimat.Coordinate, schiffe).Fuel;
+				if (sprit > budget) {
+					Log(inst, LogLevel.Warning, $"{c.ToString()}: not enough deuterium for the return leg (free {budget:N0}, needed {sprit:N0}) - ships stay, next attempt follows.");
 					return ReverseStatus.Wartet;
 				}
-				if (gewaehlt.Count != alle.Count || gewaehlt.Any(p => alle[p.Key] != p.Value))
-					Log(inst, LogLevel.Information, $"{c.ToString()}: return fleet trimmed for fuel to {string.Join(", ", gewaehlt.Select(p => p.Value.ToString("N0") + " " + p.Key))} (free deuterium {budget:N0}).");
-
-				Ships schiffe = ZuSchiffen(gewaehlt);
-				long sprit = (long) Vorhersage(inst, calc, c, heimat.Coordinate, schiffe).Fuel;
+				var gewaehlt = alle;
 				payload.Deuterium = Math.Min(payload.Deuterium, Math.Max(0L, budget - sprit));
 				payload = calc.CalcMaxTransportableResources(schiffe, payload, inst.UserData.researches.HyperspaceTechnology, inst.UserData.serverData, c.LFBonuses, inst.UserData.userInfo.Class, inst.UserData.serverData.ProbeCargo);
 
+				Log(inst, LogLevel.Debug, $"{c}: sending return leg to {heimat}: ships=[{string.Join(", ", gewaehlt.Select(p => $"{p.Value} {p.Key}"))}], fuel={sprit:N0}, cargo M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}.");
 				int id = await h.Senden(c, schiffe, heimat.Coordinate, Missions.Deploy, Speeds.HundredPercent, payload, false);
 				if (id == (int) SendFleetCode.NotEnoughSlots && inst.UserData.slots != null && inst.UserData.slots.Free > 0)
 					id = await h.Senden(c, schiffe, heimat.Coordinate, Missions.Deploy, Speeds.HundredPercent, payload, true);
@@ -398,7 +340,7 @@ namespace Tbot.Workers {
 				Log(inst, LogLevel.Warning, $"{c.ToString()}: return leg failed (code {id}) - see the preceding 'Unable to send fleet' line for the reason.");
 				return ReverseStatus.NichtMoeglich;
 			} catch (Exception e) {
-				Log(inst, LogLevel.Warning, $"Return leg from {c?.ToString()} failed: {e.Message}");
+				Log(inst, LogLevel.Warning, $"Return leg from {c?.ToString()} failed: {e}");
 				return ReverseStatus.NichtMoeglich;
 			}
 		}
@@ -407,11 +349,16 @@ namespace Tbot.Workers {
 		public static async Task<ReverseStatus> StarteAbholungAsync(ITBotMain inst, ICalculationService calc, ITBotOgamedBridge bridge, ReverseHaken h, Celestial c, Coordinate heimatKoordinate, Resources payload, Buildables bevorzugt) {
 			try {
 				ReverseKonfig k = LiesKonfig(inst);
-				if (!k.Aktiv)
+				if (!k.Aktiv) {
+					Log(inst, LogLevel.Debug, $"{c}: reverse pickup skipped because Reverse.Active is false.");
 					return ReverseStatus.NichtMoeglich;
+				}
+				Log(inst, LogLevel.Debug, $"{c}: reverse pickup requested; payload M={payload?.Metal ?? 0:N0}/C={payload?.Crystal ?? 0:N0}/D={payload?.Deuterium ?? 0:N0}, preferred ship={bevorzugt}, home coordinate={heimatKoordinate}.");
 				Celestial heimat = inst.UserData.celestials.ToList().FirstOrDefault(x => x.Coordinate.IsSame(heimatKoordinate));
-				if (heimat == null)
+				if (heimat == null) {
+					Log(inst, LogLevel.Warning, $"{c}: reverse pickup cannot resolve home celestial at {heimatKoordinate}; falling back to classic path.");
 					return ReverseStatus.NichtMoeglich;
+				}
 
 				c = await bridge.UpdatePlanet(c, UpdateTypes.LFBonuses);
 				List<Buildables> kette = h.Kette(bevorzugt);
@@ -424,10 +371,11 @@ namespace Tbot.Workers {
 				long kapDort = dort.HasMovableFleet() ? Kapazitaet(inst, calc, c, dort) : 0;
 				long gesamt = payload.Metal + payload.Crystal + payload.Deuterium;
 				long fehlt = FehlendeKapazitaet(gesamt, k.KapazitaetsFaktor, kapDort);
+				Log(inst, LogLevel.Debug, $"{c}: capacity analysis: payload={gesamt:N0}, local transporter capacity={kapDort:N0}, factor={k.KapazitaetsFaktor}, missing capacity={fehlt:N0}, home={heimat}.");
 
 				if (fehlt <= 0) {
 					Log(inst, LogLevel.Information, $"{c.ToString()}: enough transporters on site (cargo space {kapDort:N0} for {gesamt:N0}) - return leg without outbound leg.");
-					return await RueckflugAsync(inst, calc, bridge, h, k, c, heimat, bevorzugt, false);
+					return await RueckflugAsync(inst, calc, bridge, h, k, c, heimat, bevorzugt, false, Zaehle(dort).ToDictionary(p => p.Key.ToString(), p => p.Value));
 				}
 
 				if (TransportLimitErreicht(inst, out string limitText)) {
@@ -445,16 +393,7 @@ namespace Tbot.Workers {
 					return ReverseStatus.NichtMoeglich;
 				}
 
-				var erwartet = Zaehle(c.Ships.GetMovableShips());
-				foreach (var p in Zaehle(hin))
-					erwartet[p.Key] = (erwartet.ContainsKey(p.Key) ? erwartet[p.Key] : 0) + p.Value;
-				foreach (Buildables behalten in k.Behalten)
-					erwartet.Remove(behalten);
-				if (!k.AlleSchiffe) {
-					var tr = new HashSet<Buildables>(kette);
-					foreach (Buildables typ in erwartet.Keys.Where(t => !tr.Contains(t)).ToList())
-						erwartet.Remove(typ);
-				}
+				var erwartet = Zaehle(hin);
 				long spritRueck = (long) Vorhersage(inst, calc, c, heimat.Coordinate, ZuSchiffen(erwartet)).Fuel;
 
 				long spritHin = (long) Vorhersage(inst, calc, heimat, c.Coordinate, hin).Fuel;
@@ -462,6 +401,7 @@ namespace Tbot.Workers {
 				long heimatFrei = FreiesDeuterium(inst, heimat) - spritHin;
 				long zuladung = SpritZuladung(spritRueck, k.SpritFaktor, laderaumHin, heimatFrei);
 				Resources fracht = new Resources(0, 0, zuladung);
+				Log(inst, LogLevel.Debug, $"{c}: outbound planning: ships=[{string.Join(", ", Zaehle(hin).Select(p => $"{p.Value} {p.Key}"))}], outboundFuel={spritHin:N0}, returnFuelEstimate={spritRueck:N0}, homeFreeDeutAfterOutboundFuel={heimatFrei:N0}, transporterCapacity={laderaumHin:N0}, deutLoaded={zuladung:N0}.");
 
 				int id = await h.Senden(heimat, hin, c.Coordinate, Missions.Deploy, Speeds.HundredPercent, fracht, false);
 				if (id == (int) SendFleetCode.NotEnoughSlots || id == (int) SendFleetCode.AfterSleepTime) {
@@ -487,7 +427,8 @@ namespace Tbot.Workers {
 					FlottenId = id,
 					Gesendet = DateTime.UtcNow,
 					Ankunft = DateTime.UtcNow.AddSeconds(sekunden),
-					Versuche = 0
+					Versuche = 0,
+					Schiffe = Zaehle(hin).ToDictionary(p => p.Key.ToString(), p => p.Value)
 				};
 				var liste = Lade(inst);
 				lock (_lock) {
@@ -497,7 +438,7 @@ namespace Tbot.Workers {
 				Log(inst, LogLevel.Information, $"Outbound leg {hin} (+{zuladung:N0} deuterium for the return leg, estimated need {spritRueck:N0}) to {c.ToString()} started, arrival in {sekunden}s - return leg follows on arrival.");
 				return ReverseStatus.Gesendet;
 			} catch (Exception e) {
-				Log(inst, LogLevel.Warning, $"Starting the pickup from {c?.ToString()} failed: {e.Message} - classic path.");
+				Log(inst, LogLevel.Warning, $"Starting the pickup from {c?.ToString()} failed: {e} - classic path.");
 				return ReverseStatus.NichtMoeglich;
 			}
 		}
@@ -510,22 +451,29 @@ namespace Tbot.Workers {
 					return;
 				DateTime jetzt = DateTime.UtcNow;
 				var flottenIds = new HashSet<int>(inst.UserData.fleets.ToList().Select(f => f.ID));
-				foreach (ReverseEintrag e in Schnappschuss(inst)) {
+				var offene = Schnappschuss(inst);
+				Log(inst, LogLevel.Debug, $"Pending queue check: {offene.Count} entry/entries; active fleet IDs=[{string.Join(",", flottenIds)}].");
+				foreach (ReverseEintrag e in offene) {
+					Log(inst, LogLevel.Debug, $"Pending entry: celestial={e.CelestialId}, home={e.HeimatId}, fleet={e.FlottenId}, sent={e.Gesendet:O}, estimated arrival={e.Ankunft:O}, attempts={e.Versuche}.");
 					if (jetzt > e.Gesendet.AddMinutes(k.TtlMinuten)) {
 						Log(inst, LogLevel.Warning, $"Pickup (celestial {e.CelestialId}, fleet {e.FlottenId}) dropped after {k.TtlMinuten} min. If ships still lie there, the next repatriation picks them up.");
 						Entferne(inst, e);
 						continue;
 					}
-					if (flottenIds.Contains(e.FlottenId) && jetzt < e.Ankunft.AddMinutes(10))
+					if (flottenIds.Contains(e.FlottenId) && jetzt < e.Ankunft.AddMinutes(10)) {
+						Log(inst, LogLevel.Debug, $"Pending entry fleet {e.FlottenId} is still active and arrival grace period has not elapsed; waiting.");
 						continue;
+					}
 
 					Celestial c = FindeCelestial(inst, e.CelestialId);
 					Celestial heimat = FindeCelestial(inst, e.HeimatId);
 					if (c == null || heimat == null) {
+						Log(inst, LogLevel.Warning, $"Pending entry fleet {e.FlottenId} cannot resolve celestial (targetFound={c != null}, homeFound={heimat != null}); removing entry.");
 						Entferne(inst, e);
 						continue;
 					}
-					ReverseStatus st = await RueckflugAsync(inst, calc, bridge, h, k, c, heimat, bevorzugt);
+					ReverseStatus st = await RueckflugAsync(inst, calc, bridge, h, k, c, heimat, bevorzugt, true, e.Schiffe);
+					Log(inst, st == ReverseStatus.NichtMoeglich ? LogLevel.Warning : LogLevel.Debug, $"Pending entry fleet {e.FlottenId} processed with status {st}.");
 					if (st == ReverseStatus.Gesendet) {
 						Entferne(inst, e);
 					} else if (st == ReverseStatus.Wartet) {
@@ -540,7 +488,7 @@ namespace Tbot.Workers {
 					}
 				}
 			} catch (Exception ex) {
-				Log(inst, LogLevel.Warning, $"Processing pending pickups failed: {ex.Message}");
+				Log(inst, LogLevel.Warning, $"Processing pending pickups failed: {ex}");
 			}
 		}
 	}

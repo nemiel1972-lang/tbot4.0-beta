@@ -33,6 +33,7 @@ namespace TBot.Common.Logging {
 		FastFarm,
 #endif
 		AutoDiscovery,
+		GalaxyCache,
 		Telegram
 	}
 }

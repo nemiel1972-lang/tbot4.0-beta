@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TBot.Ogame.Infrastructure.Enums;
 
 namespace Tbot.Services {
 	public class BotPauseConfig {
@@ -8,6 +9,8 @@ namespace Tbot.Services {
 		public int DurationMinutes = 15;
 		public int RecallMarginMinutes = 2;
 		public int MaxDurationMinutes = 120;
+		public bool StopDefender = false;
+		public int AttackMarginMinutes = 15;
 	}
 
 	public class PendingRecall {
@@ -33,6 +36,31 @@ namespace Tbot.Services {
 				.Where(r => r != null && r.At >= oldest && r.At <= limit)
 				.OrderBy(r => r.At)
 				.FirstOrDefault();
+		}
+
+		public static int? FindBlockingAttackSeconds(IEnumerable<int> arriveInSeconds, int minutes, int attackMarginMinutes, bool stopDefender) {
+			if (arriveInSeconds == null)
+				return null;
+			int limit = (Math.Max(0, attackMarginMinutes) + (stopDefender ? Math.Max(1, minutes) : 0)) * 60;
+			var hits = arriveInSeconds.Where(s => s > 0 && s <= limit).OrderBy(s => s).ToList();
+			return hits.Count == 0 ? (int?) null : hits[0];
+		}
+
+		public static bool BlocksMission(Missions m) {
+			switch (m) {
+				case Missions.Spy:
+				case Missions.Attack:
+				case Missions.FederalAttack:
+				case Missions.Expedition:
+				case Missions.Colonize:
+				case Missions.Discovery:
+				case Missions.Harvest:
+				case Missions.Destroy:
+				case Missions.MissileAttack:
+					return true;
+				default:
+					return false;
+			}
 		}
 
 		public static string RejectionText(PendingRecall r, DateTime gameNow) {

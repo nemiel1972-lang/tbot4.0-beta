@@ -63,5 +63,24 @@ namespace TBot.Tests {
 		public void MaxPossibleMinutes_ohne_Rueckruf_ist_unbegrenzt() {
 			Assert.Equal(int.MaxValue, BotPause.MaxPossibleMinutes(new List<PendingRecall>(), Jetzt, 2));
 		}
-	}
+	
+		[Fact]
+		public void BlockingAttack_UsesMarginOnly_WhenDefenderRuns() {
+			Assert.Equal(600, BotPause.FindBlockingAttackSeconds(new[] { 600, 5000 }, 15, 15, false));
+			Assert.Null(BotPause.FindBlockingAttackSeconds(new[] { 1000 }, 15, 15, false));
+		}
+
+		[Fact]
+		public void BlockingAttack_AddsPauseLength_WhenDefenderStops() {
+			Assert.Equal(1500, BotPause.FindBlockingAttackSeconds(new[] { 1500 }, 15, 15, true));
+			Assert.Null(BotPause.FindBlockingAttackSeconds(new[] { 1900 }, 15, 15, true));
+			Assert.Null(BotPause.FindBlockingAttackSeconds(new[] { -5, 0 }, 15, 15, true));
+		}
+
+		[Fact]
+		public void BlocksMission_Spy_NotTransport() {
+			Assert.True(BotPause.BlocksMission(TBot.Ogame.Infrastructure.Enums.Missions.Spy));
+			Assert.False(BotPause.BlocksMission(TBot.Ogame.Infrastructure.Enums.Missions.Transport));
+		}
+}
 }

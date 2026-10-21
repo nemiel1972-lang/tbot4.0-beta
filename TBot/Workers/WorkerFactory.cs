@@ -60,6 +60,7 @@ namespace Tbot.Workers {
 				Feature.BrainKeepBoosters => new KeepBoostersWorker(tbotMainInstance, _ogameService, tbotOgameBridge, _calculationService),
 				Feature.AsteroidHunt => new AsteroidHuntWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
 				Feature.ShadowFleet => new ShadowFleetWorker(tbotMainInstance, _ogameService, _fleetScheduler, tbotOgameBridge),
+				Feature.GalaxyCache => new GalaxyCacheWorker(tbotMainInstance, _ogameService, tbotOgameBridge),
 				_ => null
 			};
 

@@ -334,6 +334,21 @@ namespace Tbot.Services {
 			log(LogLevel.Information, LogSender.Tbot, $"Player rank: {userData.userInfo.Rank}");
 			log(LogLevel.Information, LogSender.Tbot, $"Player points: {userData.userInfo.Points}");
 			log(LogLevel.Information, LogSender.Tbot, $"Player honour points: {userData.userInfo.HonourPoints}");
+			ZeigeUpdateMeldung();
+		}
+
+		private void ZeigeUpdateMeldung() {
+			try {
+				if (SettingsService.IsSettingSet(InstanceSettings.General, "ShowUpdateNotes") && !(bool) InstanceSettings.General.ShowUpdateNotes)
+					return;
+				var notiz = Tbot.Common.Settings.WhatsNew.ClaimBotNotice(Tbot.Common.Settings.UiLanguage.Read());
+				if (notiz == null)
+					return;
+				log(LogLevel.Information, LogSender.Main, notiz.AsText());
+				_ = SendTelegramMessage(notiz.AsText());
+			} catch (Exception e) {
+				log(LogLevel.Debug, LogSender.Tbot, $"Update notice failed: {e.Message}");
+			}
 		}
 
 		public async Task Init(string settingPath,
@@ -523,7 +538,7 @@ namespace Tbot.Services {
 			if (feat == Feature.SleepMode) {
 				return;
 			}
-			if (_pauseActive && feat != Feature.Defender) {
+			if (_pauseActive && (feat != Feature.Defender || _pauseStopsDefender)) {
 				lock (_pauseSync) {
 					_pauseStoppedFeatures.Add(feat);
 				}
@@ -1377,6 +1392,8 @@ namespace Tbot.Services {
 		private readonly SemaphoreSlim _pauseLock = new SemaphoreSlim(1, 1);
 		private readonly object _pauseSync = new();
 		private volatile bool _pauseActive = false;
+		private volatile bool _pauseStopsDefender = false;
+		public bool IsBotPaused => _pauseActive;
 		private DateTime _pauseUntilUtc = DateTime.MinValue;
 		private readonly HashSet<Feature> _pauseStoppedFeatures = new();
 		private string _pauseRejectText = null;
@@ -1397,6 +1414,10 @@ namespace Tbot.Services {
 					c.RecallMarginMinutes = Math.Max(0, (int) p.RecallMarginMinutes);
 				if (SettingsService.IsSettingSet(p, "MaxDurationMinutes"))
 					c.MaxDurationMinutes = Math.Max(c.DurationMinutes, (int) p.MaxDurationMinutes);
+				if (SettingsService.IsSettingSet(p, "StopDefender"))
+					c.StopDefender = (bool) p.StopDefender;
+				if (SettingsService.IsSettingSet(p, "AttackMarginMinutes"))
+					c.AttackMarginMinutes = Math.Max(0, (int) p.AttackMarginMinutes);
 			} catch (Exception) {
 			}
 			if (c.MaxDurationMinutes < c.DurationMinutes)
@@ -1435,6 +1456,7 @@ namespace Tbot.Services {
 		}
 
 		private (bool Ok, string Text) PauseRejected(string text) {
+			Tbot.Workers.ExtraLog.Write(this, "BotPause", "Pause rejected: " + text);
 			_pauseRejectText = text;
 			_pauseRejectUtc = DateTime.UtcNow;
 			log(LogLevel.Warning, LogSender.Tbot, text);
@@ -1492,9 +1514,23 @@ namespace Tbot.Services {
 					return PauseRejected(text);
 				}
 
+				try {
+					List<AttackerFleet> angriffe;
+					try {
+						angriffe = await _ogameService.GetAttacks() ?? new List<AttackerFleet>();
+					} catch (Exception) {
+						angriffe = GetAttackSnapshot(out DateTime _);
+					}
+					int? naechster = BotPause.FindBlockingAttackSeconds(angriffe.Select(a => a.ArriveIn), min, cfg.AttackMarginMinutes, cfg.StopDefender);
+					if (naechster != null)
+						return PauseRejected($"Pause rejected: an attack arrives in {Math.Max(1, naechster.Value / 60)} min (limit {cfg.AttackMarginMinutes} min" + (cfg.StopDefender ? " plus the pause length, the Defender would be stopped" : "") + ").");
+				} catch (Exception) {
+				}
+
 				var toStop = Features.AllFeatures
-					.Where(f => f != Feature.Defender && f != Feature.SleepMode && IsFeatureRunning(f))
+					.Where(f => (f != Feature.Defender || cfg.StopDefender) && f != Feature.SleepMode && IsFeatureRunning(f))
 					.ToList();
+				_pauseStopsDefender = cfg.StopDefender;
 				lock (_pauseSync) {
 					_pauseStoppedFeatures.Clear();
 					foreach (var f in toStop)
@@ -1503,6 +1539,7 @@ namespace Tbot.Services {
 				_pauseActive = true;
 				_pauseUntilUtc = DateTime.UtcNow.AddMinutes(min);
 				_pauseRejectText = null;
+				Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause started: {min} min, stopDefender={cfg.StopDefender}, attackMargin={cfg.AttackMarginMinutes} min, stopping [{string.Join(", ", toStop)}].");
 				foreach (var feat in toStop) {
 					try {
 						await StopFeature(feat);
@@ -1511,9 +1548,9 @@ namespace Tbot.Services {
 					}
 				}
 				ArmPauseTimer(min);
-				log(LogLevel.Warning, LogSender.Tbot, $"Pause started: {toStop.Count} workers stopped for {min} min (Defender, SleepMode and recalls keep running). Ends on its own or with Resume.");
+				log(LogLevel.Warning, LogSender.Tbot, $"Pause started: {toStop.Count} workers stopped for {min} min ({(cfg.StopDefender ? "SleepMode and recalls" : "Defender, SleepMode and recalls")} keep running; scouting, attack and expedition missions are blocked). Ends on its own or with Resume.");
 				PublishStatusSoon();
-				return (true, $"Pause started for {min} min: {toStop.Count} workers stopped. Defender and recalls keep running.");
+				return (true, $"Pause started for {min} min: {toStop.Count} workers stopped. {(cfg.StopDefender ? "Recalls keep running" : "Defender and recalls keep running")}.");
 			} finally {
 				_pauseLock.Release();
 			}
@@ -1529,6 +1566,8 @@ namespace Tbot.Services {
 					timers.Remove("BotPauseTimer");
 				}
 				_pauseActive = false;
+				_pauseStopsDefender = false;
+				Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause ended ({reason}).");
 				List<Feature> toStart;
 				lock (_pauseSync) {
 					toStart = _pauseStoppedFeatures.ToList();

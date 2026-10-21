@@ -66,6 +66,31 @@ namespace TBot.WebUI.Controllers {
 			}
 		}
 
+		private List<LogEntry> GetLogsFromDevlog(DateTime logsDate) {
+			var result = new List<LogEntry>();
+			try {
+				var filePath = Path.Combine(Directory.GetCurrentDirectory(), "devlog", $"TBot-debug-{logsDate:yyyyMMdd}.log");
+				if (!System.IO.File.Exists(filePath))
+					return result;
+				using var fs = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+				using var sr = new StreamReader(fs, Encoding.UTF8);
+				string line;
+				int i = 0;
+				while ((line = sr.ReadLine()) != null) {
+					if (line.Length == 0) continue;
+					var entry = new LogEntry { type = "Information", sender = "Developer", message = line, position = i++ };
+					if (line.Length > 24 && DateTime.TryParse(line.Substring(0, 23), CultureInfo.InvariantCulture, DateTimeStyles.None, out var t)) {
+						entry.datetime = t.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+						entry.message = line.Substring(24);
+					} else {
+						entry.datetime = logsDate.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+					}
+					result.Add(entry);
+				}
+			} catch { }
+			return result;
+		}
+
 		public async Task<IActionResult> Index(string date) {
 			var logsDate = DateTime.Now.Date;
 			if (!string.IsNullOrEmpty(date))
@@ -97,7 +122,8 @@ namespace TBot.WebUI.Controllers {
 			if (!string.IsNullOrEmpty(date))
 				DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out logsDate);
 
-			var jsonLogs = await GetLogsFromCSV(logsDate);
+			bool developer = string.Equals(logSender, "Developer", StringComparison.OrdinalIgnoreCase);
+			var jsonLogs = developer ? GetLogsFromDevlog(logsDate) : await GetLogsFromCSV(logsDate);
 			var jsonLogsQuery = jsonLogs.AsQueryable();
 
 			if (!string.IsNullOrEmpty(search)) {

@@ -310,8 +310,19 @@ namespace Tbot.Services {
 			} else {
 				await SendTyping(ct);
 				var message = update.Message;
+				if (message != null && long.TryParse(Channel, out long erlaubterChat) && message.Chat.Id != erlaubterChat) {
+					_logger.WriteLog(LogLevel.Warning, LogSender.Telegram, $"Telegram message from foreign chat {message.Chat.Id} (user {message.From?.Id}) ignored.");
+					return;
+				}
 				if (message?.Text != null)
 					message.Text = System.Text.RegularExpressions.Regex.Replace(message.Text.Trim(), @"[ \t]+", " ");
+				if (message?.Text != null && message.Text.StartsWith("/")) {
+					int leer = message.Text.IndexOf(' ');
+					string erstes = leer < 0 ? message.Text : message.Text.Substring(0, leer);
+					int at = erstes.IndexOf('@');
+					if (at > 0)
+						message.Text = erstes.Substring(0, at) + (leer < 0 ? "" : message.Text.Substring(leer));
+				}
 				var arg = "";
 				var test = "";
 				decimal speed;

@@ -470,11 +470,8 @@
             "Active": false,
             "Reverse": {
                 "Active": true,
-                "ReturnFuelFactor": 2,
-                "ReturnAllShips": true,
-                "KeepShips": [],
-                "PendingTtlMinutes": 120,
-                "OutboundCapacityFactor": 1.1
+                "ReturnFuelFactor": 1.1,
+                "PendingTtlMinutes": 120
             },
             "ExcludeMoons": true,
             "Target": [
@@ -815,11 +812,40 @@
             "Active": true,
             "DurationMinutes": 15,
             "RecallMarginMinutes": 2,
-            "MaxDurationMinutes": 120
+            "MaxDurationMinutes": 120,
+            "StopDefender": false,
+            "AttackMarginMinutes": 15
         },
         "DefenderRecheck": {
             "Active": false,
             "TimeoutSeconds": 4
+        },
+        "ExtraDebugLog": {
+            "Active": true,
+            "Repatriate": true,
+            "Ledger": true,
+            "BotPause": true,
+            "DefenderRecheck": true,
+            "FleetsaveSlot": true,
+            "MinePlanRanking": true,
+            "AsteroidHunt": true,
+            "ShadowFleet": true,
+            "GalaxyCache": true
+        },
+        "GalaxyCache": {
+            "Active": true,
+            "MaxAgeHours": 12,
+            "RangeSystems": 15,
+            "DelayMinSeconds": 20,
+            "DelayMaxSeconds": 45,
+            "UseInFastFarm": true,
+            "UseInColonize": true,
+            "Events": true,
+            "Telegram": true
+        },
+        "RepatriateLedgerHold": {
+            "Ignore": false,
+            "MinPercent": 30
         },
         "FleetsaveSlot": {
             "Active": true,

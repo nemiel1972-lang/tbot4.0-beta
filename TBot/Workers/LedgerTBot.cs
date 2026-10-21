@@ -284,17 +284,44 @@ namespace Tbot.Workers {
 			}
 		}
 
+		public static bool IgnoreExternal(ITBotMain inst) {
+			try {
+				var g = inst.InstanceSettings;
+				if (SettingsService.IsSettingSet(g, "Experimental") && SettingsService.IsSettingSet(g.Experimental, "RepatriateLedgerHold")) {
+					var r = g.Experimental.RepatriateLedgerHold;
+					return SettingsService.IsSettingSet(r, "Ignore") && (bool) r.Ignore;
+				}
+			} catch {
+			}
+			return false;
+		}
+
+		public static int ExternalMinPercent(ITBotMain inst) {
+			try {
+				var g = inst.InstanceSettings;
+				if (SettingsService.IsSettingSet(g, "Experimental") && SettingsService.IsSettingSet(g.Experimental, "RepatriateLedgerHold")) {
+					var r = g.Experimental.RepatriateLedgerHold;
+					if (SettingsService.IsSettingSet(r, "MinPercent"))
+						return Math.Max(0, Math.Min(100, (int) r.MinPercent));
+				}
+			} catch {
+			}
+			return 30;
+		}
+
 		public static Resources FreeForExternal(ITBotMain inst, Celestial c, out string heldText) {
 			heldText = "";
 			try {
-				if (!Enabled(inst) || c == null || c.Resources == null)
+				if (!Enabled(inst) || c == null || c.Resources == null || IgnoreExternal(inst))
 					return null;
 				string key = Key(inst);
-				if (!ResourceLedger.HasExternalHold(key, c.ID))
+				int minProzent = ExternalMinPercent(inst);
+				ExtraLog.Write(inst, "Ledger", $"FreeForExternal {c}: minPercent={minProzent}, claims: {ResourceLedger.DescribeExternal(key, c.ID, minProzent)}");
+				if (!ResourceLedger.HasExternalHold(key, c.ID, minProzent))
 					return null;
 				LedgerAmt live = Amt(c.Resources);
-				LedgerAmt free = ResourceLedger.AvailableExternal(key, c.ID, live, DateTime.UtcNow, Probe(inst), Logger(inst));
-				heldText = "held: " + Min0(live - free).ToString();
+				LedgerAmt free = ResourceLedger.AvailableExternal(key, c.ID, live, DateTime.UtcNow, Probe(inst), Logger(inst), minProzent);
+				heldText = "held: " + Min0(live - free).ToString() + " for " + ResourceLedger.DescribeHolders(key, c.ID, minProzent);
 				return Res(free);
 			} catch (Exception e) {
 				Warn(inst, "FreeForExternal failed (" + e.Message + ") - using live stock.");
@@ -315,10 +342,13 @@ namespace Tbot.Workers {
 				string key = Key(inst);
 				DateTime now = DateTime.UtcNow;
 				bool extern_ = ctxOwner == null;
-				if (extern_ ? !ResourceLedger.HasExternalHold(key, origin.ID) : !ResourceLedger.HasForeignClaims(key, origin.ID, owner, now))
+				if (extern_ && IgnoreExternal(inst))
+					return true;
+				int minProzent = extern_ ? ExternalMinPercent(inst) : 0;
+				if (extern_ ? !ResourceLedger.HasExternalHold(key, origin.ID, minProzent) : !ResourceLedger.HasForeignClaims(key, origin.ID, owner, now))
 					return true;
 				LedgerAmt free = extern_
-					? ResourceLedger.AvailableExternal(key, origin.ID, Amt(origin.Resources), now, Probe(inst), Logger(inst))
+					? ResourceLedger.AvailableExternal(key, origin.ID, Amt(origin.Resources), now, Probe(inst), Logger(inst), minProzent)
 					: ResourceLedger.Available(key, origin.ID, owner, Amt(origin.Resources), now, Probe(inst), Logger(inst));
 				long maxD = Math.Max(0, free.D - fuel);
 				bool fits = free.D >= fuel && payload.Metal <= free.M && payload.Crystal <= free.C && payload.Deuterium <= maxD;

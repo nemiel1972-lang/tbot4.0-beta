@@ -10,5 +10,10 @@ Die Seite zeigt sie mit 26x26 Pixel. Pro Tech wird in dieser Reihenfolge gesucht
        Humans 11201 ... 11218, Rock'tal 12201 ... 12218, Mechas 13201 ... 13218, Kaelesh 14201 ... 14218
 
 Ein Slot (z. B. MaxTechs11) zeigt die vier Techs mit gleicher Position (Humans-1, Rocktal-1, Mechas-1, Kaelesh-1).
-Fehlt eine Datei, bleibt der Platz leer. Die Bilder gehoeren OGame/Gameforge:
-nur lokal bzw. im privaten Repo ablegen, nicht ins oeffentliche Repo.
+Fehlt eine Datei, bleibt der Platz leer. Die Bilder stammen nicht von Gameforge (eigene/frei nutzbare Quelle).
+
+Erweiterung 21.10.2026 (Bilderpaket tech.zip):
+  <Rasse>-research-1..18-200px.jpg  Forschungen (ersetzt, jetzt alle 4 Rassen)
+  <Rasse>-building-1..12-200px.jpg  Lebensform-Gebaeude (neu)
+  <Rasse>-icon-200px.jpg            Rassen-Symbol (neu)
+  ui/                               Artefakt-Symbole, Lebensform-DNA/Boni/Setups (neu)

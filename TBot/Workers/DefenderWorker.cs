@@ -129,6 +129,7 @@ namespace Tbot.Workers {
 				Task<List<AttackerFleet>> fetch = _ogameService.GetAttacks().ContinueWith(t => t.Result?.ToList() ?? new List<AttackerFleet>());
 				if (await Task.WhenAny(fetch, Task.Delay(TimeSpan.FromSeconds(cfg.TimeoutSeconds))) != fetch) {
 					DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck timed out after {cfg.TimeoutSeconds}s - sending FleetSave as planned.");
+					ExtraLog.Write(_tbotInstance, "DefenderRecheck", $"{celestial}: recheck timed out after {cfg.TimeoutSeconds}s -> fleetsave as planned.");
 					return false;
 				}
 				DateTime fetchedUtc = DateTime.UtcNow;
@@ -140,6 +141,7 @@ namespace Tbot.Workers {
 						stillUnderAttack = check.Result;
 				}
 				RecheckAction action = DefenderRecheck.Evaluate(arriveIn, stillUnderAttack, fetchedUtc, pending.EarliestImpactUtc, safetyMargin, DateTime.UtcNow, out DateTime newImpactUtc);
+				ExtraLog.Write(_tbotInstance, "DefenderRecheck", $"{celestial}: recheck arriveIn=[{string.Join(",", arriveIn)}]s, stillUnderAttack={(stillUnderAttack?.ToString() ?? "unknown")}, plannedImpact={pending.EarliestImpactUtc:u}, margin={safetyMargin.TotalSeconds:F0}s -> {action} (new impact {newImpactUtc:u}).");
 				switch (action) {
 					case RecheckAction.Cancel:
 						DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck found no incoming attack - FleetSave skipped (attack recalled or already resolved).");
@@ -159,6 +161,7 @@ namespace Tbot.Workers {
 				}
 			} catch (Exception e) {
 				DoLog(LogLevel.Warning, $"{celestial.ToString()}: recheck failed ({e.Message}) - sending FleetSave as planned.");
+				ExtraLog.Write(_tbotInstance, "DefenderRecheck", $"{celestial}: recheck failed: {e}");
 				return false;
 			}
 		}

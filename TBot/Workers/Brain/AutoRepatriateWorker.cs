@@ -30,12 +30,15 @@ namespace Tbot.Workers.Brain {
 
 		protected override async Task Execute() {			
 			if (!_tbotInstance.UserData.isSleeping) {
+				DoLog(LogLevel.Debug, "AutoRepatriate worker cycle starting.");
 				var result = await _fleetScheduler.CollectImpl(false);
+				DoLog(result == RepatriateCode.Failure ? LogLevel.Warning : LogLevel.Debug, $"AutoRepatriate worker cycle finished with result={result}.");
 				if (result == RepatriateCode.Stop) {
 					DoLog(LogLevel.Information, $"Stopping feature.");
 					await EndExecution();
 				} else {
 					long interval = RandomizeHelper.CalcRandomInterval((int) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.CheckIntervalMin, (int) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.CheckIntervalMax);
+					DoLog(LogLevel.Debug, $"AutoRepatriate next interval baseline={interval}ms, result={result}.");
 					if (result == RepatriateCode.Delay) {
 						DoLog(LogLevel.Information, $"Delaying...");
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();

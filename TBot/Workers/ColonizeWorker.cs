@@ -16,6 +16,14 @@ using TBot.Ogame.Infrastructure;
 
 namespace Tbot.Workers {
 	public class ColonizeWorker : WorkerBase {
+		private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _gesperrteZiele = new();
+		private static readonly TimeSpan SperrDauer = TimeSpan.FromHours(12);
+
+		private string ZielKey(Coordinate c) => $"{_tbotInstance.InstanceAlias}|{c.Galaxy}:{c.System}:{c.Position}";
+
+		private bool IstGesperrt(Coordinate c) =>
+			_gesperrteZiele.TryGetValue(ZielKey(c), out var bis) && bis > DateTime.UtcNow;
+
 		private readonly IOgameService _ogameService;
 		private readonly IFleetScheduler _fleetScheduler;
 		private readonly ICalculationService _calculationService;
@@ -199,6 +207,12 @@ namespace Tbot.Workers {
 									if (_tbotInstance.UserData.celestials.Any(c => c.HasCoords(t))) {
 										continue;
 									}
+									if (IstGesperrt(t)) {
+										continue;
+									}
+									if (GalaxyCacheHub.KnownOccupied(_tbotInstance, t, GalaxyCacheConfig.Read(_tbotInstance).UseInColonize)) {
+										continue;
+									}
 									GalaxyInfo galaxy = await _ogameService.GetGalaxyInfo(t);
 									if (galaxy.Planets.Any(p => p != null && p.HasCoords(t))) {
 										continue;
@@ -253,6 +267,12 @@ namespace Tbot.Workers {
 										} else {
 											DoLog(LogLevel.Debug, "Send Colonize.");
 											var fleetId = await _fleetScheduler.SendFleet(origin, ships, target, Missions.Colonize, Speeds.HundredPercent);
+											if (fleetId == (int) SendFleetCode.TargetInvalid) {
+												_gesperrteZiele[ZielKey(target)] = DateTime.UtcNow + SperrDauer;
+												_tbotInstance.log(LogLevel.Information, LogSender.Colonize, $"Target {target} was refused by the server (e.g. reserved for a relocation) - skipped for {SperrDauer.TotalHours:0} h, trying the next target.");
+												interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
+												continue;
+											}
 											_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 											List<Fleet> orderedFleet = _tbotInstance.UserData.fleets
 												.Where(fleet => fleet.Mission == Missions.Colonize)

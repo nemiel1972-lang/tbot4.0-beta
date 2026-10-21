@@ -3,6 +3,94 @@
  "name": "Deutsch",
  "ui": {
   "exact": {
+   "Topic: galaxy cache": "Thema: Galaxie-Cache",
+   "Cache hits, background scans and detected events": "Cache-Treffer, Hintergrund-Scans und erkannte Ereignisse",
+   "Galaxy cache (shared galaxy scans)": "Galaxie-Cache (gemeinsame Galaxie-Scans)",
+   "Every galaxy scan of any worker is stored with a time stamp. FastFarm and Colonize read the cache first and only ask the server live when an entry is too old. A slow background scan keeps the systems around your planets fresh and reports new colonies and moves of other players.": "Jeder Galaxie-Scan eines beliebigen Workers wird mit Zeitstempel gespeichert. FastFarm und Kolonisieren lesen zuerst den Cache und fragen den Server nur live, wenn ein Eintrag zu alt ist. Ein langsamer Hintergrund-Scan hält die Systeme rund um deine Planeten frisch und meldet neue Kolonien und Umzüge anderer Spieler.",
+   "Use the galaxy cache": "Galaxie-Cache nutzen",
+   "Entry valid for (hours)": "Eintrag gültig für (Stunden)",
+   "Older entries are queried live again": "Ältere Einträge werden wieder live abgefragt",
+   "Background scan: systems around each planet": "Hintergrund-Scan: Systeme rund um jeden Planeten",
+   "0 = no background scan, only passive recording": "0 = kein Hintergrund-Scan, nur passives Speichern",
+   "Pause between background queries, from (seconds)": "Pause zwischen Hintergrund-Abfragen, von (Sekunden)",
+   "Pause between background queries, to (seconds)": "Pause zwischen Hintergrund-Abfragen, bis (Sekunden)",
+   "FastFarm reads the cache": "FastFarm liest den Cache",
+   "Colonize reads the cache": "Kolonisieren liest den Cache",
+   "Occupied positions are skipped without a live query; free ones are still checked live": "Besetzte Positionen werden ohne Live-Abfrage übersprungen; freie werden weiter live geprüft",
+   "Write detected events to the log": "Erkannte Ereignisse ins Log schreiben",
+   "New colony, planet gone, new moon, status change, move": "Neue Kolonie, Planet weg, neuer Mond, Statuswechsel, Umzug",
+   "Warn by Telegram / Discord": "Per Telegram / Discord warnen",
+   "For new colonies and moves of other players": "Bei neuen Kolonien und Umzügen anderer Spieler",
+   "Not in your config yet (the default is on). Add it to change the values.": "Noch nicht in deiner Konfiguration (Standard ist an). Füge sie hinzu, um die Werte zu ändern.",
+   "Galaxy cache settings": "Einstellungen des Galaxie-Caches",
+   "Topic: bot pause": "Thema: Bot-Pause",
+   "Topic: defender recheck": "Thema: Defender-Nachprüfung",
+   "Topic: fleetsave slot": "Thema: Fleetsave-Slot",
+   "Topic: mine plan ranking": "Thema: Minenplan-Rangliste",
+   "Topic: asteroid hunt": "Thema: Asteroidenjagd",
+   "Topic: shadow fleet": "Thema: Schattenflotte",
+   "Pause start/end, rejections and blocked missions": "Beginn und Ende der Pause, Ablehnungen und blockierte Flüge",
+   "Attack list before the fleetsave: times, decision": "Angriffsliste vor dem Fleetsave: Zeiten und Entscheidung",
+   "Every slot decision of SendFleet with the numbers": "Jede Slot-Entscheidung von SendFleet mit den Zahlen",
+   "Ranking mode and the top steps": "Berechnungsart und die besten Schritte",
+   "All asteroid hunt messages": "Alle Meldungen der Asteroidenjagd",
+   "All shadow fleet messages": "Alle Meldungen der Schattenflotte",
+   "Example: ": "Beispiel: ",
+   "HH:mm game time, empty = always. May cross midnight": "HH:mm Spielzeit, leer = immer. Darf über Mitternacht gehen",
+   "/collect moon skip": "/collect moon skip",
+   "0 % = every held amount is protected (old behavior), 100 % = only fully covered claims": "0 % = jeder gehaltene Bestand ist geschützt (altes Verhalten), 100 % = nur vollständig gedeckte Ansprüche",
+   "0 = all": "0 = alle",
+   "0 = no limit": "0 = keine Grenze",
+   "0 = unlimited (stops after the first find)": "0 = unbegrenzt (stoppt nach dem ersten Fund)",
+   "0.9 = 90 %": "0,9 = 90 %",
+   "1.1 = take 10 % more deuterium along than the return flight needs": "1,1 = 10 % mehr Deuterium mitnehmen, als der Rückflug braucht",
+   "10 = slowest and cheapest": "10 = am langsamsten und billigsten",
+   "Amount (0 = all)": "Menge (0 = alle)",
+   "An attack that arrives within this time blocks the pause": "Ein Angriff, der innerhalb dieser Zeit eintrifft, verhindert die Pause",
+   "Candidates, payload after ledger, send attempts and results": "Kandidaten, Ladung nach dem Ledger, Sendeversuche und Ergebnisse",
+   "Deuterium as cargo for": "Deuterium als Fracht für",
+   "Deuterium reserve needed. ": "Deuterium-Reserve nötig. ",
+   "Every flight burns fuel and the fleet carries deuterium for the chosen number of flights. Keep enough deuterium on the celestial; when it is used up the flights stop (a warning comes when only one flight is left).": "Jeder Flug verbraucht Treibstoff, und die Flotte nimmt Deuterium für die gewählte Anzahl Flüge mit. Halte genug Deuterium auf dem Himmelskörper; ist es aufgebraucht, enden die Flüge (eine Warnung kommt, wenn nur noch ein Flug möglich ist).",
+   "Every flight burns fuel; keep deuterium on the celestial.": "Jeder Flug verbraucht Treibstoff; halte Deuterium auf dem Himmelskörper.",
+   "Extra debug log (own file)": "Zusatz-Debuglog (eigene Datei)",
+   "Extra debug log settings": "Einstellungen Zusatz-Debuglog",
+   "Ignore the ledger completely": "Ledger komplett ignorieren",
+   "No pause before an attack": "Keine Pause vor einem Angriff",
+   "Not in your config yet - the default (30 %) applies. Add it to change that.": "Noch nicht in deiner Config – es gilt der Standard (30 %). Füge ihn hinzu, um das zu ändern.",
+   "Number of flights; limited by cargo space and stock": "Anzahl der Flüge; begrenzt durch Laderaum und Bestand",
+   "Off (default): no flight starts when an attack would land before the fleet is back, and a flying fleet stays in the air when an attack lands before its return. On (trap): the Defender does not send the shadow fleet away but still saves resources and all other ships; a flying shadow fleet is called home so that it is there when the attack lands. Sleep-time fleetsaves still send everything away.": "Aus (Standard): Es startet kein Flug, wenn ein Angriff vor der Rückkehr der Flotte einschlagen würde, und eine fliegende Flotte bleibt in der Luft, wenn ein Angriff vor ihrer Rückkehr einschlägt. An (Falle): Der Defender schickt die Schattenflotte nicht weg, sichert aber weiterhin Rohstoffe und alle anderen Schiffe; eine fliegende Schattenflotte wird nach Hause gerufen, damit sie beim Einschlag da ist. Schlaf-Fleetsaves schicken weiterhin alles weg.",
+   "Off (default): the Defender keeps watching. On: nothing runs; a known attack within the limit below plus the pause length blocks the pause": "Aus (Standard): Der Defender beobachtet weiter. An: Es läuft nichts; ein bekannter Angriff innerhalb der Grenze unten plus der Pausenlänge verhindert die Pause",
+   "On = ignore the guard and keep farming with low deuterium": "An = Schutz ignorieren und mit wenig Deuterium weiterfarmen",
+   "On: repatriate, reverse repatriate and /collect move all stock, whatever the build claims hold. Off (default): claims protect their stock as set below": "An: Repatriate, Reverse-Repatriate und /collect bewegen den gesamten Bestand, egal was die Bauansprüche halten. Aus (Standard): Ansprüche schützen ihren Bestand wie unten eingestellt",
+   "One flight lasts at least": "Ein Flug dauert mindestens",
+   "One flight lasts at most": "Ein Flug dauert höchstens",
+   "Out and back": "Hin und zurück",
+   "Pause at home, max": "Pause zu Hause, höchstens",
+   "Pause at home, min": "Pause zu Hause, mindestens",
+   "Payback = like AutoMine; Cheapest = lowest cost first; Npv = most gain over the horizon": "Payback = wie AutoMine; Cheapest = niedrigste Kosten zuerst; Npv = größter Gewinn über den Horizont",
+   "Planet or moon": "Planet oder Mond",
+   "Protect from this coverage": "Schützen ab dieser Deckung",
+   "Repatriate and the resource ledger": "Repatriate und das Ressourcen-Ledger",
+   "Repatriate ledger settings": "Ledger-Einstellungen für Repatriate",
+   "Shadow fleet": "Schattenflotte",
+   "Shadow fleet: Defender": "Schattenflotte: Defender",
+   "Shadow fleet: celestial and ships": "Schattenflotte: Himmelskörper und Schiffe",
+   "Shadow fleet: time": "Schattenflotte: Zeit",
+   "Stop the Defender during the pause too": "Defender während der Pause ebenfalls stoppen",
+   "The Pause button in the browser tile (or /pause in Telegram) stops all functions (the Defender only if you switch that on below) for a few minutes, and blocks spy, attack and expedition missions, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Pause-Knopf in der Browser-Kachel (oder /pause im Telegram) stoppt alle Funktionen (den Defender nur, wenn du das unten einschaltest) für einige Minuten und blockiert Spionage-, Angriffs- und Expeditionsflüge, damit nichts Neues startet, während du von Hand spielst. Nach der Zeit läuft der Bot von selbst weiter. Sie wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
+   "What it does: the chosen ships of ONE celestial fly in a loop on a recycle (harvest) mission at slow speed to the nearest debris field (up to 10 systems away). After half of the flight time the fleet is recalled and flies home, then after a short random pause the next flight starts. So the ships are almost never at home: a player who spies the celestial finds no fleet, and the fleet never stands still where an attack could hit it. It uses one fleet slot and the deuterium of that celestial. Safety: no flight starts when an attack would land before the fleet is back; a flying fleet is called home if it can still make it before the impact.": "So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt.",
+   "The fleet is away while the attacker looks and home when the attack lands": "Die Flotte ist weg, wenn der Angreifer schaut, und zu Hause, wenn der Angriff einschlägt",
+   "Tick the ships and enter the amount. At least one Recycler (or Pathfinder) is needed.": "Schiffe ankreuzen und Menge eintragen. Mindestens ein Recycler (oder Pathfinder) wird gebraucht.",
+   "Time limit: the fleet is home by then": "Zeitlimit: bis dahin ist die Flotte zu Hause",
+   "Time window from": "Zeitfenster ab",
+   "Time window to": "Zeitfenster bis",
+   "Topic: repatriate": "Thema: Repatriate",
+   "Topic: resource ledger": "Thema: Ressourcen-Ledger",
+   "Trap: Defender leaves the shadow fleet alone": "Falle: Defender lässt die Schattenflotte in Ruhe",
+   "Waiting build claims of the resource ledger hold the stock of a celestial. Far-away goals (for example a metal mine to 995 M) used to freeze the whole stock for days, so repatriate found nothing to move. A claim now only blocks repatriate and collect once it holds at least this percent of its total need.": "Wartende Bauansprüche des Ressourcen-Ledgers halten den Bestand eines Himmelskörpers. Weit entfernte Ziele (z. B. eine Metallmine auf 995 Mio) froren früher den ganzen Bestand tagelang ein, sodass Repatriate nichts zu bewegen fand. Ein Anspruch sperrt Repatriate und Collect jetzt erst, wenn er mindestens diesen Prozentsatz seines Gesamtbedarfs hält.",
+   "Which claims hold how much and which count for repatriate and collect": "Welche Ansprüche wie viel halten und welche für Repatriate und Collect zählen",
+   "Write the extra log": "Zusatz-Log schreiben",
+   "Writes extra diagnosis lines to devlog/TBot-debug-<date>.log (anonymized, safe to share), so the normal log stays small. Switch it on when a function does not send and you need to see why.": "Schreibt zusätzliche Diagnosezeilen in devlog/TBot-debug-<Datum>.log (anonymisiert, zum Weitergeben geeignet), damit das normale Log klein bleibt. Standardmäßig an; alte Dateien (über 7 Tage) werden automatisch gelöscht. Schalte es aus, wenn du es nicht brauchst.",
    "\" block found in the config, so nothing can be edited here.": "“-Block in der Config gefunden, hier kann also nichts bearbeitet werden.",
    "(without tech 18)": "(ohne Tech 18)",
    ") counts for finds.": ") zählt für Funde.",
@@ -30,6 +118,7 @@
    "Absolute cap for this ship type (empty = Max escort ships)": "Absolute Obergrenze für diesen Schiffstyp (leer = Max. Begleitschiffe)",
    "Add with default": "Mit Standardwert hinzufügen",
    "Added on top of the expected loot": "Wird auf die erwartete Beute aufgeschlagen",
+   "Added to the current bid": "Wird auf das aktuelle Gebot aufgeschlagen",
    "Address of the local ogamed connector the bot talks to.": "Adresse des lokalen ogamed-Connectors, mit dem der Bot spricht.",
    "Advanced options": "Erweiterte Optionen",
    "Advanced options: deliberately kept at the end of the page and not part of the normal setup. The built-in default values are enough for almost everyone, so there is no need to touch these.": "Erweiterte Optionen: bewusst am Seitenende und nicht Teil der normalen Einrichtung. Die eingebauten Standardwerte reichen fast allen, daran muss man nichts ändern.",
@@ -62,6 +151,12 @@
    "Automation of building, research and transports. Each sub-worker has its own switch.": "Automatik für Bau, Forschung und Transporte. Jeder Unter-Worker hat einen eigenen Schalter.",
    "Battles per check": "Kämpfe pro Prüfung",
    "Below the minimum on the start celestial: no speed fleet, no attacks on defended targets": "Unter dem Minimum auf dem Start-Himmelskörper: keine Speed-Flotte, keine Angriffe auf verteidigte Ziele",
+   "Bid limits": "Gebotslimits",
+   "Bid step": "Gebotsschritt",
+   "Bid war brake": "Bietergefecht-Bremse",
+   "Bid war brake active": "Bietergefecht-Bremse aktiv",
+   "Bids below this are raised to it": "Gebote darunter werden auf diesen Wert angehoben",
+   "Bids needed inside the window": "Nötige Gebote im Zeitfenster",
    "Blacklist active": "Blacklist aktiv",
    "Booster tiers: use + reserve (Bronze is used first)": "Booster-Stufen: nutzen + Reserve (Bronze zuerst)",
    "Booster types to keep running": "Booster-Typen, die laufen sollen",
@@ -92,6 +187,7 @@
    "Cargo ships and optional escort; slot budget for AutoFarm.": "Transportschiffe und optionale Begleitung; Slot-Budget für AutoFarm.",
    "Cargo ships kept at home": "Transporter, die zu Hause bleiben",
    "Cargo type that is calculated": "Transportertyp, der berechnet wird",
+   "Celestials the bids are paid from, first one first. Empty = the first celestial that has enough of the chosen resource.": "Himmelskörper, von denen die Gebote bezahlt werden, der erste zuerst. Leer = der erste Himmelskörper mit genug vom gewählten Rohstoff.",
    "Celestials the discovery missions start from.": "Himmelskörper, von denen die Entdeckungsmissionen starten.",
    "Celestials the fleets start from.": "Himmelskörper, von denen die Flotten starten.",
    "Celestials the probes and cargo ships start from. The nearest origin with enough ships is used for every target.": "Himmelskörper, von denen Sonden und Transporter starten. Für jedes Ziel wird der nächste Ursprung mit genug Schiffen genutzt.",
@@ -152,6 +248,7 @@
    "Escort reserve": "Escort-Reserve",
    "Escort ships": "Escort-Schiffe",
    "Escort step size": "Escort-Schrittgröße",
+   "Everything runs, but no bid is placed - the log shows what would be bid": "Alles läuft, aber es wird kein Gebot abgegeben – das Log zeigt, was geboten würde",
    "Examples (click to use):": "Beispiele (zum Übernehmen klicken):",
    "Alarm sound (WAV file)": "Alarmton (WAV-Datei)",
    "Full path to a WAV file played on an attack; empty = beep": "Vollständiger Pfad zu einer WAV-Datei, die bei einem Angriff abgespielt wird; leer = Piepton",
@@ -212,6 +309,8 @@
    "Harvest debris after attack": "Trümmer nach dem Angriff einsammeln",
    "Hide data is on - switch it off to edit": "„Daten verbergen“ ist an – schalte es aus, um zu bearbeiten",
    "Hide steps with a payback longer than the limit": "Schritte mit längerer Amortisation als das Limit ausblenden",
+   "Highest bid per rarity, with own limits for item types such as metal or deuterium boosters.": "Höchstgebot pro Seltenheit, mit eigenen Limits für Gegenstandstypen wie Metall- oder Deuterium-Booster.",
+   "Highest bid:": "Höchstgebot:",
    "Highest level per tech": "Höchste Stufe pro Tech",
    "Highest simulated loss, as a share of the value of the whole attack fleet. 0 = limit OFF (any loss is accepted)": "Höchster simulierter Verlust, als Anteil am Wert der gesamten Angriffsflotte. 0 = Limit AUS (jeder Verlust wird akzeptiert)",
    "Home celestial": "Heimat-Himmelskörper",
@@ -265,6 +364,7 @@
    "Loss weight vs. fuel": "Verlustgewicht gegenüber Treibstoff",
    "Losses and profit": "Verluste und Gewinn",
    "Low-deuterium guard": "Wächter bei wenig Deuterium",
+   "Lowest bid": "Niedrigstes Gebot",
    "Lowest speed when saving deuterium": "Niedrigste Geschwindigkeit beim Deuterium-Sparen",
    "Make sure there are expedition slots": "Für freie Expeditionsslots sorgen",
    "Margin before a recall": "Abstand vor einem Rückruf",
@@ -335,6 +435,7 @@
    "Needs the escort simulation": "Braucht die Escort-Simulation",
    "Net = actual loot (cargo of the returning fleet) − ship losses − fuel (deuterium), per resource. Unobserved fleets are not counted.": "Netto = tatsächliche Beute (Fracht der zurückkehrenden Flotte) − Schiffsverluste − Treibstoff (Deuterium), pro Rohstoff. Unbeobachtete Flotten zählen nicht.",
    "Never below 30 %": "Nie unter 30 %",
+   "Never bid on items containing": "Nie bieten auf Gegenstände mit",
    "Never collected from": "Nie von dort eingesammelt",
    "Never spy or attack members": "Mitglieder nie ausspionieren oder angreifen",
    "Never touched": "Nie angefasst",
@@ -345,6 +446,7 @@
    "No sleep window: the bot runs around the clock.": "Kein Schlaffenster: Der Bot läuft rund um die Uhr.",
    "No worker may use these slots - they stay free for you": "Kein Worker darf diese Slots nutzen – sie bleiben für dich frei",
    "Not if dearer than the next mine upgrade": "Nicht, wenn teurer als der nächste Minenausbau",
+   "Not in your config yet (the default is on). Add it to change the settings.": "Noch nicht in deiner Config (Standard ist an). Füge es hinzu, um die Einstellungen zu ändern.",
    "Not in your config yet (off). Add it to switch it on.": "Noch nicht in deiner Config (aus). Füge es hinzu, um es einzuschalten.",
    "Not in your config yet - the default (1 slot reserved) applies. Add it to change that.": "Noch nicht in deiner Config – der Standard (1 Slot reserviert) gilt. Füge es hinzu, um das zu ändern.",
    "Not in your config yet - the default (shortest payback, research included) applies. Add it to change that.": "Noch nicht in deiner Config – der Standard (kürzeste Amortisation, Forschung eingeschlossen) gilt. Füge es hinzu, um das zu ändern.",
@@ -401,7 +503,9 @@
    "Plan transports as a chain": "Transporte als Kette planen",
    "Planets with own caps (": "Planeten mit eigenen Limits (",
    "Player IDs": "Spieler-IDs",
+   "Player IDs never outbid": "Spieler-IDs, die nie überboten werden",
    "Player IDs that are never treated as attackers (0 = placeholder).": "Spieler-IDs, die nie als Angreifer gelten (0 = Platzhalter).",
+   "Players and alliance mates who are never outbid.": "Spieler und Allianzmitglieder, die nie überboten werden.",
    "Prefer near over large": "Nähe vor Menge bevorzugen",
    "Preferred resource": "Bevorzugter Rohstoff",
    "Primary ship": "Hauptschiff",
@@ -457,6 +561,7 @@
    "Run interval, min": "Laufintervall, min",
    "Safety margin": "Sicherheitsabstand",
    "Safety margin in simulations": "Sicherheitsabstand in Simulationen",
+   "Same bidder counts as a war": "Derselbe Bieter zählt als Gefecht",
    "Same reserve for transports out of a planet (0 = keep nothing)": "Gleiche Reserve für Transporte von einem Planeten (0 = nichts zurückhalten)",
    "Satellites per batch": "Satelliten pro Bündel",
    "Save all": "Alle speichern",
@@ -524,6 +629,7 @@
    "Start at crystal mine level": "Ab Kristallminenstufe",
    "Steps that do not pay back within this time are left out": "Schritte, die sich in dieser Zeit nicht amortisieren, entfallen",
    "Stop after one full pass": "Nach einem vollen Durchlauf stoppen",
+   "Stops bidding when someone keeps raising on purpose.": "Hört auf zu bieten, wenn jemand absichtlich immer weiter erhöht.",
    "Stops the scan after this many scanned systems and attacks with the targets found so far; the next cycle continues where it stopped. Keeps a cycle short in dense or empty areas. 0 = off (scan the whole range first).": "Stoppt den Scan nach so vielen gescannten Systemen und greift mit den bisher gefundenen Zielen an; der nächste Zyklus macht dort weiter. Hält einen Zyklus in dichten oder leeren Gegenden kurz. 0 = aus (erst den ganzen Bereich scannen).",
    "Switch = may be used. The number is kept in the inventory.": "Schalter = darf genutzt werden. Die Zahl bleibt im Inventar.",
    "Switch it on to show and edit the options": "Einschalten, um die Optionen zu zeigen und zu bearbeiten",
@@ -553,10 +659,11 @@
    "Telegram message when won": "Telegram-Nachricht bei Gewinn",
    "Telekinetic Drive": "Telekinetischer Antrieb",
    "Test field / dry run (placeholder)": "Testfeld / Trockenlauf (Platzhalter)",
+   "Test mode (no real bids)": "Testmodus (keine echten Gebote)",
    "Test mode (nothing activated)": "Testmodus (nichts wird aktiviert)",
    "The AutoFarm page shows targets, attacks, blacklist, maintenance and the losses and profit list.": "Die AutoFarm-Seite zeigt Ziele, Angriffe, Blacklist, Wartung und die Liste von Verlusten und Gewinn.",
    "The General and Brain blocks were not found in the config, so nothing can be shown here.": "Die Blöcke General und Brain wurden in der Config nicht gefunden, hier kann also nichts angezeigt werden.",
-   "The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
+   "The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen (den Defender nur, wenn du das einschaltest) für ein paar Minuten und sperrt Spionage-, Angriffs- und Expeditionsflüge, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
    "The asteroid is rarely in the home system. Tried: own, +1, -1, +2 ...": "Der Asteroid ist selten im Heimatsystem. Versucht: eigenes, +1, -1, +2 ...",
    "The background scan keeps a list of inactive players; every free slot sends one probe fleet.": "Der Hintergrund-Scan führt eine Liste inaktiver Spieler; jeder freie Slot sendet eine Sondenflotte.",
    "The celestial the defender looks at for its activity calls when \"Generate activity\" is off. AutoHarvest also uses it as the default origin (the moon at these coordinates) if it has no Origin of its own. Set it to your main planet or moon.": "Der Himmelskörper, den der Defender für seine Aktivitätsaufrufe ansieht, wenn „Aktivität erzeugen“ aus ist. AutoHarvest nutzt ihn auch als Standard-Ursprung (der Mond an diesen Koordinaten), wenn es keinen eigenen Ursprung hat. Setze ihn auf deinen Hauptplaneten oder -mond.",
@@ -607,12 +714,14 @@
    "Which debris fields": "Welche Trümmerfelder",
    "Which systems are scanned, in which order and how many per cycle.": "Welche Systeme in welcher Reihenfolge und wie viele pro Zyklus gescannt werden.",
    "Who gets a free slot first when several workers compete. Lower number = served first.": "Wer zuerst einen freien Slot bekommt, wenn mehrere Worker konkurrieren. Kleinere Zahl = zuerst bedient.",
+   "Whole alliance never outbid": "Ganze Allianz nie überbieten",
    "Will show the fleet the bot would send right now, without sending it.": "Zeigt die Flotte, die der Bot jetzt senden würde, ohne sie zu senden.",
    "With several origins the expedition slots are shared round-robin (13 slots: 7+6, with 3 origins 5+4+4).": "Bei mehreren Ursprüngen werden die Expeditionsslots reihum verteilt (13 Slots: 7+6, bei 3 Ursprüngen 5+4+4).",
    "Without an Origin of its own the moon at the Defender \"Home\" coordinates is used as the start.": "Ohne eigenen Ursprung wird der Mond an den „Home“-Koordinaten des Defenders als Start genutzt.",
    "Word in item name": "Wort im Gegenstandsnamen",
    "Word in the item name, then a limit per rarity": "Wort im Gegenstandsnamen, dann ein Limit pro Seltenheit",
    "Words (any language) that tell the rarity of an item": "Wörter (beliebige Sprache), die die Seltenheit eines Gegenstands verraten",
+   "Words that tell the rarity, items that are never bid on.": "Wörter, die die Seltenheit verraten, und Gegenstände, auf die nie geboten wird.",
    "Workers to pause": "Zu pausierende Worker",
    "Works on top of \"Slots to leave free\"": "Wirkt zusätzlich zu „Freizulassende Slots“",
    "Write messages sent and received to the log": "Gesendete und empfangene Nachrichten ins Log schreiben",
@@ -2139,19 +2248,10 @@
     "t": "Umgekehrte Repatriierung: Rohstoffe aus dem Ziel zurückholen, wenn sie für einen Bau gebraucht werden. Fortgeschritten."
    },
    "AutoRepatriate.Reverse.ReturnFuelFactor": {
-    "t": "Faktor für den Treibstoff, der für den Rückflug reserviert wird."
-   },
-   "AutoRepatriate.Reverse.ReturnAllShips": {
-    "t": "Alle Schiffe zurückbringen, nicht nur die benötigten."
-   },
-   "AutoRepatriate.Reverse.KeepShips": {
-    "t": "Schiffe, die am Ziel bleiben."
+    "t": "Deuterium für den Rückflug = Treibstoff des Rückflugs mal dieser Faktor (1,1 = 10 % mehr). Zurück fliegen genau die Schiffe, die hingeflogen sind."
    },
    "AutoRepatriate.Reverse.PendingTtlMinutes": {
     "t": "Wie lange ein geplanter Rückholtransport gültig bleibt."
-   },
-   "AutoRepatriate.Reverse.OutboundCapacityFactor": {
-    "t": "Anteil der Frachtkapazität, der für den Hinflug genutzt wird."
    },
    "BuyOfferOfTheDay.Active": {
     "t": "Kauft das Tagesangebot des Händlers."
@@ -2415,6 +2515,34 @@
    }
   },
   "Experimental": {
+   "ExtraDebugLog.BotPause": {"t": "Beginn und Ende der Pause, Ablehnungen und blockierte Flüge."},
+   "ExtraDebugLog.DefenderRecheck": {"t": "Angriffsliste vor dem Fleetsave: Zeiten und Entscheidung."},
+   "ExtraDebugLog.FleetsaveSlot": {"t": "Jede Slot-Entscheidung von SendFleet mit den Zahlen."},
+   "ExtraDebugLog.MinePlanRanking": {"t": "Berechnungsart und die besten Schritte der Minenplan-Rangliste."},
+   "ExtraDebugLog.AsteroidHunt": {"t": "Alle Meldungen der Asteroidenjagd."},
+   "ExtraDebugLog.ShadowFleet": {"t": "Alle Meldungen der Schattenflotte."},
+   "BotPause.StopDefender": {"t": "Den Defender während der Pause ebenfalls stoppen (Standard aus). Dann überwacht niemand Angriffe, deshalb wird die Pause abgelehnt, wenn ein bekannter Angriff innerhalb der Grenze unten plus der Pausenlänge eintrifft."},
+   "BotPause.AttackMarginMinutes": {"t": "Die Pause wird abgelehnt, wenn ein Angriff innerhalb dieser Minuten eintrifft (Standard 15). Spionage-, Angriffs- und Expeditionsflüge sind während der Pause ebenfalls gesperrt."},
+   "ExtraDebugLog": {"t": "Schreibt zusätzliche Diagnosezeilen in eine eigene Datei devlog/TBot-debug-<Datum>.log (anonymisiert: Namen, Mail, IP und Token werden ersetzt; Koordinaten werden zu x:x:Position, Mengen bleiben; höchstens 50 MB pro Tag). Das normale Log bleibt klein. Schalte es ein, wenn eine Funktion nichts sendet und du den Grund sehen willst."},
+   "ExtraDebugLog.Active": {"t": "Zusatz-Log ein- oder ausschalten (Standard an)."},
+   "ExtraDebugLog.Repatriate": {"t": "Repatriate / Reverse-Repatriate: Kandidaten, Ladung nach dem Ledger, Sendeversuche und Ergebnisse."},
+   "ExtraDebugLog.Ledger": {"t": "Ressourcen-Ledger: welche Ansprüche wie viel eines Himmelskörpers halten und welche davon für Repatriate und Collect zählen."},
+   "RepatriateLedgerHold": {"t": "Wie stark wartende Bauansprüche des Ressourcen-Ledgers Repatriate und Collect sperren."},
+   "RepatriateLedgerHold.Ignore": {"t": "An: Repatriate, Reverse-Repatriate und /collect ignorieren das Ressourcen-Ledger komplett und bewegen den gesamten Bestand, auch was Bauansprüche halten. Die Worker (AutoMine und andere) können dann feststellen, dass ihr gespeicherter Bestand weg ist. Standard aus."},
+   "RepatriateLedgerHold.MinPercent": {"t": "Ein wartender Anspruch schützt seinen gehaltenen Bestand nur dann vor Repatriate und Collect, wenn er schon mindestens diesen Prozentsatz seines Gesamtbedarfs (Metall+Kristall+Deuterium) hält. Ansprüche mit Flügen oder voll gedeckte schützen immer. 0 = jeder gehaltene Bestand ist geschützt (altes Verhalten).", "e": "30 = ein Metallminen-Anspruch, der 1 % von 995 Mio hält, sperrt den Himmelskörper nicht mehr."},
+   "ShadowFleet": {"t": "So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt. Braucht eine Deuterium-Reserve auf diesem Himmelskörper."},
+   "ShadowFleet.Active": {"t": "Schattenflotte ein- oder ausschalten (Standard aus). Halte Deuterium auf dem Himmelskörper: Jeder Flug verbraucht Treibstoff."},
+   "ShadowFleet.Celestial": {"t": "Der eine gesicherte Himmelskörper (Planet oder Mond). Nur sein Deuterium und ein Flottenslot werden benutzt."},
+   "ShadowFleet.Ships": {"t": "Schiffe ankreuzen, die fliegen, und die Menge eintragen (0 = alle). Für die Abbau-Mission wird mindestens ein Recycler (oder Pathfinder) gebraucht."},
+   "ShadowFleet.SpeedPercent": {"t": "Fluggeschwindigkeit, 10 bis 100 Prozent. 10 ist am langsamsten und am billigsten im Treibstoff."},
+   "ShadowFleet.MinBackInMinutes": {"t": "Kürzeste Zeit für einen Flug (hin und zurück).", "e": "20"},
+   "ShadowFleet.MaxBackInMinutes": {"t": "Längste Zeit für einen Flug (hin und zurück). Die Flotte ist spätestens nach dieser Zeit wieder zu Hause – das Zeitlimit.", "e": "60"},
+   "ShadowFleet.PauseMinSeconds": {"t": "Kürzeste Pause zu Hause zwischen zwei Flügen."},
+   "ShadowFleet.PauseMaxSeconds": {"t": "Längste Pause zu Hause zwischen zwei Flügen."},
+   "ShadowFleet.DeuteriumFlights": {"t": "Deuterium für so viele Flüge fliegt als Fracht mit (begrenzt durch Laderaum und Bestand). Wenig Bestand bei 2 oder mehr möglichen Flügen: nur Log-Warnung. Genau ein Flug übrig: Messenger-Warnung. Keiner: Die Flüge warten.", "e": "3"},
+   "ShadowFleet.WindowFrom": {"t": "Beginn des Zeitfensters (Spielzeit, HH:mm). Leer = immer. Darf über Mitternacht gehen, z. B. 22:00 bis 07:00.", "e": "22:00"},
+   "ShadowFleet.WindowTo": {"t": "Ende des Zeitfensters (HH:mm). Ein Flug startet nur, wenn er vor Ende des Fensters zurück ist.", "e": "07:00"},
+   "ShadowFleet.DefenderOff": {"t": "Fallen-Modus nur für die Schattenflotte. An = der Defender schickt die Schattenflotte nicht weg, sichert aber weiterhin Rohstoffe und alle anderen Schiffe. Wird ein Angriff gemeldet, wird eine fliegende Schattenflotte nach Hause gerufen, damit sie beim Einschlag da ist. Schlaf-Fleetsaves schicken weiterhin alles weg."},
    "BotPause": {
     "t": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist."
    },
@@ -2470,6 +2598,41 @@
    "FleetsaveSlot.Slots": {
     "t": "Wie viele Slots für den Fleetsave frei bleiben.",
     "e": "1 = der letzte freie Slot wird nur vom Fleetsave genutzt."
+   },
+   "ExtraDebugLog.GalaxyCache": {
+    "t": "Cache-Treffer, Hintergrund-Scans und erkannte Ereignisse des Galaxie-Caches."
+   },
+   "GalaxyCache": {
+    "t": "Gemeinsamer Speicher aller Galaxie-Scans mit Zeitstempel. FastFarm und Kolonisieren fragen ihn, bevor sie den Server abfragen. Ein langsamer Hintergrund-Scan hält die Systeme rund um deine Planeten frisch und meldet neue Kolonien und Umzüge anderer Spieler. Datendatei: data/galaxycache_<alias>.json."
+   },
+   "GalaxyCache.Active": {
+    "t": "Den Cache an- oder ausschalten (Standard an). Aus: Alle Worker fragen wieder live ab."
+   },
+   "GalaxyCache.MaxAgeHours": {
+    "t": "Wie alt ein Eintrag sein darf, damit Worker ihn statt einer Live-Abfrage nutzen (Standard 12).",
+    "e": "12"
+   },
+   "GalaxyCache.RangeSystems": {
+    "t": "Der Hintergrund-Scan geht so viele Systeme links und rechts jedes eigenen Systems durch (Standard 15). 0 = kein Hintergrund-Scan, nur die Scans der anderen Worker werden gespeichert.",
+    "e": "15 = 31 Systeme rund um jeden Planeten."
+   },
+   "GalaxyCache.DelayMinSeconds": {
+    "t": "Kürzeste Pause zwischen zwei Hintergrund-Abfragen (Standard 20 Sekunden)."
+   },
+   "GalaxyCache.DelayMaxSeconds": {
+    "t": "Längste Pause zwischen zwei Hintergrund-Abfragen (Standard 45 Sekunden)."
+   },
+   "GalaxyCache.UseInFastFarm": {
+    "t": "FastFarm nimmt seinen Galaxie-Scan aus dem Cache, solange der Eintrag frisch ist (Standard an). Vor einem Angriff entscheidet weiter der frische Spionagebericht."
+   },
+   "GalaxyCache.UseInColonize": {
+    "t": "Kolonisieren überspringt Positionen, die der frische Cache als besetzt zeigt. Als frei gezeigte Positionen werden immer live geprüft (Standard an)."
+   },
+   "GalaxyCache.Events": {
+    "t": "Erkannte Änderungen ins Log schreiben: neue Kolonie, Planet weg, neuer Mond, Statuswechsel, Umzug (Standard an)."
+   },
+   "GalaxyCache.Telegram": {
+    "t": "Neue Kolonien und Umzüge anderer Spieler per Telegram / Discord melden (Standard an). Andere Ereignisse stehen nur im Log."
    },
    "AsteroidHunt": {
     "t": "Item-Event: Einmal pro Spieltag greift ein Schiff den Asteroiden auf Position 17 deines eigenen Systems an, danach wird das Inventar verglichen. Eine Logzeile pro Versuch, keine Messenger-Nachricht."

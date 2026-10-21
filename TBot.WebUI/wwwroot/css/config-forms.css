@@ -211,3 +211,6 @@
 @media (max-width: 900px) { .cfg-lfgrid { grid-template-columns: 1fr; } }
 .cfg-lfcaprow input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .cfg-lfcaprow input[type=number]::-webkit-outer-spin-button, .cfg-lfcaprow input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }

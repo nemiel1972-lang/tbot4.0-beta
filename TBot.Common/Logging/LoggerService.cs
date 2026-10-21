@@ -46,7 +46,7 @@ namespace TBot.Common.Logging {
 		private object syncObject = new object();
 		private static string _logPath = "";
 
-		private LoggingLevelSwitch _telegramLevelSwitch = new LoggingLevelSwitch(LogEventLevel.Verbose);
+		private LoggingLevelSwitch _telegramLevelSwitch = new LoggingLevelSwitch(LogEventLevel.Warning);
 		private bool _telegramAdded = false;
 
 		public void WriteLog(LogLevel level, LogSender sender, string message) {
@@ -135,7 +135,7 @@ namespace TBot.Common.Logging {
 
 				var logConfig = GetDefaultConfiguration();
 
-				_telegramLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+				_telegramLevelSwitch.MinimumLevel = LogEventLevel.Warning;
 				_telegramAdded = false;
 
 				Log.Logger = logConfig.CreateLogger();
@@ -148,12 +148,13 @@ namespace TBot.Common.Logging {
 				if (_telegramAdded == false) {
 					var logConfig = GetDefaultConfiguration();
 					Log.Logger = logConfig.WriteTo.Logger(
-							c => c.Filter.Equals(Matching.WithProperty<bool>("TelegramEnabled", p => p == true))
-							).WriteTo.Telegram(botToken: botToken,
-								chatId: chatId,
-								dateFormat: null,
-								outputTemplate: "{LogLevelEmoji:l}{LogSenderEmoji:l} {Message:lj}{NewLine}{Exception}")
-						.CreateLogger();
+							c => c.MinimumLevel.ControlledBy(_telegramLevelSwitch)
+								.Filter.ByIncludingOnly(Matching.WithProperty<bool>("TelegramEnabled", p => p == true))
+								.WriteTo.Telegram(botToken: botToken,
+									chatId: chatId,
+									dateFormat: null,
+									outputTemplate: "{LogLevelEmoji:l}{LogSenderEmoji:l} {Message:lj}{NewLine}{Exception}")
+							).CreateLogger();
 
 					_telegramAdded = true;
 				}

@@ -48,6 +48,7 @@ namespace TBot.Common.Logging.Sinks {
 				LogSender.Defender => ConsoleColor.DarkGreen,
 				LogSender.Expeditions => ConsoleColor.Cyan,
 				LogSender.AutoDiscovery => ConsoleColor.Cyan,
+				LogSender.GalaxyCache => ConsoleColor.Cyan,
 				LogSender.FleetScheduler => ConsoleColor.DarkMagenta,
 				LogSender.Harvest => ConsoleColor.Green,
 				LogSender.AsteroidHunt => ConsoleColor.Green,

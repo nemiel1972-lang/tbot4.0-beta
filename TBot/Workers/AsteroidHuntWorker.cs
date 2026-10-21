@@ -18,6 +18,11 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Workers {
 	internal class AsteroidHuntWorker : WorkerBase {
+		private void AhLog(LogLevel level, string text) {
+			DoLog(level, text);
+			ExtraLog.Write(_tbotInstance, "AsteroidHunt", $"[{level}] {text}");
+		}
+
 		private readonly IOgameService _ogameService;
 		private readonly IFleetScheduler _fleetScheduler;
 		private readonly ICalculationService _calculationService;
@@ -83,7 +88,7 @@ namespace Tbot.Workers {
 					}
 				}
 			} catch (Exception e) {
-				DoLog(LogLevel.Warning, $"Could not read the asteroid log: {e.Message}");
+				AhLog(LogLevel.Warning, $"Could not read the asteroid log: {e.Message}");
 			}
 			return new HuntState();
 		}
@@ -97,7 +102,7 @@ namespace Tbot.Workers {
 					s.Attempts = s.Attempts.Skip(s.Attempts.Count - 500).ToList();
 				AtomicFile.WriteAllText(StatePath(), JsonConvert.SerializeObject(s, Formatting.Indented));
 			} catch (Exception e) {
-				DoLog(LogLevel.Warning, $"Could not write the asteroid log: {e.Message}");
+				AhLog(LogLevel.Warning, $"Could not write the asteroid log: {e.Message}");
 			}
 		}
 
@@ -122,12 +127,12 @@ namespace Tbot.Workers {
 						break;
 					default:
 						nextMs = NextDayMs(gameNow);
-						DoLog(LogLevel.Information, "Asteroid hunt: done for today.");
+						AhLog(LogLevel.Information, "Asteroid hunt: done for today.");
 						break;
 				}
 				SaveState(state);
 			} catch (Exception e) {
-				DoLog(LogLevel.Warning, $"Asteroid hunt failed: {e.Message}");
+				AhLog(LogLevel.Warning, $"Asteroid hunt failed: {e.Message}");
 			}
 			if (nextMs < 5000)
 				nextMs = 5000;
@@ -188,12 +193,12 @@ namespace Tbot.Workers {
 								result = "none";
 								break;
 							default:
-								DoLog(LogLevel.Information, $"Asteroid {p.Target}: report not recognised, using the inventory: \"{Shorten(text)}\"");
+								AhLog(LogLevel.Information, $"Asteroid {p.Target}: report not recognised, using the inventory: \"{Shorten(text)}\"");
 								break;
 						}
 					}
 				} catch (Exception e) {
-					DoLog(LogLevel.Debug, $"Asteroid {p.Target}: could not read the messages ({e.Message}), using the inventory.");
+					AhLog(LogLevel.Debug, $"Asteroid {p.Target}: could not read the messages ({e.Message}), using the inventory.");
 				}
 			}
 
@@ -212,7 +217,7 @@ namespace Tbot.Workers {
 			} catch (Exception e) {
 				p.ReadFailures++;
 				if (p.ReadFailures < AsteroidHuntLogic.MaxReadFailures) {
-					DoLog(LogLevel.Warning, $"Asteroid {p.Target}: could not read the inventory ({e.Message}), trying again.");
+					AhLog(LogLevel.Warning, $"Asteroid {p.Target}: could not read the inventory ({e.Message}), trying again.");
 					return 2 * 60 * 1000;
 				}
 			}
@@ -221,7 +226,7 @@ namespace Tbot.Workers {
 			if (result == "found" && p.Day == state.Day)
 				state.FoundToday = true;
 			state.Pending = null;
-			DoLog(LogLevel.Information, result == "found" ? $"Asteroid {p.Target}: item found: {item}"
+			AhLog(LogLevel.Information, result == "found" ? $"Asteroid {p.Target}: item found: {item}"
 				: result == "locked" ? $"Asteroid {p.Target}: daily limit reached - done for today."
 				: result == "none" ? $"Asteroid {p.Target}: no item (attempt {state.AttemptsToday} today)"
 				: $"Asteroid {p.Target}: result unknown (inventory not readable)");
@@ -235,7 +240,7 @@ namespace Tbot.Workers {
 
 		private async Task<long> StartAsync(HuntState state, AsteroidHuntConfig cfg, DateTime gameNow) {
 			if (!Enum.TryParse(cfg.ShipType, true, out Buildables shipType)) {
-				DoLog(LogLevel.Warning, $"Asteroid hunt: unknown ship type \"{cfg.ShipType}\" - using Pathfinder.");
+				AhLog(LogLevel.Warning, $"Asteroid hunt: unknown ship type \"{cfg.ShipType}\" - using Pathfinder.");
 				shipType = Buildables.Pathfinder;
 			}
 
@@ -250,7 +255,7 @@ namespace Tbot.Workers {
 				}
 			}
 			if (origin == null) {
-				DoLog(LogLevel.Information, $"Asteroid hunt: no {shipType} available - trying again later.");
+				AhLog(LogLevel.Information, $"Asteroid hunt: no {shipType} available - trying again later.");
 				return (state.AttemptsToday > 0 ? 3 : 60) * 60 * 1000;
 			}
 
@@ -264,14 +269,14 @@ namespace Tbot.Workers {
 				pending.LastMsgId = known.Count > 0 ? known.Max(m => m.ID) : 0;
 				pending.ReportBaseKnown = true;
 			} catch (Exception e) {
-				DoLog(LogLevel.Debug, $"Asteroid hunt: messages not readable before the attack ({e.Message}) - using the inventory.");
+				AhLog(LogLevel.Debug, $"Asteroid hunt: messages not readable before the attack ({e.Message}) - using the inventory.");
 			}
 			try {
 				var (before, _) = await ReadInventory(origin);
 				pending.Before = before;
 				pending.BeforeKnown = true;
 			} catch (Exception e) {
-				DoLog(LogLevel.Warning, $"Asteroid hunt: inventory not readable before the attack ({e.Message}) - result will be unknown.");
+				AhLog(LogLevel.Warning, $"Asteroid hunt: inventory not readable before the attack ({e.Message}) - result will be unknown.");
 			}
 
 			int maxSteps = Math.Max(1, cfg.SearchSystems);
@@ -302,19 +307,19 @@ namespace Tbot.Workers {
 					pending.SentUtc = nowUtc.ToString("o");
 					pending.ArrivalUtc = nowUtc.AddSeconds(prediction.Time).ToString("o");
 					state.Pending = pending;
-					DoLog(LogLevel.Information, $"Asteroid {target}: attacking with {cfg.ShipCount}x{shipType} from {origin.Coordinate} (arrives in {prediction.Time / 60} min).");
+					AhLog(LogLevel.Information, $"Asteroid {target}: attacking with {cfg.ShipCount}x{shipType} from {origin.Coordinate} (arrives in {prediction.Time / 60} min).");
 					return (prediction.Time + AsteroidHuntLogic.ArrivalGraceSeconds + 10) * 1000;
 				}
 				if (fleetId == (int) SendFleetCode.NotEnoughSlots || fleetId == (int) SendFleetCode.NotEnoughRessources || fleetId == (int) SendFleetCode.AfterSleepTime) {
-					DoLog(LogLevel.Information, $"Asteroid {target}: not sent (code {fleetId}) - trying again later.");
+					AhLog(LogLevel.Information, $"Asteroid {target}: not sent (code {fleetId}) - trying again later.");
 					return 10 * 60 * 1000;
 				}
-				DoLog(LogLevel.Debug, $"Asteroid search: no target at {target} (code {fleetId}).");
+				AhLog(LogLevel.Debug, $"Asteroid search: no target at {target} (code {fleetId}).");
 			}
 
 			state.SearchExhausted = true;
 			state.Attempts.Add(new HuntAttempt { Utc = DateTime.UtcNow.ToString("o"), Day = state.Day, Origin = origin.Coordinate.ToString(), Target = $"{origin.Coordinate.Galaxy}:*:17", Result = "not-found" });
-			DoLog(LogLevel.Information, $"Asteroid search: no asteroid found in {maxSteps} systems around {origin.Coordinate.Galaxy}:{origin.Coordinate.System}.");
+			AhLog(LogLevel.Information, $"Asteroid search: no asteroid found in {maxSteps} systems around {origin.Coordinate.Galaxy}:{origin.Coordinate.System}.");
 			return AfterAttemptMs(state, cfg, gameNow);
 		}
 

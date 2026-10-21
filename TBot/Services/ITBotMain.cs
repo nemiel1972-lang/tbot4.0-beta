@@ -45,5 +45,6 @@ namespace Tbot.Services {
 
 		void PublishAttackSnapshot(List<AttackerFleet> attacks, DateTime fetchedUtc);
 		List<AttackerFleet> GetAttackSnapshot(out DateTime fetchedUtc);
+		bool IsBotPaused { get; }
 	}
 }

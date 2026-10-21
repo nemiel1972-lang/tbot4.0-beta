@@ -678,6 +678,11 @@ namespace Tbot.Workers {
 					return (sent, true);
 				if (code == (int) SendFleetCode.NotEnoughSlots)
 					break;
+				if (code == (int) SendFleetCode.TargetInvalid) {
+					DoLog(LogLevel.Information, $"Target {Key(t)} is no longer a valid spy target (empty position or noob protection) - removed from the round.");
+					_state.Targets.Remove(Key(t));
+					continue;
+				}
 				if (code <= (int) SendFleetCode.GenericError) {
 					failedSends++;
 					DoLog(LogLevel.Warning, $"Probe dispatch to {Key(t)} from {origin.Celestial.Coordinate} failed (code {code}, origin deuterium {origin.Celestial.Resources?.Deuterium}). Reason: see the FleetScheduler line above.");
@@ -911,7 +916,7 @@ namespace Tbot.Workers {
 				_state.ScanCursor++;
 				done++;
 				try {
-					GalaxyInfo info = await _ogameService.GetGalaxyInfo(galaxy, system);
+					GalaxyInfo info = await GalaxyCacheHub.GetOrLiveAsync(_tbotInstance, _ogameService, galaxy, system, GalaxyCacheConfig.Read(_tbotInstance).UseInFastFarm);
 					if (info?.Planets == null)
 						continue;
 					foreach (var p in info.Planets.Where(p => p != null && p.Inactive && !p.Administrator && !p.Banned && !p.Vacation)) {

@@ -968,8 +968,25 @@ namespace TBot.Ogame.Infrastructure {
 			await PostAsync<object>($"/bot/fleets/{fleet.ID}/cancel");
 		}
 
+		private Action<GalaxyInfo> _galaxyObserver;
+
+		public void SetGalaxyObserver(Action<GalaxyInfo> observer) {
+			_galaxyObserver = observer;
+		}
+
 		public async Task<GalaxyInfo> GetGalaxyInfo(Coordinate coordinate) {
-			return await GetAsync<GalaxyInfo>($"/bot/galaxy-infos/{coordinate.Galaxy}/{coordinate.System}");
+			var info = await GetAsync<GalaxyInfo>($"/bot/galaxy-infos/{coordinate.Galaxy}/{coordinate.System}");
+			try {
+				if (info != null) {
+					if (info.Galaxy <= 0)
+						info.Galaxy = coordinate.Galaxy;
+					if (info.System <= 0)
+						info.System = coordinate.System;
+					_galaxyObserver?.Invoke(info);
+				}
+			} catch (Exception) {
+			}
+			return info;
 		}
 
 		public async Task<GalaxyInfo> GetGalaxyInfo(int galaxy, int system) {

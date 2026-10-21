@@ -830,19 +830,11 @@ window.CFG_HELP.en = {
    "t": "Reverse repatriation: fetch resources back out of the target when they are needed for a build. Advanced."
   },
   "AutoRepatriate.Reverse.ReturnFuelFactor": {
-   "t": "Factor for the fuel reserved for the return flight."
-  },
-  "AutoRepatriate.Reverse.ReturnAllShips": {
-   "t": "Bring all ships back, not only the ones needed."
-  },
-  "AutoRepatriate.Reverse.KeepShips": {
-   "t": "Ships that stay at the target."
+   "t": "Deuterium taken along for the return flight = fuel of the return flight x this factor (1.1 = 10 % more).",
+   "e": "The return flight takes exactly the ships that flew out."
   },
   "AutoRepatriate.Reverse.PendingTtlMinutes": {
    "t": "How long a planned reverse transport stays valid."
-  },
-  "AutoRepatriate.Reverse.OutboundCapacityFactor": {
-   "t": "Share of the cargo capacity used for the outbound flight."
   },
   "BuyOfferOfTheDay.Active": {
    "t": "Buys the daily offer of the merchant."
@@ -1126,11 +1118,57 @@ window.CFG_HELP.en = {
   "BotPause.MaxDurationMinutes": {
    "t": "Longest pause you can ask for with /pause."
   },
+  "BotPause.StopDefender": {
+   "t": "Stop the Defender during the pause as well (default off). Then nothing watches for attacks, so a pause is refused if a known attack arrives within the limit below plus the pause length."
+  },
+  "BotPause.AttackMarginMinutes": {
+   "t": "A pause is refused if an attack arrives within this many minutes (default 15). Spy, attack and expedition missions are also blocked while the bot is paused."
+  },
   "DefenderRecheck": {
    "t": "Shortly before a fleetsave the Defender asks the game for the attack list once more. If the attack was recalled, the fleetsave is skipped; if it arrives later, the fleetsave is moved. If the question fails or takes too long, the fleetsave is sent as planned."
   },
   "DefenderRecheck.Active": {
    "t": "Switch the second check on or off (default off)."
+  },
+  "ExtraDebugLog": {
+   "t": "Writes extra diagnosis lines to their own file devlog/TBot-debug-<date>.log (anonymized: names, mail, IP and tokens are replaced; coordinates become x:x:position, amounts stay) (max. 50 MB per day). The normal log stays small. On by default; old files (over 7 days) are deleted automatically. Switch it off if you do not need it."
+  },
+  "ExtraDebugLog.Active": {
+   "t": "Switch the extra log on or off (default on)."
+  },
+  "ExtraDebugLog.Repatriate": {
+   "t": "Repatriate / reverse repatriate: candidates, payload after ledger, send attempts and results."
+  },
+  "ExtraDebugLog.BotPause": {
+   "t": "Pause start/end, rejections and blocked missions."
+  },
+  "ExtraDebugLog.DefenderRecheck": {
+   "t": "Attack list before the fleetsave: times, decision."
+  },
+  "ExtraDebugLog.FleetsaveSlot": {
+   "t": "Every slot decision of SendFleet with the numbers."
+  },
+  "ExtraDebugLog.MinePlanRanking": {
+   "t": "Ranking mode and the top steps."
+  },
+  "ExtraDebugLog.AsteroidHunt": {
+   "t": "All asteroid hunt messages."
+  },
+  "ExtraDebugLog.ShadowFleet": {
+   "t": "All shadow fleet messages."
+  },
+  "ExtraDebugLog.Ledger": {
+   "t": "Resource ledger: which claims hold how much of a celestial and which of them count for repatriate and collect."
+  },
+  "RepatriateLedgerHold": {
+   "t": "How strongly waiting build claims of the resource ledger block repatriate and collect."
+  },
+  "RepatriateLedgerHold.Ignore": {
+   "t": "On: repatriate, reverse repatriate and /collect ignore the resource ledger completely and move all stock, even what build claims hold. The workers (AutoMine and others) may then find their saved stock gone. Default off."
+  },
+  "RepatriateLedgerHold.MinPercent": {
+   "t": "A waiting claim only protects its held stock from repatriate and collect if it already holds at least this percent of its total need (metal+crystal+deuterium). Claims with flights or fully covered always protect. 0 = every held amount is protected (old behavior).",
+   "e": "30 = a metal mine claim that holds 1% of 995 M no longer blocks the celestial."
   },
   "MinePlanRanking": {
    "t": "How the page Minenplan ranks the next investments (mines and research). Display only: AutoMine and AutoResearch keep building by their own rules. You can also change these values on the page itself; the page remembers its own choice in your browser."
@@ -1161,6 +1199,41 @@ window.CFG_HELP.en = {
    "t": "How many slots stay free for the fleetsave.",
    "e": "1 = the last free slot is only used by the fleetsave."
   },
+  "ExtraDebugLog.GalaxyCache": {
+   "t": "Cache hits, background scans and detected events of the galaxy cache."
+  },
+  "GalaxyCache": {
+   "t": "Shared store of all galaxy scans with a time stamp. FastFarm and Colonize ask it before they query the server. A slow background scan keeps the systems around your planets fresh and reports new colonies and moves of other players. Data file: data/galaxycache_<alias>.json."
+  },
+  "GalaxyCache.Active": {
+   "t": "Switch the cache on or off (default on). Off: every worker queries live again."
+  },
+  "GalaxyCache.MaxAgeHours": {
+   "t": "How old an entry may be so that workers use it instead of a live query (default 12).",
+   "e": "12"
+  },
+  "GalaxyCache.RangeSystems": {
+   "t": "The background scan walks this many systems left and right of every own system (default 15). 0 = no background scan, only the scans of the other workers are stored.",
+   "e": "15 = 31 systems around each planet."
+  },
+  "GalaxyCache.DelayMinSeconds": {
+   "t": "Shortest pause between two background queries (default 20 seconds)."
+  },
+  "GalaxyCache.DelayMaxSeconds": {
+   "t": "Longest pause between two background queries (default 45 seconds)."
+  },
+  "GalaxyCache.UseInFastFarm": {
+   "t": "FastFarm takes its galaxy scan from the cache while the entry is fresh (default on). Before an attack the fresh spy report still decides."
+  },
+  "GalaxyCache.UseInColonize": {
+   "t": "Colonize skips positions that the fresh cache shows as occupied. Positions shown as free are always checked live (default on)."
+  },
+  "GalaxyCache.Events": {
+   "t": "Write detected changes to the log: new colony, planet gone, new moon, status change, move (default on)."
+  },
+  "GalaxyCache.Telegram": {
+   "t": "Send new colonies and moves of other players by Telegram / Discord (default on). Other events only appear in the log."
+  },
   "AsteroidHunt": {
    "t": "Item event: once per game day one ship attacks the asteroid on position 17 of your own system and the inventory is compared afterwards. One log line per attempt, no messenger message."
   },
@@ -1185,7 +1258,7 @@ window.CFG_HELP.en = {
    "t": "Write every attempt and find to data/asteroiden_funde_<alias>.json."
   },
   "ShadowFleet": {
-   "t": "The chosen ships of ONE celestial fly one after another to nearby debris fields and are recalled after half of the time, so the fleet is almost never at home. Needs a deuterium reserve on that celestial."
+   "t": "What it does: the chosen ships of ONE celestial fly in a loop on a recycle (harvest) mission at slow speed to the nearest debris field (up to 10 systems away). After half of the flight time the fleet is recalled and flies home, then after a short random pause the next flight starts. So the ships are almost never at home: a player who spies the celestial finds no fleet, and the fleet never stands still where an attack could hit it. It uses one fleet slot and the deuterium of that celestial. Safety: no flight starts when an attack would land before the fleet is back; a flying fleet is called home if it can still make it before the impact. Needs a deuterium reserve on that celestial."
   },
   "ShadowFleet.Active": {
    "t": "Switch the shadow fleet on or off (default off). Keep deuterium on the celestial: every flight burns fuel."

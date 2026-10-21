@@ -28,6 +28,7 @@ namespace TBot.Ogame.Infrastructure.Enums {
 			Feature.Harvest,
 			Feature.AsteroidHunt,
 			Feature.ShadowFleet,
+			Feature.GalaxyCache,
 			Feature.SleepMode,
 		};
 	}

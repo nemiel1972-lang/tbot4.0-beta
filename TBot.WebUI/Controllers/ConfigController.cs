@@ -17,11 +17,40 @@ namespace TBot.WebUI.Controllers {
 				["Active"] = true,
 				["DurationMinutes"] = 15,
 				["RecallMarginMinutes"] = 2,
-				["MaxDurationMinutes"] = 120
+				["MaxDurationMinutes"] = 120,
+				["StopDefender"] = false,
+				["AttackMarginMinutes"] = 15
 			},
 			["DefenderRecheck"] = new JObject {
 				["Active"] = false,
 				["TimeoutSeconds"] = 4
+			},
+			["ExtraDebugLog"] = new JObject {
+				["Active"] = true,
+				["Repatriate"] = true,
+				["Ledger"] = true,
+				["BotPause"] = true,
+				["DefenderRecheck"] = true,
+				["FleetsaveSlot"] = true,
+				["MinePlanRanking"] = true,
+				["AsteroidHunt"] = true,
+				["ShadowFleet"] = true,
+				["GalaxyCache"] = true
+			},
+			["GalaxyCache"] = new JObject {
+				["Active"] = true,
+				["MaxAgeHours"] = 12,
+				["RangeSystems"] = 15,
+				["DelayMinSeconds"] = 20,
+				["DelayMaxSeconds"] = 45,
+				["UseInFastFarm"] = true,
+				["UseInColonize"] = true,
+				["Events"] = true,
+				["Telegram"] = true
+			},
+			["RepatriateLedgerHold"] = new JObject {
+				["Ignore"] = false,
+				["MinPercent"] = 30
 			},
 			["FleetsaveSlot"] = new JObject {
 				["Active"] = true,
