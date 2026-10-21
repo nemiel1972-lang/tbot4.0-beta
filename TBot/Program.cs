@@ -99,8 +99,9 @@ namespace Tbot {
 
 			Console.CancelKeyPress += (sender, e) => {
 				_logger.WriteLog(LogLevel.Information, LogSender.Main, "CTRL+C pressed!");
+				e.Cancel = true;
 				cts.Cancel();
-				tcs.SetResult();
+				tcs.TrySetResult();
 			};
 
 			using var sigtermRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx => {
