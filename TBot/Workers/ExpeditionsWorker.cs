@@ -86,7 +86,7 @@ namespace Tbot.Workers {
 				var ex = lf.Expeditions ?? new LFBonusesExpeditions();
 				float Cargo(Buildables b) => lf.LfShipBonusesInt.TryGetValue((int) b, out var v) ? v.CargoCapacity : 0;
 				float Fuel(Buildables b) => lf.LfShipBonusesInt.TryGetValue((int) b, out var v) ? v.FuelConsumption : 0;
-				int gtNeeded = 0, gtCapacity = 0;
+				long gtNeeded = 0; int gtCapacity = 0;
 				try {
 					int hyper = _tbotInstance.UserData.researches?.HyperspaceTechnology ?? 0;
 					var cls = _tbotInstance.UserData.userInfo.Class;
