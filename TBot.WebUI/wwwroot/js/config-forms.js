@@ -811,7 +811,7 @@
             if (X.MinePlanRanking && typeof X.MinePlanRanking === 'object') {
                 var mr = X.MinePlanRanking, mrp = xp.concat('MinePlanRanking');
                 body.appendChild(sec('Mine plan: ranking of the next steps', [
-                    el('div', { class: 'cfg-note', text: 'How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. Display only: AutoMine and AutoResearch build by their own rules.' }),
+                    el('div', { class: 'cfg-note', text: 'How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. By default this is display only; switch on "AutoMine follows the build plan" below to let AutoMine use it.' }),
                     fld(mr, 'Mode', mrp, 'Ranking', 'Payback = like AutoMine; Cheapest = lowest cost first; Npv = most gain over the horizon', 'select', { options: ['Payback', 'Cheapest', 'Npv'] }),
                     fld(mr, 'HorizonDays', mrp, 'Horizon (Npv)', 'Steps that do not pay back within this time are left out', 'num', { min: 1, unit: 'days' }),
                     fld(mr, 'OnlySensible', mrp, 'Only sensible steps', 'Hide steps with a payback longer than the limit', 'toggle'),

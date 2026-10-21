@@ -209,6 +209,11 @@ namespace TBot.WebUI.Controllers {
 
 		private static List<string> FillDefaults(string block, JObject data) {
 			var added = new List<string>();
+			if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase)) {
+				if (data["MinePlanRanking"] is JObject mpr && DefaultExperimental()["MinePlanRanking"] is JObject mprTemplate)
+					FillDefaultsInto(mpr, mprTemplate, ExperimentalBlock + ".MinePlanRanking", added);
+				return added;
+			}
 			if (NeverForm.Contains(block) || ProtectedBlocks.Contains(block) || string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase))
 				return added;
 			if (DefaultsTemplate.Value?[block] is JObject template)

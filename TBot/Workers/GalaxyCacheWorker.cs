@@ -145,6 +145,8 @@ namespace Tbot.Workers {
 				_ => $"{e.Type} {e.Coord}"
 			};
 			bool wichtig = e.Type == GalaxyEventType.New || e.Type == GalaxyEventType.Move;
+			if (string.Equals(e.PlayerName, "space", StringComparison.OrdinalIgnoreCase))
+				wichtig = false;
 			DoLog(wichtig ? LogLevel.Warning : LogLevel.Information, text);
 			ExtraLog.Write(_tbotInstance, "GalaxyCache", $"Event: {text}");
 			if (cfg.Telegram && wichtig) {
