@@ -855,6 +855,7 @@ func (b *OGame) preRequestChecks() error {
 }
 
 func (b *OGame) execRequest(method, finalURL string, payload, vals url.Values) ([]byte, error) {
+	countOut(method, vals)
 	var body io.Reader
 	if method == http.MethodPost {
 		body = strings.NewReader(payload.Encode())

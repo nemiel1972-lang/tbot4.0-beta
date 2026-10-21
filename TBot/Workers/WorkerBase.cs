@@ -80,9 +80,7 @@ namespace Tbot.Workers {
 				DoLog(LogLevel.Information, $"Worker \"{GetWorkerName()}\" closed!");
 				_timer = null;
 			}
-			foreach (var worker in _celestialWorkers.Values) {
-				await worker.StopWorker();
-			}
+			await Task.WhenAll(_celestialWorkers.Values.ToList().Select(w => w.StopWorker()));
 		}
 		public void ChangeWorkerPeriod(long periodMs) {
 			if (periodMs >= int.MaxValue)
@@ -103,9 +101,7 @@ namespace Tbot.Workers {
 		}
 		public async void RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) { try {
 			DoLog(LogLevel.Information, $"Restarting Worker \"{GetWorkerName()}\"...");
-			foreach (var worker in _celestialWorkers.Values) {
-				await worker.StopWorker();
-			}
+			await Task.WhenAll(_celestialWorkers.Values.ToList().Select(w => w.StopWorker()));
 			await StartWorker(ct, period, dueTime);
 		} catch (Exception asyncVoidEx) { DoLog(LogLevel.Error, $"Unhandled error in RestartWorker: {asyncVoidEx}"); }
 		}
@@ -183,6 +179,7 @@ namespace Tbot.Workers {
 #endif
 
 		private async Task ExecutionWrapper(CancellationToken ct) {
+			TBot.Ogame.Infrastructure.RequestStats.Current.Value = GetWorkerName();
 
 			if (_tbotInstance.UserData.isSleeping == true) {
 				DoLog(LogLevel.Debug, $"Sleeping... Ending {GetWorkerName()}");

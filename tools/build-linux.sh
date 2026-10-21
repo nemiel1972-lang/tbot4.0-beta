@@ -107,6 +107,8 @@ WorkingDirectory=/home/USER/tbot
 ExecStart=/home/USER/tbot/TBot
 Restart=on-failure
 RestartSec=15
+# Wichtig fuer "Install update": ohne dies beendet systemd beim Stoppen des Bots auch den Updater
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
@@ -145,6 +147,19 @@ Single-file alternative
   cp config/config.vorlage.json instance_settings.json, fill everything in that one file and create settings.json:
        { "Instances": [ { "Settings": "instance_settings.json", "Alias": "MAIN" } ],
          "WebUI": { "Enable": true, "Urls": "http://localhost:5000" } }
+
+Run as a systemd service (recommended for permanent operation; needed for automatic start after a reboot)
+  The file tbot.service.example in this folder is a ready unit. Replace USER and the folder (here /home/USER/tbot) and install it:
+       sudo cp tbot.service.example /etc/systemd/system/tbot.service
+       sudo nano /etc/systemd/system/tbot.service      # set User=, WorkingDirectory= and ExecStart= to your user and folder
+       sudo chown -R USER:USER /path/to/your/tbot       # the user must be able to write in the bot folder (config, data, updates)
+       sudo systemctl daemon-reload
+       sudo systemctl enable --now tbot
+  Status: systemctl status tbot     Log: journalctl -u tbot -f     Restart: sudo systemctl restart tbot
+  Stop a bot that runs in screen/tmux first, otherwise two instances run.
+  KEEP the line "KillMode=process" in the unit: without it systemd also stops the updater when the bot stops,
+  and "Install update" in the WebUI fails (the bot stops and nothing is installed). Do not run the bot as root.
+  Without systemd (screen/tmux): start it with ./start.sh in a screen or tmux session instead.
 
 Files the bot creates by itself (next to TBot)
   data/  state files (ledger, farm state, pending recalls ...)

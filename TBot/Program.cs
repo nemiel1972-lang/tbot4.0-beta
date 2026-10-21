@@ -36,6 +36,7 @@ namespace Tbot {
 		private static ILoggerService<Program> _logger;
 		private static IInstanceManager _instanceManager;
 		static DateTime startTime = DateTime.UtcNow;
+		private static System.Threading.Timer _statsTimer;
 
 		static void Main(string[] args) {
 			MainAsync(args).Wait();
@@ -94,10 +95,22 @@ namespace Tbot {
 
 			_instanceManager.OnSettingsChanged();
 
+			_statsTimer = new System.Threading.Timer(_ => {
+				try {
+					var snap = TBot.Ogame.Infrastructure.RequestStats.Snapshot();
+					if (snap.Count == 0) return;
+					long total = snap.Sum(kv => kv.Value);
+					string top = string.Join(", ", snap.Take(12).Select(kv => $"{kv.Key} {kv.Value}"));
+					_logger.WriteLog(LogLevel.Information, LogSender.Main, $"[Requests/10min] gesamt {total} ({total / 600.0:F1}/s): {top}");
+				} catch {  }
+			}, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
+
+
 			var tcs = new TaskCompletionSource();
 			CancellationTokenSource cts = new CancellationTokenSource();
 
 			Console.CancelKeyPress += (sender, e) => {
+				OgameService.ShuttingDown = true;
 				_logger.WriteLog(LogLevel.Information, LogSender.Main, "CTRL+C pressed!");
 				e.Cancel = true;
 				cts.Cancel();
@@ -105,6 +118,7 @@ namespace Tbot {
 			};
 
 			using var sigtermRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx => {
+				OgameService.ShuttingDown = true;
 				_logger.WriteLog(LogLevel.Information, LogSender.Main, "SIGTERM received (systemctl stop/restart)!");
 				ctx.Cancel = true;
 				cts.Cancel();
@@ -125,7 +139,7 @@ namespace Tbot {
 			if (disposeCompleted != disposeTask) {
 				_logger.WriteLog(LogLevel.Warning, LogSender.Main, "Graceful shutdown did not finish within 20s (likely ogamed is wedged) - force-killing ogamed so stuck workers unblock.");
 				try {
-					ogameService.KillOgamedExecutable();
+					OgameService.KillAll();
 				} catch (Exception ex) {
 					_logger.WriteLog(LogLevel.Error, LogSender.Main, $"KillOgamedExecutable() itself threw: {ex.Message}");
 				}

@@ -153,6 +153,7 @@ namespace Tbot.Workers {
 		}
 
 		private async Task ExecutionWrapper(CancellationToken ct) {
+			TBot.Ogame.Infrastructure.RequestStats.Current.Value = (_parentWorker != null) ? _parentWorker.GetWorkerName() : GetWorkerName();
 			var firstExecutionCompletion = _firstExecutionCompletion;
 
 			if (_tbotInstance.UserData.isSleeping == true) {

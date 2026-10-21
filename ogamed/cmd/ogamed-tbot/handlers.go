@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -8,15 +9,63 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alaingilbert/ogame/pkg/ogame"
+	"github.com/alaingilbert/ogame/pkg/taskRunner"
 	"github.com/alaingilbert/ogame/pkg/utils"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 )
+
+const maxToken100Retries = 4
+
+var browserPostMu sync.Mutex
+
+var (
+	browserCPMu sync.RWMutex
+	browserCP   string
+	planetIDRe  = regexp.MustCompile(`name="ogame-planet-id"\s+content="(\d+)"`)
+)
+
+func applyBrowserCP(vals url.Values, method string) {
+	if vals.Get("cp") != "" || (method != http.MethodPost && !wrapper.IsAjaxPage(vals)) {
+		return
+	}
+	browserCPMu.RLock()
+	cp := browserCP
+	browserCPMu.RUnlock()
+	if cp == "" {
+		return
+	}
+	vals.Set("cp", cp)
+	if a := vals.Get("action"); a == "sendFleet" || a == "checkTarget" {
+		log.Printf("[CP] Browser-Planet %s an %s/%s ergaenzt", cp, vals.Get("component"), a)
+	}
+}
+
+func rememberBrowserCP(vals url.Values, pageHTML []byte) {
+	cp := vals.Get("cp")
+	if cp == "" && len(pageHTML) > 0 && pageHTML[0] == '<' {
+		head := pageHTML
+		if len(head) > 30000 {
+			head = head[:30000]
+		}
+		if m := planetIDRe.FindSubmatch(head); m != nil {
+			cp = string(m[1])
+		}
+	}
+	if cp == "" {
+		return
+	}
+	browserCPMu.Lock()
+	browserCP = cp
+	browserCPMu.Unlock()
+}
 
 func PostToggleManualModeHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
@@ -79,6 +128,8 @@ func GetFromGameHandler(c echo.Context) error {
 	if len(c.QueryParams()) > 0 {
 		vals = c.QueryParams()
 	}
+	applyBrowserCP(vals, http.MethodGet)
+	wrapper.CountBrowser(http.MethodGet, vals)
 	locked, state := bot.GetState()
 	var pageHTML []byte
 	var pageErr error
@@ -87,11 +138,12 @@ func GetFromGameHandler(c echo.Context) error {
 		txTimer.Reset(30 * time.Second)
 		pageHTML, pageErr = tx.GetPageContent(vals)
 	} else {
-		pageHTML, pageErr = bot.GetPageContent(vals)
+		pageHTML, pageErr = bot.WithPriority(taskRunner.Critical).GetPageContent(vals)
 	}
 	if pageErr != nil {
 		return c.JSON(http.StatusBadGateway, wrapper.ErrorResp(502, pageErr.Error()))
 	}
+	rememberBrowserCP(vals, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
 	pageHTML = ingameUi(pageHTML, state, locked)
@@ -110,15 +162,42 @@ func PostToGameHandler(c echo.Context) error {
 		vals = c.QueryParams()
 	}
 	payload, _ := c.FormParams()
+	applyBrowserCP(vals, http.MethodPost)
+	wrapper.CountBrowser(http.MethodPost, vals)
 	locked, state := bot.GetState()
 	var pageHTML []byte
 	var pageErr error
-	if state == "manual mode" && locked {
-		txTimer.Reset(30 * time.Second)
-		tx := botMap["tx"]
-		pageHTML, pageErr = tx.PostPageContent(vals, payload)
-	} else {
-		pageHTML, pageErr = bot.PostPageContent(vals, payload)
+	doPost := func() ([]byte, error) {
+		if state == "manual mode" && locked {
+			txTimer.Reset(30 * time.Second)
+			tx := botMap["tx"]
+			return tx.PostPageContent(vals, payload)
+		}
+		return bot.WithPriority(taskRunner.Critical).PostPageContent(vals, payload)
+	}
+	origTok := payload.Get("token")
+	browserPostMu.Lock()
+	defer browserPostMu.Unlock()
+	pageHTML, pageErr = doPost()
+	for try := 0; try < maxToken100Retries && pageErr == nil && isAjaxError100(pageHTML); try++ {
+		keys := make([]string, 0, len(payload))
+		for k := range payload {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		log.Printf("[Token100] Fehler 100 bei POST %s (component=%s action=%s), Versuch %d/%d: Browser-Token %s, gesendet %s, neues Token der Antwort %s, cp=%s, Felder=%s; wartet und sendet erneut",
+			vals.Get("page"), vals.Get("component"), vals.Get("action"), try+1, maxToken100Retries, tokPrefix(origTok), tokPrefix(payload.Get("token")), tokPrefix(newTokenOf(pageHTML)), vals.Get("cp"), strings.Join(keys, ","))
+		if nt := newTokenOf(pageHTML); nt != "" {
+			payload.Set("token", nt)
+		}
+		time.Sleep(time.Duration(400*(try+1)) * time.Millisecond)
+		pageHTML, pageErr = doPost()
+		if pageErr == nil && !isAjaxError100(pageHTML) {
+			log.Printf("[Token100] Wiederholung %d erfolgreich", try+1)
+		}
+	}
+	if pageErr == nil && isAjaxError100(pageHTML) {
+		log.Printf("[Token100] Fehler 100 bleibt nach den Wiederholungen bestehen (component=%s action=%s)", vals.Get("component"), vals.Get("action"))
 	}
 	if pageErr != nil {
 		return c.JSON(http.StatusBadGateway, wrapper.ErrorResp(502, pageErr.Error()))
@@ -227,6 +306,39 @@ func removeCookiesBanner(pageHTML []byte) []byte {
 	pageHTMLstr = strings.ReplaceAll(pageHTMLstr, "https://consent.gameforge.com/cookiebanner.js", "")
 	pageHTMLstr = strings.ReplaceAll(pageHTMLstr, "https://consent-sandbox.gameforge.com/cookiebanner.js", "")
 	return []byte(pageHTMLstr)
+}
+
+func tokPrefix(t string) string {
+	if len(t) > 6 {
+		return t[:6]
+	}
+	return t
+}
+
+func newTokenOf(body []byte) string {
+	var res struct {
+		NewAjaxToken string `json:"newAjaxToken"`
+	}
+	if json.Unmarshal(body, &res) != nil {
+		return ""
+	}
+	return res.NewAjaxToken
+}
+
+func isAjaxError100(body []byte) bool {
+	if len(body) == 0 || len(body) > 4096 || body[0] != '{' {
+		return false
+	}
+	var res struct {
+		Status string `json:"status"`
+		Error  struct {
+			Error int `json:"error"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return false
+	}
+	return res.Status == "failure" && res.Error.Error == 100
 }
 
 func ingameUi(pageHTML []byte, state string, locked bool) []byte {

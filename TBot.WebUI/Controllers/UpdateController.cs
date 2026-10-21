@@ -71,6 +71,9 @@ namespace TBot.WebUI.Controllers {
 			}
 			try {
 				string appDir = AppContext.BaseDirectory;
+				string? killModeProblem = UpdateLogic.ServiceKillModeProblem();
+				if (killModeProblem != null)
+					throw new Exception(killModeProblem);
 				string zip = await UpdateLogic.DownloadAsync(info, Path.Combine(appDir, "update"), Http);
 				UpdateLogic.LaunchUpdater(appDir, zip, info.Current, info.Latest);
 				_ = Task.Run(async () => {

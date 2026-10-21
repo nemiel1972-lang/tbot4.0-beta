@@ -59,10 +59,12 @@ namespace TBot.WebUI.Controllers {
 			["MinePlanRanking"] = new JObject {
 				["Mode"] = "Payback",
 				["HorizonDays"] = 90,
-				["MaxPaybackDays"] = 200,
+				["MaxPaybackDays"] = 1000,
 				["OnlySensible"] = false,
 				["IncludeResearch"] = true,
-				["DailyBudgetDeut"] = 0
+				["DailyBudgetDeut"] = 0,
+				["UsePlanForAutoMine"] = false,
+				["PlanLookahead"] = 12
 			},
 			["AsteroidHunt"] = new JObject {
 				["Active"] = false,

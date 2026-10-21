@@ -79,6 +79,75 @@ namespace Tbot.Workers {
 				f.Origin.Type == origin.Coordinate.Type);
 		}
 
+		private ExpoFindsStore _expoStore;
+		private async System.Threading.Tasks.Task RefreshExpoFinds() {
+			try {
+				_expoStore ??= new ExpoFindsStore(ExpoFindsStore.PathFor(_tbotInstance.InstanceAlias));
+				if (!_expoStore.Due(DateTime.UtcNow, TimeSpan.FromMinutes(20)))
+					return;
+				var messages = await _ogameService.GetExpeditionMessages();
+				double ShipValue(string name) {
+					if (!Enum.TryParse<Buildables>(name, true, out var b))
+						return 0;
+					var price = _calculationService.CalcPrice(b, 1);
+					return price.Metal / Resources.MetalPerDeuterium + price.Crystal / Resources.CrystalPerDeuterium + price.Deuterium;
+				}
+				int added = _expoStore.Add(messages, ShipValue, DateTime.UtcNow);
+				if (added > 0)
+					DoLog(LogLevel.Information, $"Expedition reports: {added} new report(s) saved, {_expoStore.Current?.Reports ?? 0} in total.");
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Expedition reports could not be read: {e.Message}");
+			}
+		}
+
+		private LfEffectsStore _lfEffects;
+		private async System.Threading.Tasks.Task RefreshLfEffects(long celestialId) {
+			try {
+				_lfEffects ??= new LfEffectsStore(LfEffectsStore.PathFor(_tbotInstance.InstanceAlias));
+				if (!_lfEffects.Due(DateTime.UtcNow, TimeSpan.FromHours(6)))
+					return;
+				string html = await _ogameService.GetLfBonusesPageHtml(celestialId);
+				var rows = LfEffectsStore.Parse(html);
+				int changed = _lfEffects.Add(rows, DateTime.UtcNow);
+				if (changed > 0)
+					DoLog(LogLevel.Information, $"Lifeform effects: {changed} new value(s) learned ({rows.Count} entries read).");
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Lifeform effects could not be read: {e.Message}");
+			}
+		}
+
+		private DateTime _lfTablesLast = DateTime.MinValue;
+		private async System.Threading.Tasks.Task RefreshLfTables(IEnumerable<long> celestialIds) {
+			if (DateTime.UtcNow - _lfTablesLast < TimeSpan.FromHours(24))
+				return;
+			_lfTablesLast = DateTime.UtcNow;
+			try {
+				_lfEffects ??= new LfEffectsStore(LfEffectsStore.PathFor(_tbotInstance.InstanceAlias));
+				var done = new HashSet<int>();
+				int changed = 0;
+				foreach (long cel in celestialIds.Distinct().Take(3)) {
+					var ids = new List<int>();
+					foreach (string comp in new[] { "lfbuildings", "lfresearch" }) {
+						string page = await _ogameService.GetLfPageHtml(cel, comp);
+						foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(page ?? "", @"data-technology=""(\d{4,6})"""))
+							ids.Add(int.Parse(m.Groups[1].Value));
+					}
+					foreach (int id in ids.Distinct()) {
+						if (!done.Add(id)) continue;
+						if (_lfEffects.HasFreshTable(id, TimeSpan.FromDays(30), DateTime.UtcNow)) continue;
+						string html = await _ogameService.GetLfTechInfoHtml(cel, id);
+						var nm = System.Text.RegularExpressions.Regex.Match(html ?? "", @"data-title=""Technik - ([^""]*)""");
+						changed += _lfEffects.AddTable(id, nm.Success ? System.Net.WebUtility.HtmlDecode(nm.Groups[1].Value) : "", LfEffectsStore.ParseTechInfo(html), DateTime.UtcNow);
+						await System.Threading.Tasks.Task.Delay(1500);
+					}
+				}
+				if (changed > 0)
+					DoLog(LogLevel.Information, $"Lifeform tables: {changed} level value(s) of {done.Count} building/research entries saved.");
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Lifeform tables could not be read: {e.Message}");
+			}
+		}
+
 		private void WriteLfSnapshot(LFBonuses lf) {
 			try {
 				if (lf == null)
@@ -97,6 +166,7 @@ namespace Tbot.Workers {
 				var snapshot = new {
 					updatedUtc = DateTime.UtcNow,
 					expeditionBonuses = lf.ExpeditionBonuses,
+					expoFinds = _expoStore?.Current,
 					suggestion = new { largeCargoPerExpedition = gtNeeded, capacityPerLargeCargo = gtCapacity },
 					expeditions = new { ex.Ships, Resources = Math.Max(ex.Resources, lf.LfResourceBonuses?.ResourcesExpedition ?? 0), ex.Speed, ex.DarkMatter, ex.FleetLoss, ex.Slots, ex.LessEnemies },
 					cargo = new { LargeCargo = Cargo(Buildables.LargeCargo), SmallCargo = Cargo(Buildables.SmallCargo), Pathfinder = Cargo(Buildables.Pathfinder) },
@@ -598,6 +668,9 @@ namespace Tbot.Workers {
 				}
 
 				var lfBonuses = await _ogameService.GetLFBonuses();
+				await RefreshExpoFinds();
+				await RefreshLfEffects(origins[0].ID);
+				await RefreshLfTables(origins.Select(o => (long) o.ID));
 				WriteLfSnapshot(lfBonuses);
 				int maxPerOrigin = (int?)_tbotInstance.InstanceSettings.Expeditions.MaxExpeditionsPerOrigin ?? 1;
 				var defaultMax = new int[origins.Count];

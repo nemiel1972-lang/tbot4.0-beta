@@ -353,11 +353,19 @@
    "Lifeform bonuses (expeditions)": "Lebensform-Boni (Expeditionen)",
    "Discoverer class bonus": "Entdecker-Klassenbonus",
    "Large cargos per expedition": "Große Transporter pro Expedition",
+   "Expedition finds, 7-day average": "Expeditionsfunde, 7-Tage-Schnitt",
+   "Expedition finds, 30-day average": "Expeditionsfunde, 30-Tage-Schnitt",
+   "Expedition finds, best 7 of 60 days": "Expeditionsfunde, beste 7 von 60 Tagen",
+   "Budget from:": "Budget aus:",
+   "entered by hand": "von Hand eingegeben",
+   "expeditions, 7-day average": "Expeditionen, 7-Tage-Schnitt",
+   "expeditions, 30-day average": "Expeditionen, 30-Tage-Schnitt",
+   "expeditions, best 7 of 60 days": "Expeditionen, beste 7 von 60 Tagen",
    "Max find: metal": "Max. Fund: Metall",
    "Max find: crystal": "Max. Fund: Kristall",
    "Max find: deuterium": "Max. Fund: Deuterium",
    "Max find: ships (value)": "Max. Fund: Schiffe (Wert)",
-   "Dark matter find": "Dunkle-Materie-Fund",
+   "Max find: dark matter": "Max. Fund: Dunkle Materie",
    "No data yet - the Expeditions worker writes it on its next run.": "Noch keine Daten - der Expeditions-Worker schreibt sie bei seinem nächsten Lauf.",
    "As reported by the game": "Wie vom Spiel gemeldet",
    "Suggested large cargos per expedition": "Vorschlag: Große Transporter pro Expedition",
@@ -374,6 +382,11 @@
    "Longest production time": "Längste Produktionszeit",
    "Longest sensible payback": "Längste sinnvolle Amortisation",
    "Daily budget (build plan)": "Tagesbudget (Aufbauplan)",
+   "AutoMine follows the build plan": "AutoMine folgt dem Aufbauplan",
+   "AutoMine only builds a mine when its planet is among the first steps of the build plan (best payback first, across all planets). Off = every planet builds on its own": "AutoMine baut eine Mine nur, wenn der Planet unter den ersten Schritten des Aufbauplans vorkommt (beste Amortisation zuerst, über alle Planeten). Aus = jeder Planet baut für sich",
+   "Plan look-ahead": "Plan-Vorausschau",
+   "How many steps of the plan count as due": "Wie viele Schritte des Plans als fällig gelten",
+   "steps": "Schritte",
    "Deuterium equivalent per day, e.g. expedition income; 0 = enter it on the page": "Deuterium-Äquivalent pro Tag, z. B. Expo-Einnahmen; 0 = auf der Seite eingeben",
    "D-eq/day": "D-Äq./Tag",
    "Loss weight vs. fuel": "Verlustgewicht gegenüber Treibstoff",
@@ -2594,6 +2607,12 @@
    "MinePlanRanking.HorizonDays": {
     "t": "Horizont für die Nettogewinn-Reihung, in Tagen.",
     "e": "90 = ein Schritt ist gut, wenn er innerhalb von 90 Tagen mehr einbringt, als er kostet."
+   },
+   "MinePlanRanking.UsePlanForAutoMine": {
+    "t": "AutoMine baut eine Mine nur, wenn der Planet unter den ersten Schritten des Aufbauplans vorkommt (beste Amortisation zuerst, über alle Planeten). Die anderen Planeten warten. Aus = jeder Planet baut für sich."
+   },
+   "MinePlanRanking.PlanLookahead": {
+    "t": "Wie viele Schritte des Aufbauplans als fällig gelten. Größer = mehr Planeten bauen gleichzeitig."
    },
    "MinePlanRanking.DailyBudgetDeut": {
     "t": "Tagesbudget für den Aufbauplan in Deuterium-Äquivalent (z. B. Expo-Einnahmen). 0 = auf der Seite eingeben."

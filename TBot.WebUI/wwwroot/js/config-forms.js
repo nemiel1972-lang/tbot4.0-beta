@@ -817,12 +817,14 @@
                     fld(mr, 'OnlySensible', mrp, 'Only sensible steps', 'Hide steps with a payback longer than the limit', 'toggle'),
                     fld(mr, 'MaxPaybackDays', mrp, 'Longest sensible payback', null, 'num', { min: 1, unit: 'days' }),
                     fld(mr, 'IncludeResearch', mrp, 'Include research', 'Rank plasma technology next to the mine steps', 'toggle'),
-                    fld(mr, 'DailyBudgetDeut', mrp, 'Daily budget (build plan)', 'Deuterium equivalent per day, e.g. expedition income; 0 = enter it on the page', 'num', { min: 0, unit: 'D-eq/day' })
+                    fld(mr, 'DailyBudgetDeut', mrp, 'Daily budget (build plan)', 'Deuterium equivalent per day, e.g. expedition income; 0 = enter it on the page', 'num', { min: 0, unit: 'D-eq/day' }),
+                    fld(mr, 'UsePlanForAutoMine', mrp, 'AutoMine follows the build plan', 'AutoMine only builds a mine when its planet is among the first steps of the build plan (best payback first, across all planets). Off = every planet builds on its own', 'toggle'),
+                    fld(mr, 'PlanLookahead', mrp, 'Plan look-ahead', 'How many steps of the plan count as due', 'num', { min: 1, unit: 'steps' })
                 ].filter(Boolean)));
             } else {
                 body.appendChild(sec('Mine plan: ranking of the next steps', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet - the default (shortest payback, research included) applies. Add it to change that.' }),
-                    addDefault(X, 'MinePlanRanking', { Mode: 'Payback', HorizonDays: 90, MaxPaybackDays: 200, OnlySensible: false, IncludeResearch: true, DailyBudgetDeut: 0 }, 'Mine plan ranking settings', null)
+                    addDefault(X, 'MinePlanRanking', { Mode: 'Payback', HorizonDays: 90, MaxPaybackDays: 1000, OnlySensible: false, IncludeResearch: true, DailyBudgetDeut: 0, UsePlanForAutoMine: false, PlanLookahead: 12 }, 'Mine plan ranking settings', null)
                 ]));
             }
             if (X.GalaxyCache && typeof X.GalaxyCache === 'object') {
@@ -1606,15 +1608,30 @@
             if (o.Colony && typeof o.Colony === 'object')
                 k.push(inner('brain:AutoMine:colony', 'Caps for all other planets (Colony)', autoRows(o.Colony, p.concat('Colony'), numKeys(o.Colony, /^Max/))));
             if (Array.isArray(o.ColonyOverrides)) {
-                var ovKids = [el('div', { class: 'cfg-note', text: 'Single planets with their own caps. Matched by exact coordinate; only the fields you set replace the Colony caps.' })];
+                var capSrc = (o.Colony && typeof o.Colony === 'object') ? o.Colony : o;
+                var capKeys = ['MaxMetalMine', 'MaxCrystalMine', 'MaxDeuteriumSynthetizer', 'MaxSolarPlant', 'MaxFusionReactor', 'MaxMetalStorage', 'MaxCrystalStorage', 'MaxDeuteriumTank',
+                    'MaxRoboticsFactory', 'MaxShipyard', 'MaxResearchLab', 'MaxMissileSilo', 'MaxNaniteFactory', 'MaxTerraformer', 'MaxSpaceDock'];
+                numKeys(capSrc, /^Max/).forEach(function (key) { if (capKeys.indexOf(key) < 0) capKeys.push(key); });
+                var capRows = function (ov, op) {
+                    return capKeys.map(function (key) {
+                        if (has(ov, key)) return fld(ov, key, op, pretty(key), null, 'num', { min: 0, step: 'any' });
+                        var inp = el('input', { type: 'number', min: 0, step: 'any', placeholder: has(capSrc, key) ? 'inherits ' + capSrc[key] : 'inherits Colony' });
+                        inp.addEventListener('input', function () {
+                            if (inp.value === '') delete ov[key]; else ov[key] = Number(inp.value);
+                            update();
+                        });
+                        return row(pretty(key), 'not set: uses the Colony value', inp);
+                    });
+                };
+                var ovKids = [el('div', { class: 'cfg-note', text: 'Single planets with their own caps. Matched by exact coordinate; only the fields you set replace the Colony caps. A new planet starts with all caps at 0 (nothing is built there until you raise them).' })];
                 o.ColonyOverrides.forEach(function (ov, idx) {
                     var op = p.concat('ColonyOverrides', idx);
                     var label = sens(el('span', { text: ov.Galaxy + ':' + ov.System + ':' + ov.Position + ' ' + (ov.Type || 'Planet') }));
-                    var d2 = el('details', { class: 'cfg-inner' }, [el('summary', null, [label])].concat(coordRows(ov, op)).concat(autoRows(ov, op, numKeys(ov, /^Max/))).concat([
+                    var d2 = el('details', { class: 'cfg-inner' }, [el('summary', null, [label])].concat(coordRows(ov, op)).concat(capRows(ov, op)).concat([
                         el('button', { type: 'button', class: 'cfg-btn sm', text: 'Remove this planet', onclick: function () { o.ColonyOverrides.splice(idx, 1); update(); render(); } })]));
                     ovKids.push(d2);
                 });
-                ovKids.push(el('button', { type: 'button', class: 'cfg-btn sm', text: '+ Add planet', onclick: function () { o.ColonyOverrides.push(newCoord()); openSecs['brain:AutoMine:ov'] = true; update(); render(); } }));
+                ovKids.push(el('button', { type: 'button', class: 'cfg-btn sm', text: '+ Add planet', onclick: function () { var nc = newCoord(); capKeys.forEach(function (key) { nc[key] = 0; }); o.ColonyOverrides.push(nc); openSecs['brain:AutoMine:ov'] = true; update(); render(); } }));
                 k.push(inner('brain:AutoMine:ov', 'Planets with own caps (' + o.ColonyOverrides.length + ')', ovKids));
             }
             k.push(inner('brain:AutoMine:opt', 'Build options', autoRows(o, p, ['RandomOrder', 'OptimizeForStart', 'PrioritizeRobotsAndNanites', 'BuildDepositIfFull', 'BuildSolarSatellites', 'BuildCrawlers', 'FixedCrawlerTarget', 'DepositHours', 'MaxDaysOfInvestmentReturn', 'DeutToLeaveOnMoons'])));

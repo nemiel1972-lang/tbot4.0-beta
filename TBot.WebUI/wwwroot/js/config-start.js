@@ -128,10 +128,18 @@
             if (shipKey) c.body.appendChild(row('Max find: ships (value)', num(Math.ceil(cap * (1 + (Number(eb[shipKey]) || 0)) / 2))));
             if (dmKey) {
                 var dm = 1 + (Number(eb[dmKey]) || 0);
-                [[300, 400], [500, 700], [1000, 1800]].forEach(function (r) { c.body.appendChild(row('Dark matter find', num(Math.floor(r[0] * dm)) + ' - ' + num(Math.floor(r[1] * dm)))); });
+                c.body.appendChild(row('Max find: dark matter', num(Math.floor(1800 * dm))));
             }
             if (!shipKey || !dmKey) c.body.appendChild(el('div', 'st-mut', 'Ship / dark matter finds: bonus not reported by the game under a known name yet (see the "Bonus ..." rows).'));
             if (sg.largeCargoPerExpedition > 0) c.body.appendChild(row('Large cargos per expedition', num(sg.largeCargoPerExpedition) + ' (' + num(sg.capacityPerLargeCargo) + ' each)'));
+            var xf = lf.expoFinds;
+            if (xf && xf.Reports > 0) {
+                var both = function (r, s2) { return compact((r || 0) + (s2 || 0)) + ' / day'; };
+                c.body.appendChild(row('Expedition finds, 7-day average', both(xf.Avg7ResDeut, xf.Avg7ShipsDeut)));
+                c.body.appendChild(row('Expedition finds, 30-day average', both(xf.Avg30ResDeut, xf.Avg30ShipsDeut)));
+                c.body.appendChild(row('Expedition finds, best 7 of 60 days', both(xf.Best7Of60ResDeut, xf.Best7Of60ShipsDeut)));
+                c.body.appendChild(el('div', 'st-mut', 'From ' + num(xf.Reports) + ' saved reports (' + num(xf.DaysWithData) + ' days). In deuterium equivalent (3:2:1), resources plus found ships at build value.'));
+            }
             c.body.appendChild(el('div', 'st-mut', 'As of ' + (lf.updatedUtc ? new Date(lf.updatedUtc).toLocaleString() : '-') + '. Details: Expeditions block.'));
         } else c.body.appendChild(el('div', 'st-mut', 'No data yet - the Expeditions worker writes it on its next run.'));
 

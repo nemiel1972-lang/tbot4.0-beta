@@ -68,7 +68,12 @@ namespace Tbot.Services {
 
 			_mainSettings = await SettingsService.GetSettings(SettingsAbsoluteFilepath);
 
-			await InitializeTelegramMessenger();
+			try {
+				await InitializeTelegramMessenger();
+			} catch (Exception e) {
+				telegramMessenger = null;
+				_logger.WriteLog(LogLevel.Error, LogSender.Main, $"Telegram Messenger konnte nicht gestartet werden ({e.Message}). Bot laeuft ohne Telegram weiter - bitte TelegramMessenger.API in settings.json pruefen.");
+			}
 
 			SettingsVersion settingVersion = SettingsVersion.Invalid;
 

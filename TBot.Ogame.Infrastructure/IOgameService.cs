@@ -47,6 +47,9 @@ namespace TBot.Ogame.Infrastructure {
 		Task<LFTechs> GetLFTechs(Celestial celestial);
 		Task<ArtifactInventory> GetArtifactInventory(Celestial celestial);
 		Task<LFBonuses> GetLFBonuses();
+		Task<string> GetLfBonusesPageHtml(long celestialId);
+		Task<string> GetLfPageHtml(long celestialId, string component);
+		Task<string> GetLfTechInfoHtml(long celestialId, int techId);
 		Task<Moon> GetMoon(Moon moon);
 		Task<List<Moon>> GetMoons();
 		Task<string> GetOgamedIP();
@@ -78,6 +81,7 @@ namespace TBot.Ogame.Infrastructure {
 		Task<List<InventoryItem>> GetItems(Celestial celestial);
 		Task ActivateItem(Celestial celestial, string itemRef);
 		Task<List<OtherMessage>> GetOtherMessages();
+		Task<List<ExpeditionMessage>> GetExpeditionMessages();
 		Task<CharacterClass> GetUserClass();
 		Task<List<Celestial>> GetEmpirePlanets();
 		Task<List<Celestial>> GetEmpireMoons();

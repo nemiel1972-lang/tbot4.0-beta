@@ -41,8 +41,19 @@ namespace TBot.Ogame.Infrastructure {
 
 		bool _mustKill = false;
 
+		public static volatile bool ShuttingDown = false;
+
+		private static readonly System.Collections.Concurrent.ConcurrentDictionary<OgameService, byte> _alle = new();
+
+		public static void KillAll() {
+			foreach (var o in _alle.Keys) {
+				try { o.KillOgamedExecutable(); } catch {  }
+			}
+		}
+
 		public OgameService(ILoggerService<OgameService> logger) {
 			_logger = logger;
+			_alle[this] = 0;
 		}
 
 		public void Initialize(Credentials credentials,
@@ -62,7 +73,7 @@ namespace TBot.Ogame.Infrastructure {
 
 			_ogamedProcess = ExecuteOgamedExecutable(credentials, device, host, port, captchaKey, proxySettings);
 
-			_client = new HttpClient() {
+			_client = new HttpClient(new CountingHandler(new HttpClientHandler())) {
 				BaseAddress = new Uri($"http://{host}:{port}/"),
 				Timeout = TimeSpan.FromSeconds(60)
 			};
@@ -203,13 +214,13 @@ namespace TBot.Ogame.Infrastructure {
 		private void handle_ogamedProcess_Exited(object? sender, EventArgs e) {
 			int exitCode = -1;
 			try {
-				exitCode = _ogamedProcess.ExitCode;
+				exitCode = _ogamedProcess?.ExitCode ?? -1;
 			} catch (InvalidOperationException) {
 			}
 
-			if (_mustKill) {
+			if (_mustKill || ShuttingDown) {
 				_logger.WriteLog(LogLevel.Information, LogSender.OGameD, $"OgameD Exited {exitCode} (deliberate shutdown)");
-				_ogamedProcess.Dispose();
+				_ogamedProcess?.Dispose();
 				_ogamedProcess = null;
 				return;
 			}
@@ -787,6 +798,10 @@ namespace TBot.Ogame.Infrastructure {
 			return await GetAsync<List<InventoryItem>>($"/bot/celestials/{celestial.ID}/items");
 		}
 
+		public async Task<List<ExpeditionMessage>> GetExpeditionMessages() {
+			return await GetAsync<List<ExpeditionMessage>>("/bot/expedition-messages");
+		}
+
 		public async Task<List<OtherMessage>> GetOtherMessages() {
 			return await GetAsync<List<OtherMessage>>("/bot/other-messages");
 		}
@@ -807,9 +822,45 @@ namespace TBot.Ogame.Infrastructure {
 			return await GetAsync<LFBuildings>($"/bot/planets/{celestial.ID}/lifeform-buildings");
 		}
 
+		private static readonly TimeSpan LfBonusesMaxAlter = TimeSpan.FromMinutes(5);
+		private LFBonuses _lfBonusesCache;
+		private DateTime _lfBonusesZeit = DateTime.MinValue;
+		private readonly object _lfBonusesLock = new();
+
 		public async Task<LFBonuses> GetLFBonuses() {
-			return await GetAsync<LFBonuses>($"/bot/lfbonuses");
+			lock (_lfBonusesLock) {
+				if (_lfBonusesCache != null && DateTime.UtcNow - _lfBonusesZeit < LfBonusesMaxAlter)
+					return _lfBonusesCache;
+			}
+			var neu = await GetAsync<LFBonuses>($"/bot/lfbonuses");
+			if (neu != null) {
+				lock (_lfBonusesLock) {
+					_lfBonusesCache = neu;
+					_lfBonusesZeit = DateTime.UtcNow;
+				}
+			}
+			return neu;
 		}
+
+		private async Task<string> PostPageHtml(params KeyValuePair<string, string>[] parameters) {
+			string b64 = await PostAsync<string>("/bot/page-content", parameters);
+			return string.IsNullOrEmpty(b64) ? "" : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64));
+		}
+
+		public Task<string> GetLfBonusesPageHtml(long celestialId) => GetLfPageHtml(celestialId, "lfbonuses");
+
+		public Task<string> GetLfPageHtml(long celestialId, string component) =>
+			PostPageHtml(new KeyValuePair<string, string>("page", "ingame"),
+				new KeyValuePair<string, string>("component", component),
+				new KeyValuePair<string, string>("cp", celestialId.ToString()));
+
+		public Task<string> GetLfTechInfoHtml(long celestialId, int techId) =>
+			PostPageHtml(new KeyValuePair<string, string>("page", "ajax"),
+				new KeyValuePair<string, string>("component", "technologytree"),
+				new KeyValuePair<string, string>("ajax", "1"),
+				new KeyValuePair<string, string>("technologyId", techId.ToString()),
+				new KeyValuePair<string, string>("tab", "technologyinformation"),
+				new KeyValuePair<string, string>("cp", celestialId.ToString()));
 
 		public async Task<LFTechs> GetLFTechs(Celestial celestial) {
 			return await GetAsync<LFTechs>($"/bot/planets/{celestial.ID}/lifeform-techs");
@@ -893,12 +944,49 @@ namespace TBot.Ogame.Infrastructure {
 			return await GetAsync<List<AttackerFleet>>("/bot/attacks");
 		}
 
+		private static readonly TimeSpan FlottenMaxAlter = TimeSpan.FromSeconds(4);
+		private readonly object _flottenLock = new();
+		private List<Fleet> _fleetsCache;
+		private DateTime _fleetsZeit = DateTime.MinValue;
+		private Slots _slotsCache;
+		private DateTime _slotsZeit = DateTime.MinValue;
+
+		private void FlottenCacheLeeren() {
+			lock (_flottenLock) {
+				_fleetsCache = null;
+				_slotsCache = null;
+			}
+		}
+
 		public async Task<List<Fleet>> GetFleets() {
-			return await GetAsync<List<Fleet>>("/bot/fleets");
+			lock (_flottenLock) {
+				if (_fleetsCache != null && DateTime.UtcNow - _fleetsZeit < FlottenMaxAlter)
+					return new List<Fleet>(_fleetsCache);
+			}
+			var neu = await GetAsync<List<Fleet>>("/bot/fleets");
+			if (neu != null) {
+				lock (_flottenLock) {
+					_fleetsCache = neu;
+					_fleetsZeit = DateTime.UtcNow;
+				}
+				return new List<Fleet>(neu);
+			}
+			return neu;
 		}
 
 		public async Task<Slots> GetSlots() {
-			return await GetAsync<Slots>("/bot/fleets/slots");
+			lock (_flottenLock) {
+				if (_slotsCache != null && DateTime.UtcNow - _slotsZeit < FlottenMaxAlter)
+					return _slotsCache;
+			}
+			var neu = await GetAsync<Slots>("/bot/fleets/slots");
+			if (neu != null) {
+				lock (_flottenLock) {
+					_slotsCache = neu;
+					_slotsZeit = DateTime.UtcNow;
+				}
+			}
+			return neu;
 		}
 
 		public async Task<Researches> GetResearches() {
@@ -958,14 +1046,24 @@ namespace TBot.Ogame.Infrastructure {
 				parameters.Add(new KeyValuePair<string, string>("deuterium", payload.Deuterium.ToString()));
 				parameters.Add(new KeyValuePair<string, string>("food", payload.Food.ToString()));
 
-				return await PostAsync<Fleet>($"/bot/planets/{origin.ID}/send-fleet", parameters.ToArray());
+				FlottenCacheLeeren();
+				try {
+					return await PostAsync<Fleet>($"/bot/planets/{origin.ID}/send-fleet", parameters.ToArray());
+				} finally {
+					FlottenCacheLeeren();
+				}
 			} catch (OgamedException e) when (e.Message.Contains("no ships to send")) {
 				return null;
 			}
 		}
 
 		public async Task CancelFleet(Fleet fleet) {
-			await PostAsync<object>($"/bot/fleets/{fleet.ID}/cancel");
+			FlottenCacheLeeren();
+			try {
+				await PostAsync<object>($"/bot/fleets/{fleet.ID}/cancel");
+			} finally {
+				FlottenCacheLeeren();
+			}
 		}
 
 		private Action<GalaxyInfo> _galaxyObserver;

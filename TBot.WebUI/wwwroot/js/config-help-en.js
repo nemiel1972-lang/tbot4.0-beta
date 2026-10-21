@@ -1180,6 +1180,12 @@ window.CFG_HELP.en = {
    "t": "Horizon for the net gain ranking, in days.",
    "e": "90 = a step counts as good if it earns more than it costs within 90 days."
   },
+  "MinePlanRanking.UsePlanForAutoMine": {
+   "t": "AutoMine only builds a mine when its planet is among the first steps of the build plan (best payback first across all planets). Other planets wait. Off = every planet builds on its own."
+  },
+  "MinePlanRanking.PlanLookahead": {
+   "t": "How many steps of the build plan count as due. Larger = more planets build at the same time."
+  },
   "MinePlanRanking.DailyBudgetDeut": {
    "t": "Daily budget for the build plan in deuterium equivalent (e.g. expedition income). 0 = enter it on the page."
   },

@@ -190,6 +190,38 @@ namespace TBot.WebUI.Services {
 				throw new Exception("Unexpected download host: " + u.Host);
 		}
 
+		public static string? ServiceKillModeProblem() {
+			try {
+				if (!IsSystemdService())
+					return null;
+				string cg = File.ReadAllText("/proc/self/cgroup");
+				var m = Regex.Match(cg, @"/([^/\r\n]+\.service)");
+				if (!m.Success) return null;
+				string unit = m.Groups[1].Value;
+				var psi = new ProcessStartInfo("systemctl", $"show -p KillMode --value {unit}") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+				using var p = Process.Start(psi);
+				if (p == null || !p.WaitForExit(4000)) return null;
+				string mode = p.StandardOutput.ReadToEnd().Trim();
+				if (mode.Equals("control-group", StringComparison.OrdinalIgnoreCase) || mode.Equals("mixed", StringComparison.OrdinalIgnoreCase))
+					return $"The bot runs as the systemd service {unit} with KillMode={mode}. systemd would stop the updater together with the bot, and the update would fail. Add KillMode=process under [Service] in the unit file, run 'sudo systemctl daemon-reload' and try again.";
+			} catch (Exception) {  }
+			return null;
+		}
+
+		public static bool IsSystemdService() {
+			try {
+				if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || Environment.GetEnvironmentVariable("INVOCATION_ID") == null)
+					return false;
+				string cg = File.ReadAllText("/proc/self/cgroup");
+				var m = Regex.Match(cg, @"/([^/\r\n]+\.service)(?:/|\s|$)");
+				if (!m.Success) return false;
+				string unit = m.Groups[1].Value;
+				return !unit.StartsWith("user@", StringComparison.OrdinalIgnoreCase) && !Regex.IsMatch(cg, @"/session-\d+\.scope");
+			} catch (Exception) {
+				return false;
+			}
+		}
+
 		public static string? FindUpdater(string appDir) {
 			foreach (string n in new[] { "TBotUpdater.exe", "TBotUpdater" }) {
 				string p = Path.Combine(appDir, n);
@@ -214,7 +246,7 @@ namespace TBot.WebUI.Services {
 			var argv = Environment.GetCommandLineArgs();
 			bool dotnetHost = Path.GetFileNameWithoutExtension(exe).Equals("dotnet", StringComparison.OrdinalIgnoreCase);
 			var restartArgs = dotnetHost ? argv : argv.Skip(1);
-			bool service = Environment.GetEnvironmentVariable("INVOCATION_ID") != null;
+			bool service = IsSystemdService();
 
 			var sb = new StringBuilder();
 			sb.Append("--package ").Append(Q(zipPath)).Append(" --target ").Append(Q(appDir.TrimEnd('/', '\\')));
@@ -223,6 +255,17 @@ namespace TBot.WebUI.Services {
 			else sb.Append(" --restart ").Append(Q(exe)).Append(" --restart-args ").Append(Q(string.Join(" ", restartArgs.Select(Q))));
 
 			var psi = new ProcessStartInfo(copy, sb.ToString()) { WorkingDirectory = runDir, UseShellExecute = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) };
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+				string? setsid = new[] { "/usr/bin/setsid", "/bin/setsid", "/usr/local/bin/setsid" }.FirstOrDefault(File.Exists);
+				string? sh = new[] { "/bin/sh", "/usr/bin/sh" }.FirstOrDefault(File.Exists);
+				if (setsid != null && sh != null) {
+					var detached = new ProcessStartInfo(sh) { WorkingDirectory = runDir, UseShellExecute = false };
+					detached.ArgumentList.Add("-c");
+					detached.ArgumentList.Add($"exec {setsid} -f {Q(copy)} {sb} >/dev/null 2>&1 </dev/null");
+					Process.Start(detached);
+					return;
+				}
+			}
 			Process.Start(psi);
 		}
 

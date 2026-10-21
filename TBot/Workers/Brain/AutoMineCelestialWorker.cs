@@ -429,7 +429,26 @@ namespace Tbot.Workers.Brain {
 					}
 				}
 
-				if (buildable != Buildables.Null && level > 0) {
+				string planHoldReason = "";
+				bool planHold = celestial is Planet && buildable != Buildables.Null && Tbot.Workers.Brain.MinePlanSnapshot.ShouldHold(_tbotInstance, celestial.ToString(), buildable, out planHoldReason);
+				if (planHold) {
+					DoLog(LogLevel.Information, $"Plan mode: {celestial.ToString()} waits with {buildable.ToString()} {level} - {planHoldReason}.");
+					delay = true;
+				} else if (celestial is Planet && (buildable == Buildables.MetalMine || buildable == Buildables.CrystalMine || buildable == Buildables.DeuteriumSynthesizer)
+					&& Tbot.Workers.Brain.MinePlanSnapshot.TryPlanPick(_tbotInstance, celestial.ToString(), out Buildables pickMine, out int pickLevel, out float pickRoi)
+					&& pickMine != buildable) {
+					int pickCap = GetCapForBuildable(pickMine, maxBuildings, maxFacilities);
+					if (pickLevel == celestial.GetLevel(pickMine) + 1 && pickLevel <= pickCap && pickRoi <= autoMinerSettings.MaxDaysOfInvestmentReturn) {
+						DoLog(LogLevel.Information, $"Plan mode: {celestial.ToString()} builds {pickMine.ToString()} {pickLevel} from the plan instead of {buildable.ToString()}.");
+						buildable = pickMine;
+						level = pickLevel;
+						(buildable, level) = EnergieVorabbau(celestial as Planet, maxBuildings, (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.BuildSolarSatellites, buildable, level);
+					} else {
+						DoLog(LogLevel.Information, $"Plan mode: plan step {pickMine.ToString()} {pickLevel} on {celestial.ToString()} is not allowed by the AutoMine limits (max level {pickCap}, max {autoMinerSettings.MaxDaysOfInvestmentReturn:0} days) - keeping {buildable.ToString()}.");
+					}
+				}
+				if (planHold) {
+				} else if (buildable != Buildables.Null && level > 0) {
 					DoLog(LogLevel.Information, $"Best building for {celestial.ToString()}: {buildable.ToString()}");
 					if (buildable == Buildables.MetalMine || buildable == Buildables.CrystalMine || buildable == Buildables.DeuteriumSynthesizer) {
 						float DOIR = _calculationService.CalcDaysOfInvestmentReturn(celestial as Planet, buildable, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData.Speed, 1, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull);

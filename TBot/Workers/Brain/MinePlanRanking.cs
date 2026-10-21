@@ -12,7 +12,7 @@ namespace Tbot.Workers.Brain {
 	public class RankConfig {
 		public RankMode Mode = RankMode.Payback;
 		public int HorizonDays = 90;
-		public int MaxPaybackDays = 200;
+		public int MaxPaybackDays = 1000;
 		public bool OnlySensible = false;
 		public bool IncludeResearch = true;
 	}

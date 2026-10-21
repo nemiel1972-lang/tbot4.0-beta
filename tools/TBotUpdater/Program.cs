@@ -298,8 +298,8 @@ namespace TBotUpdater {
 
 		private static void Log(string text) {
 			string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {text}";
-			Console.WriteLine(line);
 			try { File.AppendAllText(_logFile, line + Environment.NewLine); } catch { }
+			try { Console.WriteLine(line); } catch { }
 		}
 	}
 }

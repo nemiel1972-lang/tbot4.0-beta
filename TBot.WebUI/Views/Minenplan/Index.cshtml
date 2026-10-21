@@ -158,18 +158,31 @@
             return h + '</table></div><div class="mp-muted">Display only - AutoMine and AutoResearch keep building by their own rules.</div></div>';
         }
         function planSettings(data) {
-            var o = { budget: Number(data.BudgetDeutPerDay) || 0, reinvest: true };
+            var o = { budget: Number(data.BudgetDeutPerDay) || 0, reinvest: true, src: 'manual' };
             try {
                 var s = JSON.parse(localStorage.getItem('mp-plan') || 'null');
-                if (s) { if (s.budget !== undefined && s.budget !== null) o.budget = Number(s.budget) || 0; if (s.reinvest !== undefined) o.reinvest = !!s.reinvest; }
+                if (s) { if (s.budget !== undefined && s.budget !== null) o.budget = Number(s.budget) || 0; if (s.reinvest !== undefined) o.reinvest = !!s.reinvest; if (s.src) o.src = s.src; }
             } catch (e) { }
+            var ev = expoBudget(data, o.src);
+            if (ev > 0) o.budget = ev;
             return o;
+        }
+        // Budget aus den gespeicherten Expeditionsfunden (Rohstoffe + gefundene Schiffe, in Deuterium-Aequivalent pro Tag)
+        function expoBudget(data, src) {
+            var x = data.Expo;
+            if (!x || src === 'manual') return 0;
+            if (src === 'avg7') return (x.Avg7ResDeut || 0) + (x.Avg7ShipsDeut || 0);
+            if (src === 'avg30') return (x.Avg30ResDeut || 0) + (x.Avg30ShipsDeut || 0);
+            if (src === 'best7') return (x.Best7Of60ResDeut || 0) + (x.Best7Of60ShipsDeut || 0);
+            return 0;
         }
         function planCard(data) {
             var steps = data.BuildPlan || [];
             var st = planSettings(data);
-            var h = '<div class="mp-card"><h2>Build plan by payback</h2><div class="mp-muted" style="margin-bottom:6px">Daily budget (D-eq, e.g. expedition income): '
-                + '<input data-pl="budget" type="number" min="0" step="1000" style="width:9em" value="' + st.budget + '"> '
+            var so = function (v, t) { return '<option value="' + v + '"' + (st.src === v ? ' selected' : '') + '>' + t + '</option>'; };
+            var srcSel = data.Expo ? 'Budget from: <select data-pl="src">' + so('manual', 'entered by hand') + so('avg7', 'expeditions, 7-day average') + so('avg30', 'expeditions, 30-day average') + so('best7', 'expeditions, best 7 of 60 days') + '</select> ' : '';
+            var h = '<div class="mp-card"><h2>Build plan by payback</h2><div class="mp-muted" style="margin-bottom:6px">' + srcSel + 'Daily budget (D-eq, e.g. expedition income): '
+                + '<input data-pl="budget" type="number" min="0" step="1000" style="width:9em" value="' + Math.round(st.budget) + '"' + (st.src !== 'manual' && data.Expo ? ' disabled' : '') + '> '
                 + '<label><input data-pl="reinvest" type="checkbox"' + (st.reinvest ? ' checked' : '') + '> add the extra yield of finished steps to the budget</label></div>';
             if (!steps.length) return h + '<p class="mp-muted">No plan yet (no step pays back within the payback limit).</p></div>';
             if (st.budget <= 0) h += '<p class="mp-muted">Enter a daily budget to get dates. Without it the table only shows the order.</p>';
@@ -196,7 +209,7 @@
             var key = ev.target && ev.target.getAttribute ? ev.target.getAttribute('data-pl') : null;
             if (!key || !last || !last.data) return;
             var s = planSettings(last.data);
-            if (key === 'budget') s.budget = Math.max(0, parseFloat(ev.target.value) || 0); else s.reinvest = ev.target.checked;
+            if (key === 'budget') s.budget = Math.max(0, parseFloat(ev.target.value) || 0); else if (key === 'src') s.src = ev.target.value; else s.reinvest = ev.target.checked;
             try { localStorage.setItem('mp-plan', JSON.stringify(s)); } catch (e) { }
             render(last);
         });
