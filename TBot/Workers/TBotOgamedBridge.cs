@@ -317,7 +317,7 @@ namespace Tbot.Workers
 
 		public async Task<bool> CheckCelestials() {
 			try {
-				if (!_tbotInstance.UserData.isSleeping) {
+				if (!_tbotInstance.UserData.isSleeping && !_tbotInstance.IsBotPaused) {
 					var newCelestials = await UpdateCelestials();
 					if (_tbotInstance.UserData.celestials.Count() != newCelestials.Count) {
 						if (_tbotInstance.UserData.celestials.Count() > newCelestials.Count) {

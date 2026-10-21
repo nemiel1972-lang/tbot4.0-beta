@@ -217,7 +217,8 @@ namespace Tbot.Workers {
 			try {
 				DoLog(LogLevel.Information, "Checking attacks...");
 
-				await FakeActivity();
+				if (!_tbotInstance.IsBotPaused)
+					await FakeActivity();
 				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 				bool isUnderAttack = await _ogameService.IsUnderAttack();
 				DateTime time = await _tbotOgameBridge.GetDateTime();
