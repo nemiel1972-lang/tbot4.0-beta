@@ -208,7 +208,27 @@ namespace TBot.Ogame.Infrastructure {
 		}
 
 		private void dump_ogamedProcess_Log(bool isErr, string? payload) {
-			_logger.WriteLog(isErr ? LogLevel.Error : LogLevel.Information, LogSender.OGameD, $"[{_username}] \"{payload}\"");
+			if (payload != null) {
+				string thema = null;
+				if (payload.Contains("[Out/10min]")) thema = "Requests";
+				else if (payload.Contains("[Token100]") || payload.Contains("[CP]")) thema = "BrowserProxy";
+				if (thema != null) {
+					RequestStats.DevLog?.Invoke(thema, payload);
+					return;
+				}
+			}
+			LogLevel stufe = LogLevel.Information;
+			if (payload != null) {
+				string p = payload;
+				if (p.Contains("ERRO") || p.Contains("panic", StringComparison.OrdinalIgnoreCase) || p.Contains("fatal", StringComparison.OrdinalIgnoreCase)
+					|| p.Contains("error", StringComparison.OrdinalIgnoreCase) || p.Contains("fehler", StringComparison.OrdinalIgnoreCase) || p.Contains("failed", StringComparison.OrdinalIgnoreCase))
+					stufe = LogLevel.Error;
+				else if (p.Contains("WARN") || p.Contains("warning", StringComparison.OrdinalIgnoreCase))
+					stufe = LogLevel.Warning;
+				else if (!isErr || p.Contains("DEBU") || p.Contains("INFO"))
+					stufe = LogLevel.Information;
+			}
+			_logger.WriteLog(stufe, LogSender.OGameD, $"[{_username}] \"{payload}\"");
 		}
 
 		private void handle_ogamedProcess_Exited(object? sender, EventArgs e) {
@@ -771,6 +791,8 @@ namespace TBot.Ogame.Infrastructure {
 		public async Task<List<Celestial>> GetCelestials() {
 			var planets = await GetPlanets();
 			var moons = await GetMoons();
+			if (planets == null || moons == null)
+				throw new InvalidOperationException("ogamed returned no planet or moon list (not logged in or not reachable)");
 			List<Celestial> celestials = new();
 			celestials.AddRange(planets);
 			celestials.AddRange(moons);

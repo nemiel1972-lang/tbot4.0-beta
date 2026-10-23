@@ -35,6 +35,7 @@
             "Password": "",
             "LoginOnly": true
         },
+        "AnonymizeLogs": false,
         "CaptchaAPIKey": "",
         "LoginPause": {
             "Active": true,
@@ -427,6 +428,7 @@
             "MaxProductionHours": 0,
             "LimitToCapacity": false,
             "SkipIfIncomingTransport": true,
+            "Ships": [],
             "Exclude": [
                 {
                     "Galaxy": 1,
@@ -712,6 +714,7 @@
         "Active": false,
         "OnlyWorker": true,
         "KeepExpeditions": false,
+        "BuildCheckMinutes": 60,
         "Origin": [
             {
                 "Galaxy": 1,

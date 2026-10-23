@@ -101,7 +101,7 @@ namespace Tbot {
 					if (snap.Count == 0) return;
 					long total = snap.Sum(kv => kv.Value);
 					string top = string.Join(", ", snap.Take(12).Select(kv => $"{kv.Key} {kv.Value}"));
-					_logger.WriteLog(LogLevel.Information, LogSender.Main, $"[Requests/10min] gesamt {total} ({total / 600.0:F1}/s): {top}");
+					TBot.Ogame.Infrastructure.RequestStats.DevLog?.Invoke("Requests", $"[Requests/10min] total {total} ({total / 600.0:F1}/s): {top}");
 				} catch {  }
 			}, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
 

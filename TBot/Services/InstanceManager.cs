@@ -72,7 +72,7 @@ namespace Tbot.Services {
 				await InitializeTelegramMessenger();
 			} catch (Exception e) {
 				telegramMessenger = null;
-				_logger.WriteLog(LogLevel.Error, LogSender.Main, $"Telegram Messenger konnte nicht gestartet werden ({e.Message}). Bot laeuft ohne Telegram weiter - bitte TelegramMessenger.API in settings.json pruefen.");
+				_logger.WriteLog(LogLevel.Error, LogSender.Main, $"Telegram messenger could not be started ({e.Message}). The bot keeps running without Telegram - please check TelegramMessenger.API in settings.json.");
 			}
 
 			SettingsVersion settingVersion = SettingsVersion.Invalid;
@@ -100,9 +100,25 @@ namespace Tbot.Services {
 				ICollection json_instances = _mainSettings.Instances;
 				List<InitInstanceData> uniqueInstances = new();
 
+				int eintragNr = 0;
 				foreach (var instance in _mainSettings.Instances) {
-					string cInstanceSettingPath = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(SettingsAbsoluteFilepath), instance.Settings)).FullName;
-					string alias = instance.Alias;
+					eintragNr++;
+					string settingsFile = null;
+					string alias = null;
+					try {
+						settingsFile = (string) instance.Settings;
+						alias = (string) instance.Alias;
+					} catch (Exception) {
+					}
+					if (string.IsNullOrWhiteSpace(settingsFile)) {
+						_logger.WriteLog(LogLevel.Error, LogSender.Main, $"Instances entry #{eintragNr} in \"{SettingsAbsoluteFilepath}\" has no \"Settings\" value (path of the instance settings file, relative to settings.json). This entry is skipped.");
+						continue;
+					}
+					if (string.IsNullOrWhiteSpace(alias)) {
+						alias = $"Instance{eintragNr}";
+						_logger.WriteLog(LogLevel.Warning, LogSender.Main, $"Instances entry #{eintragNr} has no \"Alias\" - using \"{alias}\".");
+					}
+					string cInstanceSettingPath = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(SettingsAbsoluteFilepath) ?? "", settingsFile)).FullName;
 
 					if(uniqueInstances.Any(c => c.SettingsPath == cInstanceSettingPath) == false) {
 						uniqueInstances.Add(new InitInstanceData(alias, cInstanceSettingPath));
@@ -110,6 +126,8 @@ namespace Tbot.Services {
 				}
 
 				_logger.WriteLog(LogLevel.Information, LogSender.Main, $"Read {json_instances.Count} instances. Unique instaces #{uniqueInstances.Count}");
+				if (uniqueInstances.Count == 0)
+					_logger.WriteLog(LogLevel.Error, LogSender.Main, "No valid instance found in the \"Instances\" list of settings.json - nothing is started. Every entry needs \"Settings\" (file path) and \"Alias\".");
 
 				foreach (var instance in uniqueInstances) {
 					string cInstanceSettingPath = instance.SettingsPath;

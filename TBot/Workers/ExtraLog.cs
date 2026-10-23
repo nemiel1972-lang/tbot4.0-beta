@@ -31,6 +31,9 @@ namespace Tbot.Workers {
 					case "AsteroidHunt": return !SettingsService.IsSettingSet(x, "AsteroidHunt") || (bool) x.AsteroidHunt;
 					case "GalaxyCache": return !SettingsService.IsSettingSet(x, "GalaxyCache") || (bool) x.GalaxyCache;
 					case "ShadowFleet": return !SettingsService.IsSettingSet(x, "ShadowFleet") || (bool) x.ShadowFleet;
+					case "Requests": return !SettingsService.IsSettingSet(x, "Requests") || (bool) x.Requests;
+					case "BrowserProxy": return !SettingsService.IsSettingSet(x, "BrowserProxy") || (bool) x.BrowserProxy;
+					case "FleetTargets": return !SettingsService.IsSettingSet(x, "FleetTargets") || (bool) x.FleetTargets;
 					default: return false;
 				}
 			} catch (Exception) {
@@ -68,7 +71,7 @@ namespace Tbot.Workers {
 
 		private static bool KnownTopic(string thema) =>
 			thema == "Repatriate" || thema == "Ledger" || thema == "BotPause" || thema == "DefenderRecheck" || thema == "FleetsaveSlot"
-			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache";
+			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets";
 
 		private static DateTime _letzteAufraeumung = DateTime.MinValue;
 		private static void RaeumeAuf(string dir) {

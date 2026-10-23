@@ -45,21 +45,33 @@ namespace TBot.WebUI.Controllers {
 		private async Task<List<LogEntry>> GetLogsFromCSV(DateTime logsDate) {
 			List<LogEntry> result = new List<LogEntry>();
 			try {
-				var filePath = Path.Combine(SettingsService.LogsPath, $"TBot{logsDate.ToString("yyyyMMdd")}.csv");
-				if (System.IO.File.Exists(filePath)) {
-					using var fs = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-					using var sr = new StreamReader(fs, Encoding.Default);
-					using var csv = new CsvReader(sr, CultureInfo.InvariantCulture);
-					csv.Context.RegisterClassMap<LogEntryMap>();
-					var asyncResult = csv.GetRecordsAsync<LogEntry>();
-					result = new List<LogEntry>();
-					await foreach (var entry in asyncResult) {
-						result.Add(entry);
-					}
-					int i = 0;
-					result.ForEach(c => c.position = i++);
-					return result;
+				var prefix = $"TBot{logsDate.ToString("yyyyMMdd")}";
+				var files = new List<string>();
+				var first = Path.Combine(SettingsService.LogsPath, prefix + ".csv");
+				if (System.IO.File.Exists(first))
+					files.Add(first);
+				var rolled = new List<(int nr, string path)>();
+				foreach (var f in Directory.GetFiles(SettingsService.LogsPath, prefix + "_*.csv")) {
+					var name = Path.GetFileNameWithoutExtension(f);
+					if (int.TryParse(name.Substring(prefix.Length + 1), out var nr))
+						rolled.Add((nr, f));
 				}
+				files.AddRange(rolled.OrderBy(r => r.nr).Select(r => r.path));
+				foreach (var filePath in files) {
+					try {
+						using var fs = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+						using var sr = new StreamReader(fs, Encoding.Default);
+						using var csv = new CsvReader(sr, CultureInfo.InvariantCulture);
+						csv.Context.RegisterClassMap<LogEntryMap>();
+						var asyncResult = csv.GetRecordsAsync<LogEntry>();
+						await foreach (var entry in asyncResult) {
+							result.Add(entry);
+						}
+					} catch {
+					}
+				}
+				int i = 0;
+				result.ForEach(c => c.position = i++);
 				return result;
 			} catch {
 				return result;

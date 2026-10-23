@@ -202,7 +202,7 @@ namespace Tbot.Workers.Brain {
 			return normal;
 		}
 
-		private static readonly Dictionary<int, string[]> PrioSlotTechNames = new() {
+		internal static readonly Dictionary<int, string[]> PrioSlotTechNames = new() {
 			{ 11, new[] { "IntergalacticEnvoys", "VolcanicBatteries", "CatalyserTechnology", "HeatRecovery" } },
 			{ 12, new[] { "HighPerformanceExtractors", "AcousticScanning", "PlasmaDrive", "SulphideProcess" } },
 			{ 13, new[] { "FusionDrives", "HighEnergyPumpSystems", "EfficiencyModule", "PsionicNetwork" } },

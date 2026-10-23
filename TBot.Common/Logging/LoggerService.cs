@@ -102,6 +102,7 @@ namespace TBot.Common.Logging {
 				.WriteTo.File(
 					path: Path.Combine(_logPath, "TBot.log"),
 					buffered: false,
+					restrictedToMinimumLevel: LogEventLevel.Debug,
 					flushToDiskInterval: TimeSpan.FromHours(1),
 					rollOnFileSizeLimit: true,
 					fileSizeLimitBytes: maxFileSize,
@@ -110,6 +111,7 @@ namespace TBot.Common.Logging {
 				.WriteTo.File(
 					path: Path.Combine(_logPath, "TBot.csv"),
 					buffered: false,
+					restrictedToMinimumLevel: LogEventLevel.Debug,
 					hooks: new SerilogCSVHeaderHooks(),
 					formatter: new SerilogCSVTextFormatter(),
 					flushToDiskInterval: TimeSpan.FromHours(1),

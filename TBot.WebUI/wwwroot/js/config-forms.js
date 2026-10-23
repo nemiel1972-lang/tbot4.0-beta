@@ -610,11 +610,13 @@
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
-    function renderGhostSleep(body, d, P) {
+    function timeHintNode(d) { var n = el('div', { class: 'cfg-note' }); if (window.tbotTimeHint) window.tbotTimeHint(n, [['Go to sleep', function () { return d.GoToSleep; }], ['Wake up', function () { return d.WakeUp; }]]); return n; }
+        function renderGhostSleep(body, d, P) {
         var timeOk = function (v) { return TIME_HM.test(v.trim()); };
         if (!has(d, 'AnchorMode')) d.AnchorMode = 'LastFleet';
         if (!d.ExpeditionDrain || typeof d.ExpeditionDrain !== 'object') d.ExpeditionDrain = { Active: false, BufferMinutes: 10, StragglerWaitMinutes: 20, DefaultDurationMinutes: 90 };
         body.appendChild(sec('GhostSleep', [
+            timeHintNode(d),
             el('div', { class: 'cfg-warnbox' }, [
                 el('b', { text: 'This is not a real sleep. ' }),
                 document.createTextNode('GhostSleep only reduces activity: the account keeps making requests (expeditions keep flying, the Defender checks around expedition returns, everything restarts at wake-up). It looks quieter than a normal bot, but not like a player who is really offline. Do not leave it on every day - use it now and then, and keep real offline time or the normal SleepMode for regular nights.')
@@ -673,6 +675,7 @@
     function renderSleepMode(body, d, P) {
         var timeOk = function (v) { return TIME_HM.test(v.trim()); };
         body.appendChild(sec('SleepMode', [
+            timeHintNode(d),
             el('div', { class: 'cfg-note', text: 'SleepMode is the classic sleep: in the window below the bot sends no fleets at all (most workers pause) and can fleetsave your ships once when going to sleep. Compare GhostSleep further down, which keeps expeditions and defence running.' }),
             fld(d, 'GoToSleep', P, 'Go to sleep', 'Server time, HH:mm', 'text', { validate: timeOk }),
             fld(d, 'WakeUp', P, 'Wake up', 'Server time, HH:mm', 'text', { validate: timeOk }),
@@ -734,18 +737,19 @@
             if (X.BotPause && typeof X.BotPause === 'object') {
                 var bp = X.BotPause, bpp = xp.concat('BotPause');
                 body.appendChild(sec('Bot pause (Pause button and /pause)', [
-                    el('div', { class: 'cfg-note', text: 'The Pause button in the browser tile (or /pause in Telegram) stops all functions (the Defender only if you switch that on below) for a few minutes, and blocks spy, attack and expedition missions, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as "Experimental" in the config.' }),
+                    el('div', { class: 'cfg-note', text: 'The Pause button in the browser tile (or /pause in Telegram) holds all functions (the Defender only if you switch that on below) for a few minutes, and blocks spy, attack and expedition missions, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as "Experimental" in the config.' }),
                     fld(bp, 'Active', bpp, 'Pause function active', 'Off: the Pause button and /pause are refused', 'toggle'),
                     fld(bp, 'DurationMinutes', bpp, 'Pause length', 'Used when you press the button or send /pause without a time', 'num', { min: 1, unit: 'minutes' }),
                     fld(bp, 'RecallMarginMinutes', bpp, 'Margin before a recall', 'A recall due within the pause time plus this margin blocks the pause', 'num', { min: 0, unit: 'minutes' }),
                     fld(bp, 'MaxDurationMinutes', bpp, 'Longest pause', 'Upper limit for /pause with a time', 'num', { min: 1, unit: 'minutes' }),
                     fld(bp, 'StopDefender', bpp, 'Stop the Defender during the pause too', 'Off (default): the Defender keeps watching. On: nothing runs; a known attack within the limit below plus the pause length blocks the pause', 'toggle'),
-                    fld(bp, 'AttackMarginMinutes', bpp, 'No pause before an attack', 'An attack that arrives within this time blocks the pause', 'num', { min: 0, unit: 'minutes' })
+                    fld(bp, 'AttackMarginMinutes', bpp, 'No pause before an attack', 'An attack that arrives within this time blocks the pause', 'num', { min: 0, unit: 'minutes' }),
+                    fld(bp, 'Mode', bpp, 'Pause mode', 'Gate (default): the workers keep running, skip their cycle during the pause and go on staggered afterwards. Stop: the old hard pause, all workers are stopped and restarted', 'select', { options: ['Gate', 'Stop'] })
                 ].filter(Boolean)));
             } else {
                 body.appendChild(sec('Bot pause (Pause button and /pause)', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet - the defaults (15 minutes, margin 2, longest 120) are used. Add it to change them.' }),
-                    addDefault(X, 'BotPause', { Active: true, DurationMinutes: 15, RecallMarginMinutes: 2, MaxDurationMinutes: 120, StopDefender: false, AttackMarginMinutes: 15 }, 'Bot pause settings', null)
+                    addDefault(X, 'BotPause', { Active: true, DurationMinutes: 15, RecallMarginMinutes: 2, MaxDurationMinutes: 120, StopDefender: false, AttackMarginMinutes: 15, Mode: 'Gate' }, 'Bot pause settings', null)
                 ]));
             }
             if (X.DefenderRecheck && typeof X.DefenderRecheck === 'object') {
@@ -774,12 +778,14 @@
                     testingField(xl, 'MinePlanRanking', true, xlp, 'Topic: mine plan ranking', 'Ranking mode and the top steps', 'toggle'),
                     testingField(xl, 'AsteroidHunt', true, xlp, 'Topic: asteroid hunt', 'All asteroid hunt messages', 'toggle'),
                     testingField(xl, 'ShadowFleet', true, xlp, 'Topic: shadow fleet', 'All shadow fleet messages', 'toggle'),
-                    testingField(xl, 'GalaxyCache', true, xlp, 'Topic: galaxy cache', 'Cache hits, background scans and detected events', 'toggle')
+                    testingField(xl, 'GalaxyCache', true, xlp, 'Topic: galaxy cache', 'Cache hits, background scans and detected events', 'toggle'),
+                    testingField(xl, 'Requests', true, xlp, 'Topic: request counters', 'Requests to the game every 10 minutes (per worker, bot and browser)', 'toggle'),
+                    testingField(xl, 'BrowserProxy', true, xlp, 'Topic: browser proxy', 'Error 100 retries and celestial handling of the browser proxy', 'toggle')
                 ].filter(Boolean)));
             } else {
                 body.appendChild(sec('Extra debug log (own file)', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet (the default is on). Add it to change the settings.' }),
-                    addDefault(X, 'ExtraDebugLog', { Active: true, Repatriate: true, Ledger: true, BotPause: true, DefenderRecheck: true, FleetsaveSlot: true, MinePlanRanking: true, AsteroidHunt: true, ShadowFleet: true, GalaxyCache: true }, 'Extra debug log settings', null)
+                    addDefault(X, 'ExtraDebugLog', { Active: true, Repatriate: true, Ledger: true, BotPause: true, DefenderRecheck: true, FleetsaveSlot: true, MinePlanRanking: true, AsteroidHunt: true, ShadowFleet: true, GalaxyCache: true, Requests: true, BrowserProxy: true }, 'Extra debug log settings', null)
                 ]));
             }
             if (X.RepatriateLedgerHold && typeof X.RepatriateLedgerHold === 'object') {
@@ -874,6 +880,8 @@
                     fld(cel, 'Type', sfp.concat('Celestial'), 'Type', 'Planet or moon', 'select', { options: ['Planet', 'Moon'] })
                 ];
                 body.appendChild(sec('Shadow fleet', [
+                    (function () { var n = el('div', { class: 'cfg-note' }); if (window.tbotTimeHint) window.tbotTimeHint(n, [['Window from', function () { return sf.WindowFrom; }], ['to', function () { return sf.WindowTo; }]]); return n; })(),
+                    el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Not fully tested. ' }), document.createTextNode('The shadow fleet is new and has not been tested thoroughly yet. Use it with care, watch the log and report problems.')]),
                     el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Deuterium reserve needed. ' }), document.createTextNode('Every flight burns fuel and the fleet carries deuterium for the chosen number of flights. Keep enough deuterium on the celestial; when it is used up the flights stop (a warning comes when only one flight is left).')]),
                     el('div', { class: 'cfg-note', text: 'What it does: the chosen ships of ONE celestial fly in a loop on a recycle (harvest) mission at slow speed to the nearest debris field (up to 10 systems away). After half of the flight time the fleet is recalled and flies home, then after a short random pause the next flight starts. So the ships are almost never at home: a player who spies the celestial finds no fleet, and the fleet never stands still where an attack could hit it. It uses one fleet slot and the deuterium of that celestial. Safety: no flight starts when an attack would land before the fleet is back; a flying fleet is called home if it can still make it before the impact.' }),
                     fld(sf, 'Active', sfp, 'Shadow fleet', 'Off by default', 'toggle')
@@ -897,6 +905,7 @@
                 ].filter(Boolean)));
             } else {
                 body.appendChild(sec('Shadow fleet', [
+                    el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Not fully tested. ' }), document.createTextNode('The shadow fleet is new and has not been tested thoroughly yet. Use it with care, watch the log and report problems.')]),
                     el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Deuterium reserve needed. ' }), document.createTextNode('Every flight burns fuel; keep deuterium on the celestial.')]),
                     el('div', { class: 'cfg-note', text: 'Not in your config yet (off). Add it to switch it on.' }),
                     addDefault(X, 'ShadowFleet', { Active: false, Celestial: { Galaxy: 1, System: 1, Position: 1, Type: 'Planet' }, Ships: { Recycler: 0 }, SpeedPercent: 10, MinBackInMinutes: 20, MaxBackInMinutes: 60, PauseMinSeconds: 30, PauseMaxSeconds: 180, DeuteriumFlights: 3, WindowFrom: '', WindowTo: '', DefenderOff: false }, 'Shadow fleet settings', null)
@@ -1496,7 +1505,7 @@
         AutoResearch: 'Researches technologies up to the caps you set on the chosen planet. 0 = do not research. The priority switches decide what is researched first.',
         LifeformAutoMine: 'Builds lifeform buildings towards the target row of lifeform_targets.json, once the crystal mine of a planet is high enough.',
         LifeformAutoResearch: 'Researches lifeform techs from the priority list up to the level caps. It does not start new techs on its own.',
-        AutoCargo: 'Builds cargo ships on your celestials, up to the amounts you set.',
+        AutoCargo: 'Builds ships on your celestials, up to the amounts you set: cargo ships, plus Recycler, Pathfinder, Reaper, Crawler and more (config key: AutoCargo).',
         AutoDefence: 'Builds defence until the target counts are reached. 0 = do not build, shield domes are on/off.',
         AutoRepatriate: 'Sends resources from your planets to one target (for example the home moon) once enough has piled up.',
         BuyOfferOfTheDay: 'Buys the daily merchant offer.',
@@ -1674,19 +1683,27 @@
             restRows(o, p, ['Active', 'Transports', 'PriorityTechs', 'MaxResearchLevel', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^MaxTechs\d+$/))).forEach(function (r) { k.push(r); });
         });
 
-        brainSub(body, 'AutoCargo', 'AutoCargo', function (k, o, p) {
+        brainSub(body, 'AutoCargo', 'AutoShips', function (k, o, p) {
             k.push(fld(o, 'CargoType', p, 'Cargo ship to build', null, 'select', { options: ['SmallCargo', 'LargeCargo'] }));
-            k.push(fld(o, 'MaxCargosToBuild', p, 'Target amount', null, 'num', { min: 0 }));
-            k.push(fld(o, 'MaxCargosToKeep', p, 'Keep amount', null, 'num', { min: 0 }));
+            k.push(fld(o, 'MaxCargosToBuild', p, 'Build per run (max)', 'Most ships ordered in one run',  'num', { min: 0 }));
+            k.push(fld(o, 'MaxCargosToKeep', p, 'Target amount (ships to have)', 'The celestial is filled up to this many ships. 0 = nothing is built',  'num', { min: 0 }));
             k.push(fld(o, 'LimitToCapacity', p, 'Only as many as the stock needs', null, 'toggle'));
             k.push(fld(o, 'MaxProductionHours', p, 'Longest production time', '0 = no limit. One order per celestial never takes longer than this; the rest follows in the next run', 'num', { min: 0, unit: 'hours' }));
             k.push(fld(o, 'SupplyMoonFromPlanet', p, 'Moons get ships from the planet', null, 'toggle'));
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
+            var shipCols = [
+                { key: 'Type', label: 'Ship', type: 'sel', opts: ['Recycler', 'Pathfinder', 'Reaper', 'Crawler', 'EspionageProbe', 'ColonyShip', 'LightFighter', 'HeavyFighter', 'Cruiser', 'Battleship', 'Battlecruiser', 'Bomber', 'Destroyer'] },
+                { key: 'Target', label: 'Target amount', min: 0 },
+                { key: 'MaxPerRun', label: 'Build per run (0 = no limit)', min: 0 }
+            ];
+            k.push(Array.isArray(o.Ships)
+                ? withHelp(row('Extra ship types', 'Built after the cargo ships, one order per celestial and run, in list order', listTable(o.Ships, shipCols, function () { return { Type: 'Recycler', Target: 10, MaxPerRun: 0 }; }, '+ Add ship type', ['Ships'])), fullKey(p, 'Ships'))
+                : addDefault(o, 'Ships', [], 'Extra ship types', 'Recycler, Pathfinder, Reaper, Crawler and more'));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'CargoType', 'MaxCargosToBuild', 'MaxCargosToKeep', 'LimitToCapacity', 'MaxProductionHours', 'SupplyMoonFromPlanet', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'CargoType', 'MaxCargosToBuild', 'MaxCargosToKeep', 'LimitToCapacity', 'MaxProductionHours', 'SupplyMoonFromPlanet', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Ships', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoDefence', 'AutoDefence', function (k, o, p) {
@@ -1761,6 +1778,9 @@
                 el('div', { class: 'cfg-note', text: 'Proxy user name and password and the captcha key are neither shown nor editable in the web UI. Set them directly in the config file (secrets/).' })
             ].filter(Boolean)));
         }
+        body.appendChild(sec('Logs', [
+            has(d, 'AnonymizeLogs') ? fld(d, 'AnonymizeLogs', P, 'Hide names in logs', 'On: player name, universe and e-mail are replaced by [Player], [Universe] and [Email] - useful before posting logs. Off: real names are shown. Applies after a restart', 'toggle') : addDefault(d, 'AnonymizeLogs', false, 'Hide names in logs', 'On: player name, universe and e-mail are replaced in the log lines')
+        ].filter(Boolean)));
         body.appendChild(sec('Fleet slots', [
             fld(d, 'SlotsToLeaveFree', P, 'Slots to leave free', 'No worker may use these slots - they stay free for you', 'num', { min: 0 })
         ].filter(Boolean)));
@@ -1770,7 +1790,7 @@
                 el('div', { class: 'cfg-note', text: 'Who gets a free slot first when several workers compete. Lower number = served first.' })
             ].concat(Object.keys(sp).map(function (k) { return fld(sp, k, ['SlotPriorityLevel'], k, null, 'num', { min: 0 }); }))));
         }
-        var rest = Object.keys(d).filter(function (k) { return ['Host', 'Port', 'Proxy', 'SlotsToLeaveFree', 'SlotPriorityLevel', 'CaptchaAPIKey', 'BasicAuth', 'LoginPause', 'BotPause'].indexOf(k) < 0; });
+        var rest = Object.keys(d).filter(function (k) { return ['Host', 'Port', 'Proxy', 'SlotsToLeaveFree', 'SlotPriorityLevel', 'AnonymizeLogs', 'CaptchaAPIKey', 'BasicAuth', 'LoginPause', 'BotPause'].indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
@@ -1858,7 +1878,8 @@
             el('div', { class: 'cfg-note', text: 'Resource farming mode with one goal: collect as much deuterium as possible. It scans the galaxy for inactive players, spies them with a fixed number of probes and raids the best ones with cargo ships. While it is on, all other workers except the Defender stay off.' }),
             fld(d, 'Active', P, 'FastFarm active', 'Master switch', 'toggle'),
             fld(d, 'OnlyWorker', P, 'Switch off all other workers', 'Defender and sleep mode always stay on', 'toggle'),
-            fld(d, 'KeepExpeditions', P, 'Keep expeditions running', 'Only used when the other workers are switched off', 'toggle')
+            fld(d, 'KeepExpeditions', P, 'Keep expeditions running', 'Only used when the other workers are switched off', 'toggle'),
+            fld(d, 'BuildCheckMinutes', P, 'Construction check while farming', 'Build and research workers look for possible constructions this often (and always while transports with resources are on their way). 0 = they stay off', 'num', { min: 0, unit: 'minutes' })
         ].filter(Boolean)));
         if (Array.isArray(d.Origin)) body.appendChild(sec('Origins', [
             el('div', { class: 'cfg-note', text: 'Celestials the probes and cargo ships start from. The nearest origin with enough ships is used for every target.' }),
@@ -1895,7 +1916,7 @@
             fld(d, 'ReportMaxAgeMinutes', P, 'Max report age', 'Older reports are not attacked', 'num', { min: 1, unit: 'minutes' }),
             fld(d, 'MaxSystemsPerScanStep', P, 'Systems per scan step', null, 'num', { min: 1 })
         ].filter(Boolean));
-        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'Origin', 'ScanRange', 'ShrinkDiscardPercent', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'MaxSystemsPerScanStep'];
+        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'BuildCheckMinutes', 'Origin', 'ScanRange', 'ShrinkDiscardPercent', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'MaxSystemsPerScanStep'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
@@ -1932,7 +1953,7 @@
             ['Transports', 'Shared settings for moving resources between your celestials.'],
             ['AutoMine / AutoResearch', 'Builds mines and facilities and researches technologies up to your caps.'],
             ['Lifeform workers', 'Build lifeform buildings and research lifeform techs from the target table.'],
-            ['AutoCargo / AutoDefence', 'Build cargo ships and defence up to target amounts.'],
+            ['AutoShips / AutoDefence', 'Build ships and defence up to target amounts.'],
             ['AutoRepatriate', 'Collects resources from your planets on one target celestial.'],
             ['Offer / JumpGate', 'Buys the daily merchant offer; jumps the fleet through the jump gate.']]],
         AutoHarvest: ['Sends recyclers to debris fields that are worth the trip: your own, foreign ones and deep space.', []],

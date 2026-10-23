@@ -25,7 +25,7 @@
         <header class="autofarm-header">
             <div>
                 <h1>Mine plan</h1>
-                <p class="intro">Next mine upgrades per planet: cost, extra yield, payback time and energy. Preview only - nothing is built or changed by this page.</p>
+                <p class="intro">Next mine upgrades per planet: cost, extra yield, payback time and energy. This page only shows the calculation and never changes anything itself. Whether AutoMine builds by this plan is set in the Config (Experimental, Mine plan ranking: "AutoMine follows the build plan").</p>
             </div>
             <form method="get" class="instance-picker" style="@(instances.Count <= 1 ? "display:none" : null)">
                 <label for="instance">Instance</label>
@@ -78,7 +78,7 @@
 
         function stepRow(s, cum) {
             var energy = s.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(s.EnergyShort) + '</span>' : n(s.EnergyAfter);
-            return '<tr><td>' + esc(s.Mine) + '</td><td>' + s.Level + '</td>'
+            return '<tr><td>' + esc(s.Mine) + (s.Capped ? ' <span class="mp-muted">(at AutoMine max)</span>' : '') + '</td><td>' + s.Level + '</td>'
                 + '<td>' + n(s.Metal) + '</td><td>' + n(s.Crystal) + '</td><td>' + n(s.Deuterium) + '</td>'
                 + '<td>' + n(s.CostDeut) + '</td><td>' + n(s.GainPerDay) + '</td><td>' + d1(s.RoiDays) + '</td>'
                 + (cum ? '' : '<td class="mp-muted">' + d1(s.RoiDaysBase) + '</td>')
@@ -155,7 +155,7 @@
                     + '<td>' + (b.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(b.EnergyShort) + '</span>' : (b.IsResearch ? '-' : 'ok')) + '</td></tr>';
             });
             if (!list.length) h += '<tr><td colspan="8" class="mp-muted">No step fits these settings.</td></tr>';
-            return h + '</table></div><div class="mp-muted">Display only - AutoMine and AutoResearch keep building by their own rules.</div></div>';
+            return h + '</table></div><div class="mp-muted">Ranking view only. Which steps are built live is decided by the plan mode (see the banner at the top).</div></div>';
         }
         function planSettings(data) {
             var o = { budget: Number(data.BudgetDeutPerDay) || 0, reinvest: true, src: 'manual' };
@@ -179,6 +179,8 @@
         function planCard(data) {
             var steps = data.BuildPlan || [];
             var st = planSettings(data);
+            var livePickKeys = {};
+            livePicks(data).forEach(function (s) { livePickKeys[s.No] = true; });
             var so = function (v, t) { return '<option value="' + v + '"' + (st.src === v ? ' selected' : '') + '>' + t + '</option>'; };
             var srcSel = data.Expo ? 'Budget from: <select data-pl="src">' + so('manual', 'entered by hand') + so('avg7', 'expeditions, 7-day average') + so('avg30', 'expeditions, 30-day average') + so('best7', 'expeditions, best 7 of 60 days') + '</select> ' : '';
             var h = '<div class="mp-card"><h2>Build plan by payback</h2><div class="mp-muted" style="margin-bottom:6px">' + srcSel + 'Daily budget (D-eq, e.g. expedition income): '
@@ -199,7 +201,8 @@
                     when = '<td>' + d1(t) + '</td><td>' + dt.toLocaleDateString() + '</td><td>' + n(income) + '</td>';
                 }
                 totalCost += x.CostDeut;
-                h += '<tr><td>' + x.No + '</td><td>' + (x.IsResearch ? 'Account' : mask(x.Planet)) + '</td><td>' + esc(x.What) + '</td><td>' + x.Level + '</td><td>' + n(x.CostDeut) + '</td><td>' + n(x.GainPerDay) + '</td><td>' + d1(x.RoiDays) + '</td>'
+                var isLive = livePickKeys[x.No] ? '<span style="color:#2ea36b" title="Built live by AutoMine">&#9654;</span> ' : '';
+                h += '<tr><td>' + isLive + x.No + '</td><td>' + (x.IsResearch && x.Planet === 'Account' ? 'Account' : mask(x.Planet)) + '</td><td>' + esc(x.What) + '</td><td>' + x.Level + '</td><td>' + n(x.CostDeut) + '</td><td>' + n(x.GainPerDay) + '</td><td>' + d1(x.RoiDays) + '</td>'
                     + when + '<td>' + (x.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(x.EnergyShort) + '</span>' : (x.IsResearch ? '-' : 'ok')) + '</td></tr>';
             });
             h += '</table></div><div class="mp-muted">' + steps.length + ' steps, total cost ' + n(totalCost) + ' D-eq. Each step uses the levels and plasma of the steps before it. Build times, resource transport and lifeform buildings/research are not included yet; display only.</div></div>';
@@ -234,6 +237,57 @@
             render(last);
         });
 
+        function livePicks(data) {
+            var lv = data.Live, seen = {}, picks = [];
+            if (!lv || !lv.Active) return picks;
+            (lv.Next || []).forEach(function (s) {
+                if (s.IsResearch || seen[s.Planet]) return;
+                seen[s.Planet] = 1; picks.push(s);
+            });
+            return picks;
+        }
+        // Kurzuebersicht ganz oben: naechster Minen-Schritt, naechster LF-Schritt, naechste Forschung, danach der folgende Minen-Schritt
+        function nextUp(data) {
+            var steps = data.BuildPlan || [];
+            if (!steps.length) return '';
+            var mines = steps.filter(function (s) { return !s.IsResearch; });
+            var lf = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && /^LF:/.test(s.What); })[0];
+            var lfb = steps.filter(function (s) { return s.IsLfBuilding; })[0];
+            var rs = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && !/^LF:/.test(s.What); })[0];
+            var picks = livePicks(data), liveNo = {};
+            picks.forEach(function (p) { liveNo[p.No] = true; });
+            var row = function (label, s, live) {
+                if (!s) return '<tr><td>' + label + '</td><td colspan="5" class="mp-muted">-</td></tr>';
+                return '<tr><td>' + label + '</td><td>' + (s.IsResearch && s.Planet === 'Account' ? 'Account' : mask(s.Planet)) + '</td><td>' + esc(s.What) + '</td><td>' + s.Level + '</td><td>' + n(s.CostDeut) + '</td><td>' + d1(s.RoiDays) + '</td><td>' + (live || '') + '</td></tr>';
+            };
+            var liveTxt = function (s) { return s && liveNo[s.No] ? '<span style="color:#2ea36b">&#9654; built live</span>' : '<span class="mp-muted">waits</span>'; };
+            var h = '<div class="mp-scroll"><table class="mp-table" style="margin-top:8px"><tr><th>Next up</th><th>Planet</th><th>Step</th><th>To level</th><th>Cost (D-eq)</th><th>Payback (days)</th><th>Status</th></tr>';
+            h += row('Next mine step', mines[0], data.Live && data.Live.Active ? liveTxt(mines[0]) : '');
+            h += row('Next LF building', lfb, '<span class="mp-muted">LifeformAutoMine</span>');
+            h += row('Next LF research', lf, '<span class="mp-muted">LF research</span>');
+            h += row('Next research', rs, '<span class="mp-muted">AutoResearch</span>');
+            h += row('Following mine step', mines[1], data.Live && data.Live.Active ? liveTxt(mines[1]) : '');
+            return h + '</table></div>';
+        }
+        function liveBanner(data) {
+            var lv = data.Live;
+            if (!lv) return '';
+            var st = 'margin:10px 0;padding:12px 14px;border-radius:8px;border:2px solid ';
+            if (!lv.Active)
+                return '<div class="mp-card" style="' + st + 'rgba(128,128,128,.5)"><strong>Plan mode OFF</strong> - every planet builds on its own by the AutoMine rules. This page is a preview. Switch it on in the Config: Experimental, Mine plan ranking, "AutoMine follows the build plan".' + nextUp(data) + '</div>';
+            var names = (lv.Planets || []).map(function (p) { return mask(p); }).join(', ') || '-';
+            var picks = livePicks(data);
+            var h = '<div class="mp-card" style="' + st + '#2ea36b"><strong style="color:#2ea36b">LIVE: AutoMine builds by this plan</strong>'
+                + '<div>Only planets among the first ' + lv.Lookahead + ' steps may build mines now: ' + names + '. All other planets wait (research, power plants and facilities are not held back).</div>'
+                + nextUp(data);
+            if (picks.length) {
+                h += '<div style="margin-top:6px">Built live now (one step per planet, marked &#9654; in the build plan):</div><ul style="margin:4px 0 4px 18px">';
+                picks.forEach(function (s) { h += '<li>' + mask(s.Planet) + ': ' + esc(s.What) + ' to level ' + s.Level + ' (payback ' + d1(s.RoiDays) + ' days)</li>'; });
+                h += '</ul>';
+            }
+            return h + '<div class="mp-muted">If the plan is older than 6 hours or empty, AutoMine falls back to its own rules.</div></div>';
+        }
+
         function render(res) {
             if (!res.available) {
                 content.innerHTML = '<p>No plan yet. The file is written by AutoMine in its next cycle' + (res.error ? ' (' + esc(res.error) + ')' : '') + '.</p>';
@@ -243,7 +297,7 @@
             var data = res.data;
             statusEl.textContent = 'Data available';
             updatedEl.textContent = data.UpdatedUtc ? 'Updated: ' + new Date(data.UpdatedUtc).toLocaleString() : '';
-            var html = '';
+            var html = liveBanner(data);
 
             html += bestCard(data);
             html += planCard(data);

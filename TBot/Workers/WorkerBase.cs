@@ -53,6 +53,18 @@ namespace Tbot.Workers {
 		}
 
 		protected abstract Task Execute();
+
+		private TimeSpan? _gateRestorePeriod;
+		private TimeSpan _gatePeriodSet;
+		private void GateRestorePeriod() {
+			if (_gateRestorePeriod == null)
+				return;
+			var alt = _gateRestorePeriod.Value;
+			_gateRestorePeriod = null;
+			if (Period == _gatePeriodSet)
+				ChangeWorkerPeriod(alt);
+		}
+
 		public void DoLog(LogLevel level, string format) {
 			_tbotInstance.log(level, GetLogSender(), format);
 		}
@@ -176,6 +188,40 @@ namespace Tbot.Workers {
 				return false;
 			}
 		}
+
+		private DateTime _lastFastFarmBuildRun = DateTime.MinValue;
+		private int FastFarmBuildAccess(out TimeSpan wait) {
+			wait = TimeSpan.Zero;
+			try {
+				Feature feature = GetFeature();
+				if (feature != Feature.BrainAutoMine && feature != Feature.BrainAutoResearch && feature != Feature.BrainLifeformAutoMine && feature != Feature.BrainLifeformAutoResearch)
+					return 0;
+				var fastFarm = _tbotInstance.InstanceSettings.FastFarm;
+				int minutes = SettingsService.IsSettingSet(fastFarm, "BuildCheckMinutes") ? (int) fastFarm.BuildCheckMinutes : 60;
+				if (minutes <= 0)
+					return 0;
+				var own = _tbotInstance.UserData.celestials;
+				var fleets = _tbotInstance.UserData.fleets;
+				if (own != null && fleets != null) {
+					bool incoming = fleets.Any(f => f.Mission == Missions.Transport && !f.ReturnFlight && f.Resources != null && f.Resources.TotalResources > 0
+						&& own.Any(c => c.Coordinate.Galaxy == f.Destination.Galaxy && c.Coordinate.System == f.Destination.System && c.Coordinate.Position == f.Destination.Position && c.Coordinate.Type == f.Destination.Type));
+					if (incoming) {
+						DoLog(LogLevel.Debug, $"{GetWorkerName()}: FastFarm is active, but transports with resources are on their way - running this cycle.");
+						return 1;
+					}
+				}
+				var seitLetztem = DateTime.UtcNow - _lastFastFarmBuildRun;
+				if (seitLetztem >= TimeSpan.FromMinutes(minutes)) {
+					_lastFastFarmBuildRun = DateTime.UtcNow;
+					DoLog(LogLevel.Debug, $"{GetWorkerName()}: FastFarm is active - short check for possible constructions (every {minutes} min).");
+					return 1;
+				}
+				wait = TimeSpan.FromMinutes(minutes) - seitLetztem + TimeSpan.FromSeconds(Random.Shared.Next(5, 60));
+				return 2;
+			} catch (Exception) {
+				return 0;
+			}
+		}
 #endif
 
 		private async Task ExecutionWrapper(CancellationToken ct) {
@@ -191,10 +237,28 @@ namespace Tbot.Workers {
 				return;
 #if FASTFARM
 			} else if (IsSuppressedByFastFarm()) {
-				DoLog(LogLevel.Information, $"{GetWorkerName()} is switched off while FastFarm is active. Ending...");
-				await EndExecution();
-				return;
+				int zugang = FastFarmBuildAccess(out TimeSpan fastFarmWait);
+				if (zugang == 2) {
+					DoLog(LogLevel.Debug, $"{GetWorkerName()}: FastFarm is active, next construction check in {fastFarmWait:hh\\:mm\\:ss}.");
+					ChangeWorkerPeriod(fastFarmWait);
+					return;
+				}
+				if (zugang == 0) {
+					DoLog(LogLevel.Information, $"{GetWorkerName()} is switched off while FastFarm is active. Ending...");
+					await EndExecution();
+					return;
+				}
 #endif
+			}
+
+			var pauseGate = _tbotInstance.PauseGateDelay(GetFeature());
+			if (pauseGate != null) {
+				if (_gateRestorePeriod == null)
+					_gateRestorePeriod = Period;
+				_gatePeriodSet = pauseGate.Value;
+				DoLog(LogLevel.Debug, $"Pause: {GetWorkerName()} skips this cycle, next run in {pauseGate.Value:mm\\:ss}");
+				ChangeWorkerPeriod(pauseGate.Value);
+				return;
 			}
 
 			bool releaseNow = true;
@@ -208,6 +272,8 @@ namespace Tbot.Workers {
 				var executeTimeout = ExecuteTimeout;
 				var executeTask = Execute();
 				var completedTask = await Task.WhenAny(executeTask, Task.Delay(executeTimeout, ct));
+				if (completedTask == executeTask && !executeTask.IsFaulted)
+					GateRestorePeriod();
 				if (completedTask != executeTask) {
 					DoLog(LogLevel.Warning, $"{GetWorkerName()}: Execute() did not complete within {executeTimeout.TotalSeconds}s - abandoning this cycle, worker continues on next scheduled run.");
 					releaseNow = false;

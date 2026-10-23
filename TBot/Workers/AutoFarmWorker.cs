@@ -1034,13 +1034,13 @@ namespace Tbot.Workers {
 				GetSystemDataTtl(),
 				GetEmptySystemCooldown());
 			if (cacheDecision == AutoFarmSystemCacheDecision.Skip) {
-				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm,
+				_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm,
 					$"Skipping cached empty system {galaxy}:{system} until {cachedSnapshot.ObservedAtUtc.Add(GetEmptySystemCooldown()):u}.");
 				return null;
 			}
 
 			if (cacheDecision == AutoFarmSystemCacheDecision.UseSnapshot) {
-				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm,
+				_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm,
 					$"Using cached galaxy data for {galaxy}:{system} ({(nowUtc - cachedSnapshot.ObservedAtUtc).TotalDays:F1} days old).");
 				return AutoFarmSystemPolicy.GetEligibleTargets(cachedSnapshot.Planets);
 			}
@@ -1342,7 +1342,7 @@ namespace Tbot.Workers {
 
 		if (blacklistActive && _blacklist.IsBlacklisted(planet.Coordinate)) {
 			var blacklistedTarget = _blacklist.GetBlacklistedTarget(planet.Coordinate);
-			_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Target {planet.ToString()} is blacklisted (Reason: {blacklistedTarget.Reason}). Skipping...");
+			_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm, $"Target {planet.ToString()} is blacklisted (Reason: {blacklistedTarget.Reason}). Skipping...");
 			return null;
 		}
 
@@ -2605,7 +2605,7 @@ namespace Tbot.Workers {
 									continue;
 								}
 
-								_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Found {scannedTargets.Count} targets on System {galaxy}:{system}");
+								_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm, $"Found {scannedTargets.Count} targets on System {galaxy}:{system}");
 
 								if (!scannedTargets.Any()) {
 									continue;

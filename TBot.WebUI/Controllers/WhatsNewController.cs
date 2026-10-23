@@ -4,12 +4,18 @@ using Tbot.Common.Settings;
 namespace TBot.WebUI.Controllers {
 	public sealed class WhatsNewController : Controller {
 		[HttpGet]
+		public IActionResult Index() {
+			return View(WhatsNew.Read(UiLanguage.Read()));
+		}
+
+		[HttpGet]
 		public IActionResult Current() {
 			try {
 				var e = WhatsNew.Pending("web", UiLanguage.Read());
 				if (e == null)
 					return Json(new { pending = false });
-				return Json(new { pending = true, version = e.Version, title = e.Title, lines = e.Lines });
+				string more = UiLanguage.Read() == "de" ? "Alle Neuerungen ansehen" : "See what's new";
+				return Json(new { pending = true, version = e.Version, title = e.Title, more });
 			} catch (Exception) {
 				return Json(new { pending = false });
 			}

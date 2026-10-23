@@ -115,6 +115,7 @@ namespace Tbot.Services {
 			_fleetScheduler = fleetScheduler;
 			_workerFactory = workerFactory;
 			_tbotOgameBridge = new TBotOgamedBridge(this, _ogameService);
+			TBot.Ogame.Infrastructure.RequestStats.DevLog = (thema, text) => Tbot.Workers.ExtraLog.Write(this, thema, text);
 
 			_fleetScheduler.SetTBotInstance(this);
 			_fleetScheduler.SetTBotOgameBridge(_tbotOgameBridge);
@@ -130,6 +131,7 @@ namespace Tbot.Services {
 		}
 
 		private Credentials GetCredentialsFromSettings() {
+			TBot.Common.Logging.LogAnonymizer.Enabled = SettingsService.IsSettingSet(InstanceSettings.General, "AnonymizeLogs") && (bool) InstanceSettings.General.AnonymizeLogs;
 			TBot.Common.Logging.LogAnonymizer.Register((string) InstanceSettings.Credentials.Email, "[Email]");
 			TBot.Common.Logging.LogAnonymizer.Register((string) InstanceSettings.Credentials.Universe, "[Universe]");
 			return new() {
@@ -326,7 +328,10 @@ namespace Tbot.Services {
 
 			var serverTime = await _tbotOgameBridge.GetDateTime();
 
-			log(LogLevel.Information, LogSender.Tbot, $"Server time: {serverTime.ToString()}");
+			double zeitAbweichung = serverTime.Year < 2000 ? 0 : (serverTime - DateTime.Now).TotalMinutes;
+			log(LogLevel.Information, LogSender.Tbot, $"Server time: {serverTime.ToString()} (system clock {DateTime.Now.ToString()}, difference {zeitAbweichung:F1} min, time zone {TimeZoneInfo.Local.Id})");
+			if (Math.Abs(zeitAbweichung) > 3)
+				log(LogLevel.Warning, LogSender.Tbot, "Server time and system clock differ by more than 3 minutes - check the time zone and clock of this machine (sleep mode and schedules use the game time).");
 			TBot.Common.Logging.LogAnonymizer.Register(userData.userInfo.PlayerName, "[Player]");
 			log(LogLevel.Information, LogSender.Tbot, $"Player name: {userData.userInfo.PlayerName}");
 			log(LogLevel.Information, LogSender.Tbot, $"Player class: {userData.userInfo.Class.ToString()}");
@@ -344,8 +349,9 @@ namespace Tbot.Services {
 				var notiz = Tbot.Common.Settings.WhatsNew.ClaimBotNotice(Tbot.Common.Settings.UiLanguage.Read());
 				if (notiz == null)
 					return;
-				log(LogLevel.Information, LogSender.Main, notiz.AsText());
-				_ = SendTelegramMessage(notiz.AsText());
+				string kurz = notiz.AsShortText(Tbot.Common.Settings.UiLanguage.Read());
+				log(LogLevel.Information, LogSender.Main, kurz);
+				_ = SendTelegramMessage(kurz);
 			} catch (Exception e) {
 				log(LogLevel.Debug, LogSender.Tbot, $"Update notice failed: {e.Message}");
 			}
@@ -538,7 +544,7 @@ namespace Tbot.Services {
 			if (feat == Feature.SleepMode) {
 				return;
 			}
-			if (_pauseActive && (feat != Feature.Defender || _pauseStopsDefender)) {
+			if (_pauseActive && !_pauseGateMode && (feat != Feature.Defender || _pauseStopsDefender)) {
 				lock (_pauseSync) {
 					_pauseStoppedFeatures.Add(feat);
 				}
@@ -1393,7 +1399,35 @@ namespace Tbot.Services {
 		private readonly object _pauseSync = new();
 		private volatile bool _pauseActive = false;
 		private volatile bool _pauseStopsDefender = false;
+		private volatile bool _pauseGateMode = false;
 		public bool IsBotPaused => _pauseActive;
+
+		public bool FastFarmBlocksNewTransports {
+			get {
+				try {
+					var s = InstanceSettings;
+					if (!SettingsService.IsSettingSet(s, "FastFarm"))
+						return false;
+					var f = s.FastFarm;
+					if (!SettingsService.IsSettingSet(f, "Active") || !(bool) f.Active)
+						return false;
+					return !SettingsService.IsSettingSet(f, "OnlyWorker") || (bool) f.OnlyWorker;
+				} catch (Exception) {
+					return false;
+				}
+			}
+		}
+
+		public TimeSpan? PauseGateDelay(Feature feature) {
+			if (!_pauseActive || !_pauseGateMode)
+				return null;
+			if (feature == Feature.SleepMode || (feature == Feature.Defender && !_pauseStopsDefender))
+				return null;
+			TimeSpan rest = _pauseUntilUtc - DateTime.UtcNow;
+			if (rest <= TimeSpan.Zero)
+				return null;
+			return rest + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 60000));
+		}
 		private DateTime _pauseUntilUtc = DateTime.MinValue;
 		private readonly HashSet<Feature> _pauseStoppedFeatures = new();
 		private string _pauseRejectText = null;
@@ -1418,6 +1452,8 @@ namespace Tbot.Services {
 					c.StopDefender = (bool) p.StopDefender;
 				if (SettingsService.IsSettingSet(p, "AttackMarginMinutes"))
 					c.AttackMarginMinutes = Math.Max(0, (int) p.AttackMarginMinutes);
+				if (SettingsService.IsSettingSet(p, "Mode"))
+					c.Mode = (string) p.Mode;
 			} catch (Exception) {
 			}
 			if (c.MaxDurationMinutes < c.DurationMinutes)
@@ -1531,6 +1567,21 @@ namespace Tbot.Services {
 					.Where(f => (f != Feature.Defender || cfg.StopDefender) && f != Feature.SleepMode && IsFeatureRunning(f))
 					.ToList();
 				_pauseStopsDefender = cfg.StopDefender;
+				if (cfg.GateMode) {
+					lock (_pauseSync) {
+						_pauseStoppedFeatures.Clear();
+					}
+					_pauseGateMode = true;
+					_pauseActive = true;
+					_pauseUntilUtc = DateTime.UtcNow.AddMinutes(min);
+					_pauseRejectText = null;
+					Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause started (gate): {min} min, stopDefender={cfg.StopDefender}, attackMargin={cfg.AttackMarginMinutes} min, holding [{string.Join(", ", toStop)}].");
+					ArmPauseTimer(min);
+					log(LogLevel.Warning, LogSender.Tbot, $"Pause started: {toStop.Count} workers hold their cycles for {min} min ({(cfg.StopDefender ? "SleepMode and recalls" : "Defender, SleepMode and recalls")} keep running; scouting, attack and expedition missions are blocked). Ends on its own or with Resume.");
+					PublishStatusSoon();
+					return (true, $"Pause started for {min} min: {toStop.Count} workers hold their cycles. {(cfg.StopDefender ? "Recalls keep running" : "Defender and recalls keep running")}.");
+				}
+				_pauseGateMode = false;
 				lock (_pauseSync) {
 					_pauseStoppedFeatures.Clear();
 					foreach (var f in toStop)
@@ -1565,9 +1616,16 @@ namespace Tbot.Services {
 					t.Dispose();
 					timers.Remove("BotPauseTimer");
 				}
+				bool warTor = _pauseGateMode;
 				_pauseActive = false;
+				_pauseGateMode = false;
 				_pauseStopsDefender = false;
 				Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause ended ({reason}).");
+				if (warTor) {
+					log(LogLevel.Information, LogSender.Tbot, $"Pause ended ({reason}): the workers continue on their own schedule.");
+					PublishStatusSoon();
+					return (true, $"Pause ended ({reason}): the workers continue on their own schedule.");
+				}
 				List<Feature> toStart;
 				lock (_pauseSync) {
 					toStart = _pauseStoppedFeatures.ToList();
@@ -2203,6 +2261,7 @@ namespace Tbot.Services {
 			{ "w_harvest", "AutoHarvest.Active" },
 			{ "w_discovery", "AutoDiscovery.Active" },
 			{ "w_brain", "Brain.Active" }
+			,{ "w_defender", "Defender.Active" }
 			,{ "w_transport", "Brain.Transports.Active" }
 			,{ "w_repatriate", "Brain.AutoRepatriate.Active" }
 			,{ "w_cargo", "Brain.AutoCargo.Active" }
@@ -2221,6 +2280,7 @@ namespace Tbot.Services {
 				case "w_expeditions": return new List<Feature> { Feature.Expeditions };
 				case "w_harvest": return new List<Feature> { Feature.Harvest };
 				case "w_discovery": return new List<Feature> { Feature.AutoDiscovery };
+				case "w_defender": return new List<Feature> { Feature.Defender };
 				case "w_repatriate": return new List<Feature> { Feature.BrainAutoRepatriate };
 				case "w_cargo": return new List<Feature> { Feature.BrainAutobuildCargo };
 				case "w_mine": return new List<Feature> { Feature.BrainAutoMine, Feature.BrainCelestialAutoMine };
@@ -2243,6 +2303,7 @@ namespace Tbot.Services {
 					case "Expeditions.Active": return (bool) InstanceSettings.Expeditions.Active;
 					case "AutoHarvest.Active": return (bool) InstanceSettings.AutoHarvest.Active;
 					case "AutoDiscovery.Active": return (bool) InstanceSettings.AutoDiscovery.Active;
+					case "Defender.Active": return (bool) InstanceSettings.Defender.Active;
 					case "Brain.Active": return (bool) InstanceSettings.Brain.Active;
 					case "Brain.Transports.Active": return (bool) InstanceSettings.Brain.Transports.Active;
 					case "Brain.AutoRepatriate.Active": return (bool) InstanceSettings.Brain.AutoRepatriate.Active;
@@ -2268,6 +2329,7 @@ namespace Tbot.Services {
 					case "Expeditions.Active": InstanceSettings.Expeditions.Active = v; return true;
 					case "AutoHarvest.Active": InstanceSettings.AutoHarvest.Active = v; return true;
 					case "AutoDiscovery.Active": InstanceSettings.AutoDiscovery.Active = v; return true;
+					case "Defender.Active": InstanceSettings.Defender.Active = v; return true;
 					case "Brain.Active": InstanceSettings.Brain.Active = v; return true;
 					case "Brain.Transports.Active": InstanceSettings.Brain.Transports.Active = v; return true;
 					case "Brain.AutoRepatriate.Active": InstanceSettings.Brain.AutoRepatriate.Active = v; return true;
@@ -2631,6 +2693,7 @@ namespace Tbot.Services {
 				expeditions = ReadBoolSetting("Expeditions.Active"),
 				harvest = ReadBoolSetting("AutoHarvest.Active"),
 				discovery = ReadBoolSetting("AutoDiscovery.Active"),
+				defender = ReadBoolSetting("Defender.Active"),
 				brain = ReadBoolSetting("Brain.Active"),
 				transport = ReadBoolSetting("Brain.Transports.Active"),
 				repatriate = ReadBoolSetting("Brain.AutoRepatriate.Active"),
@@ -2691,8 +2754,22 @@ namespace Tbot.Services {
 				defaultMinutes = ReadBotPauseConfig().DurationMinutes
 			};
 
+			object clock = null;
+			try {
+				if (gameNow.Year >= 2000) {
+					int offsetMin = (int) (Math.Round((gameNow - DateTime.UtcNow).TotalMinutes / 15.0) * 15);
+					clock = new {
+						game = gameNow.ToString("yyyy-MM-dd HH:mm:ss"),
+						offsetMin,
+						systemZone = TimeZoneInfo.Local.Id,
+						systemOffsetMin = (int) TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes
+					};
+				}
+			} catch { clock = null; }
+
 			var payload = new {
 				sleeping,
+				clock,
 				mode = ghost ? "GhostSleep" : (normal ? "Sleep" : ""),
 				pause = pauseInfo,
 				wakeInSec,
@@ -2735,6 +2812,13 @@ namespace Tbot.Services {
 			try {
 
 				DateTime time = await _tbotOgameBridge.GetDateTime();
+
+				if (time.Year < 2000) {
+					long retryMs = RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
+					log(LogLevel.Warning, LogSender.SleepMode, "Server time not available (ogamed not reachable or logged out) - checking sleep mode again shortly.");
+					timers.GetValueOrDefault("SleepModeTimer").Change(retryMs, Timeout.Infinite);
+					return;
+				}
 
 				if (!(bool) InstanceSettings.SleepMode.Active) {
 					log(LogLevel.Warning, LogSender.SleepMode, "Sleep mode is disabled");
@@ -2825,6 +2909,8 @@ namespace Tbot.Services {
 				log(LogLevel.Warning, LogSender.SleepMode, $"An error has occurred while handling sleep mode: {e.Message}");
 				log(LogLevel.Warning, LogSender.SleepMode, $"Stacktrace: {e.StackTrace}");
 				DateTime time = await _tbotOgameBridge.GetDateTime();
+				if (time.Year < 2000)
+					time = DateTime.Now;
 				long interval = RandomizeHelper.CalcRandomInterval(IntervalType.AMinuteOrTwo);
 				DateTime newTime = time.AddMilliseconds(interval);
 				timers.GetValueOrDefault("SleepModeTimer").Change(interval, Timeout.Infinite);

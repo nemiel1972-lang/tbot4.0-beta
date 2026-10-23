@@ -356,6 +356,9 @@ window.CFG_HELP.en = {
   "Proxy.LoginOnly": {
    "t": "On = the proxy is used only for logging in, game requests go direct. Off = everything goes through the proxy."
   },
+  "AnonymizeLogs": {
+   "t": "On: player name, universe and e-mail address are replaced in all log lines by [Player], [Universe] and [Email] - useful before posting logs. Off (default): the real names are shown. Read at start, so a restart is needed."
+  },
   "CaptchaAPIKey": {
    "t": "Key of a captcha solving service. Optional, only needed if the game asks for captchas."
   },
@@ -773,16 +776,22 @@ window.CFG_HELP.en = {
    "t": "Ship type that is built."
   },
   "AutoCargo.MaxCargosToBuild": {
-   "t": "Total number of cargo ships to reach."
+   "t": "The most cargo ships ordered in one run. The rest follows in the next run.",
+   "e": "200 = at most 200 ships per run, even if the target amount is higher."
   },
   "AutoCargo.MaxCargosToKeep": {
-   "t": "How many cargo ships are kept."
+   "t": "The target: the celestial is filled up with cargo ships until it has this many. 0 means nothing is built.",
+   "e": "1000 = build until 1000 ships are on the celestial."
   },
   "AutoCargo.LimitToCapacity": {
    "t": "Build only as many as the stored resources need."
   },
   "AutoCargo.SkipIfIncomingTransport": {
    "t": "Skip a celestial that already has a transport on the way."
+  },
+  "AutoCargo.Ships": {
+   "t": "More ship types that are built after the cargo ships: Recycler, Pathfinder (Discoverer class), Reaper (General class), Crawler (capped by the game's maximum) and others. One order per celestial and run, the first entry whose target is not reached yet. Cargo ships come first; moon supply and /switch still use CargoType only.",
+   "e": "Type Recycler, Target 50, Build per run 20 = fill up to 50 recyclers, 20 per run."
   },
   "AutoCargo.Exclude": {
    "t": "Celestials that build no cargo ships."
@@ -1041,6 +1050,10 @@ window.CFG_HELP.en = {
   "KeepExpeditions": {
    "t": "Lets the expeditions keep running although the other workers are off. They occupy their own fleet slots."
   },
+  "BuildCheckMinutes": {
+   "t": "While FastFarm is active, AutoMine, AutoResearch and the lifeform workers are not switched off completely: they run whenever transports with resources are on their way to your celestials (so the resources do not lie around), and otherwise once every this many minutes to see what can be built. They only spend resources that are already on the celestial and never order new transports during FastFarm. 0 = they stay off as before (default 60).",
+   "e": "60 = a short construction check every hour."
+  },
   "Origin": {
    "t": "Celestials the probes and cargo ships start from. For every target the nearest origin that has enough ships is used. Empty = all your planets."
   },
@@ -1120,6 +1133,9 @@ window.CFG_HELP.en = {
   },
   "BotPause.StopDefender": {
    "t": "Stop the Defender during the pause as well (default off). Then nothing watches for attacks, so a pause is refused if a known attack arrives within the limit below plus the pause length."
+  },
+  "BotPause.Mode": {
+   "t": "Gate (default): during the pause the workers keep running but skip their cycle, and go on with their usual plan shortly after the pause, spread over about a minute. Stop: the old hard pause, every worker is stopped and started again afterwards."
   },
   "BotPause.AttackMarginMinutes": {
    "t": "A pause is refused if an attack arrives within this many minutes (default 15). Spy, attack and expedition missions are also blocked while the bot is paused."
@@ -1211,6 +1227,12 @@ window.CFG_HELP.en = {
   "ExtraDebugLog.GalaxyCache": {
    "t": "Cache hits, background scans and detected events of the galaxy cache."
   },
+  "ExtraDebugLog.Requests": {
+   "t": "Request counters every 10 minutes: requests to the game per worker and from the bot and the browser."
+  },
+  "ExtraDebugLog.BrowserProxy": {
+   "t": "Error 100 retries and celestial handling of the browser proxy (when you play through the bot)."
+  },
   "GalaxyCache": {
    "t": "Shared store of all galaxy scans with a time stamp. FastFarm and Colonize ask it before they query the server. A slow background scan keeps the systems around your planets fresh and reports new colonies and moves of other players. Data file: data/galaxycache_<alias>.json."
   },
@@ -1267,7 +1289,7 @@ window.CFG_HELP.en = {
    "t": "Write every attempt and find to data/asteroiden_funde_<alias>.json."
   },
   "ShadowFleet": {
-   "t": "What it does: the chosen ships of ONE celestial fly in a loop on a recycle (harvest) mission at slow speed to the nearest debris field (up to 10 systems away). After half of the flight time the fleet is recalled and flies home, then after a short random pause the next flight starts. So the ships are almost never at home: a player who spies the celestial finds no fleet, and the fleet never stands still where an attack could hit it. It uses one fleet slot and the deuterium of that celestial. Safety: no flight starts when an attack would land before the fleet is back; a flying fleet is called home if it can still make it before the impact. Needs a deuterium reserve on that celestial."
+   "t": "NOT FULLY TESTED - use with care and report problems. What it does: the chosen ships of ONE celestial fly in a loop on a recycle (harvest) mission at slow speed to the nearest debris field (up to 10 systems away). After half of the flight time the fleet is recalled and flies home, then after a short random pause the next flight starts. So the ships are almost never at home: a player who spies the celestial finds no fleet, and the fleet never stands still where an attack could hit it. It uses one fleet slot and the deuterium of that celestial. Safety: no flight starts when an attack would land before the fleet is back; a flying fleet is called home if it can still make it before the impact. Needs a deuterium reserve on that celestial."
   },
   "ShadowFleet.Active": {
    "t": "Switch the shadow fleet on or off (default off). Keep deuterium on the celestial: every flight burns fuel."

@@ -4,6 +4,10 @@
  "ui": {
   "exact": {
    "Topic: galaxy cache": "Thema: Galaxie-Cache",
+   "Topic: request counters": "Thema: Anfragen-Zähler",
+   "Requests to the game every 10 minutes (per worker, bot and browser)": "Anfragen ans Spiel alle 10 Minuten (je Worker, Bot und Browser)",
+   "Topic: browser proxy": "Thema: Browser-Proxy",
+   "Error 100 retries and celestial handling of the browser proxy": "Wiederholungen bei Fehler 100 und Planetenwahl des Browser-Proxys",
    "Cache hits, background scans and detected events": "Cache-Treffer, Hintergrund-Scans und erkannte Ereignisse",
    "Galaxy cache (shared galaxy scans)": "Galaxie-Cache (gemeinsame Galaxie-Scans)",
    "Every galaxy scan of any worker is stored with a time stamp. FastFarm and Colonize read the cache first and only ask the server live when an entry is too old. A slow background scan keeps the systems around your planets fresh and reports new colonies and moves of other players.": "Jeder Galaxie-Scan eines beliebigen Workers wird mit Zeitstempel gespeichert. FastFarm und Kolonisieren lesen zuerst den Cache und fragen den Server nur live, wenn ein Eintrag zu alt ist. Ein langsamer Hintergrund-Scan hält die Systeme rund um deine Planeten frisch und meldet neue Kolonien und Umzüge anderer Spieler.",
@@ -50,6 +54,14 @@
    "Candidates, payload after ledger, send attempts and results": "Kandidaten, Ladung nach dem Ledger, Sendeversuche und Ergebnisse",
    "Deuterium as cargo for": "Deuterium als Fracht für",
    "Deuterium reserve needed. ": "Deuterium-Reserve nötig. ",
+   "Not fully tested. ": "Nicht vollständig getestet. ",
+   "Time": "Zeit",
+   "Bot time (game server)": "Bot-Zeit (Spielserver)",
+   "Your browser time": "Deine Browser-Zeit",
+   "Bot time and browser time are the same.": "Bot-Zeit und Browser-Zeit sind gleich.",
+   "Sleep times, time windows and all schedules in the config use the bot time.": "Schlafzeiten, Zeitfenster und alle Zeitpläne in der Config verwenden die Bot-Zeit.",
+   "The times here are bot time (game server time).": "Die Zeiten hier sind Bot-Zeit (Spielserver-Zeit).",
+   "The shadow fleet is new and has not been tested thoroughly yet. Use it with care, watch the log and report problems.": "Die Schattenflotte ist neu und noch nicht gründlich getestet. Mit Vorsicht nutzen, das Log beobachten und Probleme melden.",
    "Every flight burns fuel and the fleet carries deuterium for the chosen number of flights. Keep enough deuterium on the celestial; when it is used up the flights stop (a warning comes when only one flight is left).": "Jeder Flug verbraucht Treibstoff, und die Flotte nimmt Deuterium für die gewählte Anzahl Flüge mit. Halte genug Deuterium auf dem Himmelskörper; ist es aufgebraucht, enden die Flüge (eine Warnung kommt, wenn nur noch ein Flug möglich ist).",
    "Every flight burns fuel; keep deuterium on the celestial.": "Jeder Flug verbraucht Treibstoff; halte Deuterium auf dem Himmelskörper.",
    "Extra debug log (own file)": "Zusatz-Debuglog (eigene Datei)",
@@ -67,7 +79,7 @@
    "Out and back": "Hin und zurück",
    "Pause at home, max": "Pause zu Hause, höchstens",
    "Pause at home, min": "Pause zu Hause, mindestens",
-   "Payback = like AutoMine; Cheapest = lowest cost first; Npv = most gain over the horizon": "Payback = wie AutoMine; Cheapest = niedrigste Kosten zuerst; Npv = größter Gewinn über den Horizont",
+   "Payback = like AutoMine; Cheapest = lowest cost first; Npv = most gain over the horizon": "Payback = wie AutoMine; Cheapest = niedrigste Kosten zuerst; Npv = größter Gewinn im Betrachtungszeitraum",
    "Planet or moon": "Planet oder Mond",
    "Protect from this coverage": "Schützen ab dieser Deckung",
    "Repatriate and the resource ledger": "Repatriate und das Ressourcen-Ledger",
@@ -140,7 +152,7 @@
    "Attempts per game day": "Versuche pro Spieltag",
    "Auto ping": "Auto-Ping",
    "Auto: cargo count from server top score and Lifeform bonus, plus 1 probe and the strongest combat ship (Pathfinder if none).": "Auto: Transporterzahl aus Server-Topscore und Lebensform-Bonus, plus 1 Sonde und das stärkste Kampfschiff (Pathfinder, falls keins).",
-   "AutoCargo / AutoDefence": "AutoCargo / AutoDefence",
+   "AutoShips / AutoDefence": "AutoShips / AutoDefence",
    "AutoColonize active": "AutoColonize aktiv",
    "AutoDiscovery active": "AutoDiscovery aktiv",
    "AutoFarm active": "AutoFarm aktiv",
@@ -315,7 +327,7 @@
    "Highest simulated loss, as a share of the value of the whole attack fleet. 0 = limit OFF (any loss is accepted)": "Höchster simulierter Verlust, als Anteil am Wert der gesamten Angriffsflotte. 0 = Limit AUS (jeder Verlust wird akzeptiert)",
    "Home celestial": "Heimat-Himmelskörper",
    "Home world": "Hauptplanet",
-   "Horizon (Npv)": "Horizont (Npv)",
+   "Horizon (Npv)": "Betrachtungszeitraum (Npv)",
    "Host of your universe": "Host deines Universums",
    "How many targets are probed at once in sequential mode (minimum 1). Only used when Sequential mode is on.": "Wie viele Ziele im sequenziellen Modus gleichzeitig ausgespäht werden (mindestens 1). Wird nur genutzt, wenn der sequenzielle Modus an ist.",
    "How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. Display only: AutoMine and AutoResearch build by their own rules.": "Wie die Seite Minenplan die besten nächsten Investitionen sortiert. Minen und Forschung (Plasmatechnologie) werden zusammen gereiht. Nur Anzeige: AutoMine und AutoResearch bauen nach ihren eigenen Regeln.",
@@ -338,6 +350,10 @@
    "Keep a JSON log": "JSON-Protokoll führen",
    "Keep all slots busy": "Alle Slots belegt halten",
    "Keep amount": "Behalten-Menge",
+   "Target amount (ships to have)": "Zielmenge (Schiffe, die vorhanden sein sollen)",
+   "Build per run (max)": "Bauen pro Lauf (max.)",
+   "Most ships ordered in one run": "Höchstzahl Schiffe, die in einem Lauf bestellt werden",
+   "The celestial is filled up to this many ships. 0 = nothing is built": "Der Himmelskörper wird bis zu dieser Schiffszahl aufgefüllt. 0 = es wird nichts gebaut",
    "Keep at home": "Zu Hause lassen",
    "Keep expeditions running": "Expeditionen weiterlaufen lassen",
    "Keeps resource boosters running: when none of a type is active on a planet, one from your inventory is activated. Nothing is bought with Dark Matter. Start with test mode on and read the log.": "Hält Rohstoff-Booster am Laufen: Läuft von einem Typ keiner auf einem Planeten, wird einer aus deinem Inventar aktiviert. Es wird nichts mit Dunkler Materie gekauft. Starte mit eingeschaltetem Testmodus und lies das Log.",
@@ -883,7 +899,7 @@
    "Mine": "Mine",
    "Mine plan": "Minenplan",
    "Net gain (": "Nettogewinn (",
-   "Net gain over horizon": "Nettogewinn über den Horizont",
+   "Net gain over horizon": "Nettogewinn im Betrachtungszeitraum",
    "New version": "Neue Version",
    "Next build": "Nächster Bau",
    "Next mine upgrades per planet: cost, extra yield, payback time and energy. Preview only - nothing is built or changed by this page.": "Nächste Minenausbauten pro Planet: Kosten, Zusatzertrag, Amortisationszeit und Energie. Nur Vorschau – diese Seite baut oder ändert nichts.",
@@ -1071,7 +1087,47 @@
    "Where the fleet jumps to (jump gates exist on moons only; only the first entry is used)": "Wohin die Flotte springt (Sprungtore gibt es nur auf Monden; nur der erste Eintrag zählt)",
    "Writes the active items of each planet and the inventory to the log, at most every 12 hours": "Schreibt die aktiven Items jedes Planeten und das Inventar ins Log, höchstens alle 12 Stunden",
    "Deploy = station the ships at another of your moons (recommended)": "Deploy = die Schiffe auf einem anderen deiner Monde stationieren (empfohlen)",
-   "Optional fixed target moon. If these coordinates are not one of your moons, or the flight does not fit, the bot picks a suitable moon of yours on its own - you do not have to choose one.": "Optionaler fester Ziel-Mond. Gehören die Koordinaten keinem deiner Monde oder passt der Flug nicht, wählt der Bot selbst einen passenden Mond von dir – du musst keinen auswählen."
+   "Optional fixed target moon. If these coordinates are not one of your moons, or the flight does not fit, the bot picks a suitable moon of yours on its own - you do not have to choose one.": "Optionaler fester Ziel-Mond. Gehören die Koordinaten keinem deiner Monde oder passt der Flug nicht, wählt der Bot selbst einen passenden Mond von dir – du musst keinen auswählen.",
+   "Account": "Konto",
+   "Alternatives: upgrade only one mine type": "Alternativen: nur einen Minentyp ausbauen",
+   "Boosters": "Booster",
+   "Build plan by payback": "Aufbauplan nach Amortisation",
+   "Cheapest": "Günstigster Schritt",
+   "Daily budget (D-eq, e.g. expedition income):": "Tagesbudget (D-Äq., z. B. Expeditions-Einnahmen):",
+   "Derived from the real hourly production minus plasma, geologist, class and lifeform bonuses: active boosters, crawlers, etc.": "Aus der echten Stundenproduktion abgeleitet, abzüglich Plasma-, Geologen-, Klassen- und Lebensform-Boni: aktive Booster, Crawler usw.",
+   "Done in (days)": "Fertig in (Tagen)",
+   "Enter a daily budget to get dates. Without it the table only shows the order.": "Gib ein Tagesbudget ein, um Termine zu erhalten. Ohne Budget zeigt die Tabelle nur die Reihenfolge.",
+   "If the plan is older than 6 hours or empty, AutoMine falls back to its own rules.": "Ist der Plan älter als 6 Stunden oder leer, baut AutoMine nach seinen eigenen Regeln.",
+   "Income/day after": "Ertrag/Tag danach",
+   "LIVE: AutoMine builds by this plan": "LIVE: AutoMine baut nach diesem Plan",
+   "Next mine upgrades per planet: cost, extra yield, payback time and energy. This page only shows the calculation and never changes anything itself. Whether AutoMine builds by this plan is set in the Config (Experimental, Mine plan ranking: \"AutoMine follows the build plan\").": "Nächste Minen-Ausbauten je Planet: Kosten, Mehrertrag, Amortisationszeit und Energie. Diese Seite zeigt nur die Berechnung und ändert selbst nichts. Ob AutoMine nach diesem Plan baut, stellst du in der Config ein (Experimental, Minenplan-Reihung: \"AutoMine folgt dem Aufbauplan\").",
+   "No plan yet (no step pays back within the payback limit).": "Noch kein Plan (kein Schritt amortisiert sich innerhalb der Grenze).",
+   "Payback": "Amortisation",
+   "Plan mode OFF": "Plan-Modus AUS",
+   "Ranking view only. Which steps are built live is decided by the plan mode (see the banner at the top).": "Nur die Reihung. Welche Schritte live gebaut werden, bestimmt der Plan-Modus (siehe Banner oben).",
+   "Ranking:": "Reihung:",
+   "Updated:": "Aktualisiert:",
+   "Without item/crawler bonus (still at 3:2:1)": "Ohne Item-/Crawler-Bonus (noch bei 3:2:1)",
+   "mine level unknown": "Minenstufe unbekannt",
+   "missing": "fehlt",
+   "missing, none in stock": "fehlt, keiner auf Lager",
+   "horizon": "Zeitraum",
+   "Built live now (one step per planet, marked ▶ in the build plan):": "Jetzt live gebaut (ein Schritt je Planet, im Aufbauplan mit ▶ markiert):",
+   "(at AutoMine max)": "(AutoMine-Maximum erreicht)",
+   "Next up": "Als Nächstes",
+   "Next mine step": "Nächster Minen-Schritt",
+   "Next LF step": "Nächster LF-Schritt",
+   "Next research": "Nächste Forschung",
+   "Following mine step": "Folgender Minen-Schritt",
+   "▶ built live": "▶ wird live gebaut",
+   "waits": "wartet",
+   "LF research": "LF-Forschung",
+   "AutoResearch": "AutoResearch",
+   "Next LF research": "Nächste LF-Forschung",
+   "Construction check while farming": "Baucheck während des Farmens",
+   "Build and research workers look for possible constructions this often (and always while transports with resources are on their way). 0 = they stay off": "Bau- und Forschungs-Worker prüfen so oft, was gebaut werden kann (und immer, solange Transporte mit Rohstoffen unterwegs sind). 0 = sie bleiben aus",
+   "Next LF building": "Nächstes LF-Gebäude",
+   "LifeformAutoMine": "LifeformAutoMine"
   },
   "phrases": [
    [
@@ -1439,6 +1495,18 @@
    [
     "^(\\d+) h ago$",
     "vor $1 Std."
+   ],
+   [
+    "^- every planet builds on its own by the AutoMine rules\\. This page is a preview\\. Switch it on in the Config: Experimental, Mine plan ranking, \"AutoMine follows the build plan\"\\.$",
+    "- jeder Planet baut selbst nach den AutoMine-Regeln. Diese Seite ist nur eine Vorschau. Einschalten in der Config: Experimental, Minenplan-Reihung, \"AutoMine folgt dem Aufbauplan\"."
+   ],
+   [
+    "^Only planets among the first (\\d+) steps may build mines now: (.*)\\. All other planets wait \\(research, power plants and facilities are not held back\\)\\.$",
+    "Nur Planeten unter den ersten $1 Schritten dürfen jetzt Minen bauen: $2. Alle anderen Planeten warten (Forschung, Kraftwerke und Anlagen werden nicht gebremst)."
+   ],
+   [
+    "^Next mine step: (.*) - (.*) to level (\\d+) \\(payback (.*) days\\)$",
+    "Nächster Minen-Schritt: $1 - $2 auf Stufe $3 (Amortisation $4 Tage)"
    ]
   ]
  },
@@ -1798,6 +1866,9 @@
    },
    "Proxy.LoginOnly": {
     "t": "An = der Proxy wird nur zum Einloggen genutzt, Spielanfragen gehen direkt. Aus = alles läuft über den Proxy."
+   },
+   "AnonymizeLogs": {
+    "t": "An: Spielername, Universum und E-Mail-Adresse werden in allen Logzeilen durch [Player], [Universe] und [Email] ersetzt - praktisch vor dem Posten von Logs. Aus (Standard): die echten Namen werden angezeigt. Wird beim Start gelesen, daher Neustart nötig."
    },
    "CaptchaAPIKey": {
     "t": "Schlüssel eines Captcha-Lösedienstes. Optional, nur nötig, wenn das Spiel Captchas verlangt."
@@ -2230,6 +2301,10 @@
    "AutoFleetJumpGate.Exclude": {
     "t": "Monde, die nie springen."
    },
+   "AutoCargo.Ships": {
+    "t": "Weitere Schiffstypen, die nach den Transportern gebaut werden: Recycler, Pathfinder (Klasse Entdecker), Reaper (Klasse General), Crawler (begrenzt durch das Spielmaximum) und weitere. Ein Auftrag pro Himmelskörper und Durchlauf, der erste Eintrag, dessen Zielmenge noch nicht erreicht ist. Transporter haben Vorrang; Mondversorgung und /switch nutzen weiter nur CargoType.",
+    "e": "Typ Recycler, Zielmenge 50, Bau pro Durchlauf 20 = bis 50 Recycler auffüllen, 20 pro Durchlauf."
+   },
    "AutoCargo.Exclude": {
     "t": "Himmelskörper, die keine Transporter bauen."
    },
@@ -2480,6 +2555,10 @@
    "OnlyWorker": {
     "t": "Hält alle anderen Worker (Brain, AutoFarm, Expeditionen, Harvest, ...) aus, solange FastFarm aktiv ist, damit alle Flottenslots zum Farmen frei sind. Aus = die anderen Worker laufen wie konfiguriert und konkurrieren um Slots."
    },
+   "BuildCheckMinutes": {
+    "t": "Solange FastFarm aktiv ist, werden AutoMine, AutoResearch und die Lebensform-Worker nicht ganz abgeschaltet: Sie laufen, wenn Transporte mit Rohstoffen zu deinen Himmelskörpern unterwegs sind (damit die Rohstoffe nicht herumliegen), und sonst alle so viele Minuten einmal, um zu schauen, was gebaut werden kann. Sie verbauen nur Rohstoffe, die schon auf dem Himmelskörper liegen, und beauftragen während FastFarm keine neuen Transporte. 0 = sie bleiben wie bisher aus (Standard 60).",
+    "e": "60 = jede Stunde ein kurzer Baucheck."
+   },
    "KeepExpeditions": {
     "t": "Lässt die Expeditionen weiterlaufen, obwohl die anderen Worker aus sind. Sie belegen ihre eigenen Flottenslots."
    },
@@ -2543,34 +2622,96 @@
    }
   },
   "Experimental": {
-   "ExtraDebugLog.BotPause": {"t": "Beginn und Ende der Pause, Ablehnungen und blockierte Flüge."},
-   "ExtraDebugLog.DefenderRecheck": {"t": "Angriffsliste vor dem Fleetsave: Zeiten und Entscheidung."},
-   "ExtraDebugLog.FleetsaveSlot": {"t": "Jede Slot-Entscheidung von SendFleet mit den Zahlen."},
-   "ExtraDebugLog.MinePlanRanking": {"t": "Berechnungsart und die besten Schritte der Minenplan-Rangliste."},
-   "ExtraDebugLog.AsteroidHunt": {"t": "Alle Meldungen der Asteroidenjagd."},
-   "ExtraDebugLog.ShadowFleet": {"t": "Alle Meldungen der Schattenflotte."},
-   "BotPause.StopDefender": {"t": "Den Defender während der Pause ebenfalls stoppen (Standard aus). Dann überwacht niemand Angriffe, deshalb wird die Pause abgelehnt, wenn ein bekannter Angriff innerhalb der Grenze unten plus der Pausenlänge eintrifft."},
-   "BotPause.AttackMarginMinutes": {"t": "Die Pause wird abgelehnt, wenn ein Angriff innerhalb dieser Minuten eintrifft (Standard 15). Spionage-, Angriffs- und Expeditionsflüge sind während der Pause ebenfalls gesperrt."},
-   "ExtraDebugLog": {"t": "Schreibt zusätzliche Diagnosezeilen in eine eigene Datei devlog/TBot-debug-<Datum>.log (anonymisiert: Namen, Mail, IP und Token werden ersetzt; Koordinaten werden zu x:x:Position, Mengen bleiben; höchstens 50 MB pro Tag). Das normale Log bleibt klein. Schalte es ein, wenn eine Funktion nichts sendet und du den Grund sehen willst."},
-   "ExtraDebugLog.Active": {"t": "Zusatz-Log ein- oder ausschalten (Standard an)."},
-   "ExtraDebugLog.Repatriate": {"t": "Repatriate / Reverse-Repatriate: Kandidaten, Ladung nach dem Ledger, Sendeversuche und Ergebnisse."},
-   "ExtraDebugLog.Ledger": {"t": "Ressourcen-Ledger: welche Ansprüche wie viel eines Himmelskörpers halten und welche davon für Repatriate und Collect zählen."},
-   "RepatriateLedgerHold": {"t": "Wie stark wartende Bauansprüche des Ressourcen-Ledgers Repatriate und Collect sperren."},
-   "RepatriateLedgerHold.Ignore": {"t": "An: Repatriate, Reverse-Repatriate und /collect ignorieren das Ressourcen-Ledger komplett und bewegen den gesamten Bestand, auch was Bauansprüche halten. Die Worker (AutoMine und andere) können dann feststellen, dass ihr gespeicherter Bestand weg ist. Standard aus."},
-   "RepatriateLedgerHold.MinPercent": {"t": "Ein wartender Anspruch schützt seinen gehaltenen Bestand nur dann vor Repatriate und Collect, wenn er schon mindestens diesen Prozentsatz seines Gesamtbedarfs (Metall+Kristall+Deuterium) hält. Ansprüche mit Flügen oder voll gedeckte schützen immer. 0 = jeder gehaltene Bestand ist geschützt (altes Verhalten).", "e": "30 = ein Metallminen-Anspruch, der 1 % von 995 Mio hält, sperrt den Himmelskörper nicht mehr."},
-   "ShadowFleet": {"t": "So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt. Braucht eine Deuterium-Reserve auf diesem Himmelskörper."},
-   "ShadowFleet.Active": {"t": "Schattenflotte ein- oder ausschalten (Standard aus). Halte Deuterium auf dem Himmelskörper: Jeder Flug verbraucht Treibstoff."},
-   "ShadowFleet.Celestial": {"t": "Der eine gesicherte Himmelskörper (Planet oder Mond). Nur sein Deuterium und ein Flottenslot werden benutzt."},
-   "ShadowFleet.Ships": {"t": "Schiffe ankreuzen, die fliegen, und die Menge eintragen (0 = alle). Für die Abbau-Mission wird mindestens ein Recycler (oder Pathfinder) gebraucht."},
-   "ShadowFleet.SpeedPercent": {"t": "Fluggeschwindigkeit, 10 bis 100 Prozent. 10 ist am langsamsten und am billigsten im Treibstoff."},
-   "ShadowFleet.MinBackInMinutes": {"t": "Kürzeste Zeit für einen Flug (hin und zurück).", "e": "20"},
-   "ShadowFleet.MaxBackInMinutes": {"t": "Längste Zeit für einen Flug (hin und zurück). Die Flotte ist spätestens nach dieser Zeit wieder zu Hause – das Zeitlimit.", "e": "60"},
-   "ShadowFleet.PauseMinSeconds": {"t": "Kürzeste Pause zu Hause zwischen zwei Flügen."},
-   "ShadowFleet.PauseMaxSeconds": {"t": "Längste Pause zu Hause zwischen zwei Flügen."},
-   "ShadowFleet.DeuteriumFlights": {"t": "Deuterium für so viele Flüge fliegt als Fracht mit (begrenzt durch Laderaum und Bestand). Wenig Bestand bei 2 oder mehr möglichen Flügen: nur Log-Warnung. Genau ein Flug übrig: Messenger-Warnung. Keiner: Die Flüge warten.", "e": "3"},
-   "ShadowFleet.WindowFrom": {"t": "Beginn des Zeitfensters (Spielzeit, HH:mm). Leer = immer. Darf über Mitternacht gehen, z. B. 22:00 bis 07:00.", "e": "22:00"},
-   "ShadowFleet.WindowTo": {"t": "Ende des Zeitfensters (HH:mm). Ein Flug startet nur, wenn er vor Ende des Fensters zurück ist.", "e": "07:00"},
-   "ShadowFleet.DefenderOff": {"t": "Fallen-Modus nur für die Schattenflotte. An = der Defender schickt die Schattenflotte nicht weg, sichert aber weiterhin Rohstoffe und alle anderen Schiffe. Wird ein Angriff gemeldet, wird eine fliegende Schattenflotte nach Hause gerufen, damit sie beim Einschlag da ist. Schlaf-Fleetsaves schicken weiterhin alles weg."},
+   "ExtraDebugLog.BotPause": {
+    "t": "Beginn und Ende der Pause, Ablehnungen und blockierte Flüge."
+   },
+   "ExtraDebugLog.DefenderRecheck": {
+    "t": "Angriffsliste vor dem Fleetsave: Zeiten und Entscheidung."
+   },
+   "ExtraDebugLog.FleetsaveSlot": {
+    "t": "Jede Slot-Entscheidung von SendFleet mit den Zahlen."
+   },
+   "ExtraDebugLog.MinePlanRanking": {
+    "t": "Berechnungsart und die besten Schritte der Minenplan-Rangliste."
+   },
+   "ExtraDebugLog.AsteroidHunt": {
+    "t": "Alle Meldungen der Asteroidenjagd."
+   },
+   "ExtraDebugLog.ShadowFleet": {
+    "t": "Alle Meldungen der Schattenflotte."
+   },
+   "BotPause.StopDefender": {
+    "t": "Den Defender während der Pause ebenfalls stoppen (Standard aus). Dann überwacht niemand Angriffe, deshalb wird die Pause abgelehnt, wenn ein bekannter Angriff innerhalb der Grenze unten plus der Pausenlänge eintrifft."
+   },
+   "BotPause.AttackMarginMinutes": {
+    "t": "Die Pause wird abgelehnt, wenn ein Angriff innerhalb dieser Minuten eintrifft (Standard 15). Spionage-, Angriffs- und Expeditionsflüge sind während der Pause ebenfalls gesperrt."
+   },
+   "ExtraDebugLog": {
+    "t": "Schreibt zusätzliche Diagnosezeilen in eine eigene Datei devlog/TBot-debug-<Datum>.log (anonymisiert: Namen, Mail, IP und Token werden ersetzt; Koordinaten werden zu x:x:Position, Mengen bleiben; höchstens 50 MB pro Tag). Das normale Log bleibt klein. Schalte es ein, wenn eine Funktion nichts sendet und du den Grund sehen willst."
+   },
+   "ExtraDebugLog.Active": {
+    "t": "Zusatz-Log ein- oder ausschalten (Standard an)."
+   },
+   "ExtraDebugLog.Repatriate": {
+    "t": "Repatriate / Reverse-Repatriate: Kandidaten, Ladung nach dem Ledger, Sendeversuche und Ergebnisse."
+   },
+   "ExtraDebugLog.Ledger": {
+    "t": "Ressourcen-Ledger: welche Ansprüche wie viel eines Himmelskörpers halten und welche davon für Repatriate und Collect zählen."
+   },
+   "RepatriateLedgerHold": {
+    "t": "Wie stark wartende Bauansprüche des Ressourcen-Ledgers Repatriate und Collect sperren."
+   },
+   "RepatriateLedgerHold.Ignore": {
+    "t": "An: Repatriate, Reverse-Repatriate und /collect ignorieren das Ressourcen-Ledger komplett und bewegen den gesamten Bestand, auch was Bauansprüche halten. Die Worker (AutoMine und andere) können dann feststellen, dass ihr gespeicherter Bestand weg ist. Standard aus."
+   },
+   "RepatriateLedgerHold.MinPercent": {
+    "t": "Ein wartender Anspruch schützt seinen gehaltenen Bestand nur dann vor Repatriate und Collect, wenn er schon mindestens diesen Prozentsatz seines Gesamtbedarfs (Metall+Kristall+Deuterium) hält. Ansprüche mit Flügen oder voll gedeckte schützen immer. 0 = jeder gehaltene Bestand ist geschützt (altes Verhalten).",
+    "e": "30 = ein Metallminen-Anspruch, der 1 % von 995 Mio hält, sperrt den Himmelskörper nicht mehr."
+   },
+   "ShadowFleet": {
+    "t": "NICHT VOLLSTÄNDIG GETESTET - mit Vorsicht nutzen und Probleme melden. So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt. Braucht eine Deuterium-Reserve auf diesem Himmelskörper."
+   },
+   "ShadowFleet.Active": {
+    "t": "Schattenflotte ein- oder ausschalten (Standard aus). Halte Deuterium auf dem Himmelskörper: Jeder Flug verbraucht Treibstoff."
+   },
+   "ShadowFleet.Celestial": {
+    "t": "Der eine gesicherte Himmelskörper (Planet oder Mond). Nur sein Deuterium und ein Flottenslot werden benutzt."
+   },
+   "ShadowFleet.Ships": {
+    "t": "Schiffe ankreuzen, die fliegen, und die Menge eintragen (0 = alle). Für die Abbau-Mission wird mindestens ein Recycler (oder Pathfinder) gebraucht."
+   },
+   "ShadowFleet.SpeedPercent": {
+    "t": "Fluggeschwindigkeit, 10 bis 100 Prozent. 10 ist am langsamsten und am billigsten im Treibstoff."
+   },
+   "ShadowFleet.MinBackInMinutes": {
+    "t": "Kürzeste Zeit für einen Flug (hin und zurück).",
+    "e": "20"
+   },
+   "ShadowFleet.MaxBackInMinutes": {
+    "t": "Längste Zeit für einen Flug (hin und zurück). Die Flotte ist spätestens nach dieser Zeit wieder zu Hause – das Zeitlimit.",
+    "e": "60"
+   },
+   "ShadowFleet.PauseMinSeconds": {
+    "t": "Kürzeste Pause zu Hause zwischen zwei Flügen."
+   },
+   "ShadowFleet.PauseMaxSeconds": {
+    "t": "Längste Pause zu Hause zwischen zwei Flügen."
+   },
+   "ShadowFleet.DeuteriumFlights": {
+    "t": "Deuterium für so viele Flüge fliegt als Fracht mit (begrenzt durch Laderaum und Bestand). Wenig Bestand bei 2 oder mehr möglichen Flügen: nur Log-Warnung. Genau ein Flug übrig: Messenger-Warnung. Keiner: Die Flüge warten.",
+    "e": "3"
+   },
+   "ShadowFleet.WindowFrom": {
+    "t": "Beginn des Zeitfensters (Spielzeit, HH:mm). Leer = immer. Darf über Mitternacht gehen, z. B. 22:00 bis 07:00.",
+    "e": "22:00"
+   },
+   "ShadowFleet.WindowTo": {
+    "t": "Ende des Zeitfensters (HH:mm). Ein Flug startet nur, wenn er vor Ende des Fensters zurück ist.",
+    "e": "07:00"
+   },
+   "ShadowFleet.DefenderOff": {
+    "t": "Fallen-Modus nur für die Schattenflotte. An = der Defender schickt die Schattenflotte nicht weg, sichert aber weiterhin Rohstoffe und alle anderen Schiffe. Wird ein Angriff gemeldet, wird eine fliegende Schattenflotte nach Hause gerufen, damit sie beim Einschlag da ist. Schlaf-Fleetsaves schicken weiterhin alles weg."
+   },
    "BotPause": {
     "t": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist."
    },
@@ -2602,10 +2743,10 @@
     "t": "Wie die Seite Minenplan die nächsten Investitionen (Minen und Forschung) einordnet. Nur Anzeige: AutoMine und AutoResearch bauen weiter nach ihren eigenen Regeln. Du kannst diese Werte auch auf der Seite selbst ändern; die Seite merkt sich ihre Wahl in deinem Browser."
    },
    "MinePlanRanking.Mode": {
-    "t": "Payback = kürzeste Amortisation zuerst (wie AutoMine). Cheapest = niedrigste Kosten zuerst. Npv = höchster Nettogewinn über den Horizont (Gewinn pro Tag mal Horizonttage minus Kosten); Schritte, die sich im Horizont nicht amortisieren, entfallen."
+    "t": "Payback = kürzeste Amortisation zuerst (wie AutoMine). Cheapest = niedrigste Kosten zuerst. Npv = höchster Nettogewinn im Betrachtungszeitraum (Gewinn pro Tag mal Tage des Zeitraums minus Kosten); Schritte, die sich im Zeitraum nicht amortisieren, entfallen."
    },
    "MinePlanRanking.HorizonDays": {
-    "t": "Horizont für die Nettogewinn-Reihung, in Tagen.",
+    "t": "Betrachtungszeitraum für die Nettogewinn-Reihung, in Tagen.",
     "e": "90 = ein Schritt ist gut, wenn er innerhalb von 90 Tagen mehr einbringt, als er kostet."
    },
    "MinePlanRanking.UsePlanForAutoMine": {
@@ -2638,6 +2779,12 @@
    },
    "ExtraDebugLog.GalaxyCache": {
     "t": "Cache-Treffer, Hintergrund-Scans und erkannte Ereignisse des Galaxie-Caches."
+   },
+   "ExtraDebugLog.Requests": {
+    "t": "Anfragen-Zähler alle 10 Minuten: Anfragen ans Spiel je Worker sowie von Bot und Browser."
+   },
+   "ExtraDebugLog.BrowserProxy": {
+    "t": "Wiederholungen bei Fehler 100 und Planetenwahl des Browser-Proxys (wenn du über den Bot spielst)."
    },
    "GalaxyCache": {
     "t": "Gemeinsamer Speicher aller Galaxie-Scans mit Zeitstempel. FastFarm und Kolonisieren fragen ihn, bevor sie den Server abfragen. Ein langsamer Hintergrund-Scan hält die Systeme rund um deine Planeten frisch und meldet neue Kolonien und Umzüge anderer Spieler. Datendatei: data/galaxycache_<alias>.json."

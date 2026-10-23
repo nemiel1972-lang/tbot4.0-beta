@@ -3827,7 +3827,9 @@ func (b *OGame) getPageMessages(page int64, tabid ogame.MessagesTabID) ([]byte, 
 		"activeSubTab": {utils.FI64(tabid)},
 		"showTrash":    {"false"},
 	}
-	return b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"messages"}, "asJson": {"1"}, "action": {"getMessagesList"}}, payload)
+	return retryOnError100(func() ([]byte, error) {
+		return b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"messages"}, "asJson": {"1"}, "action": {"getMessagesList"}}, payload)
+	}, func(t string) { payload.Set("token", t) })
 }
 
 func (b *OGame) getEspionageReportMessages(maxPage int64) ([]ogame.EspionageReportSummary, error) {
@@ -3849,6 +3851,9 @@ func (b *OGame) getOtherMessages() ([]ogame.OtherMessage, error) {
 	pageHTML, err := b.getPageMessages(1, OtherMessagesTabID)
 	if err != nil {
 		return nil, err
+	}
+	if _, bad := ajaxError100(pageHTML); bad {
+		return nil, errors.New("messages request rejected by the game (error 100) after retries")
 	}
 	if err := json.Unmarshal(pageHTML, &res); err != nil {
 		return nil, err

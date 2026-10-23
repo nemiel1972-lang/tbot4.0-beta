@@ -11,6 +11,8 @@ namespace Tbot.Services {
 		public int MaxDurationMinutes = 120;
 		public bool StopDefender = false;
 		public int AttackMarginMinutes = 15;
+		public string Mode = "Gate";
+		public bool GateMode => !string.Equals(Mode, "Stop", StringComparison.OrdinalIgnoreCase);
 	}
 
 	public class PendingRecall {

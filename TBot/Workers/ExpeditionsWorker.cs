@@ -132,6 +132,13 @@ namespace Tbot.Workers {
 						foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(page ?? "", @"data-technology=""(\d{4,6})"""))
 							ids.Add(int.Parse(m.Groups[1].Value));
 					}
+					if (ids.Count == 0) {
+						var celObj = (_tbotInstance.UserData.celestials ?? new List<Celestial>()).FirstOrDefault(c => c.ID == cel);
+						int rasse = celObj != null ? (int) celObj.LFtype : 0;
+						bool alle = rasse < 1 || rasse > 4;
+						ids.AddRange(Enum.GetValues<LFBuildables>().Select(x => (int) x).Where(x => x >= 11000 && (alle || x / 1000 == 10 + rasse)));
+						ids.AddRange(Enum.GetValues<LFTechno>().Select(x => (int) x).Where(x => x >= 11000 && (alle || x / 1000 == 10 + rasse)));
+					}
 					foreach (int id in ids.Distinct()) {
 						if (!done.Add(id)) continue;
 						if (_lfEffects.HasFreshTable(id, TimeSpan.FromDays(30), DateTime.UtcNow)) continue;

@@ -95,6 +95,7 @@ namespace Tbot.Workers.Brain {
 					} else {
 						neededCargos = (long) _tbotInstance.InstanceSettings.Brain.AutoCargo.MaxCargosToKeep - tempCelestial.Ships.GetAmount(preferredCargoShip);
 					}
+					bool cargoStarted = false;
 					if (neededCargos > 0) {
 						if (neededCargos > (long) _tbotInstance.InstanceSettings.Brain.AutoCargo.MaxCargosToBuild)
 							neededCargos = (long) _tbotInstance.InstanceSettings.Brain.AutoCargo.MaxCargosToBuild;
@@ -129,6 +130,7 @@ namespace Tbot.Workers.Brain {
 						if (neededCargos > 0) {
 							try {
 								await _ogameService.BuildShips(tempCelestial, preferredCargoShip, neededCargos);
+								cargoStarted = true;
 								DoLog(LogLevel.Information, "Production succesfully started.");
 							} catch {
 								DoLog(LogLevel.Warning, "Unable to start ship production.");
@@ -143,6 +145,9 @@ namespace Tbot.Workers.Brain {
 					} else {
 						DoLog(LogLevel.Information, $"{tempCelestial.ToString()}: No ships will be built.");
 					}
+
+					if (!cargoStarted)
+						tempCelestial = await BuildExtraShips(tempCelestial);
 
 					if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoCargo, "SupplyMoonFromPlanet") &&
 						(bool) _tbotInstance.InstanceSettings.Brain.AutoCargo.SupplyMoonFromPlanet &&
@@ -201,6 +206,77 @@ namespace Tbot.Workers.Brain {
 					DoLog(LogLevel.Information, $"Next capacity check at {newTime.ToString()}");
 					await _tbotOgameBridge.CheckCelestials();
 			}
+		}
+
+		private async Task<Celestial> BuildExtraShips(Celestial celestial) {
+			try {
+				if (!SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoCargo, "Ships"))
+					return celestial;
+				foreach (var entry in _tbotInstance.InstanceSettings.Brain.AutoCargo.Ships) {
+					Buildables ship;
+					if (!Enum.TryParse<Buildables>((string) entry.Type, true, out ship) || (int) ship < 202 || (int) ship > 219) {
+						DoLog(LogLevel.Warning, $"Ships: unknown ship type '{(string) entry.Type}', entry ignored.");
+						continue;
+					}
+					var userClass = _tbotInstance.UserData.userInfo.Class;
+					if (ship == Buildables.Pathfinder && userClass != CharacterClass.Discoverer) {
+						DoLog(LogLevel.Warning, "Ships: Pathfinder can only be built by the Discoverer class, entry ignored.");
+						continue;
+					}
+					if (ship == Buildables.Reaper && userClass != CharacterClass.General) {
+						DoLog(LogLevel.Warning, "Ships: Reaper can only be built by the General class, entry ignored.");
+						continue;
+					}
+					if (ship == Buildables.Crawler && celestial.Coordinate.Type != Celestials.Planet)
+						continue;
+
+					long target = (long) entry.Target;
+					if (ship == Buildables.Crawler) {
+						int maxCrawlers = _calculationService.CalcMaxCrawlers(celestial as Planet, userClass, _tbotInstance.UserData.staff.Geologist);
+						if (target > maxCrawlers)
+							target = maxCrawlers;
+					}
+					long needed = target - celestial.Ships.GetAmount(ship);
+					if (needed <= 0)
+						continue;
+					long perRun = SettingsService.IsSettingSet(entry, "MaxPerRun") ? (long) entry.MaxPerRun : 0;
+					if (perRun > 0 && needed > perRun)
+						needed = perRun;
+
+					Resources free = LedgerTBot.Available(_tbotInstance, celestial, "AutoCargo");
+					if (!free.IsEnoughFor(_calculationService.CalcPrice(ship, (int) needed))) {
+						long affordable = _calculationService.CalcMaxBuildableNumber(ship, free);
+						DoLog(LogLevel.Information, $"{celestial.ToString()}: Not enough resources to build {needed}x{ship.ToString()}. {affordable} will be built instead.");
+						needed = affordable;
+					}
+
+					double maxHours = 0;
+					try { maxHours = (double) _tbotInstance.InstanceSettings.Brain.AutoCargo.MaxProductionHours; } catch (Exception) { }
+					if (maxHours > 0 && needed > 0) {
+						celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Facilities);
+						long unitSeconds = Math.Max(1, _calculationService.CalcProductionTime(ship, 1, _tbotInstance.UserData.serverData, celestial.Facilities));
+						long maxUnits = (long) (maxHours * 3600) / unitSeconds;
+						if (needed > maxUnits) {
+							DoLog(LogLevel.Information, $"{celestial.ToString()}: Production time capped at {maxHours} h: {maxUnits} instead of {needed}x{ship.ToString()}.");
+							needed = maxUnits;
+						}
+					}
+					if (needed <= 0)
+						continue;
+
+					try {
+						DoLog(LogLevel.Information, $"{celestial.ToString()}: Building {needed}x{ship.ToString()}");
+						await _ogameService.BuildShips(celestial, ship, needed);
+						DoLog(LogLevel.Information, "Production succesfully started.");
+						return celestial;
+					} catch {
+						DoLog(LogLevel.Warning, "Unable to start ship production.");
+					}
+				}
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"Extra ships failed: {e.Message}");
+			}
+			return celestial;
 		}
 
 		public override bool IsWorkerEnabledBySettings() {

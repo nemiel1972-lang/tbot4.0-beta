@@ -19,7 +19,8 @@ namespace TBot.WebUI.Controllers {
 				["RecallMarginMinutes"] = 2,
 				["MaxDurationMinutes"] = 120,
 				["StopDefender"] = false,
-				["AttackMarginMinutes"] = 15
+				["AttackMarginMinutes"] = 15,
+				["Mode"] = "Gate"
 			},
 			["DefenderRecheck"] = new JObject {
 				["Active"] = false,
@@ -35,7 +36,9 @@ namespace TBot.WebUI.Controllers {
 				["MinePlanRanking"] = true,
 				["AsteroidHunt"] = true,
 				["ShadowFleet"] = true,
-				["GalaxyCache"] = true
+				["GalaxyCache"] = true,
+				["Requests"] = true,
+				["BrowserProxy"] = true
 			},
 			["GalaxyCache"] = new JObject {
 				["Active"] = true,
@@ -621,6 +624,7 @@ namespace TBot.WebUI.Controllers {
 					["Active"] = false,
 					["OnlyWorker"] = true,
 					["KeepExpeditions"] = false,
+					["BuildCheckMinutes"] = 60,
 					["CargoType"] = "SmallCargo",
 					["ProbesPerTarget"] = 20,
 					["SlotsToLeaveFree"] = 1,

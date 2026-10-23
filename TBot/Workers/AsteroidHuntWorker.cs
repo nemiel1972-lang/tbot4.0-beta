@@ -172,12 +172,14 @@ namespace Tbot.Workers {
 				try {
 					var msgs = await _ogameService.GetOtherMessages() ?? new List<OtherMessage>();
 					var fresh = msgs.Where(m => m.ID > p.LastMsgId && m.Title != null).OrderByDescending(m => m.ID).ToList();
-					var report = fresh.FirstOrDefault(m => m.Title.Contains("Bericht", StringComparison.OrdinalIgnoreCase))
+					var report = fresh.FirstOrDefault(m => m.Title.Contains("Bericht", StringComparison.OrdinalIgnoreCase) || m.Title.Contains("Report from", StringComparison.OrdinalIgnoreCase))
 						?? fresh.FirstOrDefault(m => AsteroidHuntLogic.Classify((m.Title + " " + m.Content).Trim()) != ReportKind.Unknown);
 					if (report == null && p.ReportWaits < 3) {
 						p.ReportWaits++;
 						return 30 * 1000;
 					}
+					if (report == null)
+						AhLog(LogLevel.Warning, $"Asteroid {p.Target}: no report found in the Other messages ({fresh.Count} new, last id before the attack {p.LastMsgId}, titles: {string.Join(" | ", fresh.Take(5).Select(m => Shorten(m.Title)))}) - using the inventory (can count unrelated new items).");
 					if (report != null) {
 						string text = (report.Title + " " + report.Content).Trim();
 						switch (AsteroidHuntLogic.Classify(text)) {
@@ -198,10 +200,12 @@ namespace Tbot.Workers {
 						}
 					}
 				} catch (Exception e) {
-					AhLog(LogLevel.Debug, $"Asteroid {p.Target}: could not read the messages ({e.Message}), using the inventory.");
+					AhLog(LogLevel.Warning, $"Asteroid {p.Target}: could not read the messages ({e.Message}), using the inventory (can count unrelated new items).");
 				}
 			}
 
+			if (result == "unknown" && !p.ReportBaseKnown)
+				AhLog(LogLevel.Warning, $"Asteroid {p.Target}: message state before the attack is unknown - using the inventory (can count unrelated new items).");
 			if (result == "unknown") try {
 				var origin = FindCelestial(p.Origin);
 				var (after, names) = await ReadInventory(origin);
@@ -269,7 +273,7 @@ namespace Tbot.Workers {
 				pending.LastMsgId = known.Count > 0 ? known.Max(m => m.ID) : 0;
 				pending.ReportBaseKnown = true;
 			} catch (Exception e) {
-				AhLog(LogLevel.Debug, $"Asteroid hunt: messages not readable before the attack ({e.Message}) - using the inventory.");
+				AhLog(LogLevel.Warning, $"Asteroid hunt: messages not readable before the attack ({e.Message}) - using the inventory (can count unrelated new items).");
 			}
 			try {
 				var (before, _) = await ReadInventory(origin);

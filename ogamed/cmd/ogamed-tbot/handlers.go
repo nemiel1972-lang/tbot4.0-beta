@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/taskRunner"
 	"github.com/alaingilbert/ogame/pkg/utils"
@@ -44,7 +45,7 @@ func applyBrowserCP(vals url.Values, method string) {
 	}
 	vals.Set("cp", cp)
 	if a := vals.Get("action"); a == "sendFleet" || a == "checkTarget" {
-		log.Printf("[CP] Browser-Planet %s an %s/%s ergaenzt", cp, vals.Get("component"), a)
+		log.Printf("[CP] Added browser celestial %s to %s/%s", cp, vals.Get("component"), a)
 	}
 }
 
@@ -185,7 +186,7 @@ func PostToGameHandler(c echo.Context) error {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
-		log.Printf("[Token100] Fehler 100 bei POST %s (component=%s action=%s), Versuch %d/%d: Browser-Token %s, gesendet %s, neues Token der Antwort %s, cp=%s, Felder=%s; wartet und sendet erneut",
+		log.Printf("[Token100] Error 100 on POST %s (component=%s action=%s), attempt %d/%d: browser token %s, sent %s, new token in response %s, cp=%s, fields=%s; waiting, then resending",
 			vals.Get("page"), vals.Get("component"), vals.Get("action"), try+1, maxToken100Retries, tokPrefix(origTok), tokPrefix(payload.Get("token")), tokPrefix(newTokenOf(pageHTML)), vals.Get("cp"), strings.Join(keys, ","))
 		if nt := newTokenOf(pageHTML); nt != "" {
 			payload.Set("token", nt)
@@ -193,11 +194,11 @@ func PostToGameHandler(c echo.Context) error {
 		time.Sleep(time.Duration(400*(try+1)) * time.Millisecond)
 		pageHTML, pageErr = doPost()
 		if pageErr == nil && !isAjaxError100(pageHTML) {
-			log.Printf("[Token100] Wiederholung %d erfolgreich", try+1)
+			log.Printf("[Token100] Retry %d succeeded", try+1)
 		}
 	}
 	if pageErr == nil && isAjaxError100(pageHTML) {
-		log.Printf("[Token100] Fehler 100 bleibt nach den Wiederholungen bestehen (component=%s action=%s)", vals.Get("component"), vals.Get("action"))
+		log.Printf("[Token100] Error 100 persists after the retries (component=%s action=%s)", vals.Get("component"), vals.Get("action"))
 	}
 	if pageErr != nil {
 		return c.JSON(http.StatusBadGateway, wrapper.ErrorResp(502, pageErr.Error()))
@@ -582,6 +583,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             { key: 'w_harvest',     id: 'harvest',     label: 'Harvest',     pkey: 'p_harvest' },
             { key: 'w_discovery',   id: 'discovery',   label: 'Discovery',   pkey: 'p_discovery' },
             { key: 'w_brain',       id: 'brain',       label: 'Brain',       pkey: 'p_brain' },
+            { key: 'w_defender',    id: 'defender',    label: 'Defender' },
             // Unter-Worker: nur An/Aus, keine Slot-Prioritaet (die Slots bleiben bei den Hauptkategorien)
             { key: 'w_transport',   id: 'transport',   label: 'Transport',   sub: true },
             { key: 'w_repatriate',  id: 'repatriate',  label: 'Repatriate',  sub: true },
@@ -703,7 +705,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         function tPlace() {
             var g = tGameRect();
             if (!g) {
-                div.style.left = 'auto'; div.style.right = '10px';
+                div.style.left = 'auto'; div.style.right = '10px'; div.style.top = '64px';
                 divL.style.left = '8px';
                 return;
             }
@@ -711,9 +713,10 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             var wR = div.offsetWidth || 160, wL = divL.offsetWidth || 170;
             var rightLeft = g.r.right + T_GAP;
             if (rightLeft + wR > window.innerWidth - 4) {
-                div.style.left = 'auto'; div.style.right = '10px';
+                // kein Platz neben dem Spielfeld: unter die Kopfleiste setzen, damit die Serveruhr frei bleibt
+                div.style.left = 'auto'; div.style.right = '10px'; div.style.top = '64px';
             } else {
-                div.style.right = 'auto'; div.style.left = rightLeft + 'px';
+                div.style.right = 'auto'; div.style.left = rightLeft + 'px'; div.style.top = '10px';
             }
             var leftLeft = g.r.left - T_GAP - wL;
             divL.style.left = Math.max(4, leftLeft) + 'px';
@@ -733,6 +736,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
 var (
 	artifactTagRx = regexp.MustCompile(`(?s)<[^>]*>`)
 	artifactRx    = regexp.MustCompile(`(?is)(?:artefakt|artifact)[a-z]*\s*(?:collected)?\s*:?\s*([0-9][0-9.,]*)\s*/\s*([0-9][0-9.,]*)`)
+	artifactSlotRx = regexp.MustCompile(`(\d[\d.,]*)\s*/\s*(\d[\d.,]*)`)
 )
 
 func parseArtifactNumber(s string) int64 {
@@ -745,6 +749,11 @@ func ParseArtifacts(html string) (collected, limit int64, ok bool) {
 	text := strings.ReplaceAll(html, "&nbsp;", " ")
 	for _, candidate := range []string{artifactTagRx.ReplaceAllString(text, " "), text} {
 		if m := artifactRx.FindStringSubmatch(candidate); m != nil {
+			return parseArtifactNumber(m[1]), parseArtifactNumber(m[2]), true
+		}
+	}
+	if doc, err := goquery.NewDocumentFromReader(strings.NewReader(html)); err == nil {
+		if m := artifactSlotRx.FindStringSubmatch(doc.Find("div#slot01").Text()); m != nil {
 			return parseArtifactNumber(m[1]), parseArtifactNumber(m[2]), true
 		}
 	}
@@ -945,7 +954,7 @@ func PostSlotLimitHandler(c echo.Context) error {
 	switch key {
 	case "leaveFree", "autofarm", "brain", "harvest", "discovery", "exp",
 		"p_autofarm", "p_expeditions", "p_harvest", "p_discovery", "p_brain",
-		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain",
+		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain", "w_defender",
 		"w_transport", "w_repatriate", "w_cargo", "w_mine", "w_research", "w_lfmine", "w_lfresearch", "w_boosters", "w_offer", "w_colonize",
 		"pause":
 	default:

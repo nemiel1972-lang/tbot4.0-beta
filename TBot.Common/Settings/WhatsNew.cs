@@ -8,6 +8,8 @@ namespace Tbot.Common.Settings {
 		public List<string> Lines { get; set; } = new();
 
 		public string AsText() => Title + "\n" + string.Join("\n", Lines.Select(l => "• " + l));
+
+		public string AsShortText(string lang) => Title + "\n" + (lang == "de" ? "Alle Neuerungen: Weboberfläche → Seite \"What's new\" (/WhatsNew)." : "All changes: web UI → \"What's new\" page (/WhatsNew).");
 	}
 
 	public static class WhatsNew {

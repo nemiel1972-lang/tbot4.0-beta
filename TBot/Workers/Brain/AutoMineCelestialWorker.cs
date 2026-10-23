@@ -569,7 +569,7 @@ namespace Tbot.Workers.Brain {
 							DoLog(LogLevel.Information, $"Not enough resources to build: {buildable.ToString()} level {level.ToString()} on {celestial.ToString()}. Needed: {xCostBuildable.TransportableResources} - Available: {celestial.Resources.TransportableResources}");
 						}
 						LedgerTBot.Plan(_tbotInstance, celestial, "AutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable, ledgerRoi);
-						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
+						if ((bool) _tbotInstance.InstanceSettings.Brain.AutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active && !_tbotInstance.FastFarmBlocksNewTransports) {
 							if (buildable != Buildables.SolarSatellite && buildable != Buildables.Crawler) {
 								_pendingFundedBuildable = buildable;
 								_pendingFundedLevel = level;

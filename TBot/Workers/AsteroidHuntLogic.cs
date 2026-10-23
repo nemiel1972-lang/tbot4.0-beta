@@ -92,12 +92,14 @@ namespace Tbot.Workers {
 			if (string.IsNullOrWhiteSpace(text))
 				return ReportKind.Unknown;
 			string t = Normalize(text);
-			if (t.Contains("geborgen") || t.Contains("im inventar"))
+			if (t.Contains("geborgen") || t.Contains("im inventar") || t.Contains("in deinem inventar") || t.Contains("zu bergen")
+				|| t.Contains("to recover the following item") || t.Contains("in your inventory"))
 				return ReportKind.Found;
 			if ((t.Contains("nacht") && t.Contains("schlafen")) || t.Contains("morgen nochmal") || t.Contains("morgen noch einmal") || t.Contains("morgen wieder versuchen")
 				|| t.Contains("sleep on it") || t.Contains("try again tomorrow"))
 				return ReportKind.Locked;
-			if (t.Contains("kein ergebnis") || t.Contains("erfolglos") || t.Contains("noch einmal versuchen") || t.Contains("nochmal versuchen") || t.Contains("ruckweg"))
+			if (t.Contains("kein ergebnis") || t.Contains("erfolglos") || t.Contains("noch einmal versuchen") || t.Contains("nochmal versuchen") || t.Contains("ruckweg")
+				|| t.Contains("brought no results") || t.Contains("try again one more time") || t.Contains("return journey"))
 				return ReportKind.Retry;
 			return ReportKind.Unknown;
 		}

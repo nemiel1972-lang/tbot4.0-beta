@@ -70,7 +70,7 @@ namespace Tbot.Workers.Brain {
 
 				var buildPlan = BuildGlobalPlan(calc, planets, plans.Where(pl => pl.Excluded).Select(pl => pl.Name).ToHashSet(), inst.UserData.researches,
 					inst.UserData.serverData.Speed, inst.UserData.userInfo.Class, inst.UserData.staff.Geologist, inst.UserData.staff.IsFull, rank,
-					new LfEffectsStore(LfEffectsStore.PathFor(alias)), MineCapsOf(inst, planets));
+					new LfEffectsStore(LfEffectsStore.PathFor(alias)), MineCapsOf(inst, planets), LfCapOf(inst), LfPrioOf(inst), LfbCapOf(inst));
 
 				lock (PlanGate) {
 					LastPlans[alias] = (DateTime.UtcNow, buildPlan);
@@ -86,6 +86,7 @@ namespace Tbot.Workers.Brain {
 					Best = best,
 					Candidates = candidates,
 					Research = research,
+					Live = ReadLive(inst, buildPlan),
 					Ranking = new RankInfo { Mode = rank.Mode.ToString(), HorizonDays = rank.HorizonDays, MaxPaybackDays = rank.MaxPaybackDays, OnlySensible = rank.OnlySensible, IncludeResearch = rank.IncludeResearch }
 				};
 				string dataDir = Path.Combine(AppContext.BaseDirectory, "data");
@@ -171,6 +172,25 @@ namespace Tbot.Workers.Brain {
 			}
 		}
 
+		private static LiveInfo ReadLive(ITBotMain inst, List<PlanStep> plan) {
+			var li = new LiveInfo { Active = false, Lookahead = 12, Planets = new List<string>(), Next = new List<PlanStep>() };
+			try {
+				var g = inst.InstanceSettings;
+				if (SettingsService.IsSettingSet(g, "Experimental") && SettingsService.IsSettingSet(g.Experimental, "MinePlanRanking")) {
+					var r = g.Experimental.MinePlanRanking;
+					li.Active = SettingsService.IsSettingSet(r, "UsePlanForAutoMine") && (bool) r.UsePlanForAutoMine;
+					if (SettingsService.IsSettingSet(r, "PlanLookahead"))
+						li.Lookahead = Math.Max(1, (int) r.PlanLookahead);
+				}
+				if (plan != null) {
+					li.Next = plan.Take(li.Lookahead).ToList();
+					li.Planets = li.Next.Where(s => !s.IsResearch).Select(s => s.Planet).Distinct().ToList();
+				}
+			} catch {
+			}
+			return li;
+		}
+
 		private static long ReadBudget(ITBotMain inst) {
 			try {
 				var g = inst.InstanceSettings;
@@ -183,7 +203,7 @@ namespace Tbot.Workers.Brain {
 		}
 
 		private static List<PlanStep> BuildGlobalPlan(ICalculationService calc, List<Planet> planets, HashSet<string> excludedNames, Researches r, int speed,
-			CharacterClass cls, bool geo, bool staff, RankConfig rank, LfEffectsStore lfStore = null, Dictionary<int, int[]> caps = null) {
+			CharacterClass cls, bool geo, bool staff, RankConfig rank, LfEffectsStore lfStore = null, Dictionary<int, int[]> caps = null, Func<string, int> lfCap = null, List<int> lfPrio = null, Func<Planet, LFBuildables, int> lfbCap = null) {
 			var result = new List<PlanStep>();
 			try {
 				var ps = planets.Where(p => p.Buildings != null && p.Coordinate != null && p.Temperature != null && !excludedNames.Contains(p.ToString())).ToList();
@@ -210,6 +230,27 @@ namespace Tbot.Workers.Brain {
 							lfRows[i].Add(row);
 							lfLevel[(i, row.TechId)] = row.Level;
 						}
+				}
+				var lfAll = new List<LfEffectsStore.Row>[n];
+				for (int i = 0; i < n; i++) {
+					lfAll[i] = new List<LfEffectsStore.Row>();
+					if (lfStore == null || lfPrio == null || lfPrio.Count == 0) continue;
+					lfAll[i] = lfStore.CurrentRows().Where(x => x.CelestialId == ps[i].ID && Enum.IsDefined(typeof(LFTechno), x.TechId)).GroupBy(x => x.TechId).Select(g => g.First()).ToList();
+				}
+				var lfbLevel = new Dictionary<(int, LFBuildables), int>();
+				var lfbOpts = new List<LFBuildables>[n];
+				for (int i = 0; i < n; i++) {
+					lfbOpts[i] = new List<LFBuildables>();
+					if (lfStore == null || lfbCap == null || !rank.IncludeResearch) continue;
+					int rasse = (int) ps[i].LFtype;
+					if (rasse < 1 || rasse > 4 || ps[i].LFBuildings == null) continue;
+					foreach (var b in LfbBoost.Keys.Where(x => (int) x / 1000 == 10 + rasse)) {
+						int cur = 0;
+						try { cur = ps[i].GetLevel(b); } catch { continue; }
+						if (cur < 1) continue;
+						lfbLevel[(i, b)] = cur;
+						lfbOpts[i].Add(b);
+					}
 				}
 				int plasma = r.PlasmaTechnology;
 				try {
@@ -246,9 +287,27 @@ namespace Tbot.Workers.Brain {
 						}
 						int lfi = -1, lft = 0;
 						for (int i = 0; i < n && rank.IncludeResearch; i++) {
+							HashSet<string> erlaubt = null;
+							if (lfPrio != null && lfPrio.Count > 0 && lfCap != null) {
+								foreach (int slot in lfPrio) {
+									if (!Tbot.Workers.Brain.LifeformsAutoResearchWorker.PrioSlotTechNames.TryGetValue(slot, out var slotNamen))
+										continue;
+									bool offen = lfAll[i].Any(x => {
+										string nm = ((LFTechno) x.TechId).ToString();
+										int lvNow = lfLevel.TryGetValue((i, x.TechId), out int l0) ? l0 : x.Level;
+										return slotNamen.Contains(nm) && lvNow < lfCap(nm);
+									});
+									if (offen) { erlaubt = new HashSet<string>(slotNamen); break; }
+								}
+							}
 							foreach (var row in lfRows[i]) {
 								int k = MineOfTarget(row.Target);
 								int cur = lfLevel[(i, row.TechId)];
+								string techName = ((LFTechno) row.TechId).ToString();
+								if (lfCap != null && cur + 1 > lfCap(techName))
+									continue;
+								if (erlaubt != null && !erlaubt.Contains(techName))
+									continue;
 								if (lv[i][k] <= 0) continue;
 								double delta = lfStore.NextLevelDelta(row.TechId, "resources", row.Target, cur) / 100.0;
 								if (delta <= 0) continue;
@@ -261,9 +320,42 @@ namespace Tbot.Workers.Brain {
 								}
 							}
 						}
+						int lfbI = -1, lfbDeltaE = 0;
+						LFBuildables lfbB = LFBuildables.None;
+						for (int i = 0; i < n && rank.IncludeResearch; i++) {
+							foreach (var b in lfbOpts[i]) {
+								int cur = lfbLevel[(i, b)], nxt = cur + 1;
+								if (nxt > lfbCap(ps[i], b))
+									continue;
+								float lfbGain = 0;
+								bool vorhanden = true;
+								foreach (var (k, col) in LfbBoost[b]) {
+									double? vn = lfStore.TableValue((int) b, nxt, col), vc = cur <= 0 ? 0 : lfStore.TableValue((int) b, cur, col);
+									if (vn == null || vc == null) { vorhanden = false; break; }
+									if (lv[i][k] <= 0) continue;
+									lfbGain += ToDayDeut(Mines[k], (float) ((vn.Value - vc.Value) / 100.0) * HourProd(calc, Mines[k], lv[i][k], ps[i], r, speed, cls, geo, staff, false));
+								}
+								if (!vorhanden || lfbGain <= 0) continue;
+								long lfbCost = calc.CalcPrice(b, nxt).ConvertedDeuterium;
+								float lfbRoi = MinePlanRanking.PaybackDays(lfbCost, lfbGain);
+								if (lfbRoi > 0 && lfbRoi <= rank.MaxPaybackDays && (best == null || lfbRoi < best.RoiDays)) {
+									double? en1 = lfStore.TableValue((int) b, nxt, "energy_consumption"), en0 = cur <= 0 ? 0 : lfStore.TableValue((int) b, cur, "energy_consumption");
+									int dE = (en1.HasValue && en0.HasValue) ? (int) Math.Round(en1.Value - en0.Value) : 0;
+									long nachher = en[i] + dE;
+									best = new PlanStep { Planet = ps[i].ToString(), Coord = ps[i].Coordinate.ToString(), What = "LF building: " + b + " (" + string.Join("/", LfbBoost[b].Select(x => MineName(Mines[x.Item1]))) + ")", Level = nxt, CostDeut = lfbCost, GainPerDay = lfbGain, RoiDays = lfbRoi, IsResearch = true, IsLfBuilding = true, EnergyShort = nachher < 0 ? -nachher : 0 };
+									bi = -1; bs = null; lfi = -1; lfbI = i; lfbB = b; lfbDeltaE = dE;
+								}
+							}
+						}
 						if (best == null)
 							break;
 						best.No = no;
+						if (lfbI >= 0) {
+							lfbLevel[(lfbI, lfbB)]++;
+							en[lfbI] += lfbDeltaE;
+							result.Add(best);
+							continue;
+						}
 						if (lfi >= 0)
 							lfLevel[(lfi, lft)]++;
 						else if (best.IsResearch)
@@ -307,6 +399,67 @@ namespace Tbot.Workers.Brain {
 				}
 			} catch { }
 			return result;
+		}
+
+		private static readonly Dictionary<LFBuildables, (int, string)[]> LfbBoost = new() {
+			{ LFBuildables.HighEnergySmelting, new[] { (0, "metal_boost") } },
+			{ LFBuildables.FusionPoweredProduction, new[] { (1, "crystal_boost"), (2, "deuterium_boost") } },
+			{ LFBuildables.MagmaForge, new[] { (0, "metal_boost") } },
+			{ LFBuildables.CrystalRefinery, new[] { (1, "crystal_boost") } },
+			{ LFBuildables.DeuteriumSynthesiser, new[] { (2, "deuterium_boost") } },
+			{ LFBuildables.HighPerformanceSynthesiser, new[] { (2, "deuterium_boost") } }
+		};
+
+		private static Func<Planet, LFBuildables, int> LfbCapOf(ITBotMain inst) {
+			var cache = new Dictionary<int, LFBuildings>();
+			return (planet, b) => {
+				try {
+					if (!cache.TryGetValue(planet.ID, out var max)) {
+						max = new LFBuildings();
+						object lfSettings = (object) inst.InstanceSettings.Brain.LifeformAutoMine;
+						if (!Tbot.Helpers.LifeformTargets.TryApplyMaxLevels(lfSettings, planet, max, (l, m) => { }))
+							max = null;
+						cache[planet.ID] = max;
+					}
+					if (max == null)
+						return 0;
+					var prop = max.GetType().GetProperty(b.ToString());
+					return prop == null ? 0 : (int) prop.GetValue(max);
+				} catch {
+					return 0;
+				}
+			};
+		}
+
+		private static Func<string, int> LfCapOf(ITBotMain inst) {
+			try {
+				dynamic lf = inst.InstanceSettings.Brain.LifeformAutoResearch;
+				int maxLevel = SettingsService.IsSettingSet(lf, "MaxResearchLevel") ? (int) lf.MaxResearchLevel : 1;
+				var perName = new Dictionary<string, int>();
+				foreach (var kv in Tbot.Workers.Brain.LifeformsAutoResearchWorker.PrioSlotTechNames) {
+					string key = "MaxTechs" + kv.Key;
+					int v = SettingsService.IsSettingSet(lf, key) ? (int) lf[key] : maxLevel;
+					foreach (string nm in kv.Value)
+						perName[nm] = v;
+				}
+				return nm => perName.TryGetValue(nm, out int c) ? c : maxLevel;
+			} catch {
+				return null;
+			}
+		}
+
+		private static List<int> LfPrioOf(ITBotMain inst) {
+			var res = new List<int>();
+			try {
+				dynamic lf = inst.InstanceSettings.Brain.LifeformAutoResearch;
+				if (SettingsService.IsSettingSet(lf, "PriorityTechs"))
+					foreach (var e in lf.PriorityTechs) {
+						int s = (int) e;
+						if (!res.Contains(s)) res.Add(s);
+					}
+			} catch {
+			}
+			return res;
 		}
 
 		private static int MineOfTarget(string target) => target == "metal" ? 0 : target == "crystal" ? 1 : target == "deuterium" ? 2 : -1;
@@ -568,8 +721,21 @@ namespace Tbot.Workers.Brain {
 				plan.ExtraNote[k] = note;
 			}
 
+			int[] cap = null;
+			try {
+				MineCapsOf(inst, new List<Planet> { p }).TryGetValue(p.ID, out cap);
+			} catch { }
+
 			for (int k = 0; k < 3; k++)
-				plan.Next.Add(Step(calc, p, Mines[k], Level(p, Mines[k]) + 1, energy, r, speed, cls, geo, staff, extras[k]));
+			{
+				var ns = Step(calc, p, Mines[k], Level(p, Mines[k]) + 1, energy, r, speed, cls, geo, staff, extras[k]);
+				if (cap != null && ns.Level > cap[k]) {
+					ns.Capped = true;
+					ns.RoiDays = 0;
+					ns.RoiDaysBase = 0;
+				}
+				plan.Next.Add(ns);
+			}
 
 			int[] lv = { p.Buildings.MetalMine, p.Buildings.CrystalMine, p.Buildings.DeuteriumSynthesizer };
 			long e = energy, cumCost = 0;
@@ -578,6 +744,8 @@ namespace Tbot.Workers.Brain {
 				StepInfo bestStep = null;
 				int bestIdx = -1;
 				for (int k = 0; k < 3; k++) {
+					if (cap != null && lv[k] + 1 > cap[k])
+						continue;
 					var s = Step(calc, p, Mines[k], lv[k] + 1, e, r, speed, cls, geo, staff, extras[k]);
 					if (s.RoiDays <= 0)
 						continue;
@@ -602,6 +770,8 @@ namespace Tbot.Workers.Brain {
 				long ae = energy, ac = 0;
 				float ag = 0;
 				for (int i = 0; i < PerMineSteps; i++) {
+					if (cap != null && l + 1 > cap[mi])
+						break;
 					var s = Step(calc, p, mine, l + 1, ae, r, speed, cls, geo, staff, extras[mi]);
 					l++;
 					ae = s.EnergyAfter;
@@ -628,6 +798,13 @@ namespace Tbot.Workers.Brain {
 			public List<BestStep> Candidates;
 			public List<ResearchStep> Research;
 			public RankInfo Ranking;
+			public LiveInfo Live;
+		}
+		public sealed class LiveInfo {
+			public bool Active;
+			public int Lookahead;
+			public List<string> Planets;
+			public List<PlanStep> Next;
 		}
 		public sealed class PlanStep {
 			public int No;
@@ -636,6 +813,7 @@ namespace Tbot.Workers.Brain {
 			public long CostDeut, EnergyShort;
 			public float GainPerDay, RoiDays;
 			public bool IsResearch;
+			public bool IsLfBuilding;
 		}
 		public sealed class RankInfo {
 			public string Mode;
@@ -678,6 +856,7 @@ namespace Tbot.Workers.Brain {
 			public long EnergyNeed, EnergyAfter, EnergyShort;
 			public long CumCostDeut;
 			public float CumGainPerDay, CumRoiDays;
+			public bool Capped;
 		}
 		public sealed class BestStep {
 			public string Planet, Coord, Mine;

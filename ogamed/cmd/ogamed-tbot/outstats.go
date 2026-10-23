@@ -25,7 +25,7 @@ func init() {
 				}
 				parts = append(parts, fmt.Sprintf("%s %d (Browser %d)", e.Key, e.All, e.Browser))
 			}
-			log.Printf("[Out/10min] ans Spiel gesamt %d (%.1f/s), davon Browser %d, Bot %d: %s", total, float64(total)/600.0, browser, total-browser, strings.Join(parts, ", "))
+			log.Printf("[Out/10min] requests to the game: total %d (%.1f/s), of which browser %d, bot %d: %s", total, float64(total)/600.0, browser, total-browser, strings.Join(parts, ", "))
 		}
 	}()
 }

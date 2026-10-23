@@ -73,6 +73,17 @@
             if (s.modeOverride) c.body.appendChild(row('Mode', s.modeOverride.name + ' (override)', 'bad'));
         }
 
+        if (s && s.clock) {
+            c = card('Time'); grid.appendChild(c.root);
+            var tz = window.tbotTime ? window.tbotTime(s.clock) : null;
+            if (tz) {
+                c.body.appendChild(row('Bot time (game server)', tz.game + ' (' + tz.gameZone + ')'));
+                c.body.appendChild(row('Your browser time', tz.browser + ' (' + tz.browserZone + ')'));
+                c.body.appendChild(el('div', 'st-mut', tz.diffText));
+                c.body.appendChild(el('div', 'st-mut', 'Sleep times, time windows and all schedules in the config use the bot time.'));
+            }
+        }
+
         c = card('Account'); grid.appendChild(c.root);
         if (acc) {
             var nm = el('div', 'st-big', hide(acc.name || '-')); c.body.appendChild(nm);

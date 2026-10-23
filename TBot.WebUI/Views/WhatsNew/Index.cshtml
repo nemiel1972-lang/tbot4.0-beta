@@ -1,0 +1,16 @@
+@model Tbot.Common.Settings.WhatsNewEntry
+@{
+    ViewData["Title"] = "What's new";
+}
+<div class="container-fluid py-3" style="max-width:900px">
+@if (Model == null) {
+    <p>No release notes found.</p>
+} else {
+    <h2>@Model.Title</h2>
+    <ul>
+        @foreach (var line in Model.Lines) {
+            <li>@line</li>
+        }
+    </ul>
+}
+</div>

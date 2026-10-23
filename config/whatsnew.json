@@ -1,12 +1,15 @@
 {
-  "version": "4.0-beta13",
-  "date": "2026-10-22",
+  "version": "4.0-beta14",
+  "date": "2026-10-23",
   "title": {
-    "en": "What's new in 4.0 beta13",
-    "de": "Neu in 4.0 beta13"
+    "en": "What's new in 4.0 beta14",
+    "de": "Neu in 4.0 beta14"
   },
   "lines": {
     "en": [
+      "New: targets the game refuses (empty position, protection, reserved) are remembered for 30 minutes and not tried again; refused flights show one line \"Fleet cannot be sent: <reason>\" instead of an error with stacktrace",
+      "New: General.AnonymizeLogs switches the hiding of player name, universe and e-mail in the logs on or off (default off)",
+      "New: AutoCargo (now shown as AutoShips in the UI) can also build Recycler, Pathfinder, Reaper, Crawler and other ships (Brain.AutoCargo.Ships: type, target amount, amount per run)",
       "Fix: the in-game error \"Your last request could not be processed yet\" (error 100) when playing through the bot's browser proxy since OGame 13 - failed actions are repeated automatically with the new token; browser requests go first",
       "New: plan mode for AutoMine (Experimental.MinePlanRanking.UsePlanForAutoMine, off by default) - a planet only builds when it is next in the build plan; the plan respects the AutoMine limits per planet",
       "New: the bot learns lifeform effects and level tables from the game and uses them in the build plan (research with a resource bonus)",
@@ -18,10 +21,21 @@
       "Fix: faster shutdown and restart (planet workers stop in parallel, ogamed is no longer restarted while shutting down)",
       "Fix: the updater detects the systemd service reliably, detaches from the terminal on Linux and warns if the service runs without KillMode=process; the Linux package README explains the service setup",
       "Less load on the game: fleet list and slots are cached for 4 seconds, lifeform bonuses for 5 minutes; lifeform tables are not reloaded at every start",
-      "New in the log: request counters every 10 minutes ([Requests/10min] per worker, [Out/10min] bot and browser)",
-      "NOTICE: credits for GameForge and the OGame Wiki (CC BY-SA)"
+      "Change: the Pause no longer stops the workers - they skip their cycle during the pause and go on staggered afterwards (Experimental.BotPause.Mode = Stop brings back the old hard pause)",
+      "Fix: the web UI log shows all log files of the day (the view stopped at 10 MB); noisy AutoFarm skip lines are Trace and not written to the log files",
+      "Fix: the artifact count is also read from the lifeform page counter (slot 1) when the text search fails",
+      "Fix: reading the settings file no longer fails when another program (editor, sync, scanner) holds it - shared access and a short retry",
+      "Fix: the server time check at start shows the time zone and warns if the game time differs from the system clock",
+      "Fix: invalid entries in Instances no longer crash the instance manager",
+      "Change: log level of ogamed lines is taken from the content (no red lines for harmless messages); ogamed messages are in English",
+      "Change: FastFarm runs the build workers when own transports with resources are on their way and once per Experimental.FastFarm.BuildCheckMinutes (default 60); no new transports for builds while farming",
+      "Change: the mine plan page shows the live pick, the next steps, the AutoMine limits and lifeform buildings in the plan; lifeform research follows MaxTechs and priority",
+      "New: the bot time (game server time) is shown on the start page with the conversion to your browser time, and next to the SleepMode, GhostSleep and shadow fleet times"
     ],
     "de": [
+      "Neu: Ziele, die das Spiel ablehnt (leere Position, Schutz, reserviert), werden 30 Minuten gemerkt und nicht erneut versucht; abgelehnte Flüge zeigen eine Zeile \"Fleet cannot be sent: <Grund>\" statt Fehler mit Stacktrace",
+      "Neu: General.AnonymizeLogs schaltet das Ausblenden von Spielername, Universum und E-Mail in den Logs ein oder aus (Standard aus)",
+      "Neu: AutoCargo (in der Oberfläche jetzt AutoShips) kann jetzt auch Recycler, Pathfinder, Reaper, Crawler und weitere Schiffe bauen (Brain.AutoCargo.Ships: Typ, Zielmenge, Menge pro Durchlauf)",
       "Fix: Die Fehlermeldung im Spiel \"Deine letzte Anfrage konnte noch nicht abgearbeitet werden\" (Fehler 100) beim Spielen über den Browser-Proxy des Bots seit OGame 13 - fehlgeschlagene Aktionen werden automatisch mit dem neuen Token wiederholt; Browser-Anfragen gehen vor",
       "Neu: Plan-Modus für AutoMine (Experimental.MinePlanRanking.UsePlanForAutoMine, standardmäßig aus) - ein Planet baut nur, wenn er im Aufbauplan an der Reihe ist; der Plan beachtet die AutoMine-Grenzen je Planet",
       "Neu: Der Bot lernt Lebensform-Effekte und Stufentabellen aus dem Spiel und nutzt sie im Aufbauplan (Forschung mit Rohstoffbonus)",
@@ -33,8 +47,16 @@
       "Fix: Schnelleres Beenden und Neustarten (Planeten-Worker stoppen parallel, ogamed wird beim Beenden nicht neu gestartet)",
       "Fix: Der Updater erkennt den systemd-Dienst zuverlässig, löst sich unter Linux vom Terminal und warnt, wenn der Dienst ohne KillMode=process läuft; die README im Linux-Paket erklärt die Dienst-Einrichtung",
       "Weniger Last auf dem Spiel: Flottenliste und Slots werden 4 Sekunden, Lebensform-Boni 5 Minuten zwischengespeichert; Lebensform-Tabellen werden nicht bei jedem Start neu geladen",
-      "Neu im Log: Anfragen-Zähler alle 10 Minuten ([Requests/10min] je Worker, [Out/10min] Bot und Browser)",
-      "NOTICE: Quellenangaben für GameForge und das OGame-Wiki (CC BY-SA)"
+      "Änderung: Die Pause stoppt die Worker nicht mehr - sie überspringen ihren Zyklus und machen danach gestaffelt weiter (Experimental.BotPause.Mode = Stop bringt die alte harte Pause zurück)",
+      "Fix: Das Log der Weboberfläche zeigt alle Dateien des Tages (die Ansicht endete bei 10 MB); laute AutoFarm-Zeilen sind Trace und landen nicht in den Log-Dateien",
+      "Fix: Die Artefakt-Anzahl wird auch aus dem Zähler der Lebensform-Seite (Slot 1) gelesen, wenn die Textsuche scheitert",
+      "Fix: Das Lesen der Einstellungsdatei scheitert nicht mehr, wenn ein anderes Programm (Editor, Sync, Scanner) sie hält - gemeinsamer Zugriff und kurze Wiederholung",
+      "Fix: Die Serverzeit-Prüfung beim Start zeigt die Zeitzone und warnt, wenn die Spielzeit von der Systemuhr abweicht",
+      "Fix: Ungültige Einträge in Instances bringen den Instanz-Manager nicht mehr zum Absturz",
+      "Änderung: Das Log-Level der ogamed-Zeilen richtet sich nach dem Inhalt (keine roten Zeilen für harmlose Meldungen); ogamed-Meldungen sind auf Englisch",
+      "Änderung: FastFarm lässt die Bau-Worker laufen, wenn eigene Transporte mit Rohstoffen unterwegs sind und einmal je Experimental.FastFarm.BuildCheckMinutes (Standard 60); keine neuen Transporte für Bauten während des Farmens",
+      "Änderung: Die Minenplan-Seite zeigt die aktuelle Wahl, die nächsten Schritte, die AutoMine-Grenzen und Lebensform-Gebäude im Plan; die Lebensform-Forschung folgt MaxTechs und Priorität",
+      "Neu: Die Bot-Zeit (Spielserver-Zeit) steht auf der Startseite mit Umrechnung auf deine Browser-Zeit und neben den Zeiten von SleepMode, GhostSleep und Schattenflotte"
     ]
   }
 }

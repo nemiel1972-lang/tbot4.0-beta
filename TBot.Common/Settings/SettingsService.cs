@@ -38,7 +38,7 @@ namespace Tbot.Common.Settings {
 		public static JObject ReadResolvedObject(string settingsPath) {
 			if (!File.Exists(settingsPath))
 				throw new Exception($"{settingsPath} does not exist.");
-			return ParseAndResolve(File.ReadAllText(settingsPath), settingsPath);
+			return ParseAndResolve(ReadAllTextRetry(settingsPath), settingsPath);
 		}
 
 		private static JObject ParseAndResolve(string json, string settingsPath) {
@@ -79,7 +79,7 @@ namespace Tbot.Common.Settings {
 							string loadedPath = ResolveLoadPath(baseDir, reference);
 							if (!File.Exists(loadedPath))
 								throw new Exception($"Setting '{prop.Name}': Load reference '{reference}' (resolved to '{loadedPath}') was not found.");
-							var part = ParseObject(File.ReadAllText(loadedPath));
+							var part = ParseObject(ReadAllTextRetry(loadedPath));
 							ResolveLoadReferences(part, baseDir, depth + 1);
 							loaded.Merge(part, LoadMerge);
 						}
@@ -136,7 +136,7 @@ namespace Tbot.Common.Settings {
 					string path = ResolveLoadPath(baseDir, reference);
 					if (!result.Contains(path) && File.Exists(path)) {
 						result.Add(path);
-						CollectLoadedFiles(ParseObject(File.ReadAllText(path)), baseDir, result, depth + 1);
+						CollectLoadedFiles(ParseObject(ReadAllTextRetry(path)), baseDir, result, depth + 1);
 					}
 				}
 			}
@@ -148,7 +148,7 @@ namespace Tbot.Common.Settings {
 			}
 			var semaphore = _settingsSemaphoreManager.GetSemaphore(settingsPath);
 			using (await semaphore.ReadLockAsync()) {
-				string file = await File.ReadAllTextAsync(settingsPath);
+				string file = await ReadAllTextRetryAsync(settingsPath);
 				return file;
 			}
 		}
@@ -176,7 +176,7 @@ namespace Tbot.Common.Settings {
 
 			JObject GetDoc(string full) {
 				if (!docs.TryGetValue(full, out var doc)) {
-					doc = ParseObject(File.ReadAllText(full));
+					doc = ParseObject(ReadAllTextRetry(full));
 					docs[full] = doc;
 				}
 				return doc;
@@ -259,6 +259,30 @@ namespace Tbot.Common.Settings {
 			if (result.Count == 0)
 				throw new Exception($"Invalid settings path '{path}'.");
 			return result;
+		}
+
+		private static string ReadAllTextRetry(string path) {
+			for (int versuch = 1; ; versuch++) {
+				try {
+					using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+					using var sr = new StreamReader(fs);
+					return sr.ReadToEnd();
+				} catch (IOException) when (versuch < 5) {
+					System.Threading.Thread.Sleep(300);
+				}
+			}
+		}
+
+		private static async Task<string> ReadAllTextRetryAsync(string path) {
+			for (int versuch = 1; ; versuch++) {
+				try {
+					using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+					using var sr = new StreamReader(fs);
+					return await sr.ReadToEndAsync();
+				} catch (IOException) when (versuch < 5) {
+					await Task.Delay(300);
+				}
+			}
 		}
 
 		public static bool IsSettingSet(dynamic setting, string property) {

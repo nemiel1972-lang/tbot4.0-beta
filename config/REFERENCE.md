@@ -71,6 +71,7 @@ far targets, but you need to have researched and built them. A new account shoul
 | `Proxy.Enabled` | Route traffic through a proxy. |
 | `Proxy.Address`, `Type`, `Username`, `Password` | Proxy address, type (e.g. `socks5`) and login. Real values in `secrets/proxy`. |
 | `Proxy.LoginOnly` | `true` = proxy is used only for the login, not for game requests. |
+| `AnonymizeLogs` | Optional, default `false`. `true` replaces player name, universe and e-mail in all log lines by `[Player]`, `[Universe]`, `[Email]`. `false` shows the real names. Read at start. |
 | `CaptchaAPIKey` | API key of the captcha solving service (optional). |
 | `LoginPause.*` | Protects the IP: after `FailuresBeforePause` (2) failed logins in a row the bot waits `PauseMinutes` (30), doubling with each further failure up to `MaxPauseMinutes` (120), instead of retrying. The manual captcha page `/bot/captcha` stays usable; solving it ends the pause. State in `data/login_pause_<alias>.json`. `Active` switches it off. |
 | `SlotsToLeaveFree` | Fleet slots no worker may use, kept free for you. |
@@ -235,17 +236,18 @@ Builds lifeform buildings using the table in `lifeform_targets.json`.
 | `MaxTechs11` … `MaxTechs36` | Per-tech level caps (first digit = race, second = tech slot). |
 | `Exclude` | Celestials never touched. |
 
-### Brain.AutoCargo
+### Brain.AutoCargo (shown as AutoShips)
 
-Builds cargo ships.
+Builds cargo ships and other ship types. The config key stays `AutoCargo`.
 
 | Field | Meaning |
 |---|---|
 | `Active` | Switch. |
 | `CargoType` | Ship type to build. |
-| `MaxCargosToBuild`, `MaxCargosToKeep` | Total target count / how many to keep. |
+| `MaxCargosToBuild`, `MaxCargosToKeep` | `MaxCargosToBuild` = most ships ordered per run; `MaxCargosToKeep` = target amount per celestial (0 = nothing is built). |
 | `LimitToCapacity` | Only build as many as the stored resources need. |
 | `MaxProductionHours` | Optional. Upper limit in hours for the production time of one order per celestial (shipyard and nanite level included). 0 or missing = no limit. |
+| `Ships` | Optional list of extra ship types, built after the cargo ships: `[{"Type": "Recycler", "Target": 50, "MaxPerRun": 20}]`. `Target` = amount per celestial, `MaxPerRun` = most ships per order (0 = no limit). One order per celestial and run, the first entry whose target is not reached. Pathfinder needs the Discoverer class, Reaper the General class, Crawlers are capped by the game's maximum and only built on planets. |
 | `SupplyMoonFromPlanet` | Moons get ships from the planet at the same position. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | Skip moons; random order; skip a celestial that already has a transport coming; excluded celestials. |
 
@@ -436,6 +438,7 @@ Resource farming mode with one goal: collect as much deuterium as possible. It w
 | `Active` | Master switch of the mode. |
 | `OnlyWorker` | `true` (default) = every other worker except Defender and sleep mode stays off. `false` = they keep running and compete for slots. |
 | `KeepExpeditions` | Keeps the expeditions running although the other workers are off. |
+| `BuildCheckMinutes` | Default 60. While FastFarm is active, AutoMine, AutoResearch, LifeformAutoMine and LifeformAutoResearch run when transports with resources are on their way to your celestials, and otherwise once every this many minutes to build what is possible. They only spend resources already on the celestial and order no new transports during FastFarm. 0 = they stay off. |
 | `Origin` | Celestials the probes and cargo ships start from. The nearest one with enough ships is used per target. Empty = all planets. |
 | `ScanRange` | Galaxy and system ranges that are scanned, nearest to the origins first. Empty = 100 systems around every origin. |
 | `CargoType` | `SmallCargo` (default), `LargeCargo` or `Both` (small cargos first, large cargos for the rest). |
@@ -462,14 +465,15 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | Field | Meaning |
 |---|---|
 | `BotPause.Active` | Switches the pause function on or off (default on). |
-| `BotPause.DurationMinutes` | Button **Pause** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode stop for this long (default 15), then restart on their own. `/resume` or the button ends it earlier; pressing Pause again prolongs it. Recalls, fleetsave and the Defender keep running. |
+| `BotPause.DurationMinutes` | Button **Pause** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode hold their cycles for this long (default 15) and continue on their own (with `Mode` = `Stop` they are stopped and restarted). `/resume` or the button ends it earlier; pressing Pause again prolongs it. Recalls, fleetsave and the Defender keep running. |
 | `BotPause.RecallMarginMinutes` | Safety distance (default 2). A pause is refused if a recall is due within the pause time plus this margin. A pause is also refused while sleeping and during an attack lockdown. |
 | `BotPause.MaxDurationMinutes` | Longest pause you can ask for with `/pause` (default 120). |
 | `BotPause.StopDefender` | Default off. On: the Defender stops during the pause too. Fleetsave and recalls already planned still run. |
+| `BotPause.Mode` | `Gate` (default): workers are not stopped; during the pause each one skips its cycle and runs again after the pause, staggered by up to 60 seconds. `Stop`: the old hard pause (all workers stopped and restarted). |
 | `BotPause.AttackMarginMinutes` | Default 15. A pause is refused if an attack arrives within this time (with `StopDefender` on: plus the pause length). While paused, spy, attack, expedition, colonize, discovery and harvest missions are blocked (fleetsave, transports and Telegram commands stay possible). |
 | `DefenderRecheck.Active` | Default off. Shortly before the fleetsave the Defender fetches the attack list once more: attack recalled -> fleetsave skipped; attack later -> fleetsave moved; question fails or times out -> fleetsave sent as planned. |
 | `DefenderRecheck.TimeoutSeconds` | How long to wait for the answer (default 4, 1-10). |
-| `ExtraDebugLog.Active` | Default on (a missing block counts as on; `false` switches it off). Files older than 7 days are deleted automatically. Writes extra diagnosis lines to their own file `devlog/TBot-debug-<date>.log` (anonymized: player, universe, celestial names, mail, IP, tokens; coordinates become x:x:position, amounts stay) (max. 50 MB per day), the normal log stays small. Topics (all default on, they only apply when the log is active): `Repatriate`, `Ledger`, `BotPause`, `DefenderRecheck`, `FleetsaveSlot`, `MinePlanRanking`, `AsteroidHunt`, `ShadowFleet` - one for every experimental function. Useful when a function does not send and you need to see why. |
+| `ExtraDebugLog.Active` | Default on (a missing block counts as on; `false` switches it off). Files older than 7 days are deleted automatically. Writes extra diagnosis lines to their own file `devlog/TBot-debug-<date>.log` (anonymized: player, universe, celestial names, mail, IP, tokens; coordinates become x:x:position, amounts stay) (max. 50 MB per day), the normal log stays small. Topics (all default on, they only apply when the log is active): `Repatriate`, `Ledger`, `BotPause`, `DefenderRecheck`, `FleetsaveSlot`, `MinePlanRanking`, `AsteroidHunt`, `ShadowFleet`, `GalaxyCache`, `FleetTargets`, `Requests` (request counters every 10 minutes), `BrowserProxy` (error 100 retries of the browser proxy) - one for every experimental function. Useful when a function does not send and you need to see why. |
 | `RepatriateLedgerHold.Ignore` | Default off. On: repatriate, reverse repatriate and `/collect` ignore the resource ledger completely (all stock is free). |
 | `RepatriateLedgerHold.MinPercent` | Default 30. Repatriate and /collect leave stock alone that a waiting build claim already holds at least this share of its total need (metal+crystal+deuterium). Claims below that (far-away goals such as a metal mine to 995 M) no longer freeze the whole stock. Claims with flights or fully covered always protect. 0 = every held amount is protected (old behavior), 100 = only fully covered claims. |
 | `MinePlanRanking.Mode` | How the page Minenplan ranks the next investments (display only): `Payback` (default, like AutoMine), `Cheapest` (lowest cost first), `Npv` (highest gain over the horizon minus cost). The page can override this in your browser. |
@@ -489,7 +493,7 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | `GalaxyCache.RangeSystems` / `DelayMinSeconds` / `DelayMaxSeconds` | Background scan: systems left and right of every own system (default 15, 0 = only passive recording) and the pause between two queries (default 20-45 s). Pauses while the bot sleeps or is paused. |
 | `GalaxyCache.UseInFastFarm` / `UseInColonize` | Default on. FastFarm takes the inactive-target scan from a fresh cache. Colonize skips positions the cache shows as occupied; free positions are still checked live. |
 | `GalaxyCache.Events` / `Telegram` | Default on. Changes between two scans of a system (new colony, planet gone, new moon, status change, move = a player disappears at one place and appears at another within 72 h) go to the log; new colonies and moves also to Telegram / Discord. Your own colonies are ignored. The first scan of a system is only the baseline. |
-| `ShadowFleet.Active` | Default off. **Needs a deuterium reserve on the chosen celestial** - every flight burns fuel, and the fleet carries deuterium for `DeuteriumFlights` flights. The chosen ships of ONE celestial fly one after another to the nearest debris field (harvest mission, at `SpeedPercent`), are recalled after half of the planned time and fly again after a short random pause. Only one celestial is covered, so only its deuterium and one fleet slot are used. |
+| `ShadowFleet.Active` | Default off. **Not fully tested - use with care.** **Needs a deuterium reserve on the chosen celestial** - every flight burns fuel, and the fleet carries deuterium for `DeuteriumFlights` flights. The chosen ships of ONE celestial fly one after another to the nearest debris field (harvest mission, at `SpeedPercent`), are recalled after half of the planned time and fly again after a short random pause. Only one celestial is covered, so only its deuterium and one fleet slot are used. |
 | `ShadowFleet.Celestial` | `Galaxy`, `System`, `Position`, `Type` (`Planet` or `Moon`) of the one celestial that is secured. |
 | `ShadowFleet.Ships` | Ships that fly, as `{ "Recycler": 0, "LargeCargo": 500 }`. A ship is in the fleet when it is listed; the number is the amount, **0 = all of them**. At least one `Recycler` (or `Pathfinder`) is needed for the harvest mission. In the WebUI: tick the ship and enter the amount. |
 | `ShadowFleet.SpeedPercent` | 10 to 100, default 10 (slowest, the cheapest fuel). |

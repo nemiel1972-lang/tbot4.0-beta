@@ -9,9 +9,8 @@
         box.className = 'alert alert-info alert-dismissible mb-2';
         box.setAttribute('role', 'alert');
         box.style.cssText = 'margin:0 0 8px';
-        box.innerHTML = '<strong>' + esc(d.title) + '</strong><ul class="mb-0 mt-1">' +
-            d.lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') +
-            '</ul><button type="button" class="btn-close" aria-label="Close"></button>';
+        box.innerHTML = '<strong>' + esc(d.title) + '</strong> &middot; <a href="/WhatsNew" class="alert-link">' + esc(d.more) + '</a>' +
+            '<button type="button" class="btn-close" aria-label="Close"></button>';
         box.querySelector('.btn-close').addEventListener('click', function () {
             box.remove();
             fetch('/WhatsNew/Dismiss', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'version=' + encodeURIComponent(d.version) }).catch(function () { });

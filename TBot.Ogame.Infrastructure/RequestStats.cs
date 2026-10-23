@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 namespace TBot.Ogame.Infrastructure {
 	public static class RequestStats {
 		public static readonly AsyncLocal<string> Current = new();
+
+		public static Action<string, string> DevLog;
 		private static readonly ConcurrentDictionary<string, long> _counts = new();
 
 		public static void Count() {

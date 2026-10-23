@@ -22,6 +22,33 @@ using System.IO;
 using Newtonsoft.Json;
 
 namespace Tbot.Workers {
+	internal static class TargetRejectionMemo {
+		private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _until = new();
+		private static readonly TimeSpan Duration = TimeSpan.FromMinutes(30);
+
+		private static bool Relevant(Missions mission) =>
+			mission == Missions.Spy || mission == Missions.Attack || mission == Missions.Transport || mission == Missions.Deploy;
+
+		private static string Key(ITBotMain inst, Coordinate c) => $"{inst.InstanceAlias}|{c.Galaxy}:{c.System}:{c.Position}:{c.Type}";
+
+		public static void Add(ITBotMain inst, Coordinate c, Missions mission) {
+			if (c != null && Relevant(mission))
+				_until[Key(inst, c)] = DateTime.UtcNow + Duration;
+		}
+
+		public static bool IsBlocked(ITBotMain inst, Coordinate c, Missions mission) {
+			if (c == null || !Relevant(mission))
+				return false;
+			var key = Key(inst, c);
+			if (!_until.TryGetValue(key, out var until))
+				return false;
+			if (until > DateTime.UtcNow)
+				return true;
+			_until.TryRemove(key, out _);
+			return false;
+		}
+	}
+
 	public class FleetScheduler : IFleetScheduler {
 		private readonly SemaphoreSlim _discoveryDispatchSemaphore = new(1, 1);
 		private readonly object _fleetLock = new();
@@ -682,6 +709,10 @@ namespace Tbot.Workers {
 				}
 			}
 
+			if (TargetRejectionMemo.IsBlocked(_tbotInstance, destination, mission)) {
+				ExtraLog.Write(_tbotInstance, "FleetTargets", $"SendFleet skipped: {destination} was refused by the game a short time ago ({mission}).");
+				return (int) SendFleetCode.TargetInvalid;
+			}
 if (!_calcService.GetValidSpeedsForClass(playerClass).Any(s => s == speed)) {
     _tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler,
         "Unable to send fleet: speed not available for your class");
@@ -843,9 +874,14 @@ if (
 					_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 					return newFleet.ID;
 				} catch (Exception e) {
-					if (e.Message.Contains("(140035)") || e.Message.Contains("(140010)") || e.Message.Contains("(140016)")) {
-						_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Target {destination} cannot be used for {mission} (server: {e.Message.Substring(e.Message.LastIndexOf("Message:") >= 0 ? e.Message.LastIndexOf("Message:") + 8 : 0).Trim()}) - the worker drops it.");
-						return (int) SendFleetCode.TargetInvalid;
+					var spielFehler = System.Text.RegularExpressions.Regex.Match(e.Message, @"Message:\s*(.*?\(140\d{3}\))");
+					if (spielFehler.Success) {
+						string grund = spielFehler.Groups[1].Value.Trim();
+						bool zielFehler = e.Message.Contains("(140035)") || e.Message.Contains("(140010)") || e.Message.Contains("(140016)") || e.Message.Contains("(140006)");
+						if (zielFehler)
+							TargetRejectionMemo.Add(_tbotInstance, destination, mission);
+						_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Fleet cannot be sent: {grund} ({origin.Coordinate} -> {destination}, {mission})");
+						return zielFehler ? (int) SendFleetCode.TargetInvalid : (int) SendFleetCode.GenericError;
 					}
 					_tbotInstance.log(LogLevel.Error, LogSender.FleetScheduler, $"Unable to send fleet: an exception has occurred: {e.Message}");
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Stacktrace: {e.StackTrace}");

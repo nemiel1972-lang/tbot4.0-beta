@@ -182,7 +182,7 @@ namespace Tbot.Workers.Brain {
 								DoLog(LogLevel.Information, $"Not enough resources to build: {buildable.ToString()} level {level.ToString()} on {celestial.ToString()}. Needed: {xCostBuildable.LFBuildingCostResources.ToString()} - Available: {celestial.Resources.LFBuildingCostResources.ToString()}");
 
 								LedgerTBot.Plan(_tbotInstance, celestial, "LifeformsAutoMine", buildable.ToString() + " " + level.ToString(), xCostBuildable);
-								if ((bool) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active) {
+								if ((bool) _tbotInstance.InstanceSettings.Brain.LifeformAutoMine.Transports.Active && (bool) _tbotInstance.InstanceSettings.Brain.Transports.Active && !_tbotInstance.FastFarmBlocksNewTransports) {
 									_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 									_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 									List<RankSlotsPriority> rankSlotsPriority = new() {

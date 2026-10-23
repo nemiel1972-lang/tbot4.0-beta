@@ -62,6 +62,18 @@ namespace Tbot.Workers {
 		}
 
 		protected abstract Task Execute();
+
+		private TimeSpan? _gateRestorePeriod;
+		private TimeSpan _gatePeriodSet;
+		private void GateRestorePeriod() {
+			if (_gateRestorePeriod == null)
+				return;
+			var alt = _gateRestorePeriod.Value;
+			_gateRestorePeriod = null;
+			if (Period == _gatePeriodSet)
+				ChangeWorkerPeriod(alt);
+		}
+
 		public void DoLog(LogLevel level, string format) {
 			_tbotInstance.log(level, GetLogSender(), format);
 		}
@@ -168,6 +180,17 @@ namespace Tbot.Workers {
 				return;
 			}
 
+			var pauseGate = _tbotInstance.PauseGateDelay(GetFeature());
+			if (pauseGate != null) {
+				if (_gateRestorePeriod == null)
+					_gateRestorePeriod = Period;
+				_gatePeriodSet = pauseGate.Value;
+				DoLog(LogLevel.Debug, $"Pause: {GetWorkerName()} skips this cycle, next run in {pauseGate.Value:mm\\:ss}");
+				ChangeWorkerPeriod(pauseGate.Value);
+				firstExecutionCompletion.TrySetResult(true);
+				return;
+			}
+
 			try {
 #pragma warning disable VSTHRD003
 				await _executionPredecessor;
@@ -177,6 +200,7 @@ namespace Tbot.Workers {
 				ct.ThrowIfCancellationRequested();
 
 				await Execute();
+				GateRestorePeriod();
 
 				if (Period != Timeout.InfiniteTimeSpan) {
 					DoLog(LogLevel.Information, $"Next {GetWorkerName()} execution in {Period}");
