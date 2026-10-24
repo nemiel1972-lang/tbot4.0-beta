@@ -30,3 +30,6 @@ Text content there is available under **CC BY-SA 3.0** (https://creativecommons.
 Material taken from there is credited here: source = OGame Wiki (Fandom) contributors, license = CC BY-SA 3.0, changes = resized/converted for use in the web interface.
 Material derived from CC BY-SA sources stays under CC BY-SA.
 If you are a rights holder and want something changed or removed, please open an issue; it will be handled promptly.
+
+## AI assistance
+Parts of this project's code, translations and documentation were written with the help of AI tools (Claude by Anthropic). All changes are read and tested by the maintainer before they are released. The same review applies to hand-written and AI-assisted code; see `CONTRIBUTING.md`.
