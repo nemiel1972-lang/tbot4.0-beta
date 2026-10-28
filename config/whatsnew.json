@@ -7,6 +7,10 @@
   },
   "lines": {
     "en": [
+      "New: Directives (off by default): works through the in-game directive tasks for you (build/research to a level, ships and defence, colonise, expedition, spy mission to position 16 and its recall, lithium conversion); what it cannot do is only logged; dry-run mode available",
+      "New: Rewards page - overview of the universe reward tasks (Tritium tasks and ranks)",
+      "New: Logistics page - planner and calculator for fleet transports",
+      "New: new look of the web UI",
       "New: Defender test (Defender page, Test section): plays an assumed attack from A on B through your settings and shows what the bot calculates and would do - nothing is sent or changed",
       "New: ConfigDoctor - checks your config for implausible values (start page notes, bot log, standalone ConfigDoctor tool in the package)",
       "New: Expeditions \"Smart ships\" (off by default): per expedition 1 probe, 1 pathfinder and 1 combat ship, cargo split equally across all planned expeditions, missing cargo filled with a second cargo type",
@@ -19,6 +23,10 @@
       "New: the bot time (game server time) is shown with browser conversion on the start page"
     ],
     "de": [
+      "Neu: Direktiven (standardmäßig aus): arbeitet die Direktiven-Aufgaben des Spiels ab (bauen/erforschen bis zu einer Stufe, Schiffe und Verteidigung, kolonisieren, Expedition, Spionagemission zu Position 16 samt Rückruf, Lithium-Umwandlung); was er nicht kann, wird nur geloggt; mit Probelauf-Modus",
+      "Neu: Belohnungen-Seite - Übersicht der Universums-Belohnungen (Tritium-Aufgaben und Ränge)",
+      "Neu: Logistik-Seite - Planer und Rechner für Flotten-Transporte",
+      "Neu: neue Optik der Web-Oberfläche",
       "Neu: Defender-Test (Defender-Seite, Abschnitt Test): spielt einen angenommenen Angriff von A auf B durch und zeigt, was der Bot berechnet und tun würde - es wird nichts gesendet oder geändert",
       "Neu: ConfigDoctor - prüft deine Config auf unplausible Werte (Hinweise auf der Startseite, Bot-Log, eigenes Tool ConfigDoctor im Paket)",
       "Neu: Expeditionen \"Smart ships\" (standardmäßig aus): je Expedition 1 Sonde, 1 Pfadfinder und 1 Kampfschiff, Ladung gleichmäßig auf alle geplanten Expeditionen verteilt, fehlende Ladung mit einem zweiten Transportertyp aufgefüllt",
