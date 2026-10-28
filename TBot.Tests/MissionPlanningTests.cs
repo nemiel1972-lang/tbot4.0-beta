@@ -238,10 +238,10 @@ namespace TBot.Tests {
 		}
 
 		[Fact]
-		public void AutoFarmResumesACompletedRangeWithoutSkippingSystemsBeforeTheCursor() {
+		public void AutoFarmResumeOnlyScansTheRestOfTheRangeWithoutWraparound() {
 			var systems = AutoFarmScanPlanner.EnumerateSystems(1, 5, 3);
 
-			Assert.Equal(new[] { 3, 4, 5, 1, 2 }, systems);
+			Assert.Equal(new[] { 3, 4, 5 }, systems);
 		}
 
 		[Fact]
@@ -276,7 +276,7 @@ namespace TBot.Tests {
 		}
 
 		[Fact]
-		public void AutoFarmSlotBudgetDoesNotClaimMixedManualAttackFleets() {
+		public void AutoFarmSlotBudgetCountsEscortedAttackFleetsWithCargo() {
 			var fleets = new[] {
 				new Fleet {
 					Mission = Missions.Attack,
@@ -291,8 +291,8 @@ namespace TBot.Tests {
 				fleets,
 				Buildables.LargeCargo);
 
-			Assert.Equal(0, budget.OwnedSlots);
-			Assert.Equal(1, budget.AvailableSlots);
+			Assert.Equal(1, budget.OwnedSlots);
+			Assert.Equal(0, budget.AvailableSlots);
 		}
 
 		[Fact]

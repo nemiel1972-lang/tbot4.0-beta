@@ -141,7 +141,7 @@ namespace Tbot.Workers.Brain {
 				MissileSilo = maxMissileSilo,
 				NaniteFactory = maxNaniteFactory,
 				Terraformer = maxTerraformer,
-				SpaceDock = maxSpaceDock
+				SpaceDock = maxSpaceDock,
 			};
 		}
 

@@ -218,6 +218,7 @@ namespace Tbot.Helpers {
 					return "";
 				}
 				int[] stage1 = (int[]) baseLevels.Clone();
+				bool[] gelistet = new bool[13];
 				foreach (JProperty prop in slotObj.Properties()) {
 					if (prop.Name == "Target" || prop.Name.StartsWith("_") || positions[prop.Name] == null) {
 						continue;
@@ -225,6 +226,7 @@ namespace Tbot.Helpers {
 					int position = (int) positions[prop.Name];
 					if (position >= 1 && position <= 12) {
 						stage1[position] = (int) prop.Value;
+						gelistet[position] = true;
 					}
 				}
 				int foodBonus = raceObj["FoodBonusLevels"] != null ? (int) raceObj["FoodBonusLevels"] : 0;
@@ -235,15 +237,18 @@ namespace Tbot.Helpers {
 				for (int pos = 1; pos <= 12; pos++) {
 					current[pos] = GetByPosition(celestial.LFBuildings, celestial.LFtype, pos);
 				}
-				return ApplyBoostStages(levels, stage1, current, boostLevel, techCap, t2Slot);
+				return ApplyBoostStages(levels, stage1, current, boostLevel, techCap, t2Slot, gelistet);
 			} catch (Exception) {
 				return "";
 			}
 		}
 
-		internal static string ApplyBoostStages(int[] levels, int[] stage1, int[] current, int boostLevel, int? techCap, int t2Slot) {
+		internal static string ApplyBoostStages(int[] levels, int[] stage1, int[] current, int boostLevel, int? techCap, int t2Slot, bool[] gelistet = null) {
 			bool t2Done = true;
 			for (int pos = 1; pos <= 12; pos++) {
+				if (gelistet != null && !gelistet[pos]) {
+					continue;
+				}
 				int want = Math.Min(stage1[pos], levels[pos]);
 				if (current[pos] < want) {
 					t2Done = false;

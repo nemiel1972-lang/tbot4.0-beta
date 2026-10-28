@@ -594,6 +594,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             { key: 'w_lfresearch',  id: 'lfresearch',  label: 'LF research', sub: true },
             { key: 'w_boosters',    id: 'boosters',    label: 'Boosters',    sub: true },
             { key: 'w_offer',       id: 'offer',       label: 'Daily offer', sub: true },
+            { key: 'w_jumpgate',    id: 'jumpgate',    label: 'Jump gate',   sub: true },
             { key: 'w_colonize',    id: 'colonize',    label: 'Colonizer',   sub: true }
         ];
         var wBtns = {};
@@ -954,8 +955,8 @@ func PostSlotLimitHandler(c echo.Context) error {
 	switch key {
 	case "leaveFree", "autofarm", "brain", "harvest", "discovery", "exp",
 		"p_autofarm", "p_expeditions", "p_harvest", "p_discovery", "p_brain",
-		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain", "w_defender",
-		"w_transport", "w_repatriate", "w_cargo", "w_mine", "w_research", "w_lfmine", "w_lfresearch", "w_boosters", "w_offer", "w_colonize",
+		"w_autofarm", "w_expeditions", "w_harvest", "w_discovery", "w_brain", "w_defender", "w_auction",
+		"w_transport", "w_repatriate", "w_cargo", "w_mine", "w_research", "w_lfmine", "w_lfresearch", "w_boosters", "w_offer", "w_jumpgate", "w_colonize",
 		"pause":
 	default:
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "unbekannter Schluessel"})

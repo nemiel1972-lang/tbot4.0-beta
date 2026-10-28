@@ -16,4 +16,20 @@
     <PackageReference Include="Serilog.Sinks.Telegram.Alternative" Version="1.5.0" />
   </ItemGroup>
 
+  <!-- Build-Info fuer die WebUI: Zeitpunkt des Builds und kurzer Git-Commit als Assembly-Metadaten (ohne Git: nur die Zeit) -->
+  <ItemGroup>
+    <AssemblyMetadata Include="BuildTimeUtc" Value="$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm'))" />
+  </ItemGroup>
+  <Target Name="TBotGitCommit" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" ContinueOnError="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="TBotGitOut" />
+    </Exec>
+    <PropertyGroup>
+      <TBotGitHash Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(TBotGitOut)', '^[0-9a-f]{7,12}$'))">$(TBotGitOut)</TBotGitHash>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(TBotGitHash)' != ''">
+      <AssemblyMetadata Include="GitCommit" Value="$(TBotGitHash)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

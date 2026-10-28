@@ -151,6 +151,17 @@ ORDER BY updated_at_utc DESC;";
 				var reportId = report.Value<int?>("ID") ?? 0;
 				var consumedReportId = reader.IsDBNull(7) ? (int?)null : reader.GetInt32(7);
 				var reason = ResolveTargetReason(state, coordinate, reportId, consumedReportId, consumedReportIds, blacklist, logReasons);
+				var bl = storage.Blacklist.FirstOrDefault(b => b.Coordinate == $"{galaxy}:{system}:{position}");
+				if (bl != null) {
+					bl.HasReport = true;
+					bl.ReportDateUtc = ParseDate(report.Value<string>("Date"));
+					bl.Metal = report.Value<long?>("Metal") ?? 0;
+					bl.Crystal = report.Value<long?>("Crystal") ?? 0;
+					bl.Deuterium = report.Value<long?>("Deuterium") ?? 0;
+					bl.Player = report.Value<string>("Username") ?? string.Empty;
+					bl.Ships = ListUnits(report, ShipFields);
+					bl.Defence = ListUnits(report, DefenceFields);
+				}
 
 				storage.Reports.Add(new AutoFarmReportRow {
 					TargetName = reader.GetString(0),
@@ -167,6 +178,19 @@ ORDER BY updated_at_utc DESC;";
 					ReasonDetail = reason.Detail
 				});
 			}
+		}
+
+		private static readonly string[] ShipFields = { "LightFighter", "HeavyFighter", "Cruiser", "Battleship", "Battlecruiser", "Bomber", "Destroyer", "Deathstar", "SmallCargo", "LargeCargo", "ColonyShip", "Recycler", "EspionageProbe", "Crawler", "Reaper", "Pathfinder" };
+		private static readonly string[] DefenceFields = { "RocketLauncher", "LightLaser", "HeavyLaser", "GaussCannon", "IonCannon", "PlasmaTurret", "SmallShieldDome", "LargeShieldDome", "AntiBallisticMissiles", "InterplanetaryMissiles" };
+
+		private static string ListUnits(JObject report, string[] fields) {
+			var parts = new List<string>();
+			foreach (var f in fields) {
+				long n = report.Value<long?>(f) ?? 0;
+				if (n > 0)
+					parts.Add($"{n:N0}x {f}");
+			}
+			return string.Join(", ", parts);
 		}
 
 		private static HashSet<int> ReadConsumedReportIds(SqliteConnection connection) {

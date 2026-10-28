@@ -215,6 +215,25 @@
             </section>`;
         }
 
+        function formatEta(sec) {
+            if (sec == null) return "unknown";
+            const m = Math.round(sec / 60);
+            return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+        }
+        function renderGalaxy(g) {
+            if (!g || !g.available) {
+                return `<section class="panel"><div class="panel-heading"><h2>Galaxy scan</h2></div><p class="empty-cell">No galaxy cache yet. It appears once the galaxy cache has scanned its first systems (Experimental.GalaxyCache).</p></section>`;
+            }
+            const done = g.freshSystems >= g.totalSystems && g.totalSystems > 0;
+            const eta = done ? (g.nextDueUtc ? `complete, next pass from ${formatDate(g.nextDueUtc)}` : "complete") : formatEta(g.etaSeconds);
+            const lastTxt = g.lastCoord ? ` &middot; last ${escapeHtml(g.lastCoord)}` : "";
+            return `<section class="panel">
+                <div class="panel-heading"><h2>Galaxy scan</h2><span class="panel-count">${formatNumber(g.percent)}%</span></div>
+                <p><strong>${formatNumber(g.targets)} inactive targets</strong> (${formatNumber(g.colonies)} colonies) &middot; ${formatNumber(g.freshSystems)} / ${formatNumber(g.totalSystems)} systems${lastTxt} &middot; ${escapeHtml(done ? eta : "done in " + eta)}</p>
+                <div class="progress-line"><progress max="100" value="${g.percent}"></progress></div>
+            </section>`;
+        }
+
         function renderScan(scan) {
             const percent = Math.max(0, Math.min(100, Number(scan.progressPercent || 0)));
             const cursor = scan.cursorGalaxy > 0 ? `${scan.cursorGalaxy}:${scan.cursorSystem}` : "Not available";
@@ -280,17 +299,25 @@
 
         function renderMaintenance(data) {
             const list = data.blacklist || [];
-            const rows = list.length ? list.map(b => `<tr>
-                <td class="mono">${escapeHtml(b.coordinate)}</td>
+            const rows = list.length ? list.slice().sort((x, y) => ((y.metal || 0) + (y.crystal || 0) + (y.deuterium || 0)) - ((x.metal || 0) + (x.crystal || 0) + (x.deuterium || 0))).map(b => {
+                const forced = (b.reason === "HasFleet" || b.reason === "HasDefense" || b.reason === "Unprofitable")
+                    ? `<button type="button" class="plain-button af-cmd" data-cmd="attackDefendedNow" data-coord="${escapeHtml(b.coordinate)}">Scan + attack</button> ` : "";
+                const res = b.hasReport ? res3({ metal: b.metal, crystal: b.crystal, deuterium: b.deuterium }) + `<span class="coordinate">${formatDate(b.reportDateUtc)}</span>` : "-";
+                return `<tr>
+                <td class="mono">${escapeHtml(b.coordinate)}${b.player ? `<span class="coordinate">${escapeHtml(b.player)}</span>` : ""}</td>
                 <td>${escapeHtml(b.reason)}</td>
+                <td class="resources">${res}</td>
+                <td>${b.hasReport ? escapeHtml(b.defence || "none") : "-"}</td>
+                <td>${b.hasReport ? escapeHtml(b.ships || "none") : "-"}</td>
                 <td>${formatDate(b.blacklistedAtUtc)}</td>
                 <td>${formatDate(b.expiresAtUtc)}</td>
-                <td><button type="button" class="plain-button af-cmd" data-cmd="removeBlacklist" data-coord="${escapeHtml(b.coordinate)}">Remove</button></td>
-            </tr>`).join("") : emptyRow(5, "The blacklist is empty.");
+                <td>${forced}<button type="button" class="plain-button af-cmd" data-cmd="removeBlacklist" data-coord="${escapeHtml(b.coordinate)}">Remove</button></td>
+            </tr>`; }).join("") : emptyRow(8, "The blacklist is empty.");
             const pending = data.pendingCommands > 0 ? `<div class="notice">${formatNumber(data.pendingCommands)} command(s) waiting - AutoFarm runs them at the start of its next cycle.</div>` : "";
             return `${pending}<section class="panel">
                 <div class="panel-heading"><h2>Blacklist</h2><span class="panel-count">${formatNumber(list.length)}</span></div>
-                <div class="table-wrap"><table><thead><tr><th>Target</th><th>Reason</th><th>Added</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+                <div class="table-wrap"><table><thead><tr><th>Target</th><th>Reason</th><th>Resources (Met / Kris / Deut)</th><th>Defence</th><th>Ships</th><th>Added</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+                <p class="panel-note">Sorted by reported resources, highest first. HasFleet / HasDefense: the target was skipped because of ships or defence. Scan + attack handles that one target alone: it is spied again if its report is old, escort and profit are calculated and it is attacked with escort; if it does not pass it is removed.</p>
             </section>
             <section class="panel">
                 <div class="panel-heading"><h2>Maintenance</h2></div>
@@ -428,7 +455,7 @@
             if (!tabs.some(t => t[0] === activeTab)) activeTab = "overview";
             const bar = `<nav class="tab-bar" role="tablist">${tabs.map(t => `<button type="button" role="tab" class="tab-button${t[0] === activeTab ? " active" : ""}" data-tab="${t[0]}">${escapeHtml(t[1])}${t[2] ? ` <span class="tab-count">${t[2]}</span>` : ""}</button>`).join("")}</nav>`;
             const panels = {
-                overview: () => [renderWorker(data.worker, data.databaseAvailable), renderDeuterium(data.deuterium), renderSlots(data.slots), renderScan(data.scan), renderLosses(data.losses)].join(""),
+                overview: () => [renderWorker(data.worker, data.databaseAvailable), renderDeuterium(data.deuterium), renderSlots(data.slots), renderGalaxy(data.galaxy), renderScan(data.scan), renderLosses(data.losses)].join(""),
                 targets: () => galaxyBar(data.reports, r => r.coordinate) + renderTargets(filterGalaxy(data.reports, r => r.coordinate)),
                 attacks: () => galaxyBar(data.attacks, a => a.coordinate) + renderAttacks(filterGalaxy(data.attacks, a => a.coordinate)),
                 systems: () => galaxyBar(data.systems, x => x.coordinate) + renderSystems(filterGalaxy(data.systems, x => x.coordinate)),
@@ -482,6 +509,7 @@
                 clearBlacklist: "Clear the whole blacklist?",
                 removeBlacklist: `Remove ${coord} from the blacklist?`,
                 removeTarget: `Remove target ${coord} (and its blacklist entry)?`,
+                attackDefendedNow: `Calculate escort and profit for ${coord} now and attack it alone? (A fresh spy report is taken first if the stored one is too old. If the target does not pass it is removed.)`,
                 clearSystems: "Clear the system cache and restart the scan from the beginning?",
                 resetDb: "Reset the whole AutoFarm database and the blacklist? This cannot be undone."
             };

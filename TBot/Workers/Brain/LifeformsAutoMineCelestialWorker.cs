@@ -131,6 +131,14 @@ namespace Tbot.Workers.Brain {
 				if (delayTime == 0) {
 					if (celestial is Planet) {
 						buildable = _calculationService.GetNextLFBuildingToBuild(celestial, maxLFBuildings, preventIfMoreExpensiveThanNextMine, preventTechBuilding);
+						if (buildable != LFBuildables.None && Tbot.Workers.Brain.MinePlanSnapshot.TryPlanPickLf(_tbotInstance, celestial.ToString(), out LFBuildables pickLf, out int pickLfLevel) && pickLf != buildable) {
+							if (pickLfLevel == celestial.GetLevel(pickLf) + 1 && pickLfLevel <= maxLFBuildings.GetLevel(pickLf)) {
+								DoLog(LogLevel.Information, $"Plan mode: {celestial.ToString()} builds {pickLf.ToString()} {pickLfLevel} from the plan instead of {buildable.ToString()}.");
+								buildable = pickLf;
+							} else {
+								DoLog(LogLevel.Information, $"Plan mode: plan step {pickLf.ToString()} {pickLfLevel} on {celestial.ToString()} is not allowed by the LF targets - keeping {buildable.ToString()}.");
+							}
+						}
 
 						if (buildable != LFBuildables.None) {
 							level = _calculationService.GetNextLevel(celestial, buildable);

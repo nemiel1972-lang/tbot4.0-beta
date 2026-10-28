@@ -222,6 +222,16 @@ namespace TBot.WebUI.Services {
 			}
 		}
 
+		public static string? ServiceUnitName() {
+			try {
+				string cg = File.ReadAllText("/proc/self/cgroup");
+				var m = Regex.Match(cg, @"/([^/\r\n]+\.service)(?:/|\s|$)");
+				return m.Success ? m.Groups[1].Value : null;
+			} catch (Exception) {
+				return null;
+			}
+		}
+
 		public static string? FindUpdater(string appDir) {
 			foreach (string n in new[] { "TBotUpdater.exe", "TBotUpdater" }) {
 				string p = Path.Combine(appDir, n);
@@ -251,7 +261,11 @@ namespace TBot.WebUI.Services {
 			var sb = new StringBuilder();
 			sb.Append("--package ").Append(Q(zipPath)).Append(" --target ").Append(Q(appDir.TrimEnd('/', '\\')));
 			sb.Append(" --pid ").Append(Environment.ProcessId).Append(" --from ").Append(Q(fromVersion)).Append(" --to ").Append(Q(toVersion));
-			if (service || exe.Length == 0) sb.Append(" --no-restart");
+			if (service || exe.Length == 0) {
+				sb.Append(" --no-restart");
+				string? unit = service ? ServiceUnitName() : null;
+				if (unit != null) sb.Append(" --service ").Append(Q(unit));
+			}
 			else sb.Append(" --restart ").Append(Q(exe)).Append(" --restart-args ").Append(Q(string.Join(" ", restartArgs.Select(Q))));
 
 			var psi = new ProcessStartInfo(copy, sb.ToString()) { WorkingDirectory = runDir, UseShellExecute = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) };

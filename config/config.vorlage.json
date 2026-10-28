@@ -36,6 +36,7 @@
             "LoginOnly": true
         },
         "AnonymizeLogs": false,
+        "ShowUpdateNotes": true,
         "CaptchaAPIKey": "",
         "LoginPause": {
             "Active": true,
@@ -63,6 +64,7 @@
         "Active": false,
         "GoToSleep": "5:00",
         "WakeUp": "10:00",
+        "PreventIfThereAreFleets": false,
         "TelegramMessenger": {
             "Active": false
         },
@@ -165,6 +167,19 @@
     },
     "Brain": {
         "Active": false,
+        "ResourceLedger": {
+            "Active": true,
+            "PriorityByCost": true
+        },
+        "Directives": {
+            "Active": false,
+            "IntervalMinutes": 10,
+            "CollectRewards": true,
+            "Fulfil": false,
+            "Fleets": false,
+            "DryRun": false,
+            "LastChapter": 7
+        },
         "Transports": {
             "Active": false,
             "Origin": {
@@ -187,6 +202,7 @@
             "DeutToLeaveOnPlanets": 0,
             "RoundResources": true,
             "SendToTheMoonIfPossible": false,
+            "MaxBundledBuildings": 0,
             "MaxSlots": 1,
             "CheckMoonOrPlanetFirst": true,
             "DoMultipleTransportIsNotEnoughShipButSamePosition": true,
@@ -399,6 +415,7 @@
             "EnsureExpoSlots": true,
             "PrioritizeAstrophysics": true,
             "PrioritizePlasmaTechnology": false,
+            "PlasmaPriorityChecksPayback": false,
             "PrioritizeEnergyTechnology": false,
             "PrioritizeIntergalacticResearchNetwork": false,
             "ForceResearchWhateverTheLabLevel": false,
@@ -470,6 +487,7 @@
         },
         "AutoRepatriate": {
             "Active": false,
+            "ReserveTransportSlots": 0,
             "Reverse": {
                 "Active": true,
                 "ReturnFuelFactor": 1.1,
@@ -521,6 +539,7 @@
             "Tiers": { "bronze": true, "silver": true, "gold": true, "platinum": false },
             "Reserve": { "bronze": 10, "silver": 10, "gold": 10, "platinum": 10 },
             "MinMineLevel": { "Metal": 40, "Crystal": 30, "Deuterium": 30 },
+            "EventBoosters": { "Active": true, "ActivateWithinHours": 24 },
             "LogItems": true,
             "Exclude": [],
             "CheckIntervalMin": 30,
@@ -573,6 +592,8 @@
         "PrimaryShip": "LargeCargo",
         "MinPrimaryToSend": 0,
         "PrimaryToKeep": 5000,
+        "SmartShips": false,
+        "SmartMixShip": "SmallCargo",
         "ManualShips": {
             "Active": true,
             "Ships": {
@@ -584,6 +605,11 @@
         },
         "FuelToCarry": 30000,
         "MinDeuteriumOnMoon": 0,
+        "TelegramMessenger": {
+            "Active": false,
+            "OnlyFinds": true,
+            "WindowMinutes": 0
+        },
         "MaxExpeditionsPerOrigin": 5,
         "SplitExpeditionsBetweenSystems": {
             "Active": true,
@@ -731,6 +757,8 @@
             }
         ],
         "ShrinkDiscardPercent": 10,
+        "ResetOnActivate": true,
+        "ResetMinHours": 6,
         "CargoType": "SmallCargo",
         "ProbesPerTarget": 20,
         "SlotsToLeaveFree": 1,
@@ -742,6 +770,7 @@
         "TopTargets": 36,
         "ReportMaxAgeMinutes": 30,
         "DeleteReports": true,
+        "NoReportHours": 24,
         "FleetSpeedPercent": 100,
         "CargoSurplusPercent": 0,
         "MinFillPercent": 50,
@@ -756,6 +785,8 @@
         "MinimumResourcesOwnDF": 3000,
         "MinimumResourcesDeepSpace": 50000,
         "DeepSpaceRange": 30,
+        "ForeignDFRange": 0,
+        "ScanOnlyExpeditionOrigins": false,
         "MaxSlots": 1,
         "CheckIntervalMin": 30,
         "CheckIntervalMax": 60
@@ -811,6 +842,11 @@
         "CheckIntervalMax": 25
     },
     "Experimental": {
+        "CollectLogs": {
+            "Active": false,
+            "Hours": 12,
+            "Anonymize": true
+        },
         "BotPause": {
             "Active": true,
             "DurationMinutes": 15,
@@ -838,13 +874,26 @@
         "GalaxyCache": {
             "Active": true,
             "MaxAgeHours": 12,
+            "ScanAll": true,
+            "HoursPerGalaxy": 1,
+            "FullScanIntervalHours": 24,
+            "UseApi": true,
+            "UseHighscore": true,
+            "HighscoreIntervalHours": 24,
+            "AutoFarmMaxAgeHours": 36,
+            "FastFarmMaxAgeHours": 36,
             "RangeSystems": 15,
-            "DelayMinSeconds": 20,
-            "DelayMaxSeconds": 45,
+            "EmptyMaxAgeHours": 72,
+            "DelayMinSeconds": 4,
+            "DelayMaxSeconds": 8,
             "UseInFastFarm": true,
             "UseInColonize": true,
+            "UseInAutoFarm": true,
             "Events": true,
             "Telegram": true
+        },
+        "ReportReading": {
+            "Expeditions": true
         },
         "RepatriateLedgerHold": {
             "Ignore": false,

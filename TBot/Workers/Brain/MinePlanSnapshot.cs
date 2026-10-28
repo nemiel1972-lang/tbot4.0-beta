@@ -25,6 +25,8 @@ namespace Tbot.Workers.Brain {
 		private static readonly object PlanGate = new();
 		private static readonly Dictionary<string, (DateTime At, List<PlanStep> Steps)> LastPlans = new();
 
+		private static string LfbDiagText = "";
+
 		private static readonly Buildables[] Mines = { Buildables.MetalMine, Buildables.CrystalMine, Buildables.DeuteriumSynthesizer };
 
 		public static void TryWrite(ITBotMain inst, ICalculationService calc, IOgameService ogame, ICollection<Celestial> excluded) {
@@ -57,8 +59,9 @@ namespace Tbot.Workers.Brain {
 						Planet = pl.Name, Coord = pl.Coord, Mine = n.Mine, Level = n.Level, RoiDays = n.RoiDays,
 						CostDeut = n.CostDeut, GainPerDay = n.GainPerDay, EnergyShort = n.EnergyShort
 					})).ToList();
+				ResearchPlanCfg researchCfg = ReadResearchPlanCfg(inst);
 				var research = BuildResearch(calc, planets, inst.UserData.researches, inst.UserData.serverData.Speed, inst.UserData.userInfo.Class,
-					inst.UserData.staff.Geologist, inst.UserData.staff.IsFull);
+					inst.UserData.staff.Geologist, inst.UserData.staff.IsFull, researchCfg);
 				candidates.AddRange(research.Where(r => r.GainPerDay > 0).Select(r => new BestStep {
 					Planet = "Account", Coord = "", Mine = r.Name, Level = r.Level, RoiDays = r.RoiDays,
 					CostDeut = r.CostDeut, GainPerDay = r.GainPerDay, IsResearch = true
@@ -70,8 +73,30 @@ namespace Tbot.Workers.Brain {
 
 				var buildPlan = BuildGlobalPlan(calc, planets, plans.Where(pl => pl.Excluded).Select(pl => pl.Name).ToHashSet(), inst.UserData.researches,
 					inst.UserData.serverData.Speed, inst.UserData.userInfo.Class, inst.UserData.staff.Geologist, inst.UserData.staff.IsFull, rank,
-					new LfEffectsStore(LfEffectsStore.PathFor(alias)), MineCapsOf(inst, planets), LfCapOf(inst), LfPrioOf(inst), LfbCapOf(inst));
+					new LfEffectsStore(LfEffectsStore.PathFor(alias)), MineCapsOf(inst, planets), LfCapOf(inst), LfPrioOf(inst), LfbCapOf(inst), researchCfg);
 
+				string diag = "";
+				try {
+					int lfPlanets = planets.Count(pl => pl.LFBuildings != null && (int) pl.LFtype >= 1 && (int) pl.LFtype <= 4);
+					int lfRows = new LfEffectsStore(LfEffectsStore.PathFor(alias)).CurrentRows().Count;
+					diag = $"LF data loaded for {lfPlanets} of {planets.Count} planets, {lfRows} effect-table rows, payback limit {rank.MaxPaybackDays} days, research included: {(rank.IncludeResearch ? "yes" : "no")}.";
+					var lfsDiag = new LfEffectsStore(LfEffectsStore.PathFor(alias));
+					var capDiag = LfbCapOf(inst);
+					int started = 0, withTable = 0, belowCap = 0, noTargets = 0;
+					foreach (var pl in planets) {
+						int rasse = (int) pl.LFtype;
+						if (rasse < 1 || rasse > 4 || pl.LFBuildings == null) continue;
+						foreach (var b in LfbBoost.Keys.Where(x => (int) x / 1000 == 10 + rasse)) {
+							int cur; try { cur = pl.GetLevel(b); } catch { continue; }
+							if (cur < 1) continue;
+							started++;
+							if (lfsDiag.TableValue((int) b, cur + 1, LfbBoost[b][0].Item2) != null) withTable++;
+							int cap = capDiag(pl, b);
+							if (cap == 0) noTargets++; else if (cur + 1 <= cap) belowCap++;
+						}
+					}
+					diag = $"LF buildings with resource bonus already started: {started}, with level table: {withTable}, below target: {belowCap}, no target values: {noTargets}. First-step calculation: {(string.IsNullOrEmpty(LfbDiagText) ? "none" : LfbDiagText)}. " + diag;
+				} catch { }
 				lock (PlanGate) {
 					LastPlans[alias] = (DateTime.UtcNow, buildPlan);
 				}
@@ -130,7 +155,7 @@ namespace Tbot.Workers.Brain {
 				}
 				if (steps == null || steps.Count == 0 || DateTime.UtcNow - at > TimeSpan.FromHours(6))
 					return false;
-				var first = steps.Take(lookahead).ToList();
+				var first = steps.Where(x => !x.IsResearch).Take(lookahead).ToList();
 				if (first.Any(s => !s.IsResearch && s.Planet == planetName))
 					return false;
 				var top = first.FirstOrDefault(s => !s.IsResearch);
@@ -160,13 +185,48 @@ namespace Tbot.Workers.Brain {
 				}
 				if (steps == null || steps.Count == 0 || DateTime.UtcNow - at > TimeSpan.FromHours(6))
 					return false;
-				var step = steps.Take(lookahead).FirstOrDefault(x => !x.IsResearch && x.Planet == planetName);
+				var step = steps.Where(x => !x.IsResearch).Take(lookahead).FirstOrDefault(x => x.Planet == planetName);
 				if (step == null)
 					return false;
 				mine = step.What.StartsWith("Metal") ? Buildables.MetalMine : step.What.StartsWith("Crystal") ? Buildables.CrystalMine : step.What.StartsWith("Deuterium") ? Buildables.DeuteriumSynthesizer : Buildables.Null;
 				level = step.Level;
 				roiDays = step.RoiDays;
 				return mine != Buildables.Null;
+			} catch {
+				return false;
+			}
+		}
+
+		public static bool TryPlanPickLf(ITBotMain inst, string planetName, out LFBuildables building, out int level) {
+			building = LFBuildables.None; level = 0;
+			try {
+				var g = inst.InstanceSettings;
+				if (!SettingsService.IsSettingSet(g, "Experimental") || !SettingsService.IsSettingSet(g.Experimental, "MinePlanRanking"))
+					return false;
+				var r = g.Experimental.MinePlanRanking;
+				if (!SettingsService.IsSettingSet(r, "UsePlanForAutoMine") || !(bool) r.UsePlanForAutoMine)
+					return false;
+				int lookahead = SettingsService.IsSettingSet(r, "PlanLookahead") ? Math.Max(1, (int) r.PlanLookahead) : 12;
+				List<PlanStep> steps;
+				DateTime at;
+				lock (PlanGate) {
+					if (!LastPlans.TryGetValue(inst.InstanceAlias, out var e))
+						return false;
+					(at, steps) = e;
+				}
+				if (steps == null || steps.Count == 0 || DateTime.UtcNow - at > TimeSpan.FromHours(6))
+					return false;
+				var step = steps.Where(x => x.IsLfBuilding).Take(lookahead).FirstOrDefault(x => x.Planet == planetName);
+				if (step == null)
+					return false;
+				string name = step.What.Replace("LF building:", "").Trim();
+				int sp = name.IndexOf(' ');
+				if (sp > 0) name = name.Substring(0, sp);
+				if (!Enum.TryParse(name, out LFBuildables b) || b == LFBuildables.None)
+					return false;
+				building = b;
+				level = step.Level;
+				return true;
 			} catch {
 				return false;
 			}
@@ -183,7 +243,7 @@ namespace Tbot.Workers.Brain {
 						li.Lookahead = Math.Max(1, (int) r.PlanLookahead);
 				}
 				if (plan != null) {
-					li.Next = plan.Take(li.Lookahead).ToList();
+					li.Next = plan.Where(x => !x.IsResearch).Take(li.Lookahead).ToList();
 					li.Planets = li.Next.Where(s => !s.IsResearch).Select(s => s.Planet).Distinct().ToList();
 				}
 			} catch {
@@ -203,7 +263,7 @@ namespace Tbot.Workers.Brain {
 		}
 
 		private static List<PlanStep> BuildGlobalPlan(ICalculationService calc, List<Planet> planets, HashSet<string> excludedNames, Researches r, int speed,
-			CharacterClass cls, bool geo, bool staff, RankConfig rank, LfEffectsStore lfStore = null, Dictionary<int, int[]> caps = null, Func<string, int> lfCap = null, List<int> lfPrio = null, Func<Planet, LFBuildables, int> lfbCap = null) {
+			CharacterClass cls, bool geo, bool staff, RankConfig rank, LfEffectsStore lfStore = null, Dictionary<int, int[]> caps = null, Func<string, int> lfCap = null, List<int> lfPrio = null, Func<Planet, LFBuildables, int> lfbCap = null, ResearchPlanCfg rc = null) {
 			var result = new List<PlanStep>();
 			try {
 				var ps = planets.Where(p => p.Buildings != null && p.Coordinate != null && p.Temperature != null && !excludedNames.Contains(p.ToString())).ToList();
@@ -241,7 +301,7 @@ namespace Tbot.Workers.Brain {
 				var lfbOpts = new List<LFBuildables>[n];
 				for (int i = 0; i < n; i++) {
 					lfbOpts[i] = new List<LFBuildables>();
-					if (lfStore == null || lfbCap == null || !rank.IncludeResearch) continue;
+					if (lfStore == null || lfbCap == null) continue;
 					int rasse = (int) ps[i].LFtype;
 					if (rasse < 1 || rasse > 4 || ps[i].LFBuildings == null) continue;
 					foreach (var b in LfbBoost.Keys.Where(x => (int) x / 1000 == 10 + rasse)) {
@@ -252,10 +312,41 @@ namespace Tbot.Workers.Brain {
 						lfbOpts[i].Add(b);
 					}
 				}
+				var lfbDg = new List<string>();
+				bool cheap = rank.Mode == RankMode.Cheapest;
+				Func<float, bool> roiOk = roi => roi > 0 && ((cheap && !rank.OnlySensible) || roi <= rank.MaxPaybackDays);
+				Func<long, float, PlanStep, bool> better = (cst, roi, cur) => cur == null || (cheap ? (cst < cur.CostDeut || (cst == cur.CostDeut && roi < cur.RoiDays)) : roi < cur.RoiDays);
 				int plasma = r.PlasmaTechnology;
+				int astro = r.Astrophysics;
+				Func<(long cost, float gain, float roi)> plasmaNext = () => {
+					float g = 0;
+					for (int i = 0; i < n; i++)
+						for (int k = 0; k < 3; k++)
+							if (lv[i][k] > 0)
+								g += ToDayDeut(Mines[k], HourProdPlasma(calc, Mines[k], lv[i][k], ps[i], plasma + 1, speed, cls, geo, staff) - HourProdPlasma(calc, Mines[k], lv[i][k], ps[i], plasma, speed, cls, geo, staff));
+					long c = PlasmaCost(calc, planets, plasma + 1);
+					return (c, g, MinePlanRanking.PaybackDays(c, g));
+				};
 				try {
-					for (int no = 1; no <= 60; no++) {
+					for (int no = 1; no <= MaxPlanSteps; no++) {
 						_plasmaSim = plasma;
+						if (rank.IncludeResearch && rc != null) {
+							PlanStep forced = null;
+							if (ForcedResearch(rc, plasma, astro) == 1) {
+								var pn = plasmaNext();
+								forced = new PlanStep { Planet = "Account", Coord = "", What = "Plasma technology", Level = plasma + 1, CostDeut = pn.cost, GainPerDay = pn.gain, RoiDays = pn.roi, IsResearch = true };
+								plasma++;
+							} else if (ForcedResearch(rc, plasma, astro) == 2) {
+								forced = new PlanStep { Planet = "Account", Coord = "", What = "Astrophysics", Level = astro + 1, CostDeut = CostDeut(calc.CalcPrice(Buildables.Astrophysics, astro + 1)), GainPerDay = 0, RoiDays = 0, IsResearch = true };
+								astro++;
+							}
+							if (forced != null) {
+								if (forced.CostDeut >= PlanCostLimit) break;
+								forced.No = no;
+								result.Add(forced);
+								continue;
+							}
+						}
 						PlanStep best = null;
 						int bi = -1, bk = -1;
 						StepInfo bs = null;
@@ -264,23 +355,19 @@ namespace Tbot.Workers.Brain {
 								if (caps != null && caps.TryGetValue(ps[i].ID, out var cp) && lv[i][k] + 1 > cp[k])
 									continue;
 								var st = Step(calc, ps[i], Mines[k], lv[i][k] + 1, en[i], r, speed, cls, geo, staff, extras[i][k]);
-								if (st.RoiDays <= 0 || st.RoiDays > rank.MaxPaybackDays)
+								if (!roiOk(st.RoiDays))
 									continue;
-								if (best == null || st.RoiDays < best.RoiDays || (st.RoiDays == best.RoiDays && st.CostDeut < best.CostDeut)) {
+								if (cheap ? better(st.CostDeut, st.RoiDays, best) : (best == null || st.RoiDays < best.RoiDays || (st.RoiDays == best.RoiDays && st.CostDeut < best.CostDeut))) {
 									best = new PlanStep { Planet = ps[i].ToString(), Coord = ps[i].Coordinate.ToString(), What = MineName(Mines[k]) + " mine", Level = st.Level, CostDeut = st.CostDeut, GainPerDay = st.GainPerDay, RoiDays = st.RoiDays, EnergyShort = st.EnergyShort };
 									bi = i; bk = k; bs = st;
 								}
 							}
 						}
-						if (rank.IncludeResearch) {
-							float gain = 0;
-							for (int i = 0; i < n; i++)
-								for (int k = 0; k < 3; k++)
-									if (lv[i][k] > 0)
-										gain += ToDayDeut(Mines[k], HourProdPlasma(calc, Mines[k], lv[i][k], ps[i], plasma + 1, speed, cls, geo, staff) - HourProdPlasma(calc, Mines[k], lv[i][k], ps[i], plasma, speed, cls, geo, staff));
-							long cost = PlasmaCost(calc, planets, plasma + 1);
-							float roi = MinePlanRanking.PaybackDays(cost, gain);
-							if (roi > 0 && roi <= rank.MaxPaybackDays && (best == null || roi < best.RoiDays)) {
+						if (rank.IncludeResearch && PlasmaAllowed(rc, plasma)) {
+							var pnx = plasmaNext();
+							long cost = pnx.cost; float gain = pnx.gain, roi = pnx.roi;
+							if (no == 1) lfbDg.Add($"Plasma technology L{plasma + 1}: cost {cost:N0}, gain/day {gain:N0}, payback {roi:F0} d");
+							if (roiOk(roi) && better(cost, roi, best)) {
 								best = new PlanStep { Planet = "Account", Coord = "", What = "Plasma technology", Level = plasma + 1, CostDeut = cost, GainPerDay = gain, RoiDays = roi, IsResearch = true };
 								bi = -1; bs = null;
 							}
@@ -314,7 +401,7 @@ namespace Tbot.Workers.Brain {
 								float lfGain = ToDayDeut(Mines[k], (float) delta * HourProd(calc, Mines[k], lv[i][k], ps[i], r, speed, cls, geo, staff, false));
 								long lfCost = calc.CalcPrice((LFTechno) row.TechId, cur + 1).ConvertedDeuterium;
 								float lfRoi = MinePlanRanking.PaybackDays(lfCost, lfGain);
-								if (lfRoi > 0 && lfRoi <= rank.MaxPaybackDays && (best == null || lfRoi < best.RoiDays)) {
+								if (roiOk(lfRoi) && better(lfCost, lfRoi, best)) {
 									best = new PlanStep { Planet = ps[i].ToString(), Coord = ps[i].Coordinate.ToString(), What = "LF: " + ((LFTechno) row.TechId) + " (" + MineName(Mines[k]) + ")", Level = cur + 1, CostDeut = lfCost, GainPerDay = lfGain, RoiDays = lfRoi, IsResearch = true };
 									bi = -1; bs = null; lfi = i; lft = row.TechId;
 								}
@@ -322,7 +409,7 @@ namespace Tbot.Workers.Brain {
 						}
 						int lfbI = -1, lfbDeltaE = 0;
 						LFBuildables lfbB = LFBuildables.None;
-						for (int i = 0; i < n && rank.IncludeResearch; i++) {
+						for (int i = 0; i < n; i++) {
 							foreach (var b in lfbOpts[i]) {
 								int cur = lfbLevel[(i, b)], nxt = cur + 1;
 								if (nxt > lfbCap(ps[i], b))
@@ -335,10 +422,15 @@ namespace Tbot.Workers.Brain {
 									if (lv[i][k] <= 0) continue;
 									lfbGain += ToDayDeut(Mines[k], (float) ((vn.Value - vc.Value) / 100.0) * HourProd(calc, Mines[k], lv[i][k], ps[i], r, speed, cls, geo, staff, false));
 								}
+								if (no == 1) {
+									if (!vorhanden) lfbDg.Add($"{ps[i].Name} {b} L{nxt}: level table incomplete");
+									else if (lfbGain <= 0) lfbDg.Add($"{ps[i].Name} {b} L{nxt}: no gain (mine level 0 or no bonus step)");
+								}
 								if (!vorhanden || lfbGain <= 0) continue;
 								long lfbCost = calc.CalcPrice(b, nxt).ConvertedDeuterium;
 								float lfbRoi = MinePlanRanking.PaybackDays(lfbCost, lfbGain);
-								if (lfbRoi > 0 && lfbRoi <= rank.MaxPaybackDays && (best == null || lfbRoi < best.RoiDays)) {
+								if (no == 1) lfbDg.Add($"{ps[i].Name} {b} L{nxt}: cost {lfbCost:N0}, gain/day {lfbGain:N0}, payback {lfbRoi:F0} d");
+								if (roiOk(lfbRoi) && better(lfbCost, lfbRoi, best)) {
 									double? en1 = lfStore.TableValue((int) b, nxt, "energy_consumption"), en0 = cur <= 0 ? 0 : lfStore.TableValue((int) b, cur, "energy_consumption");
 									int dE = (en1.HasValue && en0.HasValue) ? (int) Math.Round(en1.Value - en0.Value) : 0;
 									long nachher = en[i] + dE;
@@ -347,7 +439,7 @@ namespace Tbot.Workers.Brain {
 								}
 							}
 						}
-						if (best == null)
+						if (best == null || best.CostDeut >= PlanCostLimit)
 							break;
 						best.No = no;
 						if (lfbI >= 0) {
@@ -368,6 +460,7 @@ namespace Tbot.Workers.Brain {
 					}
 				} finally {
 					_plasmaSim = 0;
+					LfbDiagText = string.Join(" | ", lfbDg.Take(10));
 				}
 			} catch {
 			}
@@ -464,6 +557,37 @@ namespace Tbot.Workers.Brain {
 
 		private static int MineOfTarget(string target) => target == "metal" ? 0 : target == "crystal" ? 1 : target == "deuterium" ? 2 : -1;
 
+		internal const int MaxPlanSteps = 50;
+
+		internal const long PlanCostLimit = 1_000_000_000_000_000L;
+
+		internal sealed class ResearchPlanCfg {
+			public int MaxPlasma = int.MaxValue, MaxAstro = 0;
+			public bool PrioPlasma, PrioAstro;
+		}
+
+		internal static bool PlasmaAllowed(ResearchPlanCfg rc, int plasma) => rc == null || plasma + 1 <= rc.MaxPlasma;
+
+		internal static int ForcedResearch(ResearchPlanCfg rc, int plasma, int astro) {
+			if (rc == null) return 0;
+			if (rc.PrioPlasma && plasma + 1 <= rc.MaxPlasma) return 1;
+			if (rc.PrioAstro && astro + 1 <= rc.MaxAstro) return 2;
+			return 0;
+		}
+
+		private static ResearchPlanCfg ReadResearchPlanCfg(ITBotMain inst) {
+			var c = new ResearchPlanCfg();
+			try {
+				dynamic ar = inst.InstanceSettings.Brain.AutoResearch;
+				if (SettingsService.IsSettingSet(ar, "MaxPlasmaTechnology")) c.MaxPlasma = (int) ar.MaxPlasmaTechnology;
+				if (SettingsService.IsSettingSet(ar, "MaxAstrophysics")) c.MaxAstro = (int) ar.MaxAstrophysics;
+				if (SettingsService.IsSettingSet(ar, "PrioritizePlasmaTechnology")) c.PrioPlasma = (bool) ar.PrioritizePlasmaTechnology;
+				if (SettingsService.IsSettingSet(ar, "PrioritizeAstrophysics")) c.PrioAstro = (bool) ar.PrioritizeAstrophysics;
+			} catch {
+			}
+			return c;
+		}
+
 		private static RankConfig ReadRankConfig(ITBotMain inst) {
 			RankConfig c = new();
 			try {
@@ -513,7 +637,7 @@ namespace Tbot.Workers.Brain {
 		private static long CostDeut(Resources price) =>
 			(long) Math.Round(price.Metal / MetalPerDeut + price.Crystal / CrystalPerDeut + price.Deuterium);
 
-		private static List<ResearchStep> BuildResearch(ICalculationService calc, List<Planet> planets, Researches r, int speed, CharacterClass cls, bool geo, bool staff) {
+		private static List<ResearchStep> BuildResearch(ICalculationService calc, List<Planet> planets, Researches r, int speed, CharacterClass cls, bool geo, bool staff, ResearchPlanCfg rc = null) {
 			var list = new List<ResearchStep>();
 			try {
 				int plasma = r.PlasmaTechnology;
@@ -529,6 +653,7 @@ namespace Tbot.Workers.Brain {
 					}
 				}
 				long plasmaCost = PlasmaCost(calc, planets, plasma + 1);
+				if (PlasmaAllowed(rc, plasma))
 				list.Add(new ResearchStep {
 					Name = "Plasma technology", Level = plasma + 1, CostDeut = plasmaCost, GainPerDay = plasmaGain,
 					RoiDays = MinePlanRanking.PaybackDays(plasmaCost, plasmaGain),
@@ -789,6 +914,7 @@ namespace Tbot.Workers.Brain {
 
 		public sealed class PlanFile {
 			public string UpdatedUtc;
+			public string Diag;
 			public long BudgetDeutPerDay;
 			public Tbot.Services.ExpoFindsStore.Summary Expo;
 			public List<PlanStep> BuildPlan;

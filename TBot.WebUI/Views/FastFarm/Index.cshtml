@@ -195,6 +195,24 @@
                 } catch (e) { /* Anzeige bleibt trotzdem sortiert */ }
                 return;
             }
+            const sa = ev.target.closest(".ff-scanattack");
+            if (sa) {
+                const c = sa.dataset.coord;
+                if (!window.confirm(`Spy ${c} again and attack it alone if it passes all AutoFarm checks? (2 fleet slots are reserved meanwhile; if it fails the target is dropped.)`)) return;
+                sa.disabled = true;
+                try {
+                    const r = await (await fetch('@Url.Action("Command", "AutoFarm")', { method: "POST", body: new URLSearchParams({ instance, cmd: "attackDefendedNow", coord: c }) })).json();
+                    if (r.success) {
+                        try { await fetch('@Url.Action("DeleteTargets", "FastFarm")', { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ instance, keys: c }).toString() }); } catch (e) { }
+                        deletedKeys.add(c);
+                        sa.textContent = "Queued";
+                        render();
+                    } else {
+                        sa.textContent = "Failed: " + r.error;
+                    }
+                } catch (e) { sa.textContent = "Failed"; }
+                return;
+            }
             const del = ev.target.closest(".ff-del");
             if (del) {
                 const key = del.dataset.key;
@@ -221,10 +239,17 @@
                 }
             });
             const rows = Object.entries(groups).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td>${esc(k)}</td><td>${num(n)}</td></tr>`).join("");
+            const def = Object.entries((s && s.targets) || {})
+                .filter(([k, t]) => !deletedKeys.has(k) && t.blockReason === "Defended" && t.blockedUntilUtc && new Date(t.blockedUntilUtc).getTime() > Date.now() && (t.metal + t.crystal + t.deuterium) > 0)
+                .sort((a, b) => b[1].weighted - a[1].weighted).slice(0, 100);
+            const defRows = def.map(([k, t]) => `<tr><td>${esc(mask(coord(t)))}<br><span class="muted">${esc(mask(t.player || ""))}</span></td><td>${num(t.metal)} / ${num(t.crystal)} / <strong>${num(t.deuterium)}</strong></td><td>${esc(t.defDefence || "none")}</td><td>${esc(t.defShips || "none")}</td><td><button type="button" class="ff-scanattack" data-coord="${esc(k)}">Scan + attack</button></td></tr>`).join("");
+            const defPanel = def.length ? `<div class="table-wrap"><table><thead><tr><th>Defended target</th><th>Met / Kris / Deut</th><th>Defence</th><th>Ships</th><th></th></tr></thead><tbody>${defRows}</tbody></table></div>
+                <p class="muted">Sorted by value. "Scan + attack" hands one target to the AutoFarm worker: it spies it again, checks all AutoFarm limits (only the Attack Defended Targets switch is ignored) and attacks it with an escort, or drops it. AutoFarm needs a complete configuration for this.</p>` : "";
             const hints = { Defended: "Has ships or defence.", NoInfo: "The report was incomplete.", Active: "Turned active again.", NoReport: "No report arrived (probes lost)." };
             return `<section class="panel">
                 <div class="panel-heading"><h2>Targets that are skipped for now</h2></div>
                 <div class="table-wrap"><table><thead><tr><th>Reason</th><th>Targets</th></tr></thead><tbody>${rows ? Object.entries(groups).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td>${esc(k)} <span class="muted">${esc(hints[k] || "")}</span></td><td>${num(n)}</td></tr>`).join("") : empty(2, "None.")}</tbody></table></div>
+                ${defPanel}
             </section>`;
         }
 

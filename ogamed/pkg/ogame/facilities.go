@@ -6,44 +6,47 @@ import (
 
 type LazyFacilities func() Facilities
 
-func (f LazyFacilities) GetRoboticsFactory() int64 { return f().RoboticsFactory }
-func (f LazyFacilities) GetShipyard() int64        { return f().Shipyard }
-func (f LazyFacilities) GetResearchLab() int64     { return f().ResearchLab }
-func (f LazyFacilities) GetAllianceDepot() int64   { return f().AllianceDepot }
-func (f LazyFacilities) GetMissileSilo() int64     { return f().MissileSilo }
-func (f LazyFacilities) GetNaniteFactory() int64   { return f().NaniteFactory }
-func (f LazyFacilities) GetTerraformer() int64     { return f().Terraformer }
-func (f LazyFacilities) GetSpaceDock() int64       { return f().SpaceDock }
-func (f LazyFacilities) GetLunarBase() int64       { return f().LunarBase }
-func (f LazyFacilities) GetSensorPhalanx() int64   { return f().SensorPhalanx }
-func (f LazyFacilities) GetJumpGate() int64        { return f().JumpGate }
-func (f LazyFacilities) ByID(id ID) int64          { return f().ByID(id) }
+func (f LazyFacilities) GetRoboticsFactory() int64            { return f().RoboticsFactory }
+func (f LazyFacilities) GetShipyard() int64                   { return f().Shipyard }
+func (f LazyFacilities) GetResearchLab() int64                { return f().ResearchLab }
+func (f LazyFacilities) GetAllianceDepot() int64              { return f().AllianceDepot }
+func (f LazyFacilities) GetMissileSilo() int64                { return f().MissileSilo }
+func (f LazyFacilities) GetNaniteFactory() int64              { return f().NaniteFactory }
+func (f LazyFacilities) GetTerraformer() int64                { return f().Terraformer }
+func (f LazyFacilities) GetSpaceDock() int64                  { return f().SpaceDock }
+func (f LazyFacilities) GetLunarBase() int64                  { return f().LunarBase }
+func (f LazyFacilities) GetSensorPhalanx() int64              { return f().SensorPhalanx }
+func (f LazyFacilities) GetJumpGate() int64                   { return f().JumpGate }
+func (f LazyFacilities) GetInterstellarAnomalyScanner() int64 { return f().InterstellarAnomalyScanner }
+func (f LazyFacilities) ByID(id ID) int64                     { return f().ByID(id) }
 
 type Facilities struct {
-	RoboticsFactory int64
-	Shipyard        int64
-	ResearchLab     int64
-	AllianceDepot   int64
-	MissileSilo     int64
-	NaniteFactory   int64
-	Terraformer     int64
-	SpaceDock       int64
-	LunarBase       int64
-	SensorPhalanx   int64
-	JumpGate        int64
+	RoboticsFactory            int64
+	Shipyard                   int64
+	ResearchLab                int64
+	AllianceDepot              int64
+	MissileSilo                int64
+	NaniteFactory              int64
+	Terraformer                int64
+	SpaceDock                  int64
+	LunarBase                  int64
+	SensorPhalanx              int64
+	JumpGate                   int64
+	InterstellarAnomalyScanner int64
 }
 
-func (f Facilities) GetRoboticsFactory() int64 { return f.RoboticsFactory }
-func (f Facilities) GetShipyard() int64        { return f.Shipyard }
-func (f Facilities) GetResearchLab() int64     { return f.ResearchLab }
-func (f Facilities) GetAllianceDepot() int64   { return f.AllianceDepot }
-func (f Facilities) GetMissileSilo() int64     { return f.MissileSilo }
-func (f Facilities) GetNaniteFactory() int64   { return f.NaniteFactory }
-func (f Facilities) GetTerraformer() int64     { return f.Terraformer }
-func (f Facilities) GetSpaceDock() int64       { return f.SpaceDock }
-func (f Facilities) GetLunarBase() int64       { return f.LunarBase }
-func (f Facilities) GetSensorPhalanx() int64   { return f.SensorPhalanx }
-func (f Facilities) GetJumpGate() int64        { return f.JumpGate }
+func (f Facilities) GetRoboticsFactory() int64            { return f.RoboticsFactory }
+func (f Facilities) GetShipyard() int64                   { return f.Shipyard }
+func (f Facilities) GetResearchLab() int64                { return f.ResearchLab }
+func (f Facilities) GetAllianceDepot() int64              { return f.AllianceDepot }
+func (f Facilities) GetMissileSilo() int64                { return f.MissileSilo }
+func (f Facilities) GetNaniteFactory() int64              { return f.NaniteFactory }
+func (f Facilities) GetTerraformer() int64                { return f.Terraformer }
+func (f Facilities) GetSpaceDock() int64                  { return f.SpaceDock }
+func (f Facilities) GetLunarBase() int64                  { return f.LunarBase }
+func (f Facilities) GetSensorPhalanx() int64              { return f.SensorPhalanx }
+func (f Facilities) GetJumpGate() int64                   { return f.JumpGate }
+func (f Facilities) GetInterstellarAnomalyScanner() int64 { return f.InterstellarAnomalyScanner }
 
 func (f Facilities) Lazy() LazyFacilities {
 	return func() Facilities { return f }
@@ -73,6 +76,8 @@ func (f Facilities) ByID(id ID) int64 {
 		return f.GetSensorPhalanx()
 	case JumpGateID:
 		return f.GetJumpGate()
+	case InterstellarAnomalyScannerID:
+		return f.GetInterstellarAnomalyScanner()
 	}
 	return 0
 }

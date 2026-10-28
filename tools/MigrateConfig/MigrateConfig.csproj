@@ -13,6 +13,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <!-- Standard: Vorlage aus dem Repo. Die Paketskripte uebergeben die fuer das Paket bereinigte Vorlage (ohne Auktions-Block). -->
     <TemplatePath Condition="'$(TemplatePath)' == ''">$(MSBuildThisFileDirectory)../../config/config.vorlage.json</TemplatePath>
+    <RemovedPath Condition="'$(RemovedPath)' == ''">$(MSBuildThisFileDirectory)../../config/removed_keys.txt</RemovedPath>
     <TargetsPath Condition="'$(TargetsPath)' == ''">$(MSBuildThisFileDirectory)../../config/lifeform_targets.json</TargetsPath>
   </PropertyGroup>
 
@@ -20,6 +21,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <EmbeddedResource Include="$(TemplatePath)" LogicalName="config.vorlage.json" />
     <EmbeddedResource Include="$(TargetsPath)" LogicalName="lifeform_targets.json" />
+    <EmbeddedResource Include="$(RemovedPath)" LogicalName="removed_keys.txt" />
   </ItemGroup>
 
 </Project>

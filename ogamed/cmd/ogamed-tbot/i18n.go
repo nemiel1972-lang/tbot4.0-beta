@@ -46,6 +46,7 @@ var tileTexts = map[string]map[string]string{
 		"LF mines":                                   "LF-Minen",
 		"LF research":                                "LF-Forschung",
 		"Daily offer":                                "Tagesangebot",
+		"Jump gate":                                  "Sprungtor",
 		"Colonizer":                                  "Kolonisierer",
 	},
 }

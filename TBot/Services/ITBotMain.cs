@@ -31,6 +31,7 @@ namespace Tbot.Services {
 		Task InitializeFeature(Feature feat);
 		Task StopFeature(Feature feat);
 		bool IsFeatureRunning(Feature feat);
+		IFleetScheduler FleetScheduler { get; }
 		Task SendTelegramMessage(string fmt, bool mirrorToDiscord = true);
 		Task<bool> SendDiscordMessage(string fmt, NotificationKind kind = NotificationKind.Information);
 		Task<bool> TelegramSwitch(decimal speed, Celestial attacked = null, bool fromTelegram = false);

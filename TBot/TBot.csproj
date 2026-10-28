@@ -40,6 +40,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Tests duerfen interne Klassen (z. B. RewardingLogic) sehen -->
+    <InternalsVisibleTo Include="TBot.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="tbot.ico" />
     <None Include="..\config\whatsnew.json" Link="whatsnew.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\config\config.vorlage.json" Link="config.vorlage.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

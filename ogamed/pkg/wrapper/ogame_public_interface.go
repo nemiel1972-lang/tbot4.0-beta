@@ -727,11 +727,11 @@ func (b *OGame) GetChapter(chapterID int64) (ogame.Chapter, error) {
 	return b.WithPriority(taskRunner.Normal).GetChapter(chapterID)
 }
 
-func (b *OGame) ChapterClaimAll(chapterID int64) error {
+func (b *OGame) ChapterClaimAll(chapterID int64) ([]byte, error) {
 	return b.WithPriority(taskRunner.Normal).ChapterClaimAll(chapterID)
 }
 
-func (b *OGame) ChapterCollectReward(taskID int64) error {
+func (b *OGame) ChapterCollectReward(taskID int64) ([]byte, error) {
 	return b.WithPriority(taskRunner.Normal).ChapterCollectReward(taskID)
 }
 

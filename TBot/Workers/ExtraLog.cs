@@ -33,6 +33,7 @@ namespace Tbot.Workers {
 					case "ShadowFleet": return !SettingsService.IsSettingSet(x, "ShadowFleet") || (bool) x.ShadowFleet;
 					case "Requests": return !SettingsService.IsSettingSet(x, "Requests") || (bool) x.Requests;
 					case "BrowserProxy": return !SettingsService.IsSettingSet(x, "BrowserProxy") || (bool) x.BrowserProxy;
+					case "Directives": return !SettingsService.IsSettingSet(x, "Directives") || (bool) x.Directives;
 					case "FleetTargets": return !SettingsService.IsSettingSet(x, "FleetTargets") || (bool) x.FleetTargets;
 					default: return false;
 				}
@@ -71,7 +72,7 @@ namespace Tbot.Workers {
 
 		private static bool KnownTopic(string thema) =>
 			thema == "Repatriate" || thema == "Ledger" || thema == "BotPause" || thema == "DefenderRecheck" || thema == "FleetsaveSlot"
-			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets";
+			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets" || thema == "Directives";
 
 		private static DateTime _letzteAufraeumung = DateTime.MinValue;
 		private static void RaeumeAuf(string dir) {
@@ -88,16 +89,17 @@ namespace Tbot.Workers {
 
 		public static void Write(ITBotMain inst, string thema, string text) {
 			try {
-				if (!Aktiv(inst, thema))
+				TBot.Common.Logging.CollectLogs.WriteExtra(thema, text);
+				if (!TBot.Common.Logging.CollectLogs.IsRunning || !Aktiv(inst, thema))
 					return;
-				string dir = Path.Combine(Directory.GetCurrentDirectory(), "devlog");
+				string dir = Path.Combine(Directory.GetCurrentDirectory(), "devlogs");
 				Directory.CreateDirectory(dir);
 				RaeumeAuf(dir);
 				string datei = Path.Combine(dir, $"TBot-debug-{DateTime.Now:yyyyMMdd}.log");
 				lock (_lock) {
 					if (File.Exists(datei) && new FileInfo(datei).Length > MaxBytesProTag)
 						return;
-					File.AppendAllText(datei, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{thema}] {Anonymisiere(inst, text)}{Environment.NewLine}");
+					File.AppendAllText(datei, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{thema}] {(TBot.Common.Logging.CollectLogs.AnonymizeEnabled ? Anonymisiere(inst, text) : text)}{Environment.NewLine}");
 				}
 			} catch (Exception) {
 			}

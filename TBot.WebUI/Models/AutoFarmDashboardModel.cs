@@ -20,8 +20,27 @@ namespace TBot.WebUI.Models {
 		public IReadOnlyList<AutoFarmBlacklistRow> Blacklist { get; init; } = Array.Empty<AutoFarmBlacklistRow>();
 		public int PendingCommands { get; init; }
 		public AutoFarmDeuteriumStatus Deuterium { get; init; } = new();
+		public GalaxyScanStatus Galaxy { get; init; } = new();
 
 		public int PendingAttackCount => Reports.Count(report => report.State == "AttackPending");
+	}
+
+	public sealed class GalaxyScanStatus {
+		public bool Available { get; init; }
+		public int TotalSystems { get; init; }
+		public int FreshSystems { get; init; }
+		public int KnownSystems { get; init; }
+		public double Percent { get; init; }
+		public string LastCoord { get; init; } = string.Empty;
+		public string LastKind { get; init; } = string.Empty;
+		public DateTime? LastUtc { get; init; }
+		public double? EtaSeconds { get; init; }
+		public DateTime? NextDueUtc { get; init; }
+		public int Players { get; init; }
+		public int InactivePlayers { get; init; }
+		public int Targets { get; init; }
+		public int Colonies { get; init; }
+		public DateTime? HighscoreUtc { get; init; }
 	}
 
 	public sealed class AutoFarmDeuteriumOrigin {
@@ -45,6 +64,14 @@ namespace TBot.WebUI.Models {
 		public string Reason { get; init; } = string.Empty;
 		public DateTime? BlacklistedAtUtc { get; init; }
 		public DateTime? ExpiresAtUtc { get; init; }
+		public bool HasReport { get; set; }
+		public DateTime? ReportDateUtc { get; set; }
+		public long Metal { get; set; }
+		public long Crystal { get; set; }
+		public long Deuterium { get; set; }
+		public string Ships { get; set; } = string.Empty;
+		public string Defence { get; set; } = string.Empty;
+		public string Player { get; set; } = string.Empty;
 	}
 
 	public sealed class AutoFarmLossShip {

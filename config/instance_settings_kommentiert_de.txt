@@ -1,0 +1,1577 @@
+## ===================================================================================================
+## TBot - instance_settings.json, kommentierte Referenz (Stand Testserver, 23.10.2026)
+## Zeilen mit ## sind Erklaerungen. Diese Datei ist KEINE lauffaehige Konfiguration (JSON kennt keine Kommentare):
+## vor dem Benutzen alle ##-Zeilen loeschen, Zugangsdaten und Koordinaten einsetzen.
+## ===================================================================================================
+{
+  ## Version des Konfigurationsformats. Nicht aendern.
+  "ConfigVersion": 4,
+  ## ZUGANGSDATEN: Gameforge-Login, Universum, Sprache. Nie weitergeben!
+  "Credentials": {
+    ## Name deines Universums genau so, wie er in der Gameforge-Lobby steht.
+    "Universe": "UNIVERSE",
+    ## E-Mail-Adresse deines Gameforge-Kontos.
+    "Email": "mail@example.com",
+    ## Passwort deines Gameforge-Kontos. Es steht in secrets/credentials, nicht in der normalen Config.
+    "Password": "CHANGE_ME",
+    ## Sprachcode des Spielservers.
+    "Language": "de",
+    ## Nur einschalten, wenn dein Konto über die Pioneers-Lobby einloggt.
+    "LobbyPioneers": false,
+    "BasicAuth": {
+      ## Benutzername/Passwort fuer Basic-Auth der WebUI (leer = aus).
+      "Username": "",
+      ## Benutzername/Passwort fuer Basic-Auth der WebUI (leer = aus).
+      "Password": ""
+    },
+    "DeviceConf": {
+      ## Browser-Fingerabdruck: Gerätename. Stimmig lassen und nicht oft ändern.
+      "Name": "Device-name",
+      ## Browser-Fingerabdruck: Betriebssystem des Geräts. Stimmig lassen und nicht oft ändern.
+      "System": "Windows",
+      ## Browser-Fingerabdruck: Browsername. Stimmig lassen und nicht oft ändern.
+      "Browser": "Chrome",
+      ## Browser-Fingerabdruck: User-Agent-Text des Browsers. Stimmig lassen und nicht oft ändern.
+      "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      ## Browser-Fingerabdruck: Arbeitsspeicher in GB (Browser-Angabe). Stimmig lassen und nicht oft ändern.
+      "Memory": 8,
+      ## Browser-Fingerabdruck: Anzahl CPU-Threads (Browser-Angabe). Stimmig lassen und nicht oft ändern.
+      "Concurrency": 16,
+      ## Browser-Fingerabdruck: Farbtiefe in Bit. Stimmig lassen und nicht oft ändern.
+      "Color": 24,
+      ## Browser-Fingerabdruck: Bildschirmbreite in Pixel. Stimmig lassen und nicht oft ändern.
+      "Width": 1920,
+      ## Browser-Fingerabdruck: Bildschirmhöhe in Pixel. Stimmig lassen und nicht oft ändern.
+      "Height": 1080,
+      ## Browser-Fingerabdruck: Zeitzone, z. B. Europe/Berlin. Stimmig lassen und nicht oft ändern.
+      "Timezone": "Europe/Berlin",
+      ## Browser-Fingerabdruck: Browsersprache. Stimmig lassen und nicht oft ändern.
+      "Lang": "de"
+    }
+  },
+  ## ALLGEMEIN: Host/Port der WebUI, Proxy, Slots, Slot-Prioritaeten.
+  "General": {
+    ## Adresse des lokalen ogamed-Connectors, mit dem der Bot spricht. Normalerweise 127.0.0.1.
+    "Host": "localhost",
+    ## Port des lokalen ogamed-Connectors. Nur ändern, wenn dieser Port schon belegt ist.
+    "Port": "8080",
+    "Proxy": {
+      ## Datenverkehr über einen Proxy leiten.
+      "Enabled": false,
+      ## Proxy-Adresse, Typ (z. B. `socks5`) und Login. Echte Werte in `secrets/proxy`.
+      "Address": "",
+      ## Planet oder Mond an diesen Koordinaten.
+      "Type": "socks5",
+      ## Proxy-Adresse, Typ (z. B. `socks5`) und Login. Echte Werte in `secrets/proxy`.
+      "Username": "",
+      ## Gameforge-Login. Echte Werte in `secrets/credentials` halten.
+      "Password": "",
+      ## `true` = Proxy nur für den Login, nicht für Spielanfragen.
+      "LoginOnly": true
+    },
+    ## An: Spielername, Universum und E-Mail-Adresse werden in allen Logzeilen durch [Player], [Universe] und [Email] ersetzt - praktisch vor dem Posten von Logs. Aus (Standard): die echten Namen werden angezeigt. Wird beim Start gelesen, daher Neustart nötig.
+    "AnonymizeLogs": false,
+    ## Schlüssel eines Captcha-Lösedienstes. Optional, nur nötig, wenn das Spiel Captchas verlangt.
+    "CaptchaAPIKey": "",
+    ## Schützt die IP: Nach wiederholten Login-Fehlern (Captcha usw.) macht der Bot eine Pause, statt es immer wieder zu versuchen. Die Pause verdoppelt sich mit jedem weiteren Fehler. Während der Pause bleibt die manuelle Captcha-Seite (/bot/captcha) nutzbar; löst du dort das Captcha, macht der Bot sofort weiter. Der Zustand liegt in einer Datei, ein Neustart überspringt die Pause also nicht.
+    "LoginPause": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": true,
+      ## Login-Pause nach Fehlversuchen (Anzahl, Pausenminuten, Hoechstpause).
+      "FailuresBeforePause": 2,
+      ## Login-Pause nach Fehlversuchen (Anzahl, Pausenminuten, Hoechstpause).
+      "PauseMinutes": 30,
+      ## Login-Pause nach Fehlversuchen (Anzahl, Pausenminuten, Hoechstpause).
+      "MaxPauseMinutes": 120
+    },
+    ## Flottenslots, die keine Funktion nutzen darf. Sie bleiben für deine eigenen manuellen Flüge frei.
+    "SlotsToLeaveFree": 1,
+    "SlotPriorityLevel": {
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "Brain": 2,
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "Expeditions": 1,
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "AutoFarm": 3,
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "AutoColonize": 50,
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "Colonize": 50,
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "AutoDiscovery": 4,
+      ## Prioritaet bei der Vergabe freier Flottenslots. Kleinere Zahl = wird zuerst bedient.
+      "AutoHarvest": 5
+    }
+  },
+  ## DISCORD: Benachrichtigungen per Webhook.
+  "DiscordWebhook": {
+    ## Die Telegram-Nachrichten nach Discord kopieren. Das sendet nur; Befehle laufen weiter über Telegram.
+    "Active": false,
+    ## Webhook-Adresse deines Discord-Kanals. Behandle sie wie ein Passwort.
+    "Url": "https://discord.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN",
+    ## Name, der als Absender der Discord-Nachrichten angezeigt wird.
+    "Username": "TBot"
+  },
+  ## SCHLAFMODUS: Bot pausiert zwischen GoToSleep und WakeUp.
+  "SleepMode": {
+    ## Festes tägliches Schlaffenster. Solange der Bot schläft, werden keine Flotten geschickt. Nur SleepMode oder GhostSleep darf aktiv sein.
+    "Active": false,
+    ## Tageszeit, zu der der Bot schlafen geht (Serverzeit).
+    "GoToSleep": "5:00",
+    ## Tageszeit, zu der der Bot wieder aufwacht (Serverzeit).
+    "WakeUp": "10:00",
+    "TelegramMessenger": {
+      ## Festes tägliches Schlaffenster. Solange der Bot schläft, werden keine Flotten geschickt. Nur SleepMode oder GhostSleep darf aktiv sein.
+      "Active": false
+    },
+    "AutoFleetSave": {
+      ## Festes tägliches Schlaffenster. Solange der Bot schläft, werden keine Flotten geschickt. Nur SleepMode oder GhostSleep darf aktiv sein.
+      "Active": true,
+      ## Flotten nur auf Monden sichern.
+      "OnlyMoons": false,
+      ## Deuterium, das beim Sichern auf dem Himmelskörper bleibt (der Rest fliegt als Treibstoff mit der Flotte).
+      "DeutToLeave": 4000000,
+      ## Die sichernde Flotte zurückrufen, damit sie zum Aufwachen wieder da ist.
+      "Recall": true,
+      ## Mission für das Sichern (`Deploy` usw.).
+      "DefaultMission": "Deploy",
+      ## Koordinaten, zu denen die Sicherung fliegt.
+      "DeployTarget": {
+        ## Galaxienummer der Koordinaten.
+        "Galaxy": 1,
+        ## Systemnummer der Koordinaten.
+        "System": 1,
+        ## Position (1-15) im System.
+        "Position": 1
+      }
+    }
+  },
+  ## GHOSTSLEEP: Schlafphase mit Expeditionen/Flotte als Anker.
+  "GhostSleep": {
+    ## Schlafvariante: Alle Schiffe werden mit einem Geisterflug gesichert, aber Expeditionen und Defender arbeiten die Nacht über weiter.
+    "Active": false,
+    ## Tageszeit, zu der der Bot schlafen geht (Serverzeit).
+    "GoToSleep": "1:30",
+    ## Tageszeit, zu der der Bot wieder aufwacht (Serverzeit).
+    "WakeUp": "11:05",
+    ## Alte zeitbasierte Vorphase. Minuten vor dem Schlafen, in denen alle Expeditionsslots aufgefüllt werden. Wird ignoriert, solange „Let expeditions finish before sleep“ an ist. 0 = aus.
+    "PreSleepExpeditionMinutes": 35,
+    ## Wie der Defender entscheidet, wann er im Schlaf auf Angriffe prüft. LastFleet = eine Prüfung kurz bevor die letzte Expedition landet. Random = eine zufällige zurückkehrende Expedition, 60 Sekunden bevor sie landet.
+    "AnchorMode": "LastFleet",
+    "ExpeditionDrain": {
+      ## Schlafvariante: Alle Schiffe werden mit einem Geisterflug gesichert, aber Expeditionen und Defender arbeiten die Nacht über weiter.
+      "Active": false,
+      ## Toleranz: Eine Expedition darf noch starten, wenn sie höchstens so viele Minuten nach `GoToSleep` zurück ist (Standard 10).
+      "BufferMinutes": 10,
+      ## Bei `GoToSleep` höchstens so lange auf noch laufende Expeditionen warten (Standard 20). Nachzügler kommen während des Schlafs heim und gehen in die nächste Welle ein.
+      "StragglerWaitMinutes": 20,
+      ## Angenommene Expeditionsdauer, bis der Bot mindestens 3 echte gemessen hat (Standard 90). Der Bot misst die echte Dauer jeder Expedition je Ursprung (`data/expedition_durations_*.json`) und nutzt das 90. Perzentil der letzten 30 Werte.
+      "DefaultDurationMinutes": 90
+    },
+    ## Himmelskörper (Mond und Planet), deren Flotten zur Schlafenszeit zuerst gesichert werden.
+    "PriorityFleetsaveCelestials": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1
+      }
+    ]
+  },
+  ## TRUEMMERFELD-SAVE: Ziele fuer das Parken von Flotten.
+  "DebrisSave": {
+    ## Himmelskörper, die der Telegram-Befehl /debrissave nutzt. Jeder schickt seine Flotte zum nächsten Trümmerfeld und ruft sie zurück, sodass sie nach der gewählten Zeit wieder da ist.
+    "Celestials": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1,
+        "Type": "Planet"
+      }
+    ]
+  },
+  ## DEFENDER: Angriffserkennung und Reaktion (Fleetsave, Nachrichten, Alarm).
+  "Defender": {
+    ## Achtet auf eingehende Angriffe und reagiert.
+    "Active": false,
+    ## Nicht auf Spionagesonden reagieren.
+    "IgnoreProbes": true,
+    ## Auch auf Raketenangriffe reagieren.
+    "DefendFromMissiles": true,
+    ## Angreifer ignorieren, die viel schwächer sind als du.
+    "IgnoreWeakAttack": false,
+    ## Ein Angreifer ist schwach, wenn seine Flottenpunkte kleiner sind als deine geteilt durch diese Zahl.
+    "WeakAttackRatio": 3,
+    "IgnoreAttackIfIHave": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": false,
+      ## Angriff ignorieren, wenn so viele Ressourcen/Flottenpunkte nicht rettenswert sind.
+      "MinResourcesToSave": 2000000,
+      ## Angriff ignorieren, wenn so viele Ressourcen/Flottenpunkte nicht rettenswert sind.
+      "MinFleetToSave": 20000000
+    },
+    ## An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = immer der Heimat-Himmelskörper. Lässt die Aktivität des Bots nur normal aussehen.
+    "RandomActivity": false,
+    ## Heimat-Himmelskörper: Wird für den Aktivitätsaufruf genutzt, wenn `RandomActivity` aus ist, und als Standard-Ursprung für AutoHarvest (der Mond an diesen Koordinaten), wenn AutoHarvest keinen `Origin` hat.
+    "Home": {
+      ## Galaxienummer der Koordinaten.
+      "Galaxy": 1,
+      ## Systemnummer der Koordinaten.
+      "System": 1,
+      ## Position (1-15) im System.
+      "Position": 1,
+      ## Planet oder Mond an diesen Koordinaten.
+      "Type": "Planet"
+    },
+    "Autofleet": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": true,
+      ## Sekunden vor dem Einschlag, bis zu denen die Flotte weg sein muss.
+      "SafetyMarginSeconds": 120,
+      "TelegramMessenger": {
+        ## Achtet auf eingehende Angriffe und reagiert.
+        "Active": false
+      }
+    },
+    "Discord": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": true,
+      ## Angriffsalarm an einen Discord-Webhook (geheim).
+      "WebhookUrl": "https://discord.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN"
+    },
+    ## Spieler-IDs, die nie als Angreifer behandelt werden, zum Beispiel Freunde oder Allianzmitglieder.
+    "WhiteList": [
+      0
+    ],
+    "SpyAttacker": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": false,
+      ## Den Angreifer mit so vielen Sonden ausspionieren.
+      "Probes": 20
+    },
+    "MessageAttacker": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": false,
+      ## Eine dieser Nachrichten an den Angreifer senden.
+      "Messages": [
+        "hey",
+        "hello",
+        "i'm online'"
+      ]
+    },
+    "TelegramMessenger": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": true
+    },
+    "Alarm": {
+      ## Achtet auf eingehende Angriffe und reagiert.
+      "Active": true,
+      ## Optionaler voller Pfad zu einer WAV-Datei, die bei einem Angriff abgespielt wird (Windows SoundPlayer; Linux `paplay`/`aplay`; macOS `afplay`). Leer, fehlend oder nicht abspielbar = der alte Piepton.
+      "SoundFile": ""
+    },
+    ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+    "CheckIntervalMin": 10,
+    ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+    "CheckIntervalMax": 20
+  },
+  ## BRAIN: Aufbau-Worker (Minen, Forschung, Schiffe, Verteidigung, Transporte, Direktiven).
+  "Brain": {
+    ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+    "Active": false,
+    ## DIREKTIVEN: loest die Spiel-Aufgaben (Direktiven/Tutorial) automatisch; Belohnungen abholen, Aufgaben erfuellen, Flottenaufgaben.
+    "Directives": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Pause in Minuten zwischen zwei Durchläufen (Standard 10).
+      "IntervalMinutes": 10,
+      ## Fertige Aufgaben und Kapitel automatisch einsammeln (Standard an).
+      "CollectRewards": true,
+      ## Offene Aufgaben selbst erfüllen: Gebäude und Forschung bis genau zur Aufgabenstufe, Schiffe/Verteidigung in der verlangten Menge, Lebensform-Gebäude (Heimatplanet) und fehlende Voraussetzungen. Deine Max…-Grenzen werden dabei ignoriert. Immer nur ein Gebäude und eine Forschung gleichzeitig; fehlen Rohstoffe, wird gewartet (keine Transporte).
+      "Fulfil": false,
+      ## Flottenaufgaben selbst losschicken: Kolonisieren, Expedition (bis 5 Kleine Transporter zu Position 16, max. 1x pro Stunde), Spionage zu Position 16 und der Rückruf dieser Flotte; außerdem die Lithium-Umwandlung (Orion). Andere Flottenaufgaben werden nur geloggt.
+      "Fleets": false,
+      ## Zusammen mit Fulfil/Fleets: nur ins Log schreiben, was getan würde.
+      "DryRun": false,
+      ## Letztes zu lesendes Kapitel (Kapitel 4001 bis 4000+Wert). Standard 7, der Testserver hat 8.
+      "LastChapter": 7
+    },
+    ## TRANSPORTE: Ressourcentransporte zum Ursprung/zu Bau und Forschung.
+    "Transports": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## ein Planet/Mond mit deinen Transportschiffen
+      "Origin": {
+        ## Galaxienummer der Koordinaten.
+        "Galaxy": 1,
+        ## Systemnummer der Koordinaten.
+        "System": 1,
+        ## Position (1-15) im System.
+        "Position": 1,
+        ## Planet oder Mond an diesen Koordinaten.
+        "Type": "Planet"
+      },
+      ## `LargeCargo` (oder `SmallCargo`)
+      "CargoType": "SmallCargo",
+      ## Bevorzugtes Transportschiff und Ausweichtypen (`SmallCargo`/`LargeCargo`). Pfadfinder werden nie für Transporte benutzt.
+      "CargoFallback": [
+        "LargeCargo"
+      ],
+      "KeepOnOrigin": {
+        ## Schiffe/Menge, die auf dem Ursprungsplaneten bleiben.
+        "UseExpeditionManualShips": true
+      },
+      ## Als letzten Schritt kleine und große Transporter mischen (Flug mit der Geschwindigkeit des langsamsten).
+      "MixFleet": true,
+      ## Transporte als Kette planen; bei zu wenigen Slots mit weniger Lieferungen neu planen.
+      "UseTransportChain": true,
+      ## Transporte als Kette planen; bei zu wenigen Slots mit weniger Lieferungen neu planen.
+      "CompactSlotPlan": true,
+      ## Deuterium, das auf Monden bleibt. Transporte, die einen Mond verlassen, starten nur, wenn Nutzlast-Deuterium + diese Reserve + der Flug-Treibstoff in den Bestand passen, damit die Reserve nie vom Treibstoff aufgebraucht wird.
+      "DeutToLeaveOnMoons": 2000000,
+      ## Dieselbe Reserve für Transporte, die einen Planeten verlassen (Standard 0 = nichts wird zurückgehalten).
+      "DeutToLeaveOnPlanets": 0,
+      ## Gesendete Menge runden, damit keine Flotten wegen winziger Unterschiede losgeschickt werden.
+      "RoundResources": true,
+      ## Zum Mond statt zum Planeten liefern, wenn es einen gibt.
+      "SendToTheMoonIfPossible": false,
+      ## Größte Zahl an Flottenslots, die diese Funktion gleichzeitig nutzen darf.
+      "MaxSlots": 1,
+      ## Bei der Rohstoffsuche zuerst den Mond oder den Planeten eines Ortes prüfen.
+      "CheckMoonOrPlanetFirst": true,
+      ## Reicht ein Schiffstyp nicht, mehrere Transporte von derselben Position schicken.
+      "DoMultipleTransportIsNotEnoughShipButSamePosition": true,
+      "MultipleOrigins": {
+        ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+        "Active": false,
+        ## Mehrere Ursprungsplaneten fuer Transporte (Mindestmenge, nur Monde, Naehe vor Menge).
+        "OnlyFromMoons": false,
+        ## Mehrere Ursprungsplaneten fuer Transporte (Mindestmenge, nur Monde, Naehe vor Menge).
+        "MinimumResourcesToSend": 10000000,
+        ## Mehrere Ursprungsplaneten fuer Transporte (Mindestmenge, nur Monde, Naehe vor Menge).
+        "PriorityToProximityOverQuantity": false,
+        ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+        "Exclude": [
+          {
+            "Galaxy": 1,
+            "System": 1,
+            "Position": 1,
+            "Type": "Planet"
+          }
+        ]
+      }
+    },
+    ## AUTOMINE: baut Minen/Gebaeude. Max* = Hoechststufen Heimatplanet, Colony.* = Kolonien.
+    "AutoMine": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Transporte zum Bau/zur Forschung zulassen (Ressourcen vom anderen Planeten holen).
+      "Transports": {
+        ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+        "Active": false
+      },
+      ## Dein Hauptplanet (bekommt die `Max…`-Grenzen aus dem obersten Block).
+      "HomeWorld": {
+        ## Galaxienummer der Koordinaten.
+        "Galaxy": 1,
+        ## Systemnummer der Koordinaten.
+        "System": 1,
+        ## Position (1-15) im System.
+        "Position": 1,
+        ## Planet oder Mond an diesen Koordinaten.
+        "Type": "Planet"
+      },
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxMetalMine": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxCrystalMine": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxDeuteriumSynthetizer": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxSolarPlant": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxFusionReactor": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxMetalStorage": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxCrystalStorage": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxDeuteriumTank": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxRoboticsFactory": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxShipyard": 0,
+      ## Hoechststufe dieses Gebaeudes. 0 = nicht bauen.
+      "MaxResearchLab": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxMissileSilo": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxNaniteFactory": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxTerraformer": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxSpaceDock": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxLunarBase": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxLunarShipyard": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxLunarRoboticsFactory": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxSensorPhalanx": 0,
+      ## Hoechststufe dieses Gebaeudes (Heimatplanet). 0 = Standardverhalten ohne eigene Grenze.
+      "MaxJumpGate": 0,
+      "Colony": {
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxMetalMine": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxCrystalMine": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxDeuteriumSynthetizer": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxSolarPlant": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxFusionReactor": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxMetalStorage": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxCrystalStorage": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxDeuteriumTank": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxRoboticsFactory": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxShipyard": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxResearchLab": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxMissileSilo": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxNaniteFactory": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxTerraformer": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxSpaceDock": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxLunarBase": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxLunarShipyard": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxLunarRoboticsFactory": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxSensorPhalanx": 0,
+        ## Hoechststufe dieses Gebaeudes (Kolonien). 0 = Standardverhalten ohne eigene Grenze.
+        "MaxJumpGate": 0
+      },
+      ## Die Himmelskörper in zufälliger Reihenfolge bearbeiten, statt immer denselben zuerst.
+      "RandomOrder": false,
+      ## Die Aufbaureihenfolge für den Spielstart verwenden (Robotfabrik/Werft zuerst).
+      "OptimizeForStart": true,
+      ## Robotfabrik und Nanitenfabrik früh bauen.
+      "PrioritizeRobotsAndNanites": true,
+      ## Lager bauen, wenn es voll ist.
+      "BuildDepositIfFull": true,
+      ## Solarsatelliten bauen, wenn Energie fehlt.
+      "BuildSolarSatellites": true,
+      ## Satelliten werden in Paketen dieser Größe gebaut (der Bedarf wird aufgerundet); Standard 20, 0/1 = genau die fehlende Menge.
+      "SolarSatelliteBatch": 20,
+      ## Vor einem Minenausbau (oder einem Gebäude mit Energiekosten wie dem Terraformer), der die Energie ins Minus drücken würde, wird zuerst die Energiequelle (Solarkraftwerk/Fusion/Satelliten) gebaut, bemessen auf die fehlende Menge plus diesen Prozentsatz; Standard 10, 0 = genau.
+      "EnergyReservePercent": 10,
+      ## Crawler bauen.
+      "BuildCrawlers": false,
+      ## Das Lager soll so viele Stunden Produktion fassen.
+      "DepositHours": 6,
+      ## Bauten überspringen, deren Amortisationszeit länger als so viele Tage ist (9999 = keine Grenze).
+      "MaxDaysOfInvestmentReturn": 9999,
+      ## Deuterium, das auf Monden bleibt. Transporte, die einen Mond verlassen, starten nur, wenn Nutzlast-Deuterium + diese Reserve + der Flug-Treibstoff in den Bestand passen, damit die Reserve nie vom Treibstoff aufgebraucht wird.
+      "DeutToLeaveOnMoons": 2000000,
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Feste Ziel-Anzahl an Crawlern; 0 = berechnen.
+      "FixedCrawlerTarget": 1000,
+      ## Liste einzelner Planeten mit eigenen Grenzen; zugeordnet über die genaue Koordinate, nur die gesetzten Felder überschreiben `Colony`.
+      "ColonyOverrides": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet",
+          "MaxMetalMine": 0,
+          "MaxCrystalMine": 0,
+          "MaxDeuteriumSynthetizer": 0,
+          "MaxSolarPlant": 0,
+          "MaxFusionReactor": 0,
+          "MaxMetalStorage": 0,
+          "MaxCrystalStorage": 0,
+          "MaxDeuteriumTank": 0,
+          "MaxRoboticsFactory": 0,
+          "MaxShipyard": 0,
+          "MaxResearchLab": 0,
+          "MaxMissileSilo": 0,
+          "MaxNaniteFactory": 0,
+          "MaxTerraformer": 0,
+          "MaxSpaceDock": 0
+        }
+      ],
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 40,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 70
+    },
+    ## LEBENSFORM-GEBAEUDE automatisch bauen.
+    "LifeformAutoMine": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Transporte zum Bau/zur Forschung zulassen (Ressourcen vom anderen Planeten holen).
+      "Transports": {
+        ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+        "Active": true
+      },
+      ## Lebensform-Gebäude auf einem Planeten starten, sobald seine Kristallmine diese Stufe erreicht.
+      "StartFromCrystalMineLvl": 22,
+      ## Zeile (1-18) aus `lifeform_targets.json`, auf die hingebaut wird; 0 = nur Ersatzgrenzen.
+      "TargetSlot": 18,
+      ## Zusätzliche Obergrenzen für die ersten drei Gebäudeplätze (kleine Konten); es gilt der niedrigere Wert aus Tabelle und Grenze.
+      "MaxBasePopulationBuilding": 0,
+      ## Zusätzliche Obergrenzen für die ersten drei Gebäudeplätze (kleine Konten); es gilt der niedrigere Wert aus Tabelle und Grenze.
+      "MaxBaseFoodBuilding": 0,
+      ## Zusätzliche Obergrenzen für die ersten drei Gebäudeplätze (kleine Konten); es gilt der niedrigere Wert aus Tabelle und Grenze.
+      "MaxBaseTechBuilding": 0,
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Kein Lebensform-Gebäude bauen, das mehr kostet als der nächste Minenausbau.
+      "PreventIfMoreExpensiveThanNextMine": true,
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 45,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 90
+    },
+    ## LEBENSFORM-FORSCHUNG automatisch.
+    "LifeformAutoResearch": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Transporte zum Bau/zur Forschung zulassen (Ressourcen vom anderen Planeten holen).
+      "Transports": {
+        ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+        "Active": true
+      },
+      ## IDs der Lebensform-Techniken, die zuerst erforscht werden, in dieser Reihenfolge.
+      "PriorityTechs": [
+        14,
+        15,
+        25,
+        34,
+        35,
+        36
+      ],
+      ## Höchste erforschte Stufe je Lebensform-Technik.
+      "MaxResearchLevel": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs11": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs12": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs13": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs14": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs15": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs16": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs21": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs22": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs23": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs24": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs25": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs26": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs31": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs32": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs33": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs34": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs35": 0,
+      ## Hoechststufe je Lebensform-Technik (erste Ziffer = Volk, zweite = Technik). 0 = keine Grenze.
+      "MaxTechs36": 0,
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 90,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 180
+    },
+    ## AUTORESEARCH: Forschung. Max* = Hoechststufen, Prioritize* = zuerst erforschen.
+    "AutoResearch": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Transporte zum Bau/zur Forschung zulassen (Ressourcen vom anderen Planeten holen).
+      "Transports": {
+        ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+        "Active": true
+      },
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxEnergyTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxLaserTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxIonTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxHyperspaceTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxPlasmaTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxCombustionDrive": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxImpulseDrive": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxHyperspaceDrive": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxEspionageTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxComputerTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxAstrophysics": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxIntergalacticResearchNetwork": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxWeaponsTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxShieldingTechnology": 0,
+      ## Hoechststufe dieser Forschung. 0 = keine eigene Grenze.
+      "MaxArmourTechnology": 0,
+      ## Planet, auf dem die Forschung gestartet wird (meist der mit dem besten Labor).
+      "Target": {
+        ## Galaxienummer der Koordinaten.
+        "Galaxy": 1,
+        ## Systemnummer der Koordinaten.
+        "System": 1,
+        ## Position (1-15) im System.
+        "Position": 1,
+        ## Planet oder Mond an diesen Koordinaten.
+        "Type": "Planet"
+      },
+      ## Die Aufbaureihenfolge für den Spielstart verwenden (Robotfabrik/Werft zuerst).
+      "OptimizeForStart": true,
+      ## Computertechnik/Astrophysik nach Bedarf erforschen, um Expeditionsslots zu bekommen.
+      "EnsureExpoSlots": true,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeAstrophysics": true,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizePlasmaTechnology": false,
+      ## Plasmatechnik-Prioritaet ist hart (false): solange Plasma unter MaxPlasmaTechnology liegt und freigeschaltet ist, wird sie vor Astrophysik und Energie erforscht. true = nur, wenn ihre Amortisation unter der letzten Minen-Amortisation und MaxDaysOfInvestmentReturn liegt (altes Verhalten).
+      "PlasmaPriorityChecksPayback": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeEnergyTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeIntergalacticResearchNetwork": false,
+      ## Auch forschen, wenn das Labor noch niedrig ist.
+      "ForceResearchWhateverTheLabLevel": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeComputerTechnology": true,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeLaserTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeIonTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeHyperspaceTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeCombustionDrive": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeImpulseDrive": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeHyperspaceDrive": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeEspionageTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeWeaponsTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeShieldingTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeArmourTechnology": false,
+      ## Diese Forschung bevorzugt zuerst erforschen (true/false).
+      "PrioritizeGravitonTechnology": false,
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 30,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 60
+    },
+    ## AUTOSHIPS (Schluessel AutoCargo): baut Transporter und weitere Schiffe. Beispiel fuer Ships: [{"Type":"Pathfinder","Target":20,"MaxPerRun":5},{"Type":"Recycler","Target":50,"MaxPerRun":20},{"Type":"HeavyFighter","Target":500,"MaxPerRun":100},{"Type":"Deathstar","Target":10,"MaxPerRun":2}] - Reihenfolge = Prioritaet, pro Himmelskoerper und Durchlauf eine Bestellung.
+    "AutoCargo": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Monde bekommen ihre Schiffe vom Planeten an derselben Position.
+      "SupplyMoonFromPlanet": false,
+      ## Monde überspringen, nur Planeten werden bearbeitet.
+      "ExcludeMoons": true,
+      ## `LargeCargo` (oder `SmallCargo`)
+      "CargoType": "LargeCargo",
+      ## Die Himmelskörper in zufälliger Reihenfolge bearbeiten, statt immer denselben zuerst.
+      "RandomOrder": true,
+      ## `MaxCargosToBuild` = höchste Schiffszahl pro Durchlauf bestellt; `MaxCargosToKeep` = Zielmenge pro Himmelskörper (0 = es wird nichts gebaut).
+      "MaxCargosToBuild": 0,
+      ## `MaxCargosToBuild` = höchste Schiffszahl pro Durchlauf bestellt; `MaxCargosToKeep` = Zielmenge pro Himmelskörper (0 = es wird nichts gebaut).
+      "MaxCargosToKeep": 0,
+      ## Optional. Obergrenze in Stunden für die Bauzeit einer Bestellung pro Himmelskörper (inklusive Werft- und Nanitenstufe). 0 oder fehlend = keine Grenze.
+      "MaxProductionHours": 0,
+      ## Nur so viele bauen, wie die gelagerten Rohstoffe brauchen.
+      "LimitToCapacity": false,
+      ## Monde überspringen; zufällige Reihenfolge; Himmelskörper überspringen, zu denen schon ein Transport unterwegs ist; ausgeschlossene Himmelskörper.
+      "SkipIfIncomingTransport": true,
+      ## Optionale Liste weiterer Schiffstypen, die nach den Transportern gebaut werden: `[{"Type": "Recycler", "Target": 50, "MaxPerRun": 20}]`. `Target` = Menge pro Himmelskörper, `MaxPerRun` = höchste Schiffszahl pro Bestellung (0 = unbegrenzt). Pro Himmelskörper und Durchlauf eine Bestellung, und zwar für den ersten Eintrag, dessen Ziel noch nicht erreicht ist. Beispiel: [{"Type":"Pathfinder","Target":20,"MaxPerRun":5},{"Type":"Recycler","Target":50,"MaxPerRun":20},{"Type":"HeavyFighter","Target":500,"MaxPerRun":100},{"Type":"Deathstar","Target":10,"MaxPerRun":2}]. Pfadfinder brauchen die Entdecker-Klasse, Reaper die General-Klasse, Crawler sind durch das Spielmaximum begrenzt und werden nur auf Planeten gebaut.
+      "Ships": [],
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 60,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 240
+    },
+    ## AUTODEFENCE: baut Verteidigung.
+    "AutoDefence": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Monde überspringen, nur Planeten werden bearbeitet.
+      "ExcludeMoons": true,
+      ## Die Himmelskörper in zufälliger Reihenfolge bearbeiten, statt immer denselben zuerst.
+      "RandomOrder": true,
+      ## Optional. Obergrenze in Stunden für die Bauzeit einer Bestellung pro Himmelskörper (inklusive Werft- und Nanitenstufe). 0 oder fehlend = keine Grenze.
+      "MaxProductionHours": 0,
+      "DefenceToReach": {
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "RocketLauncher": 0,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "LightLaser": 0,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "HeavyLaser": 0,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "GaussCannon": 0,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "IonCannon": 0,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "PlasmaTurret": 0,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "SmallShieldDome": true,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "LargeShieldDome": true,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "AntiBallisticMissiles": 50,
+        ## Zielanzahl dieser Verteidigung (Schutzschilde: true/false). 0 = nicht bauen.
+        "InterplanetaryMissiles": 0
+      },
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 60,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 240
+    },
+    ## AUTOREPATRIATE: sammelt Ressourcen auf einem Ziel.
+    "AutoRepatriate": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      "Reverse": {
+        ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+        "Active": true,
+        ## Rueckholung fuer AutoRepatriate (Kraftstofffaktor, Wartezeit offener Auftraege in Minuten).
+        "ReturnFuelFactor": 1.1,
+        ## Rueckholung fuer AutoRepatriate (Kraftstofffaktor, Wartezeit offener Auftraege in Minuten).
+        "PendingTtlMinutes": 120
+      },
+      ## Monde überspringen, nur Planeten werden bearbeitet.
+      "ExcludeMoons": true,
+      ## Planet, auf dem die Forschung gestartet wird (meist der mit dem besten Labor).
+      "Target": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## 100000 und mehr (erhöhen, wenn die Flotte wächst)
+      "MinimumResources": 30000000,
+      "LeaveDeut": {
+        ## Deuterium, das beim Repatriieren zurueckbleibt (nur auf Monden oder ueberall).
+        "OnlyOnMoons": false,
+        ## Deuterium, das beim Repatriieren zurueckbleibt (nur auf Monden oder ueberall).
+        "DeutToLeave": 2000000
+      },
+      ## Zum Mond an der Zielposition liefern.
+      "TargetAssociateMoon": false,
+      ## `LargeCargo` (oder `SmallCargo`)
+      "CargoType": "SmallCargo",
+      ## Die Himmelskörper in zufälliger Reihenfolge bearbeiten, statt immer denselben zuerst.
+      "RandomOrder": true,
+      ## Monde überspringen; zufällige Reihenfolge; Himmelskörper überspringen, zu denen schon ein Transport unterwegs ist; ausgeschlossene Himmelskörper.
+      "SkipIfIncomingTransport": true,
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 120,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 240
+    },
+    ## Tagesangebot automatisch kaufen.
+    "BuyOfferOfTheDay": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 240,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 360
+    },
+    ## KEEPBOOSTERS: haelt Booster aktiv.
+    "KeepBoosters": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Standard aus. Mit `Fulfil`: nur ins Log schreiben, was getan würde.
+      "DryRun": true,
+      "Types": {
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Metal": true,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Crystal": true,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Deuterium": true,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Energy": false
+      },
+      "Tiers": {
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "bronze": true,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "silver": true,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "gold": true,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "platinum": false
+      },
+      "Reserve": {
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "bronze": 10,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "silver": 10,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "gold": 10,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "platinum": 10
+      },
+      "MinMineLevel": {
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Metal": 40,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Crystal": 30,
+        ## Einstellung je Booster-Typ/Stufe fuer KeepBoosters.
+        "Deuterium": 30
+      },
+      ## Die aktiven Gegenstände jedes Planeten und das Inventar höchstens alle 12 Stunden loggen (zeigt auch Ereignis- und Spezialgegenstände).
+      "LogItems": true,
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [],
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 30,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 60
+    },
+    ## SPRUNGTOR: verschiebt Flotten zwischen Monden.
+    "AutoFleetJumpGate": {
+      ## Hauptschalter der Gebäude-, Forschungs- und Transportautomatik. Jeder Teil unten hat zusätzlich einen eigenen Schalter.
+      "Active": false,
+      ## Planet, auf dem die Forschung gestartet wird (meist der mit dem besten Labor).
+      "Target": [
+        {
+          "Galaxy": 1,
+          "System": 1,
+          "Position": 1,
+          "Type": "Planet"
+        }
+      ],
+      ## Himmelskörper (Planeten oder Monde), die diese Funktion nie anfasst. Eine Zeile pro Himmelskörper.
+      "Exclude": [],
+      "MinimumAmountOfShipsToBeLeftOnMoon": {
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "LightFighter": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "HeavyFighter": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Cruiser": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Battleship": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Battlecruiser": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Bomber": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Destroyer": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Deathstar": 100000,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "SmallCargo": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "LargeCargo": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "ColonyShip": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Recycler": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "EspionageProbe": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Reaper": 0,
+        ## Anzahl dieses Schiffstyps, die auf dem Mond bleibt und nicht per Sprungtor verschoben wird.
+        "Pathfinder": 0
+      },
+      ## Nur springen, wenn mindestens so viele Flottenpunkte mitgehen würden.
+      "MinimumAmountOfShipPointsToTeleport": 500000,
+      ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+      "CheckIntervalMin": 5,
+      ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+      "CheckIntervalMax": 10
+    }
+  },
+  ## EXPEDITIONEN: Ursprung, Schiffe, Anzahl und Wartezeiten.
+  "Expeditions": {
+    ## Hauptschalter des Expeditions-Workers.
+    "Active": false,
+    ## Himmelskörper, von denen die Expeditionen starten.
+    "Origin": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1,
+        "Type": "Planet",
+        "MaxExpeditions": 0
+      }
+    ],
+    ## Automatikmodus: Haupt-Transportschiff pro Expedition. Der Bot sendet so viele, wie für den größtmöglichen Fund nötig sind, oder alle verfügbaren, dazu eine Sonde, das stärkste Kampfschiff und ein Pfadfinder, falls vorhanden (sonst nur das Kampfschiff).
+    "PrimaryShip": "LargeCargo",
+    ## Automatikmodus: Mindestzahl an Hauptschiffen pro Expedition. Sind weniger übrig, wird von diesem Ursprung nichts gesendet. 0 = kein Minimum.
+    "MinPrimaryToSend": 0,
+    ## Automatikmodus: So viele Hauptschiffe bleiben immer zu Hause.
+    "PrimaryToKeep": 5000,
+    ## Neue Flottenwahl im Automatikmodus (nur wenn ManualShips aus ist): je Expedition 1 Sonde, 1 Pfadfinder und 1 Kampfschiff (Reaper zuerst), jeweils falls vorhanden. Reichen die Hauptschiffe nicht für alle noch geplanten Expeditionen dieses Ursprungs, wird die Menge für alle gleich gekürzt, die fehlende Ladung füllt das Mischschiff auf.
+    "SmartShips": false,
+    ## Mischschiff, das bei SmartShips fehlende Ladung auffüllt (SmallCargo oder LargeCargo; Null = nicht mischen).
+    "SmartMixShip": "SmallCargo",
+    "ManualShips": {
+      ## Hauptschalter des Expeditions-Workers.
+      "Active": true,
+      ## Feste Schiffsanzahl je Expedition (nur bei ManualShips.Active).
+      "Ships": {
+        ## Feste Schiffsanzahl je Expedition (nur bei ManualShips.Active).
+        "LargeCargo": 3200,
+        ## Feste Schiffsanzahl je Expedition (nur bei ManualShips.Active).
+        "EspionageProbe": 1,
+        ## Feste Schiffsanzahl je Expedition (nur bei ManualShips.Active).
+        "Reaper": 1,
+        ## Feste Schiffsanzahl je Expedition (nur bei ManualShips.Active).
+        "Pathfinder": 1
+      }
+    },
+    ## Deuterium, das jede Expedition mitnimmt.
+    "FuelToCarry": 30000,
+    ## Ein Mond braucht mindestens so viel Deuterium, um Expeditionen zu starten (0 = keine Prüfung). Darunter wird der Mond übersprungen und du bekommst eine Meldung.
+    "MinDeuteriumOnMoon": 0,
+    ## Höchstzahl an Expeditionen, die gleichzeitig von einem Ursprung fliegen.
+    "MaxExpeditionsPerOrigin": 5,
+    "SplitExpeditionsBetweenSystems": {
+      ## Hauptschalter des Expeditions-Workers.
+      "Active": true,
+      ## Ziele auf Systeme in diesem Umkreis verteilen.
+      "Range": 3
+    },
+    ## Die Ursprünge in zufälliger Reihenfolge bearbeiten.
+    "RandomizeOrder": true,
+    ## Auch im SleepMode weiter Expeditionen senden.
+    "IgnoreSleep": false,
+    "SleepWave": {
+      ## Hauptschalter des Expeditions-Workers.
+      "Active": false,
+      ## Expeditions-Welle vor dem Schlafen (Rueckkehrzeit, Geschwindigkeit).
+      "ReturnAt": "WakeUp+15",
+      ## Expeditions-Welle vor dem Schlafen (Rueckkehrzeit, Geschwindigkeit).
+      "SpeedPercent": 50
+    },
+    ## Eine neue Runde erst starten, wenn alle Expeditionen zurück sind.
+    "WaitForAllExpeditions": false,
+    ## Eine neue Runde starten, wenn mehr als die Hälfte der Expeditionen zurück ist.
+    "WaitForMajorityOfExpeditions": false,
+    ## Kürzeste Pause in Sekunden zwischen zwei Flotten einer Runde.
+    "MinWaitNextFleet": 2,
+    ## Längste Pause in Sekunden zwischen zwei Flotten einer Runde.
+    "MaxWaitNextFleet": 6,
+    ## Kürzeste zusätzliche Pause in Sekunden nach der ersten Rückkehr vor der nächsten Runde.
+    "MinWaitNextRound": 10,
+    ## Längste zusätzliche Pause in Sekunden nach der ersten Rückkehr vor der nächsten Runde.
+    "MaxWaitNextRound": 20
+  },
+  ## AUTOFARM: Spionage und Angriffe auf Farmziele, optional mit Eskorte (Escort...) und Simulation.
+  "AutoFarm": {
+    ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+    "Active": false,
+    ## ein Planet/Mond mit deinen Transportschiffen
+    "Origin": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1,
+        "Type": "Planet"
+      }
+    ],
+    ## Galaxie- und Systembereiche, die nach Zielen gescannt werden.
+    "ScanRange": [
+      {
+        "Galaxy": 1,
+        "StartSystem": 1,
+        "EndSystem": 499
+      }
+    ],
+    ## Nur Systeme innerhalb dieser Entfernung von deinen Start-Himmelskörpern scannen, statt des festen Scan-Bereichs. 0 = Scan-Bereich verwenden.
+    "SystemRange": 0,
+    ## Koordinaten, die nie ausspioniert oder angegriffen werden.
+    "Exclude": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1,
+        "Type": "Planet"
+      }
+    ],
+    ## Monde werden weder ausspioniert noch angegriffen, nur Planeten.
+    "ExcludeMoons": true,
+    ## Die nächsten Systeme zuerst scannen. Nahe Ziele bedeuten kürzere Flüge und weniger Treibstoff.
+    "DistanceBasedScanOrder": true,
+    ## Nach so vielen Systemen den Scan unterbrechen, mit dem Gefundenen angreifen und dann weitermachen. 0 = aus.
+    "ScanBlockSize": 0,
+    ## Sobald so viele Ziele ausspioniert sind, mit dem Angriff beginnen, statt erst den Scan zu beenden. 0 = aus.
+    "TargetsProbedBeforeAttack": 0,
+    ## Ein Ziel nach dem anderen bearbeiten (Sonde, auf den Bericht warten, angreifen), statt zuerst zu scannen. Langsamer, braucht aber sehr wenige Flottenslots.
+    "SequentialMode": false,
+    ## Nur im sequenziellen Modus: wie viele Ziele pro Durchlauf ausspioniert werden.
+    "SequentialModeProbesPerCycle": 5,
+    ## AutoFarm hört von selbst auf, nachdem es den ganzen Bereich einmal gescannt hat.
+    "StopAfterFullScan": false,
+    ## Ein unverteidigtes Ziel wird nur angegriffen, wenn mindestens so viel Beute zu holen ist (laut Spionagebericht).
+    "MinimumResources": 2000000,
+    ## Dasselbe Minimum für Ziele mit Schiffen oder Verteidigung. Setze es höher als den Wert darüber, weil diese Kämpfe Schiffe kosten können.
+    "MinimumResourcesDefended": 2000000,
+    ## Spieler mit einem besseren Rang (kleinere Zahl) als diesem werden übersprungen.
+    "MinimumPlayerRank": 3000,
+    ## Längste erlaubte einfache Flugzeit in Sekunden. Weiter entfernte Ziele werden übersprungen. 0 = keine Grenze.
+    "MaxFlightTime": 7200,
+    ## Die Beute muss mindestens so viel wert sein wie der Treibstoff, multipliziert mit diesem Faktor. Der Bot wählt die schnellste Geschwindigkeit, die das noch erfüllt.
+    "MinLootFuelRatio": 1.5,
+    ## Ziele mit dem meisten dieses Rohstoffs kommen zuerst. Leer = keine Vorliebe.
+    "PreferedResource": "",
+    ## Auch Ziele mit Schiffen oder Verteidigung angreifen. Der Bot simuliert den Kampf und schickt eine Eskorte aus Kriegsschiffen mit den Frachtern. Braucht die Eskorte-Einstellungen weiter unten.
+    "AttackDefendedTargets": true,
+    ## Ziele, deren Verteidigung mehr wert ist als dieser Wert, werden übersprungen.
+    "MaxDefensePoints": 50000000,
+    ## Verteidigte Ziele werden übersprungen, wenn ihre Beute im Verhältnis zur Verteidigung zu klein ist. Höher = wählerischer.
+    "MinLootPerDefensePoint": 20,
+    ## Minuten, die ein Spionagebericht gültig bleibt, bevor das Ziel erneut ausspioniert werden muss.
+    "KeepReportFor": 1440,
+    ## Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus.
+    "MaxReportAgeMinutesForAttack": 120,
+    ## Längste Zeit in Sekunden, die ein Angriff zurückgehalten werden darf, damit die Recycler direkt dahinter ankommen.
+    "MaxAttackDelaySec": 600,
+    ## Wie viel des erwarteten Trümmerfelds als Gewinn zählt, wenn der Bot entscheidet, ob sich ein Angriff lohnt (nach dem Treibstoff der Recycler).
+    "DebrisCreditPercent": 80,
+    ## Recycler werden nur geschickt, wenn das Trümmerfeld nach ihren Treibstoffkosten größer als dieser Wert ist. 0 = immer, wenn Trümmer da sind.
+    "MinDebrisToHarvest": 0,
+    ## Lohnt sich ein Angriff bei der gewählten Geschwindigkeit nicht, probiert der Bot langsamere Geschwindigkeiten bis zu diesem Wert, weil langsamere Flüge weniger Treibstoff verbrennen.
+    "MinSpeedPercentForProfitRetry": 50,
+    ## Deuterium sparen: Angriffsflotte und Recycler fliegen so langsam, wie es sinnvoll ist, nie unter der unten eingestellten niedrigsten Geschwindigkeit. Flüge dauern länger und Slots bleiben länger belegt.
+    "ReduceDeuterium": false,
+    ## Die langsamste Geschwindigkeit, die „Deuterium sparen“ nutzen darf. Nie unter 30 %.
+    "ReduceDeuteriumMinSpeedPercent": 30,
+    ## Hat ein Start-Himmelskörper weniger Deuterium als das Minimum darunter, werden Angriffe auf verteidigte Ziele von dort pausiert. Hat keiner genug, wird auch die Schnellflotte abgeschaltet. Die AutoFarm-Seite zeigt dann „Deuterium too low for bigger fleets“.
+    "DeuteriumGuard": true,
+    ## Die Deuterium-Schwelle der Sperre.
+    "DeuteriumGuardMin": 10000000,
+    ## Die Sperre von Hand überbrücken und auch bei wenig Deuterium weiterfarmen. Die Seite zeigt weiterhin einen Hinweis.
+    "DeuteriumGuardOverride": false,
+    ## Nur für mehrere Bot-Instanzen: verteilt sie auf verschiedene Startpunkte im Scan-Bereich. Bei einer Instanz aus lassen.
+    "GlobalSpacing": false,
+    ## Wie viele Berichte von nicht angreifbaren Zielen pro Durchlauf gelesen werden. Niedriger = schnellere Durchläufe.
+    "ReportQueryLimitForNonActionable": 3,
+    ## Dieselbe Log-Meldung erscheint höchstens so oft. 0 = jedes Mal.
+    "RepeatedLogIntervalMinutes": 360,
+    "Blacklist": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": true,
+      ## Zeit in Stunden, nach der der jeweilige Blacklist-Eintrag zurueckgesetzt wird.
+      "ResetAfterHours": 24,
+      ## Zeit in Stunden, nach der der jeweilige Blacklist-Eintrag zurueckgesetzt wird.
+      "UnprofitableResetAfterHours": 72,
+      ## Zeit in Stunden, nach der der jeweilige Blacklist-Eintrag zurueckgesetzt wird.
+      "PermanentResetAfterHours": 168
+    },
+    "AllianceWhitelist": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": false,
+      ## Hostname deines Universums, um die Allianzen anderer Spieler zu lesen.
+      "ServerHost": "sNNN-xx.ogame.gameforge.com",
+      ## **ID deiner Allianz** (die Zahl im `id`-Attribut deiner Allianz in `alliances.xml`; dieselbe Zahl wie im Link der Allianzseite `allianceId=...` im Spiel). 0 oder leer = Whitelist aus, mit Warnung im Log. Steht die ID nicht in der API-Antwort, sagt das das Log und die zuletzt bekannte Liste bleibt in Gebrauch.
+      "AllianceId": 0,
+      ## Allianz-IDs, die nie angegriffen werden, zum Beispiel NAP-Partner.
+      "AdditionalAllianceIds": []
+    },
+    ## Spionagesonden, die pro Ziel geschickt werden.
+    "NumProbes": 25,
+    ## Sonden automatisch bauen, wenn zu wenige zu Hause sind.
+    "BuildProbes": false,
+    ## Alle erlaubten Flottenslots mit Sonden und Angriffen belegt halten.
+    "FillSlots": true,
+    ## Wie lange (in Sekunden) auf Sondenberichte gewartet wird, bevor freie Slots anders genutzt werden.
+    "FillSlotsMaxProbeWaitSec": 300,
+    ## Die meisten Flottenslots, die AutoFarm gleichzeitig nutzen darf.
+    "MaxSlots": 4,
+    ## Flottenslots, die AutoFarm nie nutzt, damit Expeditionen und andere Worker noch Platz haben.
+    "SlotsToLeaveFree": 1,
+    ## Feste Geschwindigkeit für Angriffe, wenn keine bessere berechnet wird. 100 % ist am schnellsten und verbrennt am meisten Deuterium.
+    "FleetSpeed": 100,
+    ## Der Frachtertyp, der die Beute trägt.
+    "CargoType": "LargeCargo",
+    ## Es wird kein Angriff mit weniger Frachtern als diesem Wert gestartet.
+    "MinCargosToSend": 50,
+    ## Frachter, die immer zu Hause bleiben.
+    "MinCargosToKeep": 0,
+    ## Zusätzlicher Laderaum über die berechnete Menge hinaus, als Sicherheitsreserve.
+    "CargoSurplusPercentage": 10,
+    ## Anteil der Frachter, der als Reserve zurückgehalten wird.
+    "CargoReservePercent": 5,
+    ## Frachter bauen, wenn nicht genug da sind.
+    "BuildCargos": false,
+    ## Schnelle Schiffe (Pathfinder) als Frachter nutzen, damit Angriffe früher ankommen. Sie verbrennen mehr Deuterium. Die Deuterium-Sperre schaltet das von selbst ab, wenn das Deuterium knapp ist.
+    "UseSpeedFleet": false,
+    ## Höchster akzeptierter Verlust an Frachtern in der Simulation, als Anteil an ihrem Wert.
+    "MaxCargoLossPercent": 2,
+    ## Erwarteter Anteil der Flottenverluste, der als Trümmerfeld übrig bleibt. Wird für die Planung der Recycler genutzt.
+    "FleetToDebrisPercent": 30,
+    ## Nach dem Angriff Recycler zum Trümmerfeld schicken.
+    "AutoHarvestDebrisAfterAttack": true,
+    ## Anteil der Recycler, der als Reserve zurückgehalten wird.
+    "RecyclerReservePercent": 10,
+    ## Zusätzliche Waffentechnik-Stufen, die für das Ziel in Kampfsimulationen angenommen werden, als Sicherheitsreserve. Höher = vorsichtiger.
+    "TargetCombatTechBonus": 1,
+    ## Kriegsschiffe, die als Eskorte mitfliegen dürfen, in der Reihenfolge der Vorliebe. Mit Komma getrennt.
+    "EscortShipTypes": "Cruiser,Battlecruiser",
+    ## Wird nur genutzt, wenn die Eskortschiffe darüber nicht ausreichen.
+    "EscortFallbackShipTypes": "Bomber,Reaper",
+    ## Absolute Obergrenze je Schiffstyp.
+    "EscortShipCaps": {
+      ## Absolute Obergrenze dieses Schiffstyps in der Eskorte.
+      "Cruiser": 100000000,
+      ## Absolute Obergrenze dieses Schiffstyps in der Eskorte.
+      "Battlecruiser": 100000000
+    },
+    ## Die Eskorte wird in Schritten von so vielen Schiffen gesucht. Kleiner = genauer, aber langsamer.
+    "EscortShipsStep": 50,
+    ## Größte Zahl Schiffe eines Typs in einer Eskorte, wenn unten für diesen Typ keine Obergrenze gesetzt ist.
+    "MaxEscortShips": 100000000,
+    ## Höchstens so viel Prozent der Schiffe eines Typs, die zu Hause stehen, dürfen als Eskorte mitfliegen.
+    "MaxEscortFleetPercent": 100,
+    ## Sicherheitspuffer: Auf die berechnete Eskorte kommt so viel zusätzlich, wo Schiffe verfügbar sind.
+    "EscortReservePercent": 5,
+    ## Suchaufwand für die beste Eskortengröße: höchste Zahl an Schritten. Höher = besseres Ergebnis, mehr Rechenzeit.
+    "EscortMaxIterations": 300,
+    ## Suchaufwand: wie fein die Eskortengröße eingegrenzt wird. Höher = genauer, langsamer.
+    "EscortBisectionIterations": 20,
+    ## Suchaufwand: Simulationen für die letzte Feinabstimmung der Eskorte.
+    "EscortFineTuneMaxSims": 40,
+    ## Höchster simulierter Verlust, als Anteil am Wert der ganzen Angriffsflotte. Eskorten, die mehr verlieren würden, werden abgelehnt. 0 = Grenze aus (jeder Verlust wird akzeptiert).
+    "MaxEscortLossPercent": 0,
+    ## Wie stark Schiffsverluste im Vergleich zum Treibstoff zählen, wenn der Bot die günstigste Eskorte wählt. Höher = er bevorzugt eine größere Eskorte, die weniger verliert.
+    "EscortLossWeight": 3,
+    ## Der simulierte Kampf muss mindestens so oft gewonnen werden.
+    "MinWinRate": 0.9,
+    ## Wie viele Kämpfe pro Prüfung simuliert werden. Mehr = zuverlässiger, aber langsamer.
+    "SimulationRuns": 1000,
+    ## Minuten zwischen zwei AutoFarm-Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum.
+    "CheckIntervalMin": 1,
+    ## Minuten zwischen zwei AutoFarm-Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum.
+    "CheckIntervalMax": 3
+  },
+  ## FASTFARM: schneller Ein-Worker-Modus zum Farmen (Scan, Spionage, Angriff).
+  "FastFarm": {
+    ## Schaltet den Rohstoff-Farmmodus ein. Er scannt nach inaktiven Spielern, spioniert sie aus und raidet die besten. Defender und Schlafmodus arbeiten weiter.
+    "Active": false,
+    ## Hält alle anderen Worker (Brain, AutoFarm, Expeditionen, Harvest, ...) aus, solange FastFarm aktiv ist, damit alle Flottenslots zum Farmen frei sind. Aus = die anderen Worker laufen wie konfiguriert und konkurrieren um Slots.
+    "OnlyWorker": true,
+    ## Lässt die Expeditionen weiterlaufen, obwohl die anderen Worker aus sind. Sie belegen ihre eigenen Flottenslots.
+    "KeepExpeditions": false,
+    ## Solange FastFarm aktiv ist, werden AutoMine, AutoResearch und die Lebensform-Worker nicht ganz abgeschaltet: Sie laufen, wenn Transporte mit Rohstoffen zu deinen Himmelskörpern unterwegs sind (damit die Rohstoffe nicht herumliegen), und sonst alle so viele Minuten einmal, um zu schauen, was gebaut werden kann. Sie verbauen nur Rohstoffe, die schon auf dem Himmelskörper liegen, und beauftragen während FastFarm keine neuen Transporte. 0 = sie bleiben wie bisher aus (Standard 60).
+    "BuildCheckMinutes": 60,
+    ## Himmelskörper, von denen Sonden und Transporter starten. Für jedes Ziel wird der nächste Ursprung mit genug Schiffen genommen. Leer = alle deine Planeten.
+    "Origin": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1,
+        "Type": "Planet"
+      }
+    ],
+    ## Galaxie- und Systembereiche, die nach inaktiven Spielern gescannt werden, die nächsten zu deinen Ursprüngen zuerst. Leer = 100 Systeme um jeden Ursprung.
+    "ScanRange": [
+      {
+        "Galaxy": 1,
+        "StartSystem": 1,
+        "EndSystem": 499
+      }
+    ],
+    ## Ein Ziel fällt weg, wenn sein frischer Beutewert mindestens so viele Prozent unter dem Wert aus dem vollen Durchlauf liegt (oder unter der Mindestbeute).
+    "ShrinkDiscardPercent": 10,
+    ## Beim Start des Bots und beim Wiedereinschalten nach einer Pause den alten Stand (Ziele, Sperren, Sweep-Stand) verwerfen. Die Statistik bleibt.
+    "ResetOnActivate": true,
+    ## Sperre: höchstens ein solches Zurücksetzen alle so viele Stunden (0 = keine Sperre).
+    "ResetMinHours": 6,
+    ## Schiffe, die die Beute transportieren. Both = erst kleine Transporter, große nur für das, was die kleinen nicht tragen können.
+    "CargoType": "SmallCargo",
+    ## Spionagesonden pro Ziel. Mehr Sonden liefern auch gegen hohe Spionagestufen einen vollen Bericht (Flotte und Verteidigung), aber einige können verloren gehen.
+    "ProbesPerTarget": 20,
+    ## Flottenslots, die FastFarm nie nutzt, damit der Defender immer eine Flotte senden kann.
+    "SlotsToLeaveFree": 1,
+    ## Wie viel ein Metall im Beutewert zählt, der die Ziele einordnet.
+    "WeightMetal": 3,
+    ## Wie viel ein Kristall im Beutewert zählt.
+    "WeightCrystal": 2,
+    ## Wie viel ein Deuterium im Beutewert zählt. Ein höherer Wert stellt deuteriumreiche Ziele nach vorn.
+    "WeightDeuterium": 1,
+    ## Ziele mit weniger plünderbaren Rohstoffen als diesem Wert (Metall + Kristall + Deuterium, nach der Plünderquote) werden nicht angegriffen.
+    "MinLoot": 100000,
+    ## Ziele mit weniger plünderbarem Deuterium als diesem Wert werden nicht angegriffen. 0 = kein Limit.
+    "MinDeuterium": 0,
+    ## Höchstzahl an Angriffen pro Runde, die besten Ziele zuerst.
+    "TopTargets": 36,
+    ## Sweep-Modus: Ein frischer Prüfbericht, der älter als das ist, wird nicht für einen Angriff genutzt (z. B. wenn lange kein Transporter frei war); das Ziel wird neu geprüft.
+    "ReportMaxAgeMinutes": 30,
+    ## Löscht jeden Spionagebericht, nachdem er gelesen wurde. Das Postfach hat ein Limit; ist es voll, gehen neue Berichte verloren.
+    ## ACHTUNG: Während FastFarm läuft, Spionageberichte nicht von Hand oder mit Browser-Add-ons löschen. Fehlende Berichte wirken wie verlorene Sonden und führen zu Fehlfunktionen.
+    "DeleteReports": true,
+    ## Ein Ziel, das dreimal hintereinander keinen Bericht lieferte (Sonden vermutlich vernichtet), wird so viele Stunden nicht erneut spioniert. 0 = aus (Standard 24).
+    "NoReportHours": 24,
+    ## Geschwindigkeit der Transportflotten. 100 ist am schnellsten; niedrigere Werte sparen Deuterium, belegen den Slot aber länger.
+    "FleetSpeedPercent": 100,
+    ## Zusätzlicher Laderaum über die erwartete Beute hinaus, in Prozent. Deckt Rohstoffe ab, die während des Fluges produziert werden.
+    "CargoSurplusPercent": 0,
+    ## Ein Ziel wird übersprungen, wenn die übrigen Schiffe weniger als diesen Anteil seiner Beute tragen können, damit nicht ein paar Transporter zu einem großen Ziel fliegen.
+    "MinFillPercent": 50,
+    ## Wie viele Systeme der volle Scan einer Runde in einem Schritt besucht.
+    "MaxSystemsPerScanStep": 25
+  },
+  ## AUTOHARVEST: Truemmerfelder abbauen.
+  "AutoHarvest": {
+    ## Sammelt Trümmerfelder mit Recyclern ein.
+    "Active": false,
+    ## Trümmerfelder deiner eigenen Planeten und Monde einsammeln.
+    "HarvestOwnDF": true,
+    ## Trümmerfelder im Weltraum (Deep Space) einsammeln.
+    "HarvestDeepSpace": true,
+    ## Trümmerfelder anderer Spieler einsammeln.
+    "HarvestForeignDF": true,
+    ## Ein fremdes Feld lohnt die Reise erst ab diesem Inhalt.
+    "MinimumResourcesForeignDF": 3000,
+    ## Ein eigenes Feld lohnt die Reise erst ab diesem Inhalt.
+    "MinimumResourcesOwnDF": 3000,
+    ## Ein Deep-Space-Feld lohnt die Reise erst ab diesem Inhalt.
+    "MinimumResourcesDeepSpace": 50000,
+    ## Systeme links und rechts um jeden eigenen Planeten, die nach Deep-Space-Feldern (Expeditions-Trümmerfeldern) abgesucht werden.
+    "DeepSpaceRange": 30,
+    ## Systeme links und rechts um jeden eigenen Planeten, die nach fremden Truemmerfeldern abgesucht werden (0 = nur das System des Planeten). Je groesser, desto mehr Galaxie-Aufrufe pro Durchlauf.
+    "ForeignDFRange": 0,
+    ## true = Deep-Space- und Fremdfeld-Suche nur um die Start-Himmelskörper der Expeditionen (Expeditions.Origin) statt um alle eigenen Planeten. Ohne Einträge bei den Expeditions gelten alle.
+    "ScanOnlyExpeditionOrigins": false,
+    ## Flottenslots, die das Einsammeln gleichzeitig nutzen darf.
+    "MaxSlots": 1,
+    ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+    "CheckIntervalMin": 30,
+    ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+    "CheckIntervalMax": 60
+  },
+  ## AUTOCOLONIZE: neue Planeten besiedeln.
+  "AutoColonize": {
+    ## Kolonisiert neue Planeten automatisch.
+    "Active": false,
+    ## ein Planet/Mond mit deinen Transportschiffen
+    "Origin": {
+      ## Galaxienummer der Koordinaten.
+      "Galaxy": 1,
+      ## Systemnummer der Koordinaten.
+      "System": 1,
+      ## Position (1-15) im System.
+      "Position": 1,
+      ## Planet oder Mond an diesen Koordinaten.
+      "Type": "Planet"
+    },
+    ## Slots, die für die Runden dieser Funktion frei bleiben.
+    "SlotsToLeaveFree": 0,
+    "Abandon": {
+      ## Kolonisiert neue Planeten automatisch.
+      "Active": true,
+      ## Grenzwerte fuer das Aufgeben neuer Planeten (Mindestfelder, zulaessiger Temperaturbereich).
+      "MinFields": 310,
+      ## Grenzwerte fuer das Aufgeben neuer Planeten (Mindestfelder, zulaessiger Temperaturbereich).
+      "MinTemperatureAcceptable": -130,
+      ## Grenzwerte fuer das Aufgeben neuer Planeten (Mindestfelder, zulaessiger Temperaturbereich).
+      "MaxTemperatureAcceptable": 260
+    },
+    "IntensiveResearch": {
+      ## Kolonisiert neue Planeten automatisch.
+      "Active": true,
+      ## Größte Zahl an Flottenslots, die diese Funktion gleichzeitig nutzen darf.
+      "MaxSlots": 0,
+      ## Intensivforschung fuer AutoColonize (Slots, Wartezeiten).
+      "MinWaitNextFleet": 25,
+      ## Intensivforschung fuer AutoColonize (Slots, Wartezeiten).
+      "MaxWaitNextFleet": 35
+    },
+    ## Bereiche, die kolonisiert werden. Jeder hat Galaxie, Start- und Endsystem sowie Position und die größte Zahl an Planeten, die in diesem Bereich gegründet werden.
+    "Targets": [
+      {
+        "Galaxy": 1,
+        "StartSystem": 1,
+        "EndSystem": 50,
+        "StartPosition": 8,
+        "EndPosition": 8,
+        "MaxPlanets": 7
+      }
+    ],
+    ## Positionen innerhalb der Zielbereiche zufällig wählen.
+    "RandomPosition": false,
+    ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+    "CheckIntervalMin": 30,
+    ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+    "CheckIntervalMax": 60
+  },
+  ## AUTODISCOVERY: Entdeckungsmissionen.
+  "AutoDiscovery": {
+    ## Sendet Entdeckungsmissionen.
+    "Active": false,
+    ## Himmelskörper, von denen die Entdeckungsmissionen starten.
+    "Origin": [
+      {
+        "Galaxy": 1,
+        "System": 1,
+        "Position": 1,
+        "Type": "Planet"
+      }
+    ],
+    ## Flottenslots, die Entdeckungen gleichzeitig nutzen dürfen.
+    "MaxSlots": 2,
+    ## Schickt keine Entdeckungen mehr, sobald so viele Artefakte gesammelt sind (Anzeige „Gesammelte Artefakte: 1840 / 3600“ auf den Lebensform-Seiten). 0 = keine Grenze. Fällt der Bestand wieder darunter, geht es weiter. Lässt sich die Anzeige nicht lesen, laufen die Entdeckungen weiter (Warnung im Log).
+    "StopAtArtifacts": 0,
+    ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
+    "CheckIntervalMin": 15,
+    ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.
+    "CheckIntervalMax": 25
+  },
+  ## EXPERIMENTELL: Pause, Galaxie-Cache, Debug-Log, MinePlanRanking, Schattenflotte u. a.
+  "Experimental": {
+    ## Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist.
+    "BotPause": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": true,
+      ## Knopf **Pause** in der Browser-Kachel und Telegram `/pause [Minuten]`: Alle Worker außer Defender und SleepMode halten ihre Durchläufe so lange an (Standard 15) und laufen von selbst weiter (bei `Mode` = `Stop` werden sie gestoppt und neu gestartet). `/resume` oder der Knopf beendet es früher; erneutes Drücken verlängert. Rückrufe, Fleetsave und der Defender laufen weiter.
+      "DurationMinutes": 15,
+      ## Sicherheitsabstand (Standard 2). Eine Pause wird abgelehnt, wenn innerhalb der Pausenzeit plus dieser Reserve ein Rückruf fällig ist. Eine Pause wird auch abgelehnt, solange der Bot schläft und während einer Angriffssperre.
+      "RecallMarginMinutes": 2,
+      ## Längste Pause, die du mit `/pause` verlangen kannst (Standard 120).
+      "MaxDurationMinutes": 120,
+      ## Standard aus. An: Der Defender hält während der Pause ebenfalls an. Bereits geplante Fleetsaves und Rückrufe laufen weiter.
+      "StopDefender": false,
+      ## Standard 15. Eine Pause wird abgelehnt, wenn innerhalb dieser Zeit ein Angriff eintrifft (mit `StopDefender` an: plus die Pausenlänge). Während der Pause sind Spionage-, Angriffs-, Expeditions-, Kolonisier-, Entdeckungs- und Abbaumissionen gesperrt (Fleetsave, Transporte und Telegram-Befehle bleiben möglich).
+      "AttackMarginMinutes": 15
+    },
+    ## Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Wurde der Angriff zurückgerufen, entfällt der Fleetsave; kommt er später an, wird der Fleetsave verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus.
+    "DefenderRecheck": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": false,
+      ## Wie lange auf die Antwort gewartet wird (Standard 4, 1-10).
+      "TimeoutSeconds": 4
+    },
+    ## Schreibt zusätzliche Diagnosezeilen in eine eigene Datei devlog/TBot-debug-<Datum>.log (anonymisiert: Namen, Mail, IP und Token werden ersetzt; Koordinaten werden zu x:x:Position, Mengen bleiben; höchstens 50 MB pro Tag). Das normale Log bleibt klein. Schalte es ein, wenn eine Funktion nichts sendet und du den Grund sehen willst.
+    "ExtraDebugLog": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": true,
+      ## Zusatz-Debuglog fuer dieses Thema.
+      "Repatriate": true,
+      ## Zusatz-Debuglog fuer dieses Thema.
+      "Ledger": true,
+      ## Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist.
+      "BotPause": true,
+      ## Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Wurde der Angriff zurückgerufen, entfällt der Fleetsave; kommt er später an, wird der Fleetsave verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus.
+      "DefenderRecheck": true,
+      ## Hält den letzten freien Flottenslot für den Fleetsave frei. Jede andere Flotte, auch eine erzwungene, wird abgelehnt, wenn nur noch der reservierte Slot übrig ist, damit ein Angriff immer einen Slot für den Fleetsave findet.
+      "FleetsaveSlot": true,
+      ## Wie die Seite Minenplan die nächsten Investitionen (Minen und Forschung) einordnet. Nur Anzeige: AutoMine und AutoResearch bauen weiter nach ihren eigenen Regeln. Du kannst diese Werte auch auf der Seite selbst ändern; die Seite merkt sich ihre Wahl in deinem Browser.
+      "MinePlanRanking": true,
+      ## Item-Event: Einmal pro Spieltag greift ein Schiff den Asteroiden auf Position 17 deines eigenen Systems an, danach wird das Inventar verglichen. Eine Logzeile pro Versuch, keine Messenger-Nachricht.
+      "AsteroidHunt": true,
+      ## NICHT VOLLSTÄNDIG GETESTET - mit Vorsicht nutzen und Probleme melden. So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt. Braucht eine Deuterium-Reserve auf diesem Himmelskörper.
+      "ShadowFleet": true,
+      ## Gemeinsamer Speicher aller Galaxie-Scans mit Zeitstempel. FastFarm und Kolonisieren fragen ihn, bevor sie den Server abfragen. Ein langsamer Hintergrund-Scan hält die Systeme rund um deine Planeten frisch und meldet neue Kolonien und Umzüge anderer Spieler. Datendatei: data/galaxycache_<alias>.json.
+      "GalaxyCache": true,
+      ## Zusatz-Debuglog fuer dieses Thema.
+      "Requests": true,
+      ## Zusatz-Debuglog fuer dieses Thema.
+      "BrowserProxy": true
+    },
+    ## Gemeinsamer Speicher aller Galaxie-Scans mit Zeitstempel. FastFarm und Kolonisieren fragen ihn, bevor sie den Server abfragen. Ein langsamer Hintergrund-Scan hält die Systeme rund um deine Planeten frisch und meldet neue Kolonien und Umzüge anderer Spieler. Datendatei: data/galaxycache_<alias>.json.
+    "GalaxyCache": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": true,
+      ## Standard 12. Wie alt ein Eintrag sein darf, um statt einer Live-Abfrage genutzt zu werden.
+      "MaxAgeHours": 12,
+      ## Hintergrund-Scan: Systeme links und rechts jedes eigenen Systems (Standard 15, 0 = nur passives Aufzeichnen) und die Pause zwischen zwei Abfragen (Standard 20-45 s). Pausiert, solange der Bot schläft oder pausiert ist.
+      "RangeSystems": 15,
+      ## Hintergrund-Scan: Systeme links und rechts jedes eigenen Systems (Standard 15, 0 = nur passives Aufzeichnen) und die Pause zwischen zwei Abfragen (Standard 20-45 s). Pausiert, solange der Bot schläft oder pausiert ist.
+      "DelayMinSeconds": 20,
+      ## Hintergrund-Scan: Systeme links und rechts jedes eigenen Systems (Standard 15, 0 = nur passives Aufzeichnen) und die Pause zwischen zwei Abfragen (Standard 20-45 s). Pausiert, solange der Bot schläft oder pausiert ist.
+      "DelayMaxSeconds": 45,
+      ## Standard an. FastFarm nimmt den Scan nach inaktiven Zielen aus einem frischen Cache. Colonize überspringt Positionen, die der Cache als belegt zeigt; freie Positionen werden weiter live geprüft.
+      "UseInFastFarm": true,
+      ## Standard an. FastFarm nimmt den Scan nach inaktiven Zielen aus einem frischen Cache. Colonize überspringt Positionen, die der Cache als belegt zeigt; freie Positionen werden weiter live geprüft.
+      "UseInColonize": true,
+      ## Standard an. Änderungen zwischen zwei Scans eines Systems (neue Kolonie, Planet weg, neuer Mond, Statuswechsel, Umzug = ein Spieler verschwindet an einer Stelle und taucht innerhalb von 72 h an einer anderen auf) kommen ins Log; neue Kolonien und Umzüge auch an Telegram / Discord. Eigene Kolonien werden ignoriert. Der erste Scan eines Systems ist nur die Grundlage.
+      "Events": true,
+      ## Standard an. Änderungen zwischen zwei Scans eines Systems (neue Kolonie, Planet weg, neuer Mond, Statuswechsel, Umzug = ein Spieler verschwindet an einer Stelle und taucht innerhalb von 72 h an einer anderen auf) kommen ins Log; neue Kolonien und Umzüge auch an Telegram / Discord. Eigene Kolonien werden ignoriert. Der erste Scan eines Systems ist nur die Grundlage.
+      "Telegram": true
+    },
+    ## Wie stark wartende Bauansprüche des Ressourcen-Ledgers Repatriate und Collect sperren.
+    "RepatriateLedgerHold": {
+      ## Standard aus. An: Repatriate, Reverse-Repatriate und `/collect` ignorieren das Rohstoff-Konto vollständig (der ganze Bestand ist frei).
+      "Ignore": false,
+      ## Standard 30. Repatriate und /collect lassen Bestand in Ruhe, den ein wartender Bauauftrag schon zu mindestens diesem Anteil seines Gesamtbedarfs (Metall+Kristall+Deuterium) hält. Aufträge darunter (ferne Ziele wie eine Metallmine auf 995 M) frieren nicht mehr den ganzen Bestand ein. Aufträge mit Flügen oder voll gedeckt schützen immer. 0 = jede gehaltene Menge ist geschützt (altes Verhalten), 100 = nur voll gedeckte Aufträge.
+      "MinPercent": 30
+    },
+    ## Hält den letzten freien Flottenslot für den Fleetsave frei. Jede andere Flotte, auch eine erzwungene, wird abgelehnt, wenn nur noch der reservierte Slot übrig ist, damit ein Angriff immer einen Slot für den Fleetsave findet.
+    "FleetsaveSlot": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": true,
+      ## Anzahl reservierter Slots (Standard 1). Wirkt zusätzlich zu `General.SlotsToLeaveFree`.
+      "Slots": 1
+    },
+    ## Wie die Seite Minenplan die nächsten Investitionen (Minen und Forschung) einordnet. Nur Anzeige: AutoMine und AutoResearch bauen weiter nach ihren eigenen Regeln. Du kannst diese Werte auch auf der Seite selbst ändern; die Seite merkt sich ihre Wahl in deinem Browser.
+    "MinePlanRanking": {
+      ## `Gate` (Standard): Worker werden nicht gestoppt; während der Pause überspringt jeder seinen Durchlauf und läuft danach wieder, gestaffelt um bis zu 60 Sekunden. `Stop`: die alte harte Pause (alle Worker gestoppt und neu gestartet).
+      "Mode": "Payback",
+      ## Horizont für `Npv` (Standard 90 Tage); längste Amortisation, die als sinnvoll zählt (Standard 1000 Tage).
+      "HorizonDays": 90,
+      ## Horizont für `Npv` (Standard 90 Tage); längste Amortisation, die als sinnvoll zählt (Standard 1000 Tage).
+      "MaxPaybackDays": 1000,
+      ## Schritte mit längerer Amortisation als die Grenze ausblenden; Plasmatechnik neben den Minenschritten einreihen (Standard an).
+      "OnlySensible": false,
+      ## Schritte mit längerer Amortisation als die Grenze ausblenden; Plasmatechnik neben den Minenschritten einreihen (Standard an).
+      "IncludeResearch": true,
+      ## Standard 0. Tagesbudget in Deuterium-Gegenwert (zum Beispiel dein Expeditionseinkommen) für den Bauplan auf der Seite Minenplan. 0 = die Seite fragt danach und merkt es sich im Browser. Der Plan dient nur der Anzeige.
+      "DailyBudgetDeut": 0,
+      ## Standard aus / 12. An: AutoMine baut eine Mine auf einem Planeten nur, wenn dieser unter den ersten `PlanLookahead` Schritten des Bauplans steht (Seite Minenplan: beste Amortisation zuerst über alle Planeten). Andere Planeten warten. Ein Planet baut die Mine, die sein eigener Planschritt nennt, statt der Mine der alten ROI-Logik, aber nur innerhalb der AutoMine-Grenzen (höchste Minenstufe, `MaxDaysOfInvestmentReturn`); Energie- und Anlagen-Prioritäten von AutoMine bleiben vorn. Ohne frischen Plan (älter als 6 Stunden oder leer) wird nichts zurückgehalten. Nur Minen werden zurückgehalten; Forschung, Kraftwerke und Anlagen laufen wie bisher. Lebensform-Gebäude sind noch nicht Teil des Plans.
+      "UsePlanForAutoMine": false,
+      ## Standard aus / 12. An: AutoMine baut eine Mine auf einem Planeten nur, wenn dieser unter den ersten `PlanLookahead` Schritten des Bauplans steht (Seite Minenplan: beste Amortisation zuerst über alle Planeten). Andere Planeten warten. Ein Planet baut die Mine, die sein eigener Planschritt nennt, statt der Mine der alten ROI-Logik, aber nur innerhalb der AutoMine-Grenzen (höchste Minenstufe, `MaxDaysOfInvestmentReturn`); Energie- und Anlagen-Prioritäten von AutoMine bleiben vorn. Ohne frischen Plan (älter als 6 Stunden oder leer) wird nichts zurückgehalten. Nur Minen werden zurückgehalten; Forschung, Kraftwerke und Anlagen laufen wie bisher. Lebensform-Gebäude sind noch nicht Teil des Plans.
+      "PlanLookahead": 12
+    },
+    ## Item-Event: Einmal pro Spieltag greift ein Schiff den Asteroiden auf Position 17 deines eigenen Systems an, danach wird das Inventar verglichen. Eine Logzeile pro Versuch, keine Messenger-Nachricht.
+    "AsteroidHunt": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": false,
+      ## Gesendetes Schiff (Standard `Pathfinder`, 1). Jeder Schiffsname des Spiels geht (z. B. `Cruiser`, `Reaper`, `Destroyer`); keine Spionagesonden. Es wird der Planet mit den meisten dieser Schiffe benutzt.
+      "ShipType": "Pathfinder",
+      ## Gesendetes Schiff (Standard `Pathfinder`, 1). Jeder Schiffsname des Spiels geht (z. B. `Cruiser`, `Reaper`, `Destroyer`); keine Spionagesonden. Es wird der Planet mit den meisten dieser Schiffe benutzt.
+      "ShipCount": 1,
+      ## Versuche pro Spieltag (Standard 0 = unbegrenzt, max. 60; der Jäger hört für den Tag nach dem ersten Fund auf); `SearchSystems` (Standard 10) = wie viele Systeme um das Heimatsystem nach dem Asteroiden abgesucht werden (eigenes, +1, -1, +2 ...); ein abgelehntes Ziel kostet keinen Versuch, das zuletzt getroffene System wird am nächsten Tag zuerst versucht.
+      "MaxAttemptsPerDay": 0,
+      ## Versuche pro Spieltag (Standard 0 = unbegrenzt, max. 60; der Jäger hört für den Tag nach dem ersten Fund auf); `SearchSystems` (Standard 10) = wie viele Systeme um das Heimatsystem nach dem Asteroiden abgesucht werden (eigenes, +1, -1, +2 ...); ein abgelehntes Ziel kostet keinen Versuch, das zuletzt getroffene System wird am nächsten Tag zuerst versucht.
+      "SearchSystems": 10,
+      ## Standard an. Protokoll aller Versuche und Funde in `data/asteroiden_funde_<alias>.json`.
+      "SaveJson": true
+    },
+    ## NICHT VOLLSTÄNDIG GETESTET - mit Vorsicht nutzen und Probleme melden. So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt. Braucht eine Deuterium-Reserve auf diesem Himmelskörper.
+    "ShadowFleet": {
+      ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
+      "Active": false,
+      ## `Galaxy`, `System`, `Position`, `Type` (`Planet` oder `Moon`) des einen Himmelskörpers, der gesichert wird.
+      "Celestial": {
+        ## Galaxienummer der Koordinaten.
+        "Galaxy": 1,
+        ## Systemnummer der Koordinaten.
+        "System": 1,
+        ## Position (1-15) im System.
+        "Position": 1,
+        ## Planet oder Mond an diesen Koordinaten.
+        "Type": "Planet"
+      },
+      ## Optionale Liste weiterer Schiffstypen, die nach den Transportern gebaut werden: `[{"Type": "Recycler", "Target": 50, "MaxPerRun": 20}]`. `Target` = Menge pro Himmelskörper, `MaxPerRun` = höchste Schiffszahl pro Bestellung (0 = unbegrenzt). Pro Himmelskörper und Durchlauf eine Bestellung, und zwar für den ersten Eintrag, dessen Ziel noch nicht erreicht ist. Beispiel: [{"Type":"Pathfinder","Target":20,"MaxPerRun":5},{"Type":"Recycler","Target":50,"MaxPerRun":20},{"Type":"HeavyFighter","Target":500,"MaxPerRun":100},{"Type":"Deathstar","Target":10,"MaxPerRun":2}]. Pfadfinder brauchen die Entdecker-Klasse, Reaper die General-Klasse, Crawler sind durch das Spielmaximum begrenzt und werden nur auf Planeten gebaut.
+      "Ships": {
+        ## Schiffstyp und Anzahl der Schattenflotte.
+        "Recycler": 0
+      },
+      ## 10 bis 100, Standard 10 (am langsamsten, der günstigste Treibstoff).
+      "SpeedPercent": 10,
+      ## Ein Flug (hin und zurück) dauert eine zufällige Zeit zwischen diesen beiden Werten (Standard 20 bis 60). Die Zeitgrenze: Die Flotte ist nach höchstens `MaxBackInMinutes` wieder zu Hause.
+      "MinBackInMinutes": 20,
+      ## Ein Flug (hin und zurück) dauert eine zufällige Zeit zwischen diesen beiden Werten (Standard 20 bis 60). Die Zeitgrenze: Die Flotte ist nach höchstens `MaxBackInMinutes` wieder zu Hause.
+      "MaxBackInMinutes": 60,
+      ## Zufällige Pause zu Hause zwischen zwei Flügen (Standard 30 bis 180).
+      "PauseMinSeconds": 30,
+      ## Zufällige Pause zu Hause zwischen zwei Flügen (Standard 30 bis 180).
+      "PauseMaxSeconds": 180,
+      ## Deuterium für so viele Flüge wird als Fracht mitgenommen (Standard 3, begrenzt durch Laderaum und Bestand). Sind noch 2 oder mehr Flüge im Bestand, gibt ein niedriger Bestand nur eine Log-Warnung; bei genau einem verbleibenden Flug folgt eine Messenger-Warnung; ohne Deuterium warten die Flüge und es wird einmal eine Messenger-Nachricht gesendet.
+      "DeuteriumFlights": 3,
+      ## Optionales Zeitfenster (Spielzeit, `HH:mm`, darf über Mitternacht gehen, z. B. `22:00` bis `07:00`). Leer = immer. Ein Flug startet nur, wenn er vor Ende des Fensters zurück ist.
+      "WindowFrom": "",
+      ## Optionales Zeitfenster (Spielzeit, `HH:mm`, darf über Mitternacht gehen, z. B. `22:00` bis `07:00`). Leer = immer. Ein Flug startet nur, wenn er vor Ende des Fensters zurück ist.
+      "WindowTo": "",
+      ## Standard aus. Fallenmodus, gilt nur für die Schattenflotte dieses Himmelskörpers. An = der Defender lässt die Schattenflotte in Ruhe (sie wird nicht weggeschickt), sichert aber weiter die Rohstoffe und alle anderen Schiffe. Wird ein Angriff auf den Himmelskörper angekündigt, wird eine fliegende Schattenflotte sofort heimgerufen, wenn sie vor dem Einschlag zurück sein kann, damit sie beim Angriff da ist (aber nicht da war, als der Angreifer nachsah). Solange der Angriff aussteht, startet kein neuer Flug. Fleetsaves während der Schlafzeit (SleepMode/GhostSleep) schicken weiterhin alles weg.
+      "DefenderOff": false
+    }
+  }
+}

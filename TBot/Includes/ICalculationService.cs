@@ -134,6 +134,7 @@ namespace Tbot.Includes {
 		List<decimal> GetValidSpeedsForClass(CharacterClass playerClass);
 		bool IsThereTransportTowardsCelestial(Celestial celestial, List<Fleet> fleets);
 		bool isUnlocked(Celestial celestial, LFBuildables buildable);
+		Dictionary<LFBuildables, int> GetLFRequirements(LFBuildables buildable);
 		bool MayAddShipToExpedition(Ships fleet, Buildables buildable, int expeditionsNumber);
 		List<Celestial> ParseCelestialsList(dynamic source, List<Celestial> currentCelestials);
 		bool ShouldBuildCrystalStorage(Planet planet, int maxLevel, int speedFactor, int hours = 12, float ratio = 1, Researches researches = null, CharacterClass playerClass = CharacterClass.NoClass, bool hasGeologist = false, bool hasStaff = false, bool forceIfFull = false);
@@ -161,4 +162,4 @@ namespace Tbot.Includes {
 		List<Dictionary<Celestial, Resources>> CalcMultipleOrigin(Celestial celestialToBuild, List<Celestial> allCelestials, Resources missingResources, TransportSettings transportSettings, List<Fleet> fleets, UserData userData, Func<Celestial, Ships> quellSchiffe = null, int maxShipments = int.MaxValue);
 	}
 
-}
+}

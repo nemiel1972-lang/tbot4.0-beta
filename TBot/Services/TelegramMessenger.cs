@@ -334,7 +334,11 @@ namespace Tbot.Services {
 				Coordinate target = new();
 				string[] args;
 
-				if (core_cmds.Any(x => message.Text.ToLower().Contains(x))) {
+				if (message?.Text == null)
+					return;
+				string ersterBefehl = message.Text.ToLower().Split(' ')[0];
+
+				if (core_cmds.Contains(ersterBefehl)) {
 					args = message.Text.ToLower().Split(' ');
 					arg = args.ElementAt(0);
 
@@ -506,7 +510,7 @@ namespace Tbot.Services {
 				else if (currInstanceIndex < 0 || currInstanceIndex >= instances.Count()) {
 					await SendMessage(botClient, message.Chat, "Select an instance with /setmain !");
 					return;
-				} else if (commands.Any(x => message.Text.ToLower().Contains(x))) {
+				} else if (commands.Contains(ersterBefehl)) {
 					if (message.Text.Contains("@") && message.Text.Split(" ").Length == 1)
 						message.Text = message.Text.ToLower().Split(' ')[0].Split('@')[0];
 

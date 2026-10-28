@@ -143,7 +143,7 @@ namespace Tbot.Workers.Brain {
 				MissileSilo = maxMissileSilo,
 				NaniteFactory = maxNaniteFactory,
 				Terraformer = maxTerraformer,
-				SpaceDock = maxSpaceDock
+				SpaceDock = maxSpaceDock,
 			};
 		}
 
@@ -228,6 +228,7 @@ namespace Tbot.Workers.Brain {
 				case Buildables.NaniteFactory: return maxFacilities.NaniteFactory;
 				case Buildables.Terraformer: return maxFacilities.Terraformer;
 				case Buildables.SpaceDock: return maxFacilities.SpaceDock;
+				case Buildables.InterstellarAnomalyScanner: return maxFacilities.InterstellarAnomalyScanner;
 				default: return int.MaxValue;
 			}
 		}
@@ -320,6 +321,7 @@ namespace Tbot.Workers.Brain {
 			bool started = false;
 			bool stop = false;
 			bool delay = false;
+			bool pendingBlockedByLedger = false;
 			long delayBuilding = 0;
 			bool delayProduction = false;
 			try {
@@ -417,6 +419,8 @@ namespace Tbot.Workers.Brain {
 										DoLog(LogLevel.Information, $"Prioritizing previously funded {_pendingFundedBuildable.ToString()} level {_pendingFundedLevel.ToString()} on {celestial.ToString()} over freshly computed {buildable.ToString()}.");
 										buildable = _pendingFundedBuildable;
 										level = _pendingFundedLevel;
+									} else if (celestial.Resources.IsEnoughFor(pendingCost)) {
+										pendingBlockedByLedger = true;
 									}
 								}
 							}
@@ -446,6 +450,11 @@ namespace Tbot.Workers.Brain {
 					} else {
 						DoLog(LogLevel.Information, $"Plan mode: plan step {pickMine.ToString()} {pickLevel} on {celestial.ToString()} is not allowed by the AutoMine limits (max level {pickCap}, max {autoMinerSettings.MaxDaysOfInvestmentReturn:0} days) - keeping {buildable.ToString()}.");
 					}
+				}
+				if (!planHold && pendingBlockedByLedger) {
+					DoLog(LogLevel.Information, $"{celestial.ToString()} waits with the funded {_pendingFundedBuildable.ToString()} {_pendingFundedLevel}: the stock is reserved for another build (ledger). No other building is started meanwhile.");
+					delay = true;
+					planHold = true;
 				}
 				if (planHold) {
 				} else if (buildable != Buildables.Null && level > 0) {

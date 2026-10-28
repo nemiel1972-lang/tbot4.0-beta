@@ -34,6 +34,7 @@ namespace TBot.Common.Logging {
 #endif
 		AutoDiscovery,
 		GalaxyCache,
+		Directives,
 		Telegram
 	}
 }

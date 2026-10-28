@@ -11,7 +11,7 @@ namespace TBotUpdater {
 		private static string _target = "", _logFile = "", _resultFile = "";
 
 		public static int Main(string[] args) {
-			string package = null, restart = null, restartArgs = "", from = "?", to = "?";
+			string package = null, restart = null, restartArgs = "", from = "?", to = "?", service = null;
 			int pid = 0, waitStart = 40;
 			bool noRestart = false;
 			for (int i = 0; i < args.Length; i++) {
@@ -24,11 +24,12 @@ namespace TBotUpdater {
 					case "--from" when i + 1 < args.Length: from = args[++i]; break;
 					case "--to" when i + 1 < args.Length: to = args[++i]; break;
 					case "--wait-start" when i + 1 < args.Length: int.TryParse(args[++i], out waitStart); break;
+					case "--service" when i + 1 < args.Length: service = args[++i]; break;
 					case "--no-restart": noRestart = true; break;
 				}
 			}
 			if (package == null || _target == "" || !File.Exists(package) || !Directory.Exists(_target)) {
-				Console.WriteLine("Usage: TBotUpdater --package <zip> --target <folder> [--pid N] [--restart <exe>] [--restart-args \"...\"] [--from X] [--to Y] [--wait-start S] [--no-restart]");
+				Console.WriteLine("Usage: TBotUpdater --package <zip> --target <folder> [--pid N] [--restart <exe>] [--restart-args \"...\"] [--from X] [--to Y] [--wait-start S] [--no-restart] [--service <systemd-Dienst>]");
 				return 2;
 			}
 			string updateDir = Path.Combine(_target, "update");
@@ -61,7 +62,7 @@ namespace TBotUpdater {
 				} else ZipFile.ExtractToDirectory(package, staging, true);
 				string root = FindPackageRoot(staging);
 				if (root == null) {
-					bool again = RestartOld(noRestart, restart, restartArgs);
+					bool again = RestartOld(noRestart, restart, restartArgs, service);
 					Fail(false, "The package contains no TBot executable (TBot, TBot.exe or TBot.dll). Nothing was changed." + (again ? " The old version was started again." : ""), from, to, null);
 					return 1;
 				}
@@ -108,6 +109,8 @@ namespace TBotUpdater {
 
 				RunMigrateConfig();
 
+				if (noRestart && !string.IsNullOrWhiteSpace(service))
+					StartService(service);
 				if (!noRestart && !string.IsNullOrWhiteSpace(restart)) {
 					Process p = StartBot(restart, restartArgs);
 					if (p == null) throw new Exception("The new version could not be started.");
@@ -124,7 +127,7 @@ namespace TBotUpdater {
 			} catch (Exception e) {
 				Log("ERROR: " + e.Message);
 				if (!filesTouched) {
-					bool again = RestartOld(noRestart, restart, restartArgs);
+					bool again = RestartOld(noRestart, restart, restartArgs, service);
 					Fail(false, e.Message + " Nothing was changed." + (again ? " The old version was started again." : ""), from, to, null);
 					return 1;
 				}
@@ -140,6 +143,8 @@ namespace TBotUpdater {
 					Log("Rollback done: old version restored.");
 					if (!noRestart && !string.IsNullOrWhiteSpace(restart))
 						StartBot(restart, restartArgs);
+					else if (noRestart && !string.IsNullOrWhiteSpace(service))
+						StartService(service);
 					Fail(true, e.Message + " The old version was restored.", from, to, backupDir);
 				} catch (Exception e2) {
 					Log("ROLLBACK FAILED: " + e2.Message);
@@ -149,8 +154,9 @@ namespace TBotUpdater {
 			}
 		}
 
-		private static bool RestartOld(bool noRestart, string restart, string restartArgs) {
+		private static bool RestartOld(bool noRestart, string restart, string restartArgs, string service = null) {
 			try {
+				if (noRestart && !string.IsNullOrWhiteSpace(service)) return StartService(service);
 				if (noRestart || string.IsNullOrWhiteSpace(restart)) return false;
 				var p = StartBot(restart, restartArgs);
 				Log(p != null ? $"Old version started again (PID {p.Id})." : "The old version could not be started again.");
@@ -267,6 +273,29 @@ namespace TBotUpdater {
 			} catch (Exception e) {
 				Log("MigrateConfig could not run: " + e.Message);
 			}
+		}
+
+		private static bool StartService(string unit) {
+			try {
+				if (!System.Text.RegularExpressions.Regex.IsMatch(unit, @"^[A-Za-z0-9_.@-]+\.service$")) return false;
+				for (int i = 0; i < 5; i++) {
+					if (SystemctlOut("is-active " + unit) == "active") { Log($"Service {unit} is already running again."); return true; }
+					Thread.Sleep(1000);
+				}
+				SystemctlOut("start --no-block " + unit);
+				Log($"Service {unit} started (systemctl start).");
+				return true;
+			} catch (Exception e) {
+				Log($"Service {unit} could not be started: {e.Message}. Start it manually: systemctl start {unit}");
+				return false;
+			}
+		}
+
+		private static string SystemctlOut(string args) {
+			var psi = new ProcessStartInfo("systemctl", args) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+			using var p = Process.Start(psi);
+			if (p == null || !p.WaitForExit(15000)) return "";
+			return p.StandardOutput.ReadToEnd().Trim();
 		}
 
 		private static Process StartBot(string exe, string args) {

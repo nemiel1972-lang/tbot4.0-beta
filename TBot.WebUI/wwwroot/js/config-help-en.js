@@ -356,8 +356,11 @@ window.CFG_HELP.en = {
   "Proxy.LoginOnly": {
    "t": "On = the proxy is used only for logging in, game requests go direct. Off = everything goes through the proxy."
   },
+  "ShowUpdateNotes": {
+   "t": "After a version change the bot shows one short note about what is new, in the log and on Telegram/Discord. Off = no note. Default on."
+  },
   "AnonymizeLogs": {
-   "t": "On: player name, universe and e-mail address are replaced in all log lines by [Player], [Universe] and [Email] - useful before posting logs. Off (default): the real names are shown. Read at start, so a restart is needed."
+   "t": "On: player name, universe and e-mail address are replaced in all log lines by [Player], [Universe] and [Email] - useful before posting logs (read at start, so a restart is needed). It is also the default of the Hide data switch on every web UI page: names and coordinates are hidden there. The switch on a page overrides this in that browser only. Off (default): the real names are shown."
   },
   "CaptchaAPIKey": {
    "t": "Key of a captcha solving service. Optional, only needed if the game asks for captchas."
@@ -410,7 +413,23 @@ window.CFG_HELP.en = {
    "t": "ID of the chat the bot talks to. Only this chat may send commands."
   },
   "Logging": {
-   "t": "Write sent and received Telegram messages into the bot log."
+   "t": "Send log lines of the bot to Telegram. LogLevel and LogLevels decide which. Off: only alerts and command answers."
+  },
+  "LogLevel": {
+   "t": "Lowest level of log lines that go to Telegram (Error, Warning, Information, Debug). Default Warning. Applies to every worker without its own entry in LogLevels. /setloglevel changes it only until the next restart.",
+   "e": "Information"
+  },
+  "LogLevels": {
+   "t": "Own level per worker (name as in the log, for example Expeditions or AutoMine). Default = use the default level, Off = nothing from this worker, otherwise Error, Warning, Information or Debug.",
+   "e": "{ \"Expeditions\": \"Information\", \"AutoFarm\": \"Off\" }"
+  },
+  "RepeatMinutes": {
+   "t": "The same log line of a worker goes to Telegram at most once in this many minutes (numbers such as times are ignored when comparing). 0 = off, every line is sent. Applies to every worker without its own entry in LogRepeatMinutes. The log file is not affected.",
+   "e": "60"
+  },
+  "LogRepeatMinutes": {
+   "t": "Own repeat time per worker in minutes (name as in the log). 0 = never hold back lines of this worker, empty = use RepeatMinutes.",
+   "e": "{ \"Expeditions\": 120, \"AutoFarm\": 0 }"
   },
   "TelegramAutoPing.Active": {
    "t": "Send a regular \"still alive\" message."
@@ -619,6 +638,9 @@ window.CFG_HELP.en = {
   },
   "Transports.SendToTheMoonIfPossible": {
    "t": "Deliver to the moon instead of the planet if there is a moon."
+  },
+  "Transports.MaxBundledBuildings": {
+   "t": "How many ADDITIONAL buildings one delivery may bring along besides the target of the worker. 0 (default) = only the one target, which matches the resource reservation."
   },
   "Transports.MaxSlots": {
    "t": "Fleet slots Brain transports may use at the same time."
@@ -835,6 +857,15 @@ window.CFG_HELP.en = {
   "AutoRepatriate.Exclude": {
    "t": "Celestials that send nothing."
   },
+  "AutoRepatriate.ReserveTransportSlots": {
+   "t": "The reverse fetch stays this many slots below Brain Transports Max slots, so it never takes slots from the mines, lifeform and research workers. 0 (default) = no reserve."
+  },
+  "ResourceLedger.Active": {
+   "t": "The bookkeeping that reserves resources for builds so workers do not fight over the same stock or order the same delivery twice. On by default."
+  },
+  "ResourceLedger.PriorityByCost": {
+   "t": "On (default): per celestial the cheapest build wish gets the stock first, and a build that is not yet fully funded releases its held stock to cheaper ones, so small builds do not starve behind a big one. Off: first come, first served."
+  },
   "AutoRepatriate.Reverse.Active": {
    "t": "Reverse repatriation: fetch resources back out of the target when they are needed for a build. Advanced."
   },
@@ -856,6 +887,12 @@ window.CFG_HELP.en = {
   },
   "KeepBoosters.MinMineLevel.*": {
    "t": "A booster of this type is only used when the matching mine on the planet has at least this level."
+  },
+  "KeepBoosters.EventBoosters.Active": {
+   "t": "Event resource boosters in the inventory expire. When one has little time left it is activated on the planet with the highest production. Normal boosters are not affected. Needs a readable expiry time (see the log line 'Event booster in inventory')."
+  },
+  "KeepBoosters.EventBoosters.ActivateWithinHours": {
+   "t": "Activate an event booster when its remaining time in the inventory is below this many hours."
   },
   "KeepBoosters.Reserve": {
    "t": "Boosters of each type that stay in the inventory."
@@ -889,8 +926,14 @@ window.CFG_HELP.en = {
   "Origin": {
    "t": "Celestials the expeditions start from."
   },
+  "SmartShips": {
+   "t": "New fleet selection in auto mode (only if ManualShips is off): per expedition 1 probe, 1 pathfinder and 1 combat ship (Reaper first), each if available. If the main ships do not cover all expeditions still planned from this origin, the amount is reduced equally for all and the missing cargo is filled up by the mix ship."
+  },
+  "SmartMixShip": {
+   "t": "Mix ship that fills up missing cargo with SmartShips (SmallCargo or LargeCargo; Null = do not mix)."
+  },
   "PrimaryShip": {
-   "t": "Automatic mode: main cargo ship per expedition. The bot sends as many as are needed for the largest possible find, or all that are available, plus one probe and the strongest combat ship."
+   "t": "Automatic mode: main cargo ship per expedition. The bot sends as many as are needed for the largest possible find, or all that are available, plus one probe, the strongest combat ship and one pathfinder if available (otherwise just the combat ship)."
   },
   "PrimaryToKeep": {
    "t": "Automatic mode: this many primary ships always stay at home.",
@@ -910,6 +953,16 @@ window.CFG_HELP.en = {
   },
   "MinDeuteriumOnMoon": {
    "t": "A moon needs at least this much deuterium to start expeditions (0 = no check). Below it the moon is skipped and you get a message."
+  },
+  "TelegramMessenger.Active": {
+   "t": "Send a Telegram message when new expedition reports arrive, with the summed finds (resources, dark matter, ships). Several reports found at the same time come as one message. The first read after the first start only learns the existing reports and sends nothing."
+  },
+  "TelegramMessenger.OnlyFinds": {
+   "t": "On: no message when all new expeditions came back empty. Off: you also get a message when nothing was found."
+  },
+  "TelegramMessenger.WindowMinutes": {
+   "t": "0 = a message right after the bot reads new reports (every 20 minutes at most). With a number, new reports are collected and one summed message is sent once that many minutes have passed since the first collected report. Reports collected but not yet sent are lost when the bot restarts.",
+   "e": "60 = at most one expedition message per hour."
   },
   "MaxExpeditionsPerOrigin": {
    "t": "Most expeditions that fly from one origin at the same time."
@@ -979,7 +1032,13 @@ window.CFG_HELP.en = {
    "t": "A deep space field is only worth a trip with at least this much content."
   },
   "DeepSpaceRange": {
-   "t": "Systems around the start celestial that are searched for deep space fields."
+   "t": "Systems to the left and right of each of your planets that are searched for deep space (expedition) fields."
+  },
+  "ScanOnlyExpeditionOrigins": {
+   "t": "On: the deep space and foreign field search runs only around the expedition start celestials (Expeditions.Origin) instead of all your planets. Without expedition origins all planets are used. Own fields at your planets are always checked."
+  },
+  "ForeignDFRange": {
+   "t": "Systems to the left and right of each of your planets that are searched for foreign debris fields (0 = only the planet's own system). The larger, the more galaxy calls per cycle."
   },
   "MaxSlots": {
    "t": "Fleet slots harvesting may use at the same time."
@@ -1091,8 +1150,16 @@ window.CFG_HELP.en = {
    "e": "Only the ratio of the three weights matters, default 3 : 2 : 1 (MSE ratio); raise the deuterium weight to put deuterium-rich targets first."
   },
   "ShrinkDiscardPercent": {
-   "t": "A target is dropped when its fresh loot value is at least this many percent below the value from the full sweep (or below the minimum loot).",
-   "e": "10 = drop everything that lost 10 % or more."
+   "t": "%s",
+   "e": "10 = drop everything that lost 10 %% or more."
+  },
+  "ResetOnActivate": {
+   "t": "On bot start and when FastFarm is switched on again after a pause, the old state (targets, blocks, sweep position) is discarded so nothing from the day before lingers. Statistics are kept. A backup of the old file is saved as .bak.",
+   "e": "Only FastFarm uses this data; the normal AutoFarm is not affected."
+  },
+  "ResetMinHours": {
+   "t": "Lock for the reset: at most one reset every this many hours, so restarts or switching FastFarm on and off do not wipe everything each time.",
+   "e": "6 = a reset at most every 6 hours; 0 = no lock."
   },
   "MinLoot": {
    "t": "Targets with less lootable resources than this (metal + crystal + deuterium, after the plunder ratio) are not attacked."
@@ -1102,6 +1169,9 @@ window.CFG_HELP.en = {
   },
   "TopTargets": {
    "t": "Highest number of attacks sent in one round, best targets first."
+  },
+  "NoReportHours": {
+   "t": "A target that gave no espionage report three times in a row (the probes were probably destroyed) is not probed again for this many hours. 0 = off. The FastFarm reset clears this list."
   },
   "DeleteReports": {
    "t": "Deletes each espionage report after it was read. The inbox has a limit; when it is full, new reports are lost."
@@ -1146,8 +1216,20 @@ window.CFG_HELP.en = {
   "DefenderRecheck.Active": {
    "t": "Switch the second check on or off (default off)."
   },
+  "CollectLogs": {
+   "t": "Collects logs for development: while active, every log line (from debug up) and all lines of the extra debug log are written into ONE file in the folder devlogs (TBot-collect-<start>.log, max. 300 MB). The collection stops by itself after the hours set (default 12), also across restarts; switch it off and on again to collect again."
+  },
+  "CollectLogs.Active": {
+   "t": "Collection on or off (default off)."
+  },
+  "CollectLogs.Hours": {
+   "t": "How long to collect, in hours (default 12)."
+  },
+  "CollectLogs.Anonymize": {
+   "t": "Replace name, universe, mail, celestials, coordinates (x:x:position), IP and tokens (default on). Off = raw data, do not share."
+  },
   "ExtraDebugLog": {
-   "t": "Writes extra diagnosis lines to their own file devlog/TBot-debug-<date>.log (anonymized: names, mail, IP and tokens are replaced; coordinates become x:x:position, amounts stay) (max. 50 MB per day). The normal log stays small. On by default; old files (over 7 days) are deleted automatically. Switch it off if you do not need it."
+   "t": "Writes extra diagnosis lines to their own file devlogs/TBot-debug-<date>.log (anonymized: names, mail, IP and tokens are replaced; coordinates become x:x:position, amounts stay) (max. 50 MB per day). The normal log stays small. On by default; old files (over 7 days) are deleted automatically. Switch it off if you do not need it."
   },
   "ExtraDebugLog.Active": {
    "t": "Switch the extra log on or off (default on)."
@@ -1243,21 +1325,51 @@ window.CFG_HELP.en = {
    "t": "How old an entry may be so that workers use it instead of a live query (default 12).",
    "e": "12"
   },
+  "GalaxyCache.ScanAll": {
+   "t": "The background scan walks all galaxies and systems slowly, starting with the surroundings of your own systems, so the cache gives a complete picture (default on). Off = only the systems around your planets (see Systems around each planet)."
+  },
+  "GalaxyCache.HoursPerGalaxy": {
+   "t": "Full scan: time budget per galaxy. The pause between two systems is calculated from it (1 hour = about 7 seconds per system, 9 galaxies = about 9 hours). 0 = use the pauses DelayMinSeconds / DelayMaxSeconds. Default 1."
+  },
+  "GalaxyCache.FullScanIntervalHours": {
+   "t": "Full scan: every system is scanned again after this many hours. 24 = one full scan per day, starting at your home world and moving outwards. Default 24."
+  },
+  "GalaxyCache.UseHighscore": {
+   "t": "Reads the highscore once a day into a player database: status (inactive i, long inactive I, banned, vacation), rank, alliance and home world. Systems with inactive players are scanned first and kept fresh. The rank and status also correct old cache entries. Default on."
+  },
+  "GalaxyCache.UseApi": {
+   "t": "Reads the player list (status, alliance, rank) from the public OGame API: players.xml and highscore.xml, one request each, no load in the game. The host is taken from AutoFarm.AllianceWhitelist.ServerHost or derived from the universe number and language. The API status can lag behind (a returned player may stay marked inactive for a while), so the galaxy scans decide the status; the API only supplies the player list and the rank. Off = read the highscore pages instead. Default on."
+  },
+  "GalaxyCache.HighscoreIntervalHours": {
+   "t": "How often the highscore is read (default 24 hours). A failed read is retried after an hour."
+  },
+  "GalaxyCache.FastFarmMaxAgeHours": {
+   "t": "FastFarm takes its galaxy scan from the cache while the entry is no older than this (default 36 hours). Espionage before an attack is still done live."
+  },
+  "GalaxyCache.AutoFarmMaxAgeHours": {
+   "t": "AutoFarm takes its scan from the cache while the entry is no older than this (default 36 hours). The target is still re-checked live before an attack."
+  },
+  "GalaxyCache.EmptyMaxAgeHours": {
+   "t": "Systems without any planet are scanned again only after this many hours (default 72)."
+  },
   "GalaxyCache.RangeSystems": {
-   "t": "The background scan walks this many systems left and right of every own system (default 15). 0 = no background scan, only the scans of the other workers are stored.",
+   "t": "Used only when the whole-universe scan (ScanAll) is OFF: the background scan walks this many systems left and right of every own system (default 15, i.e. 31 systems around each planet). No effect while ScanAll is on.",
    "e": "15 = 31 systems around each planet."
   },
   "GalaxyCache.DelayMinSeconds": {
-   "t": "Shortest pause between two background queries (default 20 seconds)."
+   "t": "Shortest pause between two background queries (default 4 seconds)."
   },
   "GalaxyCache.DelayMaxSeconds": {
-   "t": "Longest pause between two background queries (default 45 seconds)."
+   "t": "Longest pause between two background queries (default 8 seconds)."
   },
   "GalaxyCache.UseInFastFarm": {
    "t": "FastFarm takes its galaxy scan from the cache while the entry is fresh (default on). Before an attack the fresh spy report still decides."
   },
   "GalaxyCache.UseInColonize": {
    "t": "Colonize skips positions that the fresh cache shows as occupied. Positions shown as free are always checked live (default on)."
+  },
+  "GalaxyCache.UseInAutoFarm": {
+   "t": "AutoFarm takes its scan for inactive targets from the cache while the entry is fresh (default on). Before an attack the target is still re-checked live."
   },
   "GalaxyCache.Events": {
    "t": "Write detected changes to the log: new colony, planet gone, new moon, status change, move (default on)."

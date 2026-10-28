@@ -115,3 +115,6 @@
 }
 
 
+
+.container.log-page { max-width: none; }
+#logsDiv .log-msg { white-space: normal; overflow-wrap: anywhere; word-break: break-word; padding-top: 2px; }

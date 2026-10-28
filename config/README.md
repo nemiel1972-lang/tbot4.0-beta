@@ -20,6 +20,10 @@ question). It does nothing for configs that already use `Load`. After it ran: re
 Safety net: the template starts with `"ConfigVersion": 4`. If the bot finds a config WITHOUT it that still has the old
 lifeform fields (`MaxT2Building`, `MaxBuilding6-12`), it logs "OLD CONFIG DETECTED" and starts only the Defender until the
 config is migrated (or `"ConfigVersion": 4` is added by hand). Configs without those old fields are never blocked.
+### Removing outdated entries (clean_config)
+
+The migration keeps every old value, so entries of removed settings stay in `instance_settings.json` and are listed as "not used by this version". `MigrateConfig --clean` (packages: `clean_config.sh` / `clean_config.bat`) removes them: it shows the list, asks, makes a backup in `backups/config-clean-<time>` and then deletes only the paths listed in `config/removed_keys.txt` (one path per line, `# reason` after it). Your own entries are never touched; entries that are neither in the template nor on the list are only shown. Options: `--dry-run`, `--yes`, `--dir <folder>`. Split configs (`Load`) are skipped. Maintainers: add a line to `config/removed_keys.txt` whenever a setting is removed or renamed.
+
 It is built from `tools/MigrateConfig/` (own project, template and `lifeform_targets.json` are embedded).
 
 ## DiscordWebhook (global)

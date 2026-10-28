@@ -1571,6 +1571,7 @@ func (b *OGame) sendMessage(id int64, message string, isPlayer bool) error {
 }
 
 func (b *OGame) getFleetsFromEventList() ([]ogame.Fleet, error) {
+	b.refreshLocation()
 	pageHTML, err := b.getPageContent(url.Values{"eventList": {"movement"}, "ajax": {"1"}})
 	if err != nil {
 		return nil, err
@@ -1579,6 +1580,7 @@ func (b *OGame) getFleetsFromEventList() ([]ogame.Fleet, error) {
 }
 
 func (b *OGame) getFleets(opts ...Option) ([]ogame.Fleet, ogame.Slots, error) {
+	b.refreshLocation()
 	page, err := getPage[parser.MovementPage](b, opts...)
 	if err != nil {
 		return []ogame.Fleet{}, ogame.Slots{}, err
@@ -2370,10 +2372,13 @@ func (b *OGame) getAuction(celestialID ogame.CelestialID) (ogame.Auction, error)
 		b.debug("getAuction step1 token: " + tokenMatch[1])
 
 		t1 := time.Now()
-		auctionHTML, err := b.postPageContent(
-			url.Values{"page": {"ingame"}, "component": {"trader"}, "action": {"auctioneer"}, "ajax": {"1"}},
-			url.Values{"action": {"auctioneer"}, "token": {tokenMatch[1]}, "ajax": {"1"}},
-		)
+		step2Payload := url.Values{"action": {"auctioneer"}, "token": {tokenMatch[1]}, "ajax": {"1"}}
+		auctionHTML, err := retryOnError100(func() ([]byte, error) {
+			return b.postPageContent(
+				url.Values{"page": {"ingame"}, "component": {"trader"}, "action": {"auctioneer"}, "ajax": {"1"}},
+				step2Payload,
+			)
+		}, func(t string) { step2Payload.Set("token", t) })
 		if err != nil {
 			b.debug(fmt.Sprintf("getAuction step2 (auctioneer post) FAILED after %v: %v", time.Since(t1), err))
 			return ogame.Auction{}, err
@@ -2523,7 +2528,9 @@ func (b *OGame) doAuction(celestialID ogame.CelestialID, bid map[ogame.Celestial
 		b.debug(fmt.Sprintf("doAuction: submitting bid %v after doAuction start, token used: %s", time.Since(tStart), token))
 		b.debug("submitBid outgoing payload: " + payload.Encode())
 		tSubmit := time.Now()
-		auctionHTML, err = b.postPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}, "asJson": {"1"}}, payload)
+		auctionHTML, err = retryOnError100(func() ([]byte, error) {
+			return b.postPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}, "asJson": {"1"}}, payload)
+		}, func(t string) { payload.Set("token", t) })
 		if err != nil {
 			b.debug(fmt.Sprintf("submitBid request FAILED after %v: %v", time.Since(tSubmit), err))
 		} else {
@@ -2531,7 +2538,9 @@ func (b *OGame) doAuction(celestialID ogame.CelestialID, bid map[ogame.Celestial
 		}
 	} else {
 		payload.Add("ajax", "1")
-		auctionHTML, err = b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderauctioneer"}, "ajax": {"1"}, "action": {"submitBid"}, "asJson": {"1"}}, payload)
+		auctionHTML, err = retryOnError100(func() ([]byte, error) {
+			return b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderauctioneer"}, "ajax": {"1"}, "action": {"submitBid"}, "asJson": {"1"}}, payload)
+		}, func(t string) { payload.Set("token", t) })
 	}
 	if err != nil {
 		return err
@@ -3823,17 +3832,141 @@ func (b *OGame) miniFleetSpy(coord ogame.Coordinate, shipCount int64, options ..
 }
 
 func (b *OGame) getPageMessages(page int64, tabid ogame.MessagesTabID) ([]byte, error) {
+	b.refreshLocation()
 	payload := url.Values{
 		"activeSubTab": {utils.FI64(tabid)},
 		"showTrash":    {"false"},
+	}
+	if page > 1 {
+		payload.Set("messagePage", utils.FI64(page))
 	}
 	return retryOnError100(func() ([]byte, error) {
 		return b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"messages"}, "asJson": {"1"}, "action": {"getMessagesList"}}, payload)
 	}, func(t string) { payload.Set("token", t) })
 }
 
+const espionageMaxPages = 10
+
+var (
+	locRefreshMu   sync.Mutex
+	locRefreshLast time.Time
+)
+
+func (b *OGame) refreshLocation() {
+	locRefreshMu.Lock()
+	if time.Since(locRefreshLast) < 15*time.Minute {
+		locRefreshMu.Unlock()
+		return
+	}
+	locRefreshLast = time.Now()
+	locRefreshMu.Unlock()
+	page, err := getPage[parser.OverviewPage](b, SkipCacheFullPage)
+	if err != nil {
+		return
+	}
+	st, err := page.ExtractServerTime()
+	if err != nil || st.IsZero() {
+		return
+	}
+	loc := st.Location()
+	_, offNew := st.Zone()
+	if old := b.cache.location; old != nil {
+		_, offOld := time.Now().In(old).Zone()
+		b.info(fmt.Sprintf("server clock offset: before %+d min, now %+d min", offOld/60, offNew/60))
+	}
+	if old := b.cache.location; old != nil && old.String() == loc.String() {
+		if _, o1 := time.Now().In(old).Zone(); true {
+			_, o2 := time.Now().In(loc).Zone()
+			if o1 == o2 {
+				return
+			}
+		}
+	}
+	b.cache.location = loc
+	b.extractor.SetLocation(loc)
+}
+
+func (b *OGame) espionagePages(maxPage int64, visit func(page int64, items []ogame.EspionageReportSummary) bool) (int64, string, error) {
+	b.refreshLocation()
+	if maxPage <= 0 || maxPage > espionageMaxPages {
+		maxPage = espionageMaxPages
+	}
+	seen := map[int64]bool{}
+	var pages int64
+	var newestTs int64
+	var stats []string
+	for page := int64(1); page <= maxPage; page++ {
+		pageHTML, err := b.getPageMessages(page, EspionageMessagesTabID)
+		if err != nil {
+			if page == 1 {
+				return pages, "", err
+			}
+			stats = append(stats, "p"+utils.FI64(page)+"=error")
+			break
+		}
+		var res struct {
+			Messages  []any `json:"messages"`
+			PageCount int64 `json:"pageCount"`
+		}
+		_ = json.Unmarshal(pageHTML, &res)
+		items := make([]ogame.EspionageReportSummary, 0)
+		for _, m := range res.Messages {
+			html, ok := m.(string)
+			if !ok {
+				continue
+			}
+			found, _, _ := b.extractor.ExtractEspionageReportMessageIDs([]byte(html))
+			items = append(items, found...)
+			if mm := rawTimestampRe.FindStringSubmatch(html); len(mm) == 2 {
+				if ts, e := strconv.ParseInt(mm[1], 10, 64); e == nil && ts > newestTs {
+					newestTs = ts
+				}
+			}
+		}
+		fresh := make([]ogame.EspionageReportSummary, 0, len(items))
+		for _, it := range items {
+			if !seen[it.ID] {
+				seen[it.ID] = true
+				fresh = append(fresh, it)
+			}
+		}
+		stats = append(stats, "p"+utils.FI64(page)+"="+strconv.Itoa(len(items))+"/"+strconv.Itoa(len(fresh))+" new")
+		if page == 1 {
+			var sample []string
+			for i, it := range fresh {
+				if i >= 12 {
+					break
+				}
+				sample = append(sample, strconv.FormatInt(it.Target.Galaxy, 10)+":"+strconv.FormatInt(it.Target.System, 10)+":"+strconv.FormatInt(it.Target.Position, 10))
+			}
+			stats = append(stats, "first targets ["+strings.Join(sample, " ")+"]")
+		}
+		if len(fresh) == 0 {
+			break
+		}
+		pages = page
+		if visit(page, fresh) {
+			break
+		}
+		if res.PageCount > 0 && page >= res.PageCount {
+			break
+		}
+	}
+	if newestTs > 0 {
+		stats = append(stats, "newest report "+strconv.FormatInt((time.Now().Unix()-newestTs)/60, 10)+" min old")
+	}
+	return pages, strings.Join(stats, " "), nil
+}
+
+var rawTimestampRe = regexp.MustCompile(`data-raw-timestamp='(\d+)'`)
+
 func (b *OGame) getEspionageReportMessages(maxPage int64) ([]ogame.EspionageReportSummary, error) {
-	return getMessages(b, maxPage, EspionageMessagesTabID, b.extractor.ExtractEspionageReportMessageIDs)
+	all := make([]ogame.EspionageReportSummary, 0)
+	_, _, err := b.espionagePages(maxPage, func(_ int64, items []ogame.EspionageReportSummary) bool {
+		all = append(all, items...)
+		return false
+	})
+	return all, err
 }
 
 func (b *OGame) getCombatReportMessages(maxPage int64) ([]ogame.CombatReportSummary, error) {
@@ -4065,34 +4198,23 @@ func (b *OGame) getEspionageReport(msgID int64) (ogame.EspionageReport, error) {
 }
 
 func (b *OGame) getEspionageReportFor(coord ogame.Coordinate) (ogame.EspionageReport, error) {
-	pageHTML, err := b.getPageMessages(1, EspionageMessagesTabID)
+	var foundID int64
+	pages, stats, err := b.espionagePages(espionageMaxPages, func(_ int64, items []ogame.EspionageReportSummary) bool {
+		for _, m := range items {
+			if m.Target.Equal(coord) {
+				foundID = m.ID
+				return true
+			}
+		}
+		return false
+	})
 	if err != nil {
 		return ogame.EspionageReport{}, err
 	}
-	var res struct {
-		ServerLang   string `json:"js_serverlang"`
-		ServerID     string `json:"js_serverid"`
-		Status       string `json:"status"`
-		Messages     []any  `json:"messages"`
-		Components   []any  `json:"components"`
-		NewAjaxToken string `json:"newAjaxToken"`
+	if foundID != 0 {
+		return b.getEspionageReport(foundID)
 	}
-	_ = json.Unmarshal(pageHTML, &res)
-	newMessages := make([]ogame.EspionageReportSummary, 0)
-	for i, m := range res.Messages {
-		if i > 40 {
-			break
-		}
-		doc := ([]byte)(m.(string))
-		newMessage, _, _ := b.extractor.ExtractEspionageReportMessageIDs(doc)
-		newMessages = append(newMessages, newMessage...)
-	}
-	for _, m := range newMessages {
-		if m.Target.Equal(coord) {
-			return b.getEspionageReport(m.ID)
-		}
-	}
-	return ogame.EspionageReport{}, errors.New("espionage report not found for " + coord.String())
+	return ogame.EspionageReport{}, errors.New("espionage report not found for " + coord.String() + " (" + strconv.FormatInt(pages, 10) + " page(s) searched; " + stats + ")")
 }
 
 func (b *OGame) getDeleteMessagesToken() (string, error) {
@@ -4584,28 +4706,30 @@ func (b *OGame) getChapter(chapterID int64) (ogame.Chapter, error) {
 	return b.extractor.ExtractChapter(pageHTML)
 }
 
-func (b *OGame) chapterClaimAll(chapterID int64) error {
-	_, err := b.getPageContent(url.Values{
+func (b *OGame) chapterClaimAll(chapterID int64) ([]byte, error) {
+	return b.postPageContent(url.Values{
 		"page":      {"ajax"},
 		"component": {"ipioverview"},
 		"action":    {"collectChapter"},
+		"asJson":    {"1"},
 		"ajax":      {"1"},
+	}, url.Values{
 		"token":     {b.cache.token.Get()},
 		"chapterId": {utils.FI64(chapterID)},
 	})
-	return err
 }
 
-func (b *OGame) chapterCollectReward(taskID int64) error {
-	_, err := b.getPageContent(url.Values{
+func (b *OGame) chapterCollectReward(taskID int64) ([]byte, error) {
+	return b.postPageContent(url.Values{
 		"page":      {"ajax"},
 		"component": {"ipioverview"},
 		"action":    {"collectTask"},
+		"asJson":    {"1"},
 		"ajax":      {"1"},
-		"token":     {b.cache.token.Get()},
-		"taskId":    {utils.FI64(taskID)},
+	}, url.Values{
+		"token":  {b.cache.token.Get()},
+		"taskId": {utils.FI64(taskID)},
 	})
-	return err
 }
 
 func (b *OGame) selectLfResearchSelect(planetID ogame.PlanetID, slotNumber int64) error {

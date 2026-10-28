@@ -57,6 +57,14 @@ namespace TBot.WebUI.Services {
 			}
 		}
 
+		public static bool GetKeepAuction(string alias) {
+			try {
+				return ReadBlock(alias)?.Value<bool?>("KeepAuction") ?? false;
+			} catch {
+				return false;
+			}
+		}
+
 		private static JObject? ReadBlock(string alias) {
 			var globalPath = SettingsService.GlobalSettingsPath;
 			if (string.IsNullOrWhiteSpace(globalPath) || !File.Exists(globalPath))

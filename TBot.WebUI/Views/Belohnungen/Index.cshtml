@@ -1,0 +1,260 @@
+@{
+    var instances = (IReadOnlyList<string>) ViewBag.Instances;
+    var selected = (string) ViewBag.Selected;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/autofarm.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
+    <style>
+        .rw-card { margin: 14px 0; padding: 12px 14px; border: 1px solid rgba(128,128,128,.35); border-radius: 8px; }
+        .rw-card h2 { font-size: 1.05rem; margin: 0 0 6px; }
+        .rw-card.rw-excluded { opacity: .6; }
+        .rw-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 6px 0 10px; }
+        .rw-table th, .rw-table td { padding: 3px 8px; text-align: right; border-bottom: 1px solid rgba(128,128,128,.25); white-space: nowrap; }
+        .rw-table th:first-child, .rw-table td:first-child, .rw-table th:nth-child(2), .rw-table td:nth-child(2) { text-align: left; }
+        .rw-warn { color: #e0a030; font-weight: 600; }
+        .rw-muted { opacity: .7; font-size: .85rem; }
+        .rw-scroll { overflow-x: auto; }
+        .rw-done { opacity: .55; }
+    </style>
+}
+
+<div class="autofarm-page tbot-dark" id="rw-page" data-instance="@selected">
+    <div class="autofarm-shell">
+        <header class="autofarm-header">
+            <div>
+                <h1>Rewards</h1>
+                <p class="intro">Tasks of the universe rewards (Tritium) as the bot reads them, with its classification and where it would build. This page only shows data and never changes anything. The data comes from the rewards capture (file belohnungen.on in the program folder).</p>
+            </div>
+            <form method="get" class="instance-picker" style="@(instances.Count <= 1 ? "display:none" : null)">
+                <label for="instance">Instance</label>
+                <div class="instance-controls">
+                    <select id="instance" name="instance">
+                        @foreach (var instance in instances)
+                        {
+                            if (string.Equals(instance, selected, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@instance" data-name="@instance" selected>*****</option>
+                            }
+                            else
+                            {
+                                <option value="@instance" data-name="@instance">*****</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="refresh-button">Open</button>
+                </div>
+            </form>
+        </header>
+
+        <div class="dashboard-toolbar" role="status" aria-live="polite">
+            <span id="rw-status">Loading data...</span>
+            <span id="rw-updated"></span>
+            <label style="margin-left:auto"><input type="checkbox" id="rw-mask" /> Hide data</label>
+        </div>
+
+        <div class="rw-tabs" style="margin:8px 0">
+            <button type="button" class="refresh-button" id="rw-tab-tasks">Tasks</button>
+            <button type="button" class="refresh-button" id="rw-tab-log">Log</button>
+        </div>
+        <div id="rw-content"></div>
+        <div id="rw-log" style="display:none"></div>
+        <p class="rw-muted">Defences and ships are always built on the home world. Buildings are built on the planet where the next level is cheapest. Dark Matter, item and purchase tasks always stay manual. Rank rewards are never claimed automatically.</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    (function () {
+        var page = document.getElementById('rw-page');
+        var instance = page.getAttribute('data-instance');
+        var content = document.getElementById('rw-content');
+        var statusEl = document.getElementById('rw-status');
+        var updatedEl = document.getElementById('rw-updated');
+        var maskEl = document.getElementById('rw-mask');
+        var last = null;
+        maskEl.checked = window.tbotHideData.get();
+
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+        function mask(s) { return maskEl.checked ? '*****' : esc(s); }
+
+        var KINDS = {
+            Defence: 'Defence',
+            SendFleet: 'Send fleet',
+            StartBuilding: 'Start building',
+            VisitMarket: 'Visit market',
+            Manual: 'Manual',
+            SendMessage: 'Send message',
+            VisitHighscore: 'Highscore',
+            Transport: 'Transport',
+            CollectDebris: 'Collect debris',
+            Spy: 'Spy',
+            ShipBuild: 'Ship building',
+            VisitScrap: 'Scrap merchant',
+            VisitOfficers: 'Officers\' mess',
+            VisitShop: 'Shop',
+            VisitTechtree: 'Tech tree',
+            OtherWorker: 'Other worker',
+            StartResearch: 'Start research',
+            Unknown: 'Unknown'
+        };
+        function target(t, home) {
+            if (t.Kind === 'Defence') return 'Home world ' + mask(home) + ': ' + (t.Amount > 0 ? t.Amount + ' x ' + esc(t.Defence) : 'nothing left to build');
+            if (t.Kind === 'ShipBuild') return 'Home world ' + mask(home) + ': ' + (t.Amount > 0 ? t.Amount + ' x ' + esc(t.Ship) : 'nothing left to build');
+            if (t.Kind === 'VisitScrap') return 'Open the scrap merchant page';
+            if (t.Kind === 'VisitOfficers') return 'Open the officers\' mess page';
+            if (t.Kind === 'VisitShop') return 'Open the shop page';
+            if (t.Kind === 'VisitTechtree') return 'Open any tech tree';
+            if (t.Kind === 'OtherWorker') return 'Done by another worker (items / auction)';
+            if (t.Kind === 'StartBuilding') return 'Planet with the cheapest next level';
+            if (t.Kind === 'StartResearch') return 'Done on its own when AutoResearch or the lifeform research starts a project';
+            if (t.Kind === 'SendFleet') return 'Done on its own by any fleet mission';
+            if (t.Kind === 'SendMessage') return 'Send one message';
+            if (t.Kind === 'VisitHighscore') return 'Open the highscore page';
+            if (t.Kind === 'Transport') return 'Home moon -> home planet: the missing amount with cargo ships';
+            if (t.Kind === 'CollectDebris') return 'Recyclers harvest the richest debris field in the systems of your planets';
+            if (t.Kind === 'Spy') return 'Done on its own by AutoFarm spying';
+            if (t.Kind === 'VisitMarket') return 'Open the resource market page';
+            if (t.Kind === 'Manual') return '<span class="rw-warn">manual</span> ' + esc(t.Why);
+            return '<span class="rw-muted">not recognised</span>';
+        }
+
+        function render(res) {
+            if (!res || !res.available) {
+                statusEl.textContent = 'No data yet';
+                updatedEl.textContent = '';
+                content.innerHTML = '<div class="rw-card"><p>No rewards data found. Create an empty file <code>belohnungen.on</code> in the program folder and restart the bot; the first capture runs right after the start and then every 4 hours.</p>' + (res && res.error ? '<p class="rw-warn">' + esc(res.error) + '</p>' : '') + '</div>';
+                return;
+            }
+            var d = res.data, tasks = d.Tasks || [];
+            statusEl.textContent = tasks.filter(function (t) { return !t.Done; }).length + ' open of ' + tasks.length + ' tasks';
+            updatedEl.textContent = d.Updated ? 'Updated ' + new Date(d.Updated).toLocaleString() : '';
+            var stages = {};
+            tasks.forEach(function (t) { (stages[t.Tritium] = stages[t.Tritium] || []).push(t); });
+            var h = '';
+            Object.keys(stages).sort(function (a, b) { return a - b; }).forEach(function (k) {
+                h += '<div class="rw-card"><h2>' + k + ' Tritium per task</h2><div class="rw-scroll"><table class="rw-table"><tr><th>Task</th><th>Progress</th><th>Type</th><th>Bot would</th><th>Status</th></tr>';
+                stages[k].forEach(function (t) {
+                    var prog = t.Need >= 0 ? t.Have + ' / ' + t.Need : '-';
+                    var st = t.Done ? '<span style="color:#2ea36b">done</span>' : '<span class="rw-warn">open</span>';
+                    h += '<tr' + (t.Done ? ' class="rw-done"' : '') + '><td><strong>' + esc(t.Title) + '</strong><br><span class="rw-muted">' + esc(t.Text) + '</span></td><td>' + prog + '</td><td>' + (KINDS[t.Kind] || esc(t.Kind)) + '</td><td>' + (t.Done ? '-' : target(t, d.Home)) + '</td><td>' + st + '</td></tr>';
+                });
+                h += '</table></div></div>';
+            });
+            h += modeCard(res.mode || 'off', res.tasks || 'off');
+            h += ranksCard(d, res.choices);
+            content.innerHTML = h;
+        }
+
+        function modeCard(mode, tasks) {
+            function o(v, t) { return '<option value="' + v + '"' + (mode === v ? ' selected' : '') + '>' + t + '</option>'; }
+            function o2(v, t) { return '<option value="' + v + '"' + (tasks === v ? ' selected' : '') + '>' + t + '</option>'; }
+            return '<div class="rw-card"><h2>Automatic claiming</h2><div>Mode: <select id="rw-mode">' + o('off', 'Off') + o('dry', 'Dry run (log only)') + o('on', 'On') + '</select></div>'
+                + '<div class="rw-muted">Claims a rank only when it is reached, not yet claimed and you chose a reward for it below. Checked with every capture (about every 4 hours). Dry run only writes to the log what would be claimed.</div>'
+                + '<h2 style="margin-top:14px">Automatic tasks</h2><div>Mode: <select id="rw-tasks">' + o2('off', 'Off') + o2('dry', 'Dry run (log only)') + o2('on', 'On') + '</select></div>'
+                + '<div class="rw-muted">Visits the scrap dealer and builds missing ships (e.g. Recycler) and defence (e.g. Light Laser) on your home planet for open tasks. Only the missing amount, only if the resources are there, and the same order is not repeated within 24 hours. Costs resources, so it is off by default.</div></div>';
+        }
+
+        function ranksCard(d, choices) {
+            var tiers = d.Tiers || [];
+            if (!tiers.length) return '';
+            choices = choices || {};
+            var h = '<div class="rw-card"><h2>Rank rewards</h2><div class="rw-muted" style="margin-bottom:6px">Pick one reward per rank as a preselection. It is only claimed when automatic claiming is switched on.</div><div class="rw-scroll"><table class="rw-table"><tr><th>Rank</th><th>Tritium</th><th>Choose one</th><th>With Commanding Staff</th><th>Status</th></tr>';
+            var stale = false;
+            tiers.forEach(function (t) {
+                var normal = (t.Rewards || []).filter(function (r) { return !r.Additional; });
+                var extra = (t.Rewards || []).filter(function (r) { return !!r.Additional; });
+                var ch = choices[String(t.Number)];
+                var valid = ch && normal.some(function (r) { return r.Id === ch.id && r.Name === ch.name; });
+                if (ch && !valid) stale = true;
+                function label(r) {
+                    var q = r.Quantity && r.Quantity !== '1' ? ' <span class="rw-muted">x ' + esc(r.Quantity) + '</span>' : '';
+                    return esc(r.Name) + q;
+                }
+                var radios = normal.map(function (r) {
+                    var on = valid && ch.id === r.Id;
+                    return '<label style="display:block"><input type="radio" name="rw-t' + t.Number + '" data-tier="' + t.Number + '" data-id="' + r.Id + '" data-name="' + esc(r.Name) + '"' + (on ? ' checked' : '') + (t.Claimed ? ' disabled' : '') + '> ' + label(r) + '</label>';
+                }).join('');
+                if (!t.Claimed) radios += '<label style="display:block" class="rw-muted"><input type="radio" name="rw-t' + t.Number + '" data-tier="' + t.Number + '" data-id="0"' + (valid ? '' : ' checked') + '> none</label>';
+                var reached = t.Need > 0 && t.Have >= t.Need;
+                var st = t.Claimed ? '<span style="color:#2ea36b">claimed</span>' : (reached ? '<span class="rw-warn">reached, not claimed</span>' : '<span class="rw-muted">' + t.Have + ' / ' + t.Need + '</span>');
+                h += '<tr' + (t.Claimed ? ' class="rw-done"' : '') + '><td>' + t.Number + (d.CurrentTier === t.Number ? ' <span class="rw-muted">(current)</span>' : '') + '</td><td>' + t.Need + '</td><td>' + radios + '</td><td>' + extra.map(label).join('<br>') + '</td><td>' + st + '</td></tr>';
+            });
+            h += '</table></div>';
+            if (stale) h += '<div class="rw-warn">A saved choice no longer matches the rewards (new event?). Please choose again.</div>';
+            return h + '<div class="rw-muted">Rewards change with each event; a saved choice then expires.</div></div>';
+        }
+
+        content.addEventListener('change', function (ev) {
+            var el = ev.target;
+            if (el && (el.id === 'rw-mode' || el.id === 'rw-tasks')) {
+                var b = new URLSearchParams();
+                b.set('instance', instance);
+                b.set(el.id === 'rw-tasks' ? 'tasks' : 'mode', el.value);
+                fetch('@Url.Action("SaveMode", "Belohnungen")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: b.toString() })
+                    .then(function (r) { return r.json(); })
+                    .then(function (r) { statusEl.textContent = r.success ? 'Choice saved' : 'Could not save: ' + (r.error || ''); if (r.success && last) last[el.id === 'rw-tasks' ? 'tasks' : 'mode'] = el.value; });
+                return;
+            }
+            if (!el || !el.getAttribute || el.getAttribute('data-tier') === null) return;
+            var body = new URLSearchParams();
+            body.set('instance', instance);
+            body.set('tier', el.getAttribute('data-tier'));
+            body.set('id', el.getAttribute('data-id'));
+            body.set('name', el.getAttribute('data-name') || '');
+            fetch('@Url.Action("SaveChoice", "Belohnungen")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })
+                .then(function (r) { return r.json(); })
+                .then(function (r) {
+                    if (!r.success) { statusEl.textContent = 'Could not save: ' + (r.error || ''); return; }
+                    if (last) { last.choices = last.choices || {}; var k = el.getAttribute('data-tier'); if (el.getAttribute('data-id') === '0') delete last.choices[k]; else last.choices[k] = { id: parseInt(el.getAttribute('data-id'), 10), name: el.getAttribute('data-name') || '' }; }
+                    statusEl.textContent = 'Choice saved';
+                })
+                .catch(function () { statusEl.textContent = 'Could not save'; });
+        });
+
+        function load() {
+            fetch('@Url.Action("Snapshot", "Belohnungen")?instance=' + encodeURIComponent(instance), { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) { last = res; render(res); })
+                .catch(function () { statusEl.textContent = 'Could not load data'; });
+        }
+        function maskInstances() {
+            var opts = document.querySelectorAll('#instance option');
+            for (var i = 0; i < opts.length; i++) opts[i].textContent = maskEl.checked ? '*****' : (opts[i].getAttribute('data-name') || '');
+        }
+        maskInstances();
+        maskEl.addEventListener('change', function () {
+            window.tbotHideData.set(maskEl.checked);
+            maskInstances();
+            if (last) render(last);
+        });
+        var logEl = document.getElementById('rw-log');
+        var showLog = false;
+        function loadLog() {
+            if (!showLog) return;
+            if (maskEl.checked) { logEl.innerHTML = '<div class="rw-muted">Hidden (Hide data is on).</div>'; return; }
+            fetch('@Url.Action("Log", "Belohnungen")', { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (r) {
+                    if (!r.success) { logEl.innerHTML = '<div class="rw-warn">Could not read the log: ' + esc(r.error || '') + '</div>'; return; }
+                    logEl.innerHTML = r.lines.length
+                        ? '<pre style="white-space:pre-wrap;font-size:12px;line-height:1.45">' + r.lines.map(esc).join('\n') + '</pre>'
+                        : '<div class="rw-muted">No Rewards lines in today\'s log yet.</div>';
+                })
+                .catch(function () { logEl.innerHTML = '<div class="rw-warn">Could not load the log.</div>'; });
+        }
+        function tab(log) {
+            showLog = log;
+            content.style.display = log ? 'none' : '';
+            logEl.style.display = log ? '' : 'none';
+            loadLog();
+        }
+        document.getElementById('rw-tab-tasks').addEventListener('click', function () { tab(false); });
+        document.getElementById('rw-tab-log').addEventListener('click', function () { tab(true); });
+        setInterval(loadLog, 15000);
+        load();
+        setInterval(load, 60000);
+    })();
+    </script>
+}

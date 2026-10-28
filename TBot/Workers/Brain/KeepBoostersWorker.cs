@@ -46,9 +46,23 @@ namespace Tbot.Workers.Brain {
 			return null;
 		}
 
+		private static bool TryGetCI(IDictionary<string, object> d, string key, out object value) {
+			value = null;
+			if (d == null)
+				return false;
+			if (d.TryGetValue(key, out value))
+				return true;
+			foreach (var kv in d)
+				if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase)) {
+					value = kv.Value;
+					return true;
+				}
+			return false;
+		}
+
 		private static bool GetBool(IDictionary<string, object> d, string key, bool def) {
 			try {
-				return d != null && d.TryGetValue(key, out var v) && v != null ? Convert.ToBoolean(v) : def;
+				return TryGetCI(d, key, out var v) && v != null ? Convert.ToBoolean(v) : def;
 			} catch {
 				return def;
 			}
@@ -56,7 +70,7 @@ namespace Tbot.Workers.Brain {
 
 		private static int GetInt(IDictionary<string, object> d, string key, int def) {
 			try {
-				return d != null && d.TryGetValue(key, out var v) && v != null ? Convert.ToInt32(v) : def;
+				return TryGetCI(d, key, out var v) && v != null ? Convert.ToInt32(v) : def;
 			} catch {
 				return def;
 			}
@@ -95,12 +109,19 @@ namespace Tbot.Workers.Brain {
 				try {
 					if (v is IDictionary<string, object> map)
 						value = GetInt(map, tier, 10);
+					else if (v is Newtonsoft.Json.Linq.JObject jo)
+						value = jo.TryGetValue(tier, StringComparison.OrdinalIgnoreCase, out var jt) && jt.Type != Newtonsoft.Json.Linq.JTokenType.Null ? (int) jt : 10;
+					else if (v is System.Collections.IDictionary legacy)
+						value = legacy.Contains(tier) && legacy[tier] != null ? Convert.ToInt32(legacy[tier]) : 10;
 					else if (v != null)
 						value = Convert.ToInt32(v);
-				} catch {
+				} catch (Exception e) {
+					DoLog(LogLevel.Warning, $"Reserve for {tier} not readable ({v?.GetType().Name}: {e.Message}) - using 10.");
 				}
 				res[tier] = Math.Max(0, value);
 			}
+			if (_logItems)
+				DoLog(LogLevel.Information, $"Reserve read ({v?.GetType().Name ?? "missing"}): " + string.Join(", ", res.Select(kv => $"{kv.Key}={kv.Value}")));
 			return res;
 		}
 
@@ -116,7 +137,8 @@ namespace Tbot.Workers.Brain {
 
 		private void WriteStock(List<InventoryItem> inventory) {
 			try {
-				var file = new { updated = DateTime.UtcNow.ToString("o"), stock = BoosterMatcher.StockByTier(inventory) };
+				var events = inventory.Where(i => i.Amount > 0 && IsEventBooster(i.Name)).Select(i => new { name = i.Name, amount = i.Amount, expiresInSec = i.ExpiresInSec() }).ToList();
+				var file = new { updated = DateTime.UtcNow.ToString("o"), stock = BoosterMatcher.StockByTier(inventory), events };
 				string dir = System.IO.Path.Combine(AppContext.BaseDirectory, "data");
 				System.IO.Directory.CreateDirectory(dir);
 				string alias = System.IO.Path.GetFileName(_tbotInstance.InstanceAlias);
@@ -194,6 +216,7 @@ namespace Tbot.Workers.Brain {
 				}
 			}
 			var status = new List<object>();
+			var activeByPlanet = new Dictionary<long, List<ActiveItem>>();
 			foreach (var planet in planets) {
 				_ct.ThrowIfCancellationRequested();
 				Heartbeat();
@@ -204,6 +227,8 @@ namespace Tbot.Workers.Brain {
 					DoLog(LogLevel.Warning, $"Could not read active items of {planet}: {e.Message}");
 					continue;
 				}
+
+				activeByPlanet[planet.ID] = active;
 
 				if (_logItems) {
 					string text = active.Count == 0 ? "none" : string.Join("; ", active.Select(i => $"\"{i.Name}\" [{i.Ref}] {i.TimeRemaining / 3600}h{i.TimeRemaining % 3600 / 60:00}m left"));
@@ -228,6 +253,7 @@ namespace Tbot.Workers.Brain {
 						cells[type.ToString()] = new { state = "active", level, minLevel, item = running.Name, remainingSec = running.TimeRemaining };
 						continue;
 					}
+					string what = $"No {type} booster running on {planet}";
 					if (minLevel > 0 && level < minLevel) {
 						cells[type.ToString()] = new { state = level < 0 ? "no-data" : "below-min", level, minLevel };
 						if (_logItems)
@@ -247,13 +273,13 @@ namespace Tbot.Workers.Brain {
 						continue;
 					}
 					if (dryRun) {
-						DoLog(LogLevel.Information, $"[DryRun] No {type} booster running on {planet} - would activate \"{pick.Name}\" [{pick.Ref}] (x{pick.Amount}).");
+						DoLog(LogLevel.Information, $"[DryRun] {what} - would activate \"{pick.Name}\" [{pick.Ref}] (x{pick.Amount}).");
 						_cooldown[(planet.ID, type)] = DateTime.UtcNow.AddMinutes(30);
 						cells[type.ToString()] = new { state = "would-activate", level, minLevel, item = pick.Name };
 						continue;
 					}
 
-					DoLog(LogLevel.Information, $"No {type} booster running on {planet} - activating \"{pick.Name}\" (x{pick.Amount} in stock).");
+					DoLog(LogLevel.Information, $"{what} - activating \"{pick.Name}\" (x{pick.Amount} in stock).");
 					_cooldown[(planet.ID, type)] = DateTime.UtcNow.Add(CooldownAfterTry);
 					cells[type.ToString()] = new { state = "missing", level, minLevel };
 					try {
@@ -278,6 +304,98 @@ namespace Tbot.Workers.Brain {
 				status.Add(new { id = planet.ID, name = planet.Name, coord = planet.Coordinate.ToString(), cells });
 			}
 			WriteStatus(status);
+
+			try {
+				await HandleEventBoosters(cfg, dryRun, planets, inventory, activeByPlanet);
+			} catch (OperationCanceledException) {
+				throw;
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"Event boosters failed: {e.Message}");
+			}
+		}
+
+		private readonly Dictionary<string, DateTime> _eventCooldown = new();
+		private DateTime _nextEventDiag = DateTime.MinValue;
+
+		private static bool IsEventBooster(string name) {
+			var n = BoosterMatcher.Normalize(name);
+			if (n.Length == 0 || n.Contains("expedition"))
+				return false;
+			return n.Contains("ressourcen-booster") || n.Contains("ressourcenbooster") || n.Contains("resource booster") || n.Contains("resource-booster");
+		}
+
+		private static double PlanetScore(Celestial c) {
+			if (c.ResourcesProduction != null) {
+				return (c.ResourcesProduction.Metal?.CurrentProduction ?? 0) / 3.0 + (c.ResourcesProduction.Crystal?.CurrentProduction ?? 0) / 2.0 + (c.ResourcesProduction.Deuterium?.CurrentProduction ?? 0);
+			}
+			if (c is Planet p && p.Buildings != null)
+				return (p.Buildings.MetalMine + p.Buildings.CrystalMine + p.Buildings.DeuteriumSynthesizer) / 1000.0;
+			return 0;
+		}
+
+		private async Task HandleEventBoosters(IDictionary<string, object> cfg, bool dryRun, List<Celestial> planets, List<InventoryItem> inventory, Dictionary<long, List<ActiveItem>> activeByPlanet) {
+			IDictionary<string, object> ev = null;
+			if (cfg != null && cfg.TryGetValue("EventBoosters", out var evv))
+				ev = evv as IDictionary<string, object>;
+			if (!GetBool(ev, "Active", true) || inventory == null || planets.Count == 0)
+				return;
+			long windowSec = Math.Max(1, GetInt(ev, "ActivateWithinHours", 24)) * 3600L;
+
+			var items = inventory.Where(i => i.Amount > 0 && !string.IsNullOrEmpty(i.Ref) && IsEventBooster(i.Name)).ToList();
+			if (items.Count == 0)
+				return;
+
+			if (DateTime.UtcNow >= _nextEventDiag) {
+				_nextEventDiag = DateTime.UtcNow.AddHours(12);
+				foreach (var it in items) {
+					long? left = it.ExpiresInSec();
+					string extra = it.Extra == null || it.Extra.Count == 0 ? "none" : string.Join(", ", it.Extra.Select(kv => $"{kv.Key}={kv.Value}"));
+					DoLog(LogLevel.Information, $"Event booster in inventory: \"{it.Name}\" x{it.Amount}, expires in {(left.HasValue ? TimeSpan.FromSeconds(left.Value).ToString(@"d\.hh\:mm") : "unknown")}; fields: {extra}");
+				}
+			}
+
+			bool EventRunning(Celestial c) => activeByPlanet.TryGetValue(c.ID, out var a) && a != null && a.Any(x => x.TimeRemaining > 0 && IsEventBooster(x.Name));
+			var used = new HashSet<long>();
+
+			foreach (var it in items.OrderBy(i => i.ExpiresInSec() ?? long.MaxValue)) {
+				_ct.ThrowIfCancellationRequested();
+				long? left = it.ExpiresInSec();
+				if (!left.HasValue || left.Value > windowSec)
+					continue;
+				if (_eventCooldown.TryGetValue(it.Ref, out var until) && until > DateTime.UtcNow)
+					continue;
+
+				var target = planets.Where(c => !used.Contains(c.ID) && !EventRunning(c)).OrderByDescending(PlanetScore).FirstOrDefault();
+				if (target == null) {
+					DoLog(LogLevel.Information, $"Event booster \"{it.Name}\" ends in {left.Value / 3600}h {left.Value % 3600 / 60:00}m, but every planet already has one running.");
+					_eventCooldown[it.Ref] = DateTime.UtcNow.AddMinutes(30);
+					continue;
+				}
+				_eventCooldown[it.Ref] = DateTime.UtcNow.AddMinutes(45);
+				if (dryRun) {
+					DoLog(LogLevel.Information, $"[DryRun] Event booster \"{it.Name}\" ends in {left.Value / 3600}h {left.Value % 3600 / 60:00}m - would activate it on {target}.");
+					used.Add(target.ID);
+					continue;
+				}
+				DoLog(LogLevel.Information, $"Event booster \"{it.Name}\" ends in {left.Value / 3600}h {left.Value % 3600 / 60:00}m - activating it on {target}.");
+				try {
+					await _ogameService.ActivateItem(target, it.Ref);
+					used.Add(target.ID);
+					await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds), _ct);
+					var act = await _ogameService.GetActiveItems(target) ?? new List<ActiveItem>();
+					activeByPlanet[target.ID] = act;
+					if (act.Any(x => x.TimeRemaining > 0 && IsEventBooster(x.Name))) {
+						DoLog(LogLevel.Information, $"Event booster is now active on {target}.");
+						_ = _tbotInstance.SendTelegramMessage($"{target}: event booster activated (\"{it.Name}\").");
+					} else
+						DoLog(LogLevel.Warning, $"Activated \"{it.Name}\" on {target}, but no running event booster shows up.");
+					inventory = await _ogameService.GetItems(target) ?? inventory;
+					WriteStock(inventory);
+				} catch (Exception e) {
+					DoLog(LogLevel.Warning, $"Could not activate event booster \"{it.Name}\" on {target}: {e.Message}");
+				}
+				await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.AFewSeconds), _ct);
+			}
 		}
 
 		private static int LevelOf(Celestial c, BoosterType type) {

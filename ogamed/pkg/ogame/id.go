@@ -415,7 +415,8 @@ func (o ID) IsFacility() bool {
 		o == SpaceDockID ||
 		o == LunarBaseID ||
 		o == SensorPhalanxID ||
-		o == JumpGateID
+		o == JumpGateID ||
+		o == InterstellarAnomalyScannerID
 }
 
 func (o ID) IsResourceBuilding() bool {

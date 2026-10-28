@@ -43,18 +43,17 @@ namespace TBot.Common.Logging {
 			_serviceProvider = serviceProvider;
 		}
 
-		private object syncObject = new object();
-		private static string _logPath = "";
 
-		private LoggingLevelSwitch _telegramLevelSwitch = new LoggingLevelSwitch(LogEventLevel.Warning);
-		private bool _telegramAdded = false;
+
 
 		public void WriteLog(LogLevel level, LogSender sender, string message) {
 			IDisposable? telegram = null;
 
+			LogSave.Write(level, sender.ToString(), message);
+			CollectLogs.Write(level, sender.ToString(), message);
 			message = Anonymize(message);
 
-			if (_telegramAdded == true) {
+			if (TelegramLogState.Added == true) {
 				telegram = LogContext.PushProperty("TelegramEnabled", true);
 			}
 			using (LogContext.PushProperty("LogSender", sender))
@@ -100,7 +99,7 @@ namespace TBot.Common.Logging {
 					outputTemplate: outTemplate
 				)
 				.WriteTo.File(
-					path: Path.Combine(_logPath, "TBot.log"),
+					path: Path.Combine(TelegramLogState.LogPath, "TBot.log"),
 					buffered: false,
 					restrictedToMinimumLevel: LogEventLevel.Debug,
 					flushToDiskInterval: TimeSpan.FromHours(1),
@@ -109,7 +108,7 @@ namespace TBot.Common.Logging {
 					retainedFileCountLimit: 10,
 					rollingInterval: RollingInterval.Day)
 				.WriteTo.File(
-					path: Path.Combine(_logPath, "TBot.csv"),
+					path: Path.Combine(TelegramLogState.LogPath, "TBot.csv"),
 					buffered: false,
 					restrictedToMinimumLevel: LogEventLevel.Debug,
 					hooks: new SerilogCSVHeaderHooks(),
@@ -132,13 +131,13 @@ namespace TBot.Common.Logging {
 		}
 
 		public void ConfigureLogging(string logPath) {
-			lock (syncObject) {
-				_logPath = logPath;
+			lock (TelegramLogState.Sync) {
+				TelegramLogState.LogPath = logPath;
 
 				var logConfig = GetDefaultConfiguration();
 
-				_telegramLevelSwitch.MinimumLevel = LogEventLevel.Warning;
-				_telegramAdded = false;
+				TelegramLogState.Switch.MinimumLevel = TelegramLogState.Levels.Lowest;
+				TelegramLogState.Added = false;
 
 				Log.Logger = logConfig.CreateLogger();
 
@@ -146,43 +145,78 @@ namespace TBot.Common.Logging {
 		}
 
 		public void AddTelegramLogger(string botToken, string chatId) {
-			lock (syncObject) {
-				if (_telegramAdded == false) {
+			lock (TelegramLogState.Sync) {
+				if (TelegramLogState.Added == false) {
 					var logConfig = GetDefaultConfiguration();
 					Log.Logger = logConfig.WriteTo.Logger(
-							c => c.MinimumLevel.ControlledBy(_telegramLevelSwitch)
-								.Filter.ByIncludingOnly(Matching.WithProperty<bool>("TelegramEnabled", p => p == true))
+							c => c.MinimumLevel.ControlledBy(TelegramLogState.Switch)
+								.Filter.ByIncludingOnly(TelegramAllows)
 								.WriteTo.Telegram(botToken: botToken,
 									chatId: chatId,
 									dateFormat: null,
 									outputTemplate: "{LogLevelEmoji:l}{LogSenderEmoji:l} {Message:lj}{NewLine}{Exception}")
 							).CreateLogger();
 
-					_telegramAdded = true;
+					TelegramLogState.Added = true;
+				}
+			}
+		}
+
+		private bool TelegramAllows(LogEvent e) {
+			if (!e.Properties.TryGetValue("TelegramEnabled", out var enabled) || !(enabled is ScalarValue es) || !(es.Value is bool on) || !on)
+				return false;
+			string sender = null;
+			if (e.Properties.TryGetValue("LogSender", out var ls) && ls is ScalarValue lss)
+				sender = lss.Value?.ToString();
+			if (!TelegramLogState.Levels.Allows(sender, e.Level))
+				return false;
+			return TelegramLogState.Repeat.ShouldSend(sender, e.RenderMessage(), DateTime.UtcNow);
+		}
+
+		public void ConfigureTelegramRepeat(int defaultMinutes, IEnumerable<KeyValuePair<string, string>> perSender) {
+			lock (TelegramLogState.Sync) {
+				var limit = TelegramRepeatLimit.Parse(defaultMinutes, perSender);
+				string before = TelegramLogState.Repeat.Describe();
+				string after = limit.Describe();
+				TelegramLogState.Repeat = limit;
+				if (before != after)
+					WriteLog(LogLevel.Information, LogSender.Main, $"Telegram log: {after}");
+			}
+		}
+
+		public void ConfigureTelegramLevels(string defaultLevel, IEnumerable<KeyValuePair<string, string>> perSender) {
+			lock (TelegramLogState.Sync) {
+				TelegramLogState.Levels = TelegramLogLevels.Parse(defaultLevel, perSender);
+				TelegramLogState.Switch.MinimumLevel = TelegramLogState.Levels.Lowest;
+				string text = TelegramLogState.Levels.Describe();
+				if (text != TelegramLogState.LevelsText) {
+					TelegramLogState.LevelsText = text;
+					WriteLog(LogLevel.Information, LogSender.Main, $"Telegram log levels: {text}");
 				}
 			}
 		}
 
 		public void RemoveTelegramLogger() {
-			ConfigureLogging(_logPath);
+			ConfigureLogging(TelegramLogState.LogPath);
 		}
 
 		public bool IsTelegramLoggerEnabled() {
-			return _telegramAdded;
+			return TelegramLogState.Added;
 		}
 
 		public void SetTelegramLoggerLogLevel(LogEventLevel logLevel) {
-			lock (syncObject) {
-				if (logLevel != _telegramLevelSwitch.MinimumLevel) {
-					WriteLog(LogLevel.Warning, LogSender.Main, $"Telegram log level changed from {_telegramLevelSwitch.MinimumLevel.ToString()}" +
-						$" into {logLevel.ToString()}");
+			lock (TelegramLogState.Sync) {
+				if (logLevel != TelegramLogState.Levels.Default) {
+					WriteLog(LogLevel.Warning, LogSender.Main, $"Telegram log level changed from {TelegramLogState.Levels.Default.ToString()}" +
+						$" into {logLevel.ToString()} (per-worker levels from the config stay as they are)");
 				}
-				_telegramLevelSwitch.MinimumLevel = logLevel;
+				TelegramLogState.Levels = TelegramLogState.Levels.WithDefault(logLevel);
+				TelegramLogState.Switch.MinimumLevel = TelegramLogState.Levels.Lowest;
 			}
 		}
 
 		public LogEventLevel GetTelegramLoggerLevel() {
-			return _telegramLevelSwitch.MinimumLevel;
+			return TelegramLogState.Levels.Default;
 		}
 	}
 }

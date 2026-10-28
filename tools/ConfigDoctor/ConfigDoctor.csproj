@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Eigenstaendiges Werkzeug: prueft die Config (alle Instanzen aus settings.json) auf Fehler und Widersprueche. Liest nur, aendert nie etwas.
+       Nutzt dieselbe Pruefung wie der Bot und das WebUI (TBot.Common/Settings/ConfigDoctor.cs). Ohne Spielzugriff: Koordinaten werden nur auf Bereiche geprueft. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ConfigDoctor</AssemblyName>
+    <RootNamespace>ConfigDoctorTool</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TBot.Common\TBot.Common.csproj" />
+  </ItemGroup>
+
+</Project>

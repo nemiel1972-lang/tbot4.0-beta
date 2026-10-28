@@ -69,7 +69,7 @@
         var updatedEl = document.getElementById('mp-updated');
         var maskEl = document.getElementById('mp-mask');
         var last = null;
-        try { maskEl.checked = localStorage.getItem('mp-mask') !== '0'; } catch (e) { maskEl.checked = true; }
+        maskEl.checked = window.tbotHideData.get();
 
         function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
         function n(v) { return (Math.round(Number(v) || 0)).toLocaleString('en'); }
@@ -167,7 +167,6 @@
             if (ev > 0) o.budget = ev;
             return o;
         }
-        // Budget aus den gespeicherten Expeditionsfunden (Rohstoffe + gefundene Schiffe, in Deuterium-Aequivalent pro Tag)
         function expoBudget(data, src) {
             var x = data.Expo;
             if (!x || src === 'manual') return 0;
@@ -176,6 +175,34 @@
             if (src === 'best7') return (x.Best7Of60ResDeut || 0) + (x.Best7Of60ShipsDeut || 0);
             return 0;
         }
+        function queueCard(data) {
+            var steps = data.BuildPlan || [];
+            if (!steps.length) return '';
+            var kindOf = function (x) { return x.IsLfBuilding ? 'lfb' : /^LF:/.test(x.What) ? 'lfr' : x.IsResearch ? 'res' : 'mine'; };
+            var cell = function (x) {
+                if (!x) return '<td class="mp-muted">-</td>';
+                return '<td>' + esc(x.What.replace(/^LF building: |^LF: /, '')) + ' &rarr; ' + x.Level + ' <span class="mp-muted">(plan #' + x.No + ', ' + d1(x.RoiDays) + ' d)</span></td>';
+            };
+            var research = steps.filter(function (x) { return kindOf(x) === 'res'; });
+            var h = '<div class="mp-card"><h2>Next step per queue</h2>';
+            h += '<div class="mp-muted" style="margin-bottom:6px">Per planet: which mine, lifeform building and lifeform research is built next, in plan order. Account research (AutoResearch) applies to the whole account and is shown on top.</div>';
+            h += '<div class="mp-scroll"><table class="mp-table"><tr><th>Research (account)</th><th colspan="3">Next steps</th></tr><tr><td>Next research</td><td colspan="3">'
+                + (research.length ? research.slice(0, 3).map(function (x, i) { return (i === 0 ? '<strong>' : '') + esc(x.What) + ' &rarr; ' + x.Level + (i === 0 ? '</strong>' : '') + ' <span class="mp-muted">(plan #' + x.No + ', ' + d1(x.RoiDays) + ' d)</span>'; }).join('<br>') : '<span class="mp-muted">-</span>')
+                + '</td></tr></table></div>';
+            h += '<div class="mp-scroll"><table class="mp-table" style="margin-top:8px"><tr><th>Planet</th><th>Next mine</th><th>Next LF building</th><th>Next LF research</th></tr>';
+            var names = (data.Planets || []).map(function (p) { return p.Name; });
+            names.forEach(function (nm) {
+                var mine = null, lfb = null, lfr = null;
+                steps.forEach(function (x) {
+                    if (x.Planet !== nm) return;
+                    var k = kindOf(x);
+                    if (k === 'mine' && !mine) mine = x; else if (k === 'lfb' && !lfb) lfb = x; else if (k === 'lfr' && !lfr) lfr = x;
+                });
+                var excl = (data.Planets || []).filter(function (p) { return p.Name === nm; })[0];
+                h += '<tr><td>' + mask(nm) + (excl && excl.Excluded ? ' <span class="mp-muted">(excluded)</span>' : '') + '</td>' + cell(mine) + cell(lfb) + cell(lfr) + '</tr>';
+            });
+            return h + '</table></div></div>';
+        }
         function planCard(data) {
             var steps = data.BuildPlan || [];
             var st = planSettings(data);
@@ -183,12 +210,12 @@
             livePicks(data).forEach(function (s) { livePickKeys[s.No] = true; });
             var so = function (v, t) { return '<option value="' + v + '"' + (st.src === v ? ' selected' : '') + '>' + t + '</option>'; };
             var srcSel = data.Expo ? 'Budget from: <select data-pl="src">' + so('manual', 'entered by hand') + so('avg7', 'expeditions, 7-day average') + so('avg30', 'expeditions, 30-day average') + so('best7', 'expeditions, best 7 of 60 days') + '</select> ' : '';
-            var h = '<div class="mp-card"><h2>Build plan by payback</h2><div class="mp-muted" style="margin-bottom:6px">' + srcSel + 'Daily budget (D-eq, e.g. expedition income): '
+            var h = '<div class="mp-card"><h2>Build plan: everything in order, all planets</h2><div class="mp-muted" style="margin-bottom:6px">' + srcSel + 'Daily budget (D-eq, e.g. expedition income): '
                 + '<input data-pl="budget" type="number" min="0" step="1000" style="width:9em" value="' + Math.round(st.budget) + '"' + (st.src !== 'manual' && data.Expo ? ' disabled' : '') + '> '
                 + '<label><input data-pl="reinvest" type="checkbox"' + (st.reinvest ? ' checked' : '') + '> add the extra yield of finished steps to the budget</label></div>';
             if (!steps.length) return h + '<p class="mp-muted">No plan yet (no step pays back within the payback limit).</p></div>';
             if (st.budget <= 0) h += '<p class="mp-muted">Enter a daily budget to get dates. Without it the table only shows the order.</p>';
-            h += '<div class="mp-scroll"><table class="mp-table"><tr><th>#</th><th>Planet</th><th>Step</th><th>To level</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th>'
+            h += '<div class="mp-scroll"><table class="mp-table"><tr><th>#</th><th>Type</th><th>Planet</th><th>Step</th><th>To level</th><th>Cost (D-eq)</th><th>Gain/day</th><th>Payback (days)</th>'
                 + (st.budget > 0 ? '<th>Done in (days)</th><th>Date</th><th>Income/day after</th>' : '') + '<th>Energy</th></tr>';
             var t = 0, funds = 0, income = st.budget, now = new Date(), totalCost = 0;
             steps.forEach(function (x) {
@@ -198,14 +225,16 @@
                     funds -= x.CostDeut;
                     if (st.reinvest) income += x.GainPerDay;
                     var dt = new Date(now.getTime() + t * 86400000);
-                    when = '<td>' + d1(t) + '</td><td>' + dt.toLocaleDateString() + '</td><td>' + n(income) + '</td>';
+                    var dateTxt = (t >= 0 && t < 36500 && !isNaN(dt.getTime())) ? dt.toLocaleDateString() : '> 100 years'; // Date ueberlaeuft bei riesigen Zeiten
+                    when = '<td>' + d1(t) + '</td><td>' + dateTxt + '</td><td>' + n(income) + '</td>';
                 }
                 totalCost += x.CostDeut;
                 var isLive = livePickKeys[x.No] ? '<span style="color:#2ea36b" title="Built live by AutoMine">&#9654;</span> ' : '';
-                h += '<tr><td>' + isLive + x.No + '</td><td>' + (x.IsResearch && x.Planet === 'Account' ? 'Account' : mask(x.Planet)) + '</td><td>' + esc(x.What) + '</td><td>' + x.Level + '</td><td>' + n(x.CostDeut) + '</td><td>' + n(x.GainPerDay) + '</td><td>' + d1(x.RoiDays) + '</td>'
+                var typ = x.IsLfBuilding ? 'LF building' : /^LF:/.test(x.What) ? 'LF research' : x.IsResearch ? 'Research' : 'Mine';
+                h += '<tr><td>' + isLive + x.No + '</td><td>' + typ + '</td><td>' + (x.IsResearch && x.Planet === 'Account' ? 'Account' : mask(x.Planet)) + '</td><td>' + esc(x.What) + '</td><td>' + x.Level + '</td><td>' + n(x.CostDeut) + '</td><td>' + n(x.GainPerDay) + '</td><td>' + d1(x.RoiDays) + '</td>'
                     + when + '<td>' + (x.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(x.EnergyShort) + '</span>' : (x.IsResearch ? '-' : 'ok')) + '</td></tr>';
             });
-            h += '</table></div><div class="mp-muted">' + steps.length + ' steps, total cost ' + n(totalCost) + ' D-eq. Each step uses the levels and plasma of the steps before it. Build times, resource transport and lifeform buildings/research are not included yet; display only.</div></div>';
+            h += '</table></div><div class="mp-muted">' + steps.length + ' steps, total cost ' + n(totalCost) + ' D-eq. Each step uses the levels and plasma of the steps before it. Build times and resource transport are not included; display only.</div></div>';
             return h;
         }
         content.addEventListener('change', function (ev) {
@@ -246,7 +275,6 @@
             });
             return picks;
         }
-        // Kurzuebersicht ganz oben: naechster Minen-Schritt, naechster LF-Schritt, naechste Forschung, danach der folgende Minen-Schritt
         function nextUp(data) {
             var steps = data.BuildPlan || [];
             if (!steps.length) return '';
@@ -257,7 +285,7 @@
             var picks = livePicks(data), liveNo = {};
             picks.forEach(function (p) { liveNo[p.No] = true; });
             var row = function (label, s, live) {
-                if (!s) return '<tr><td>' + label + '</td><td colspan="5" class="mp-muted">-</td></tr>';
+                if (!s) return '<tr><td>' + label + '</td><td colspan="5" class="mp-muted">- <span title="' + esc(data.Diag || '') + '">' + (/LF|research/i.test(label) && data.Diag ? '(' + esc(data.Diag) + ')' : '') + '</span></td></tr>';
                 return '<tr><td>' + label + '</td><td>' + (s.IsResearch && s.Planet === 'Account' ? 'Account' : mask(s.Planet)) + '</td><td>' + esc(s.What) + '</td><td>' + s.Level + '</td><td>' + n(s.CostDeut) + '</td><td>' + d1(s.RoiDays) + '</td><td>' + (live || '') + '</td></tr>';
             };
             var liveTxt = function (s) { return s && liveNo[s.No] ? '<span style="color:#2ea36b">&#9654; built live</span>' : '<span class="mp-muted">waits</span>'; };
@@ -299,8 +327,9 @@
             updatedEl.textContent = data.UpdatedUtc ? 'Updated: ' + new Date(data.UpdatedUtc).toLocaleString() : '';
             var html = liveBanner(data);
 
-            html += bestCard(data);
+            html += queueCard(data);
             html += planCard(data);
+            html += bestCard(data);
             html += researchCard(data);
 
             html += boosterCard(res.boosters);
@@ -323,6 +352,15 @@
                 html += '<h3 style="font-size:.95rem;margin:8px 0 0">Next step per mine</h3><div class="mp-scroll"><table class="mp-table">' + head(false);
                 (p.Next || []).forEach(function (s) { html += stepRow(s, false); });
                 html += '</table></div>';
+                var lfSteps = (data.BuildPlan || []).filter(function (x) { return x.Planet === p.Name && (x.IsLfBuilding || /^LF:/.test(x.What)); });
+                html += '<h3 style="font-size:.95rem;margin:8px 0 0">Lifeform steps in the build plan</h3>';
+                if (lfSteps.length) {
+                    html += '<div class="mp-scroll"><table class="mp-table"><tr><th>Plan #</th><th>Step</th><th>To level</th><th>Cost (D-eq)</th><th>Extra yield/day</th><th>Payback (days)</th><th>Energy</th></tr>';
+                    lfSteps.forEach(function (x) {
+                        html += '<tr><td>' + x.No + '</td><td>' + esc(x.What) + '</td><td>' + x.Level + '</td><td>' + n(x.CostDeut) + '</td><td>' + n(x.GainPerDay) + '</td><td>' + d1(x.RoiDays) + '</td><td>' + (x.EnergyShort > 0 ? '<span class="mp-warn">short ' + n(x.EnergyShort) + '</span>' : 'ok') + '</td></tr>';
+                    });
+                    html += '</table></div>';
+                } else html += '<div class="mp-muted">No lifeform step in the plan for this planet (no lifeform data loaded yet, no resource bonus, or targets reached).</div>';
                 html += '<h3 style="font-size:.95rem;margin:8px 0 0">Planned order (best payback first, like AutoMine)</h3><div class="mp-scroll"><table class="mp-table">' + head(true);
                 (p.Sequence || []).forEach(function (s) { html += stepRow(s, true); });
                 html += '</table></div>';
@@ -349,7 +387,7 @@
         }
         maskInstances();
         maskEl.addEventListener('change', function () {
-            try { localStorage.setItem('mp-mask', maskEl.checked ? '1' : '0'); } catch (e) { }
+            window.tbotHideData.set(maskEl.checked);
             maskInstances();
             if (last) render(last);
         });

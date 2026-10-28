@@ -218,7 +218,10 @@ namespace TBot.Ogame.Infrastructure {
 				}
 			}
 			LogLevel stufe = LogLevel.Information;
-			if (payload != null) {
+			var tag = payload == null ? null : System.Text.RegularExpressions.Regex.Match(payload, @"^\s*\x1b?(?:\[[0-9;]*m)?(ERRO|CRIT|WARN|INFO|DEBU|TRAC|PRIN)");
+			if (tag != null && tag.Success) {
+				stufe = (tag.Groups[1].Value == "ERRO" || tag.Groups[1].Value == "CRIT") ? LogLevel.Error : tag.Groups[1].Value == "WARN" ? LogLevel.Warning : LogLevel.Information;
+			} else if (payload != null) {
 				string p = payload;
 				if (p.Contains("ERRO") || p.Contains("panic", StringComparison.OrdinalIgnoreCase) || p.Contains("fatal", StringComparison.OrdinalIgnoreCase)
 					|| p.Contains("error", StringComparison.OrdinalIgnoreCase) || p.Contains("fehler", StringComparison.OrdinalIgnoreCase) || p.Contains("failed", StringComparison.OrdinalIgnoreCase))
@@ -869,6 +872,28 @@ namespace TBot.Ogame.Infrastructure {
 			return string.IsNullOrEmpty(b64) ? "" : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64));
 		}
 
+		public Task<string> GetPageHtml(params KeyValuePair<string, string>[] parameters) => PostPageHtml(parameters);
+
+		public async Task<string> PostPageForm(string query, params KeyValuePair<string, string>[] form) {
+			string b64 = await PostAsyncNoRetry<string>("/bot/post-page-content?" + query, form);
+			return string.IsNullOrEmpty(b64) ? "" : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64));
+		}
+
+		public Task<string> GetDirectiveChapterHtml(int chapterId) =>
+			PostPageHtml(new KeyValuePair<string, string>("page", "ajax"),
+				new KeyValuePair<string, string>("component", "ipioverview"),
+				new KeyValuePair<string, string>("action", "overviewLayer"),
+				new KeyValuePair<string, string>("ajax", "1"),
+				new KeyValuePair<string, string>("chapterId", chapterId.ToString()));
+
+		public async Task<string> CollectDirectiveTask(long taskId) {
+			return await PostAsync<string>($"/bot/directives/task/{taskId}/collect");
+		}
+
+		public async Task<string> ClaimDirectiveChapter(int chapterId) {
+			return await PostAsync<string>($"/bot/directives/chapter/{chapterId}/claim-all");
+		}
+
 		public Task<string> GetLfBonusesPageHtml(long celestialId) => GetLfPageHtml(celestialId, "lfbonuses");
 
 		public Task<string> GetLfPageHtml(long celestialId, string component) =>
@@ -1109,6 +1134,10 @@ namespace TBot.Ogame.Infrastructure {
 			return info;
 		}
 
+		public async Task<HighscoreInfo> GetHighscore(int category, int type, int page) {
+			return await GetAsync<HighscoreInfo>($"/bot/highscore/{category}/{type}/{page}");
+		}
+
 		public async Task<GalaxyInfo> GetGalaxyInfo(int galaxy, int system) {
 			Coordinate coordinate = new() { Galaxy = galaxy, System = system };
 			return await GetGalaxyInfo(coordinate);
@@ -1232,7 +1261,7 @@ namespace TBot.Ogame.Infrastructure {
 				parameters.Add(new KeyValuePair<string, string>("galaxy", coords.Galaxy.ToString()));
 				parameters.Add(new KeyValuePair<string, string>("system", coords.System.ToString()));
 				parameters.Add(new KeyValuePair<string, string>("position", coords.Position.ToString()));
-				success = await PostAsync<bool>($"/bot/planets/{origin.ID}/send-discovery", parameters.ToArray());
+				success = await PostAsyncNoRetry<bool>($"/bot/planets/{origin.ID}/send-discovery", parameters.ToArray());
 			} catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest) {
 				success = false;
 			} catch (OgamedException) {

@@ -51,7 +51,7 @@ namespace Tbot.Services {
 
 		public bool Due(DateTime now, TimeSpan every) => now - _lastRefresh >= every;
 
-		public int Add(IEnumerable<ExpeditionMessage> messages, Func<string, double> shipValueDeut, DateTime now) {
+		public int Add(IEnumerable<ExpeditionMessage> messages, Func<string, double> shipValueDeut, DateTime now, List<Entry> fresh = null) {
 			lock (_gate) {
 				_lastRefresh = now;
 				var known = _data.Entries.Select(e => e.Id).ToHashSet();
@@ -61,10 +61,12 @@ namespace Tbot.Services {
 						continue;
 					var ships = (m.Ships ?? new()).Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value);
 					var r = m.Resources;
-					_data.Entries.Add(new Entry {
+					var entry = new Entry {
 						Id = m.ID, Utc = m.CreatedAt.Kind == DateTimeKind.Utc ? m.CreatedAt : m.CreatedAt.ToUniversalTime(),
 						Metal = r?.Metal ?? 0, Crystal = r?.Crystal ?? 0, Deuterium = r?.Deuterium ?? 0, DarkMatter = r?.Darkmatter ?? 0, Ships = ships
-					});
+					};
+					_data.Entries.Add(entry);
+					fresh?.Add(entry);
 					known.Add(m.ID);
 					added++;
 				}
@@ -73,6 +75,27 @@ namespace Tbot.Services {
 				Save();
 				return added;
 			}
+		}
+
+		public static string FormatTelegram(IReadOnlyList<Entry> fresh, bool onlyFinds) {
+			if (fresh == null || fresh.Count == 0)
+				return null;
+			bool Has(Entry e) => e.Metal > 0 || e.Crystal > 0 || e.Deuterium > 0 || e.DarkMatter > 0 || e.Ships.Count > 0;
+			var finds = fresh.Where(Has).ToList();
+			if (finds.Count == 0 && onlyFinds)
+				return null;
+			var ci = System.Globalization.CultureInfo.InvariantCulture;
+			var parts = new List<string>();
+			long m = finds.Sum(e => e.Metal), c = finds.Sum(e => e.Crystal), d = finds.Sum(e => e.Deuterium), dm = finds.Sum(e => e.DarkMatter);
+			if (m > 0) parts.Add("metal " + m.ToString("N0", ci));
+			if (c > 0) parts.Add("crystal " + c.ToString("N0", ci));
+			if (d > 0) parts.Add("deuterium " + d.ToString("N0", ci));
+			if (dm > 0) parts.Add("dark matter " + dm.ToString("N0", ci));
+			var ships = finds.SelectMany(e => e.Ships).GroupBy(kv => kv.Key).Select(g => g.Sum(kv => kv.Value).ToString("N0", ci) + " " + g.Key).ToList();
+			if (ships.Count > 0) parts.Add("ships: " + string.Join(", ", ships));
+			string text = $"Expeditions back: {fresh.Count} report(s), {finds.Count} with finds.";
+			if (parts.Count > 0) text += "\nFound: " + string.Join("; ", parts) + ".";
+			return text;
 		}
 
 		public Summary Current { get { lock (_gate) return _data.Summary; } }

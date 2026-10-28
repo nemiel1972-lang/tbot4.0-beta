@@ -119,6 +119,7 @@ namespace Tbot.Workers
 						planet.Defences = await ogameService.GetDefences(planet);
 						break;
 				}
+				StartDataFreshness.Mark(planet, UpdateTypes);
 			} catch (Exception e) {
 				_tbotInstance.log(LogLevel.Debug, LogSender.Tbot, $"Exception: {e.Message}");
 				_tbotInstance.log(LogLevel.Warning, LogSender.Tbot, $"Stacktrace: {e.StackTrace}");
@@ -277,7 +278,10 @@ namespace Tbot.Workers
 
 		public async Task<List<Celestial>> UpdateCelestials() {
 			try {
-				return (await _ogameService.GetCelestials()).ToList();
+				var geladen = (await _ogameService.GetCelestials()).ToList();
+				foreach (var c in geladen)
+					TBot.Common.Logging.LogAnonymizer.RegisterCelestial(c.Name);
+				return geladen;
 			} catch (Exception e) {
 				_tbotInstance.log(LogLevel.Debug, LogSender.Tbot, $"UpdateCelestials() Exception: {e.Message}");
 				_tbotInstance.log(LogLevel.Warning, LogSender.Tbot, $"Stacktrace: {e.StackTrace}");

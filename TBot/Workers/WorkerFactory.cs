@@ -61,6 +61,7 @@ namespace Tbot.Workers {
 				Feature.AsteroidHunt => new AsteroidHuntWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
 				Feature.ShadowFleet => new ShadowFleetWorker(tbotMainInstance, _ogameService, _fleetScheduler, tbotOgameBridge),
 				Feature.GalaxyCache => new GalaxyCacheWorker(tbotMainInstance, _ogameService, tbotOgameBridge),
+				Feature.Directives => new DirectivesWorker(tbotMainInstance, _ogameService, _fleetScheduler, _calculationService, tbotOgameBridge),
 				_ => null
 			};
 
@@ -122,6 +123,7 @@ namespace Tbot.Workers {
 				case Feature.BrainLifeformAutoResearch:
 				case Feature.BrainAutoFleetJumpGate:
 				case Feature.BrainKeepBoosters:
+				case Feature.Directives:
 				case Feature.BrainCelestialAutoMine:
 				case Feature.BrainCelestialLifeformAutoMine:
 				case Feature.BrainCelestialLifeformAutoResearch:

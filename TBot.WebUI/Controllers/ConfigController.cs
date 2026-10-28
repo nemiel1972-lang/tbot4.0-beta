@@ -13,6 +13,11 @@ namespace TBot.WebUI.Controllers {
 		private const string ExperimentalBlock = "Experimental";
 
 		private static JObject DefaultExperimental() => new JObject {
+			["CollectLogs"] = new JObject {
+				["Active"] = false,
+				["Hours"] = 12,
+				["Anonymize"] = true
+			},
 			["BotPause"] = new JObject {
 				["Active"] = true,
 				["DurationMinutes"] = 15,
@@ -43,11 +48,21 @@ namespace TBot.WebUI.Controllers {
 			["GalaxyCache"] = new JObject {
 				["Active"] = true,
 				["MaxAgeHours"] = 12,
+				["ScanAll"] = true,
+				["HoursPerGalaxy"] = 1.0,
+				["FullScanIntervalHours"] = 24,
+				["UseApi"] = true,
+				["UseHighscore"] = true,
+				["HighscoreIntervalHours"] = 24,
+				["AutoFarmMaxAgeHours"] = 36,
+				["FastFarmMaxAgeHours"] = 36,
 				["RangeSystems"] = 15,
-				["DelayMinSeconds"] = 20,
-				["DelayMaxSeconds"] = 45,
+				["EmptyMaxAgeHours"] = 72,
+				["DelayMinSeconds"] = 4,
+				["DelayMaxSeconds"] = 8,
 				["UseInFastFarm"] = true,
 				["UseInColonize"] = true,
+				["UseInAutoFarm"] = true,
 				["Events"] = true,
 				["Telegram"] = true
 			},
@@ -342,6 +357,8 @@ namespace TBot.WebUI.Controllers {
 					var suppressed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AutoFarm", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave" };
 					if (!deutOverride.KeepExpeditions)
 						suppressed.Add("Expeditions");
+					if (FastFarmReader.GetKeepAuction(model.Instance))
+						suppressed.Remove("AutoBidAuction");
 					foreach (var info in model.Blocks.Where(b => suppressed.Contains(b.Name))) {
 						info.Overridden = true;
 						info.OverrideTag = info.Name == "AutoFarm" ? "override" : "";
@@ -520,6 +537,47 @@ namespace TBot.WebUI.Controllers {
 			}
 		}
 
+		[HttpPost]
+		public IActionResult DefenderTestRun(string? instance, string? origin, string? target, int arriveInMinutes, long attackerId, long attackerPoints, bool onlyProbes, string? mission) {
+			try {
+				var instances = GetInstances();
+				var chosen = instances.FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (chosen.Alias == null)
+					chosen = instances[0];
+				string dir = Path.Combine(AppContext.BaseDirectory, "data");
+				Directory.CreateDirectory(dir);
+				string alias = Path.GetFileName(chosen.Alias);
+				string result = Path.Combine(dir, $"defendertest_result_{alias}.json");
+				if (System.IO.File.Exists(result))
+					System.IO.File.Delete(result);
+				var req = new JObject {
+					["origin"] = origin ?? "", ["target"] = target ?? "", ["arriveInMinutes"] = arriveInMinutes,
+					["attackerId"] = attackerId, ["attackerPoints"] = attackerPoints, ["onlyProbes"] = onlyProbes, ["mission"] = mission ?? "Attack"
+				};
+				System.IO.File.WriteAllText(Path.Combine(dir, $"defendertest_request_{alias}.json"), req.ToString(Formatting.None));
+				return Json(new { success = true });
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
+		}
+
+		[HttpGet]
+		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+		public IActionResult DefenderTestResult(string? instance) {
+			try {
+				var instances = GetInstances();
+				var chosen = instances.FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (chosen.Alias == null)
+					chosen = instances[0];
+				string result = Path.Combine(AppContext.BaseDirectory, "data", $"defendertest_result_{Path.GetFileName(chosen.Alias)}.json");
+				if (!System.IO.File.Exists(result))
+					return Json(new { ready = false });
+				return Content(System.IO.File.ReadAllText(result), "application/json");
+			} catch (Exception e) {
+				return Json(new { error = e.Message });
+			}
+		}
+
 		[HttpGet]
 		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 		public IActionResult StartData(string? instance) {
@@ -529,14 +587,72 @@ namespace TBot.WebUI.Controllers {
 				if (chosen.Alias == null)
 					chosen = instances[0];
 				var main = ParseObject(System.IO.File.ReadAllText(chosen.Path));
-				bool overrides = false, keepExp = false;
+				bool overrides = false, keepExp = false, keepAuction = false;
 #if FASTFARM
 				(overrides, keepExp) = FastFarmReader.GetOverride(chosen.Alias);
+				keepAuction = FastFarmReader.GetKeepAuction(chosen.Alias);
 #endif
-				var data = StartReader.Read(chosen.Alias, main, LegacyConfigCheck.IsLegacy(), overrides, keepExp);
+				var data = StartReader.Read(chosen.Alias, main, LegacyConfigCheck.IsLegacy(), overrides, keepExp, keepAuction);
+				data["configCheck"] = ConfigCheckFor(chosen.Alias, chosen.Path, instances);
 				return Content(data.ToString(Formatting.None), "application/json");
 			} catch (Exception e) {
 				return Json(new { error = e.Message });
+			}
+		}
+
+		private static JArray ConfigCheckFor(string alias, string path, List<(string Alias, string Path)> instances) {
+			var result = new JArray();
+			try {
+				var list = new List<ConfigFinding>();
+				bool fromBot = false;
+				long botStart = 0;
+				try {
+					string f = System.IO.Path.Combine(AppContext.BaseDirectory, "data", System.IO.Path.GetFileName($"config_check_{alias}.json"));
+					if (System.IO.File.Exists(f)) {
+						var o = JObject.Parse(System.IO.File.ReadAllText(f));
+						long upd = o.Value<long?>("updatedMs") ?? 0;
+						botStart = o.Value<long?>("startMs") ?? 0;
+						if (upd > 0 && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - upd < 24L * 3600 * 1000 && o["findings"] is JArray fa) {
+							foreach (var x in fa.OfType<JObject>())
+								list.Add(new ConfigFinding { Severity = x.Value<string>("severity") ?? "warn", Path = x.Value<string>("path") ?? "", Message = x.Value<string>("message") ?? "" });
+							fromBot = true;
+						}
+					}
+				} catch { }
+				if (!fromBot)
+					list.AddRange(ConfigDoctor.Check(SettingsService.ReadResolvedObject(path)));
+				if (instances.Count > 1)
+					list.AddRange(ConfigDoctor.CheckShared(instances));
+				foreach (var x in list.Where(x => x.Severity != "info").OrderBy(x => x.Severity == "error" ? 0 : x.Severity == "warn" ? 1 : 2).Take(30))
+					result.Add(new JObject { ["severity"] = x.Severity, ["path"] = x.Path, ["message"] = x.Message, ["start"] = botStart });
+			} catch { }
+			return result;
+		}
+
+		[HttpGet]
+		[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+		public IActionResult FleetsAnim(string? instance) {
+			try {
+				var instances = GetInstances();
+				var chosen = instances.FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (chosen.Alias == null)
+					chosen = instances[0];
+				string dir = AppContext.BaseDirectory;
+				string perInstance = Path.Combine(dir, "data", Path.GetFileName($"status_{chosen.Alias}.json"));
+				string path = System.IO.File.Exists(perInstance) ? perInstance : Path.Combine(dir, "sleepstatus.json");
+				if (!System.IO.File.Exists(path))
+					return Json(new { fleets = new object[0], updatedMs = 0L });
+				using var reader = new JsonTextReader(new StringReader(System.IO.File.ReadAllText(path))) { DateParseHandling = DateParseHandling.None };
+				var status = JObject.Load(reader);
+				var antwort = new JObject {
+					["fleets"] = status["fleetsAnim"] ?? new JArray(),
+					["attacks"] = status["attacks"] ?? new JArray(),
+					["updatedMs"] = status.Value<long?>("updatedMs") ?? 0L,
+					["nowMs"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				};
+				return Content(antwort.ToString(Formatting.None), "application/json");
+			} catch (Exception e) {
+				return Json(new { error = e.Message, fleets = new object[0] });
 			}
 		}
 
@@ -559,6 +675,7 @@ namespace TBot.WebUI.Controllers {
 				}
 				var data = ReadBlock(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!, out var targetFile, out var secretRefs);
 				MergeSecrets(SecretFileOf(main, block, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath))!), data);
+				RemovedKeys.Entfernen(block, data);
 				var addedDefaults = FillDefaults(block, data);
 				HideFields(block, data);
 				StripUndefined(data);
@@ -624,6 +741,7 @@ namespace TBot.WebUI.Controllers {
 					["Active"] = false,
 					["OnlyWorker"] = true,
 					["KeepExpeditions"] = false,
+					["KeepAuction"] = false,
 					["BuildCheckMinutes"] = 60,
 					["CargoType"] = "SmallCargo",
 					["ProbesPerTarget"] = 20,
@@ -636,6 +754,7 @@ namespace TBot.WebUI.Controllers {
 					["TopTargets"] = 36,
 					["ReportMaxAgeMinutes"] = 30,
 					["DeleteReports"] = true,
+					["NoReportHours"] = 24,
 					["FleetSpeedPercent"] = 100,
 					["CargoSurplusPercent"] = 0,
 					["MinFillPercent"] = 50,

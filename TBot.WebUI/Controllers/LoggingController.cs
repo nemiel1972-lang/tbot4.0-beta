@@ -81,7 +81,7 @@ namespace TBot.WebUI.Controllers {
 		private List<LogEntry> GetLogsFromDevlog(DateTime logsDate) {
 			var result = new List<LogEntry>();
 			try {
-				var filePath = Path.Combine(Directory.GetCurrentDirectory(), "devlog", $"TBot-debug-{logsDate:yyyyMMdd}.log");
+				var filePath = Path.Combine(Directory.GetCurrentDirectory(), "devlogs", $"TBot-debug-{logsDate:yyyyMMdd}.log");
 				if (!System.IO.File.Exists(filePath))
 					return result;
 				using var fs = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);

@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="wwwroot\**\*" />
+		<EmbeddedResource Include="..\config\removed_keys.txt" LogicalName="removed_keys.txt" />
 	</ItemGroup>
 
 	<ItemGroup>

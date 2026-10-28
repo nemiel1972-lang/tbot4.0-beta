@@ -53,7 +53,7 @@ namespace Tbot.Workers {
 		}
 		public Task FirstExecutionCompleted => _firstExecutionCompletion.Task;
 
-		public ConcurrentDictionary<Celestial, ITBotCelestialWorker> celestialWorkers => throw new NotImplementedException();
+		public ConcurrentDictionary<Celestial, ITBotCelestialWorker> celestialWorkers { get; } = new();
 
 		public CelestialWorkerBase(ITBotMain parentInstance, ITBotWorker parentWorker, Celestial celestial) {
 			_tbotInstance = parentInstance;

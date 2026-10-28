@@ -21,6 +21,7 @@ namespace Tbot.Workers.Brain {
 		private readonly IFleetScheduler _fleetScheduler;
 		private readonly ICalculationService _calculationService;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
+		private string _lastSelectionLog;
 
 		public AutoResearchWorker(ITBotMain parentInstance,
 			IOgameService ogameService,
@@ -107,6 +108,7 @@ namespace Tbot.Workers.Brain {
 				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Ships) as Planet;
 
 				Buildables research;
+				string selectionInfo = null;
 
 				bool prioritizeComputerTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeComputerTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeComputerTechnology;
 				bool prioritizeLaserTechnology = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PrioritizeLaserTechnology") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeLaserTechnology;
@@ -141,30 +143,37 @@ namespace Tbot.Workers.Brain {
 					var astroDOIR = _calculationService.CalcNextAstroDOIR(planets.Where(c => c is Planet).Cast<Planet>().ToList<Planet>(), _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData.Speed, 1, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull);
 					DoLog(LogLevel.Debug, $"Next Astro DOIR: {Math.Round(astroDOIR, 2).ToString()}");
 
-					if (
-						(bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizePlasmaTechnology &&
-						_tbotInstance.UserData.lastDOIR > 0 &&
-						plasmaDOIR <= _tbotInstance.UserData.lastDOIR &&
-						plasmaDOIR <= (float) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxDaysOfInvestmentReturn &&
-						(int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxPlasmaTechnology >= _tbotInstance.UserData.researches.PlasmaTechnology + 1 &&
-						celestial.Facilities.ResearchLab >= 4 &&
-						_tbotInstance.UserData.researches.EnergyTechnology >= 8 &&
-						_tbotInstance.UserData.researches.LaserTechnology >= 10 &&
-						_tbotInstance.UserData.researches.IonTechnology >= 5
-					) {
+					bool plasmaChecksPayback = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoResearch, "PlasmaPriorityChecksPayback") && (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PlasmaPriorityChecksPayback;
+					bool prioritizeEnergy = (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeEnergyTechnology;
+					var res = _tbotInstance.UserData.researches;
+					var prioInput = new ResearchPriorityInput {
+						PrioritizePlasma = (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizePlasmaTechnology,
+						PrioritizeEnergy = prioritizeEnergy,
+						PrioritizeAstrophysics = (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeAstrophysics,
+						PlasmaChecksPayback = plasmaChecksPayback,
+						Plasma = res.PlasmaTechnology,
+						MaxPlasma = (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxPlasmaTechnology,
+						Astrophysics = res.Astrophysics,
+						MaxAstrophysics = (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxAstrophysics,
+						Energy = res.EnergyTechnology,
+						Laser = res.LaserTechnology,
+						Ion = res.IonTechnology,
+						Espionage = res.EspionageTechnology,
+						Impulse = res.ImpulseDrive,
+						ResearchLab = celestial.Facilities.ResearchLab,
+						PlasmaDOIR = (float) plasmaDOIR,
+						AstroDOIR = (float) astroDOIR,
+						LastDOIR = (float) _tbotInstance.UserData.lastDOIR,
+						MaxDaysOfInvestmentReturn = (float) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxDaysOfInvestmentReturn,
+						EnergyWanted = prioritizeEnergy && _calculationService.ShouldResearchEnergyTech(planets.Where(c => c.Coordinate.Type == Celestials.Planet).Cast<Planet>().ToList<Planet>(), res, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxEnergyTechnology, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull),
+					};
+					var prioDecision = ResearchPriorityLogic.Decide(prioInput);
+					selectionInfo = $"effective settings: Plasma {prioInput.Plasma}/{prioInput.MaxPlasma} (priority {prioInput.PrioritizePlasma}, payback check {plasmaChecksPayback}), Astrophysics {prioInput.Astrophysics}/{prioInput.MaxAstrophysics} (priority {prioInput.PrioritizeAstrophysics}), OptimizeForStart {(bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.OptimizeForStart}, EnsureExpoSlots {(bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.EnsureExpoSlots}, ForceResearchWhateverTheLabLevel {(bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.ForceResearchWhateverTheLabLevel}; {prioDecision}";
+					if (prioDecision.Pick == PriorityResearchPick.Plasma) {
 						research = Buildables.PlasmaTechnology;
-					} else if ((bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeEnergyTechnology && _calculationService.ShouldResearchEnergyTech(planets.Where(c => c.Coordinate.Type == Celestials.Planet).Cast<Planet>().ToList<Planet>(), _tbotInstance.UserData.researches, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxEnergyTechnology, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.IsFull)) {
+					} else if (prioDecision.Pick == PriorityResearchPick.Energy) {
 						research = Buildables.EnergyTechnology;
-					} else if (
-						(bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.PrioritizeAstrophysics &&
-						_tbotInstance.UserData.lastDOIR > 0 &&
-						(int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxAstrophysics >= (_tbotInstance.UserData.researches.Astrophysics % 2 == 0 ? _tbotInstance.UserData.researches.Astrophysics + 1 : _tbotInstance.UserData.researches.Astrophysics + 2) &&
-						astroDOIR <= (float) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxDaysOfInvestmentReturn &&
-						astroDOIR <= _tbotInstance.UserData.lastDOIR &&
-						celestial.Facilities.ResearchLab >= 3 &&
-						_tbotInstance.UserData.researches.EspionageTechnology >= 4 &&
-						_tbotInstance.UserData.researches.ImpulseDrive >= 3
-					) {
+					} else if (prioDecision.Pick == PriorityResearchPick.Astrophysics) {
 						research = Buildables.Astrophysics;
 					} else {
 						research = _calculationService.GetNextResearchToBuild(celestial as Planet, _tbotInstance.UserData.researches, (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.PrioritizeRobotsAndNanites, _tbotInstance.UserData.slots, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxEnergyTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxLaserTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxIonTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxHyperspaceTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxPlasmaTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxCombustionDrive, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxImpulseDrive, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxHyperspaceDrive, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxEspionageTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxComputerTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxAstrophysics, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxIntergalacticResearchNetwork, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxWeaponsTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxShieldingTechnology, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.MaxArmourTechnology, (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.OptimizeForStart, (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.EnsureExpoSlots, (bool) _tbotInstance.InstanceSettings.Brain.AutoResearch.ForceResearchWhateverTheLabLevel, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.staff.Geologist, _tbotInstance.UserData.staff.Admiral, prioritizeComputerTechnology, prioritizeLaserTechnology, prioritizeIonTechnology, prioritizeHyperspaceTechnology, prioritizeCombustionDrive, prioritizeImpulseDrive, prioritizeHyperspaceDrive, prioritizeEspionageTechnology, prioritizeWeaponsTechnology, prioritizeShieldingTechnology, prioritizeArmourTechnology, prioritizeGravitonTechnology);
@@ -189,6 +198,12 @@ namespace Tbot.Workers.Brain {
 					if (irnTime < researchTime) {
 						research = Buildables.IntergalacticResearchNetwork;
 					}
+				}
+
+				if (selectionInfo != null) {
+					string selectionLine = $"AutoResearch selection: {research} - {selectionInfo}";
+					DoLog(selectionLine == _lastSelectionLog ? LogLevel.Debug : LogLevel.Information, selectionLine);
+					_lastSelectionLog = selectionLine;
 				}
 
 				int level = _calculationService.GetNextLevel(_tbotInstance.UserData.researches, research);
@@ -514,7 +529,7 @@ namespace Tbot.Workers.Brain {
 						try {
 							interval = (_tbotInstance.UserData.fleets.Where(f => f.Mission == Missions.Transport).OrderBy(f => f.BackIn).First().BackIn ?? 0) * 1000 + RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
 						} catch {
-							interval = RandomizeHelper.CalcRandomInterval((int) _tbotInstance.InstanceSettings.AutoResearch.CheckIntervalMin, (int) _tbotInstance.InstanceSettings.AutoResearch.CheckIntervalMax);
+							interval = RandomizeHelper.CalcRandomInterval((int) _tbotInstance.InstanceSettings.Brain.AutoResearch.CheckIntervalMin, (int) _tbotInstance.InstanceSettings.Brain.AutoResearch.CheckIntervalMax);
 						}
 						var newTime = time.AddMilliseconds(interval);
 						ChangeWorkerPeriod(interval);

@@ -149,6 +149,7 @@ const (
 	NaniteFactoryID                     ID = 15
 	TerraformerID                       ID = 33
 	SpaceDockID                         ID = 36
+	InterstellarAnomalyScannerID        ID = 45
 	LunarBaseID                         ID = 41
 	SensorPhalanxID                     ID = 42
 	JumpGateID                          ID = 43

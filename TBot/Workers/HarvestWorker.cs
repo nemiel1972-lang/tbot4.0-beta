@@ -31,6 +31,39 @@ namespace Tbot.Workers {
 			_calculationService = calculationService;
 			_tbotOgameBridge = tbotOgameBridge;
 		}
+		protected override TimeSpan ExecuteTimeout => TimeSpan.FromMinutes(15);
+
+		private List<(int Galaxy, int System)> ReadScanCentersFromExpeditionOrigins() {
+			try {
+				var ah = _tbotInstance.InstanceSettings.AutoHarvest;
+				if (!Tbot.Common.Settings.SettingsService.IsSettingSet(ah, "ScanOnlyExpeditionOrigins") || !(bool) ah.ScanOnlyExpeditionOrigins)
+					return null;
+				var list = new List<(int Galaxy, int System)>();
+				foreach (var configured in _tbotInstance.InstanceSettings.Expeditions.Origin)
+					list.Add(((int) configured.Galaxy, (int) configured.System));
+				return list.Count > 0 ? list : null;
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"AutoHarvest.ScanOnlyExpeditionOrigins: Expeditions.Origin could not be read, scanning around all planets: {e.Message}");
+				return null;
+			}
+		}
+
+		private DateTime _lastOriginDetection = DateTime.MinValue;
+		private string DetectedOriginFile => System.IO.Path.Combine(AppContext.BaseDirectory, "data", System.IO.Path.GetFileName($"harvest_origin_{_tbotInstance.InstanceAlias}.json"));
+		private Coordinate LoadDetectedOrigin() {
+			try {
+				if (!System.IO.File.Exists(DetectedOriginFile)) return null;
+				var j = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(DetectedOriginFile));
+				return new Coordinate((int) j["Galaxy"], (int) j["System"], (int) j["Position"], Enum.Parse<Celestials>((string) j["Type"]));
+			} catch (Exception) { return null; }
+		}
+		private void SaveDetectedOrigin(Coordinate c) {
+			try {
+				System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(DetectedOriginFile));
+				Tbot.Common.IO.AtomicFile.WriteAllText(DetectedOriginFile, Newtonsoft.Json.JsonConvert.SerializeObject(new { Galaxy = (int) c.Galaxy, System = (int) c.System, Position = (int) c.Position, Type = c.Type.ToString() }));
+			} catch (Exception e) { DoLog(LogLevel.Warning, $"Could not save the detected harvest origin: {e.Message}"); }
+		}
+
 		public override bool IsWorkerEnabledBySettings() {
 			try {
 				return (bool) _tbotInstance.InstanceSettings.AutoHarvest.Active;
@@ -62,29 +95,50 @@ namespace Tbot.Workers {
 					List<Celestial> celestialSnapshot = _tbotInstance.UserData.celestials.ToList();
 
 					List<Celestial> harvestOrigins = celestialSnapshot;
+					bool detectOriginNeeded = false;
 					if (Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "Origin")) {
 						var configuredOrigins = _calculationService.ParseCelestialsList(_tbotInstance.InstanceSettings.AutoHarvest.Origin, celestialSnapshot);
 						if (configuredOrigins.Count > 0)
 							harvestOrigins = configuredOrigins;
 					} else {
-						Coordinate defenderHome = new(
-							(int) _tbotInstance.InstanceSettings.Defender.Home.Galaxy,
-							(int) _tbotInstance.InstanceSettings.Defender.Home.System,
-							(int) _tbotInstance.InstanceSettings.Defender.Home.Position,
-							Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Defender.Home.Type)
-						);
-						var homeMoon = celestialSnapshot.FirstOrDefault(c => c.Coordinate.IsSame(defenderHome));
-						if (homeMoon != null)
-							harvestOrigins = new List<Celestial> { homeMoon };
+						harvestOrigins = new List<Celestial>();
+						{
+							void AddOrigin(Celestial c) { if (c != null && !harvestOrigins.Any(o => o.Coordinate.IsSame(c.Coordinate))) harvestOrigins.Add(c); }
+							try { foreach (var o in _calculationService.ParseCelestialsList(_tbotInstance.InstanceSettings.Expeditions.Origin, celestialSnapshot)) AddOrigin(o); } catch (Exception) { }
+							var remembered = LoadDetectedOrigin();
+							if (remembered != null)
+								AddOrigin(celestialSnapshot.FirstOrDefault(c => c.Coordinate.IsSame(remembered)));
+							detectOriginNeeded = remembered == null || DateTime.UtcNow - _lastOriginDetection > TimeSpan.FromHours(1);
+						}
 					}
 
 					List<Celestial> updatedCelestials = new();
 					foreach (Celestial c in celestialSnapshot) {
+						Heartbeat();
 						if (harvestOrigins.Any(o => o.Coordinate.IsSame(c.Coordinate))) {
 							Celestial updated = await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
 							updatedCelestials.Add(updated);
 						} else {
 							updatedCelestials.Add(c);
+						}
+					}
+					if (detectOriginNeeded) {
+						bool candidatesEmpty = updatedCelestials.Where(c => harvestOrigins.Any(o => o.Coordinate.IsSame(c.Coordinate)))
+							.All(c => (c.Ships?.Pathfinder ?? 0) + (c.Ships?.Recycler ?? 0) == 0);
+						if (LoadDetectedOrigin() == null || candidatesEmpty) {
+							_lastOriginDetection = DateTime.UtcNow;
+							for (int i = 0; i < updatedCelestials.Count; i++) {
+								Heartbeat();
+								if (!harvestOrigins.Any(o => o.Coordinate.IsSame(updatedCelestials[i].Coordinate)))
+									updatedCelestials[i] = await _tbotOgameBridge.UpdatePlanet(updatedCelestials[i], UpdateTypes.Ships);
+							}
+							var best = updatedCelestials.OrderByDescending(c => (c.Ships?.Pathfinder ?? 0) + (c.Ships?.Recycler ?? 0)).FirstOrDefault();
+							if (best != null && (best.Ships?.Pathfinder ?? 0) + (best.Ships?.Recycler ?? 0) > 0) {
+								SaveDetectedOrigin(best.Coordinate);
+								if (!harvestOrigins.Any(o => o.Coordinate.IsSame(best.Coordinate)))
+									harvestOrigins.Add(best);
+								DoLog(LogLevel.Information, $"Harvest origin detected: {best.Coordinate} holds the most ships ({best.Ships.Pathfinder} pathfinders, {best.Ships.Recycler} recyclers). It is remembered and used as an additional start (set AutoHarvest.Origin to override).");
+							}
 						}
 					}
 					_tbotInstance.UserData.celestials = updatedCelestials.ToList();
@@ -94,12 +148,16 @@ namespace Tbot.Workers {
 
 					List<Celestial> newCelestials = updatedCelestials.ToList();
 
+					var expoCenters = ReadScanCentersFromExpeditionOrigins();
+					bool IsScanCenter(Coordinate c) => expoCenters == null || expoCenters.Any(e => e.Galaxy == c.Galaxy && e.System == c.System);
+					var scannedDeepSpace = new HashSet<(int Galaxy, int System)>();
 					foreach (Planet planet in updatedCelestials.Where(c => c is Planet).Cast<Planet>()) {
+						Heartbeat();
 						Planet tempCelestial = await _tbotOgameBridge.UpdatePlanet(planet, UpdateTypes.Fast) as Planet;
 
 						if ((bool) _tbotInstance.InstanceSettings.AutoHarvest.HarvestOwnDF) {
 							Coordinate dest = new(planet.Coordinate.Galaxy, planet.Coordinate.System, planet.Coordinate.Position, Celestials.Debris);
-							if (!_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination == dest)) {
+							if (!_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination != null && f.Destination.IsSame(dest))) {
 								tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Debris) as Planet;
 								if (tempCelestial.Debris != null && tempCelestial.Debris.Resources.TotalResources >= (long) _tbotInstance.InstanceSettings.AutoHarvest.MinimumResourcesOwnDF) {
 									if (!targets.Any(t => t.Destination.IsSame(dest))) {
@@ -110,7 +168,7 @@ namespace Tbot.Workers {
 							}
 						}
 
-						if ((bool) _tbotInstance.InstanceSettings.AutoHarvest.HarvestDeepSpace) {
+						if ((bool) _tbotInstance.InstanceSettings.AutoHarvest.HarvestDeepSpace && IsScanCenter(tempCelestial.Coordinate)) {
 							int deepSpaceRange;
 							try {
 								deepSpaceRange = (int) _tbotInstance.InstanceSettings.AutoHarvest.DeepSpaceRange;
@@ -128,9 +186,12 @@ namespace Tbot.Workers {
 
 								if (targets.Any(t => t.Destination.IsSame(destination)))
 									continue;
-								if (_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination == destination))
+								if (_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination != null && f.Destination.IsSame(destination)))
 									continue;
 
+								if (!scannedDeepSpace.Add((destination.Galaxy, destination.System)))
+									continue;
+								Heartbeat();
 								await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.LessThanASecond));
 								ExpeditionDebris expoDebris = (await _ogameService.GetGalaxyInfo(destination)).ExpeditionDebris;
 								if (expoDebris != null && expoDebris.Resources.TotalResources >= (long) _tbotInstance.InstanceSettings.AutoHarvest.MinimumResourcesDeepSpace) {
@@ -152,29 +213,34 @@ namespace Tbot.Workers {
 							: (long) _tbotInstance.InstanceSettings.AutoHarvest.MinimumResourcesOwnDF;
 
 						var scannedSystems = new HashSet<(int Galaxy, int System)>();
-						foreach (Planet ownPlanet in updatedCelestials.Where(c => c is Planet).Cast<Planet>()) {
-							var sysKey = (ownPlanet.Coordinate.Galaxy, ownPlanet.Coordinate.System);
-							if (!scannedSystems.Add(sysKey))
-								continue;
+						int foreignRange = Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "ForeignDFRange") ? Math.Max(0, (int) _tbotInstance.InstanceSettings.AutoHarvest.ForeignDFRange) : 0;
+						foreach (Planet ownPlanet in updatedCelestials.Where(c => c is Planet && IsScanCenter(c.Coordinate)).Cast<Planet>()) {
+							for (int off = -foreignRange; off <= foreignRange; off++) {
+								int scanSystem = GeneralHelper.WrapSystem(ownPlanet.Coordinate.System + off);
+								var sysKey = (ownPlanet.Coordinate.Galaxy, scanSystem);
+								if (!scannedSystems.Add(sysKey))
+									continue;
 
-							await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.LessThanASecond));
-							var galaxyInfo = await _ogameService.GetGalaxyInfo(ownPlanet.Coordinate);
-							foreach (var foreignPlanet in galaxyInfo.Planets ?? new List<Planet>()) {
-								if (foreignPlanet?.Coordinate == null || foreignPlanet.Debris == null)
-									continue;
-								if (_tbotInstance.UserData.celestials.Any(c => c.Coordinate.Galaxy == foreignPlanet.Coordinate.Galaxy
-									&& c.Coordinate.System == foreignPlanet.Coordinate.System
-									&& c.Coordinate.Position == foreignPlanet.Coordinate.Position))
-									continue;
-								if (foreignPlanet.Debris.Resources.TotalResources < minForeignDF)
-									continue;
-								Coordinate dest = new(foreignPlanet.Coordinate.Galaxy, foreignPlanet.Coordinate.System, foreignPlanet.Coordinate.Position, Celestials.Debris);
-								if (targets.Any(t => t.Destination.IsSame(dest)))
-									continue;
-								if (_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination == dest))
-									continue;
-								targets.Add(new HarvestTarget(dest, foreignPlanet.Debris.Resources, isOwnDebris: true));
-								targetShipsNeeded[dest] = foreignPlanet.Debris.RecyclersNeeded;
+								Heartbeat();
+								await Task.Delay(RandomizeHelper.CalcRandomInterval(IntervalType.LessThanASecond));
+								var galaxyInfo = await _ogameService.GetGalaxyInfo(new Coordinate(ownPlanet.Coordinate.Galaxy, scanSystem, ownPlanet.Coordinate.Position, Celestials.Planet));
+								foreach (var foreignPlanet in galaxyInfo.Planets ?? new List<Planet>()) {
+									if (foreignPlanet?.Coordinate == null || foreignPlanet.Debris == null)
+										continue;
+									if (_tbotInstance.UserData.celestials.Any(c => c.Coordinate.Galaxy == foreignPlanet.Coordinate.Galaxy
+										&& c.Coordinate.System == foreignPlanet.Coordinate.System
+										&& c.Coordinate.Position == foreignPlanet.Coordinate.Position))
+										continue;
+									if (foreignPlanet.Debris.Resources.TotalResources < minForeignDF)
+										continue;
+									Coordinate dest = new(foreignPlanet.Coordinate.Galaxy, foreignPlanet.Coordinate.System, foreignPlanet.Coordinate.Position, Celestials.Debris);
+									if (targets.Any(t => t.Destination.IsSame(dest)))
+										continue;
+									if (_tbotInstance.UserData.fleets.Any(f => f.Mission == Missions.Harvest && f.Destination != null && f.Destination.IsSame(dest)))
+										continue;
+									targets.Add(new HarvestTarget(dest, foreignPlanet.Debris.Resources, isOwnDebris: true));
+									targetShipsNeeded[dest] = foreignPlanet.Debris.RecyclersNeeded;
+								}
 							}
 						}
 					}
@@ -213,10 +279,19 @@ namespace Tbot.Workers {
 
 					if (targets.Count > 0 && availableSlots == 0)
 						DoLog(LogLevel.Information, $"Skipping harvest: AutoHarvest.MaxSlots ({configuredMaxSlots}) already fully used by in-flight harvest missions.");
-					else if (targets.Count > 0 && assignments.Count == 0)
+					else if (targets.Count > 0 && assignments.Count == 0) {
 						DoLog(LogLevel.Information, "Skipping harvest: no origin has enough recyclers/pathfinders for any target.");
+						try {
+							string herkunft = origins.Count == 0
+								? "none of the harvest origins [" + string.Join(", ", harvestOrigins.Select(h => h.Coordinate.ToString() + " R=" + (_tbotInstance.UserData.celestials.FirstOrDefault(c => c.Coordinate.IsSame(h.Coordinate))?.Ships?.Recycler ?? 0) + " P=" + (_tbotInstance.UserData.celestials.FirstOrDefault(c => c.Coordinate.IsSame(h.Coordinate))?.Ships?.Pathfinder ?? 0))) + "] has idle recyclers or pathfinders (AutoHarvest.Origin" + (Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "Origin") ? " is set" : " is not set, expedition bases and the detected main fleet location are used") + ")"
+								: "origins " + string.Join(", ", origins.Select(o => o.Celestial.Coordinate.ToString() + " R=" + o.AvailableRecyclers + " P=" + o.AvailablePathfinders));
+							string ziele = string.Join(", ", targets.Take(8).Select(tg => tg.Destination.ToString() + " needs " + (targetShipsNeeded.TryGetValue(tg.Destination, out long need) ? need : 0) + (tg.IsOwnDebris ? " recyclers" : " pathfinders")));
+							DoLog(LogLevel.Information, $"Harvest check: {herkunft}; targets: {ziele}{(targets.Count > 8 ? " ..." : "")}");
+						} catch (Exception) { }
+					}
 
 					foreach (var assignment in assignments) {
+						Heartbeat();
 						var fleetId = (int) SendFleetCode.GenericError;
 						Coordinate destination = assignment.Target.Destination;
 

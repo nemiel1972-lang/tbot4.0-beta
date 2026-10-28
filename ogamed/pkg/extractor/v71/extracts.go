@@ -1278,13 +1278,9 @@ func extractBuffActivationFromDoc(doc *goquery.Document) (token string, items []
 		err = errors.New("failed to find items inventory")
 		return
 	}
-	var inventoryMap map[string]ogame.Item
-	if err = json.Unmarshal([]byte(m[1]), &inventoryMap); err != nil {
+	if items, err = ogame.ParseInventoryItems([]byte(m[1])); err != nil {
 		fmt.Println(err)
 		return
-	}
-	for _, item := range inventoryMap {
-		items = append(items, item)
 	}
 	return
 }

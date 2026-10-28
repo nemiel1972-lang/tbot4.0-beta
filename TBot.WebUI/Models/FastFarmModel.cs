@@ -65,6 +65,9 @@ namespace TBot.WebUI.Models {
 		public string? BlockReason { get; set; }
 		public DateTime? LastAttackUtc { get; set; }
 		public int Attacks { get; set; }
+		public string? DefShips { get; set; }
+		public string? DefDefence { get; set; }
+		public DateTime? DefReportServer { get; set; }
 	}
 
 	public sealed class FastFarmAttackDto {

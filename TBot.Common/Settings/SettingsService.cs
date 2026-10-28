@@ -436,16 +436,16 @@ namespace Tbot.Common.Settings {
 		}
 
 		public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex) {
-			throw new NotImplementedException();
+			((ICollection<KeyValuePair<string, object>>) Members).CopyTo(array, arrayIndex);
 		}
 
 		public bool Remove(KeyValuePair<string, object> item) {
-			throw new NotImplementedException();
+			return ((ICollection<KeyValuePair<string, object>>) Members).Remove(item);
 		}
 
 		public int Count => Members.Count;
 
-		public bool IsReadOnly => throw new NotImplementedException();
+		public bool IsReadOnly => false;
 
 		#endregion
 

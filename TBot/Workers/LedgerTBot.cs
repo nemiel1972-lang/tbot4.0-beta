@@ -29,6 +29,7 @@ namespace Tbot.Workers {
 	public static class LedgerTBot {
 		private static readonly AsyncLocal<string> OwnerCtx = new AsyncLocal<string>();
 		private static readonly AsyncLocal<long> CelCtx = new AsyncLocal<long>();
+		public static string CurrentOwner => OwnerCtx.Value;
 
 		static LedgerTBot() {
 			ResourceLedger.LoadHook = path => {

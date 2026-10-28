@@ -72,6 +72,7 @@ namespace Tbot.Workers {
 			public int TopTargets;
 			public int ReportMaxAgeMinutes;
 			public bool DeleteReports;
+			public int NoReportHours;
 			public int FleetSpeedPercent;
 			public double CargoSurplusPercent;
 			public double MinFillPercent;
@@ -134,6 +135,7 @@ namespace Tbot.Workers {
 				TopTargets = Math.Max(1, (int) Num("TopTargets", 36)),
 				ReportMaxAgeMinutes = Math.Max(1, (int) Num("ReportMaxAgeMinutes", 30)),
 				DeleteReports = Flag("DeleteReports", true),
+				NoReportHours = Math.Max(0, (int) Num("NoReportHours", 24)),
 				FleetSpeedPercent = Math.Clamp((int) Num("FleetSpeedPercent", 100), 10, 100),
 				CargoSurplusPercent = Math.Max(0, Num("CargoSurplusPercent", 0)),
 				MinFillPercent = Math.Clamp(Num("MinFillPercent", 50), 1, 100),
@@ -162,6 +164,7 @@ namespace Tbot.Workers {
 			public bool Pending { get; set; }
 			public DateTime ExpectedArrivalUtc { get; set; }
 			public DateTime SpySentServer { get; set; }
+			public long SpyFlightSec { get; set; }
 			public DateTime? ReportServer { get; set; }
 			public long Metal { get; set; }
 			public long Crystal { get; set; }
@@ -175,6 +178,9 @@ namespace Tbot.Workers {
 			public int SpyFails { get; set; }
 			public long SweepValue { get; set; }
 			public bool Verify { get; set; }
+			public string DefShips { get; set; }
+			public string DefDefence { get; set; }
+			public DateTime? DefReportServer { get; set; }
 		}
 
 		public sealed class FastFarmAttackLog {
@@ -212,6 +218,7 @@ namespace Tbot.Workers {
 			public long LongestFlightSec { get; set; }
 			public DateTime UpdatedUtc { get; set; }
 			public DateTime NextRunUtc { get; set; }
+			public DateTime? LastResetUtc { get; set; }
 		}
 
 		private string StatePath() {
@@ -317,11 +324,51 @@ namespace Tbot.Workers {
 			public Dictionary<Buildables, long> CargoLeft = new Dictionary<Buildables, long>();
 		}
 
+		private static readonly HashSet<string> _seitStartGelaufen = new();
+
+		private void PruefeReset() {
+			bool aktiv = Flag("ResetOnActivate", true);
+			double minHours = Num("ResetMinHours", 6);
+			bool prozessStart;
+			lock (_seitStartGelaufen)
+				prozessStart = _seitStartGelaufen.Add(_tbotInstance.InstanceAlias ?? "default");
+			var e = FastFarmReset.Entscheide(aktiv, prozessStart, _state.NextRunUtc, _state.LastResetUtc, DateTime.UtcNow, minHours);
+			if (e.Ausloeser == null)
+				return;
+			if (!aktiv) {
+				DoLog(LogLevel.Debug, $"Reset on {e.Ausloeser}: switched off (ResetOnActivate = false), keeping the old data.");
+				return;
+			}
+			if (!e.Zuruecksetzen) {
+				DoLog(LogLevel.Information, $"Reset on {e.Ausloeser}: skipped, last reset was less than {minHours:0.#} h ago (next possible at {e.GesperrtBis.Value.ToLocalTime():dd.MM. HH:mm}).");
+				return;
+			}
+			int ziele = _state.Targets.Count, gesperrt = _state.Targets.Values.Count(t => IsBlocked(t)), ignoriert = _state.Ignored.Count;
+			try {
+				string path = StatePath();
+				if (File.Exists(path))
+					File.Copy(path, path + ".bak", true);
+			} catch (Exception ex) {
+				DoLog(LogLevel.Debug, $"Could not back up the state file: {ex.Message}");
+			}
+			_state.Targets.Clear();
+			_state.Ignored.Clear();
+			_state.ScanCursor = 0;
+			_state.SweepPhase = null;
+			_state.SweepGalaxy = 0;
+			_state.SweepRound = 0;
+			_state.ScanSignature = null;
+			_state.LastResetUtc = DateTime.UtcNow;
+			DoLog(LogLevel.Information, $"Reset on {e.Ausloeser}: old data discarded ({ziele} targets, {gesperrt} blocked, {ignoriert} ignored); statistics kept. Next reset possible after {minHours:0.#} h.");
+			SaveState();
+		}
+
 		protected override async Task Execute() {
 			bool stop = false;
 			_nextDelayMs = 30000;
 			try {
 				LoadState();
+				PruefeReset();
 				ApplyDeleteRequests();
 				Cfg cfg = ReadConfig();
 				stop = await RunCycle(cfg);
@@ -475,28 +522,121 @@ namespace Tbot.Workers {
 		}
 
 
+		private readonly HashSet<int> _bekannteBerichte = new HashSet<int>();
+		private readonly HashSet<int> _eigeneGeloescht = new HashSet<int>();
+		private DateTime? _loeschErkanntUtc;
+		private DateTime _zeitversatzLogUtc = DateTime.MinValue;
+		private DateTime _berichtPauseBis = DateTime.MinValue;
+
+		private async Task<Dictionary<string, int>> LeseBerichtsIndex() {
+			try {
+				var liste = await _ogameService.GetEspionageReports();
+				if (liste == null)
+					return null;
+				var ids = new HashSet<int>(liste.Select(r => r.ID));
+				int weg = _bekannteBerichte.Count(id => !ids.Contains(id) && !_eigeneGeloescht.Contains(id));
+				if (weg > 0) {
+					_loeschErkanntUtc = DateTime.UtcNow;
+					DoLog(LogLevel.Information, $"{weg} espionage report(s) vanished without FastFarm deleting them (deleted by hand or by something else) - missing reports of probes that arrived before are not counted as failures.");
+				}
+				_bekannteBerichte.Clear();
+				foreach (var id in ids)
+					_bekannteBerichte.Add(id);
+				_eigeneGeloescht.Clear();
+
+				var index = new Dictionary<string, int>();
+				foreach (var r in liste) {
+					if (r.Type != EspionageReportType.Report || r.Target == null)
+						continue;
+					string k = $"{r.Target.Galaxy}:{r.Target.System}:{r.Target.Position}";
+					if (!index.TryGetValue(k, out int alt) || r.ID > alt)
+						index[k] = r.ID;
+				}
+				return index;
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Could not read the report inbox: {e.Message}");
+				return null;
+			}
+		}
+
 		private async Task CollectReports(Cfg cfg) {
 			var due = _state.Targets.Values.Where(t => t.Pending && t.ExpectedArrivalUtc <= DateTime.UtcNow.AddSeconds(1)).ToList();
 			if (due.Count == 0)
 				return;
+			var berichtsIndex = await LeseBerichtsIndex();
 			CharacterClass playerClass = _tbotInstance.UserData.userInfo.Class;
+			var ueberfaellig = due.Where(x => DateTime.UtcNow > x.ExpectedArrivalUtc.AddSeconds(120)).ToList();
+			bool sammelausfall = berichtsIndex != null && ueberfaellig.Count >= 5
+				&& !ueberfaellig.Any(x => berichtsIndex.ContainsKey($"{x.Galaxy}:{x.System}:{x.Position}"));
+			if (sammelausfall) {
+				_berichtPauseBis = DateTime.UtcNow.AddMinutes(10);
+				DoLog(LogLevel.Warning, $"None of {ueberfaellig.Count} overdue probe targets has a report in the inbox ({berichtsIndex.Count} reports there). Not counted as target failures; no new probes for 10 minutes. Check that nothing deletes espionage reports (browser add-on, manual cleanup) and that the report tab is readable.");
+			}
 			foreach (var t in due) {
 				Heartbeat();
 				EspionageReport report = null;
 				try {
-					report = await _ogameService.GetEspionageReport(Coord(t));
+					if (berichtsIndex != null) {
+						if (berichtsIndex.TryGetValue($"{t.Galaxy}:{t.System}:{t.Position}", out int msgId))
+							report = await _ogameService.GetEspionageReport(msgId);
+						else
+							DoLog(LogLevel.Debug, $"{Key(t)}: no report in the inbox yet ({berichtsIndex.Count} reports there).");
+					} else {
+						report = await _ogameService.GetEspionageReport(Coord(t));
+					}
 				} catch (Exception e) {
 					DoLog(LogLevel.Debug, $"{Key(t)}: no report yet ({e.Message}).");
 				}
 
 				bool fresh = report != null && report.Coordinate != null && report.Date >= t.SpySentServer.AddSeconds(-10);
+				if (report != null && report.Coordinate != null && !fresh) {
+					for (int k = 1; k <= 2 && !fresh; k++) {
+						double d = (report.Date.AddHours(k) - t.SpySentServer).TotalSeconds;
+						if (d >= 0 && d <= 240) {
+							fresh = true;
+							report.Date = report.Date.AddHours(k);
+							if ((DateTime.UtcNow - _zeitversatzLogUtc).TotalMinutes > 30) {
+								_zeitversatzLogUtc = DateTime.UtcNow;
+								DoLog(LogLevel.Warning, $"Report times are {k} h behind the server time (clock change? the ogamed proxy keeps the time zone offset from its login). Corrected for now; restart the whole bot service to fix it permanently.");
+							}
+						}
+					}
+				}
+				if (report != null && !fresh)
+					DoLog(LogLevel.Debug, $"{Key(t)}: report {report.ID} found, but too old: report time {report.Date:yyyy-MM-dd HH:mm:ss}, probes sent (server time) {t.SpySentServer:yyyy-MM-dd HH:mm:ss}.");
 				if (!fresh) {
 					if (DateTime.UtcNow > t.ExpectedArrivalUtc.AddSeconds(120)) {
+						string flottenInfo;
+						try {
+							var spyFleets = (_tbotInstance.UserData.fleets ?? new List<Fleet>()).Where(f => f.Mission == Missions.Spy && f.Destination != null
+								&& f.Destination.Galaxy == t.Galaxy && f.Destination.System == t.System && f.Destination.Position == t.Position).ToList();
+							var outbound = spyFleets.Where(f => !f.ReturnFlight).OrderByDescending(f => f.ArriveIn).FirstOrDefault();
+							if (outbound != null) {
+								t.ExpectedArrivalUtc = DateTime.UtcNow.AddSeconds(Math.Max(2, outbound.ArriveIn) + 2);
+								DoLog(LogLevel.Debug, $"{Key(t)}: probes are still flying (arrive in {outbound.ArriveIn}s) - calculated arrival was too early, reading the report later.");
+								continue;
+							}
+							flottenInfo = spyFleets.Count > 0 ? "probes already on their way back (arrived, but no report)" : "no probe fleet any more (destroyed, or already home)";
+						} catch (Exception) {
+							flottenInfo = "fleet state unknown";
+						}
+						if (_loeschErkanntUtc.HasValue && DateTime.UtcNow - _loeschErkanntUtc.Value < TimeSpan.FromHours(2) && t.ExpectedArrivalUtc <= _loeschErkanntUtc.Value) {
+							t.Pending = false;
+							DoLog(LogLevel.Information, $"{Key(t)}: report missing, but reports were deleted meanwhile - not counted as a failure, the target will be probed again.");
+							continue;
+						}
 						t.Pending = false;
+						if (sammelausfall)
+							continue;
 						t.SpyFails++;
-						DoLog(LogLevel.Information, $"{Key(t)}: no report arrived (probes lost or target gone).");
-						if (t.SpyFails >= 3)
+						DoLog(LogLevel.Debug, $"{Key(t)}: no report arrived ({flottenInfo}); probes were sent {(DateTime.UtcNow - t.ExpectedArrivalUtc).TotalSeconds + t.SpyFlightSec:0} s ago, calculated one-way flight {t.SpyFlightSec} s.");
+						if (t.SpyFails >= 3) {
 							_state.Targets.Remove(Key(t));
+							if (cfg.NoReportHours > 0) {
+								_state.Ignored[Key(t)] = DateTime.UtcNow.AddHours(cfg.NoReportHours);
+								DoLog(LogLevel.Information, $"{Key(t)}: no report 3 times in a row - not probed again for {cfg.NoReportHours} h.");
+							}
+						}
 					}
 					continue;
 				}
@@ -509,6 +649,7 @@ namespace Tbot.Workers {
 				ProcessSweepReport(cfg, t, report, playerClass);
 				if (cfg.DeleteReports) {
 					try {
+						_eigeneGeloescht.Add(report.ID);
 						await _ogameService.DeleteReport(report.ID);
 					} catch (Exception e) {
 						DoLog(LogLevel.Debug, $"{Key(t)}: could not delete report {report.ID}: {e.Message}");
@@ -704,6 +845,7 @@ namespace Tbot.Workers {
 				t.Verify = verify;
 				t.SpySentServer = serverNow;
 				t.ExpectedArrivalUtc = DateTime.UtcNow.AddSeconds(prediction.Time);
+				t.SpyFlightSec = (long) prediction.Time;
 			}
 			if (sent > 0) {
 				DoLog(LogLevel.Information, $"{sent} probe fleets sent ({cfg.ProbesPerTarget} probes each).");
@@ -762,6 +904,17 @@ namespace Tbot.Workers {
 			return list.Where(x => x.galaxy == _state.SweepGalaxy).ToList();
 		}
 
+		private static string UnitList(EspionageReport report, params string[] fields) {
+			var parts = new List<string>();
+			foreach (var f in fields) {
+				var prop = typeof(EspionageReport).GetProperty(f);
+				long n = Convert.ToInt64(prop?.GetValue(report) ?? 0L);
+				if (n > 0)
+					parts.Add($"{n:N0}x {f}");
+			}
+			return string.Join(", ", parts);
+		}
+
 		private void ProcessSweepReport(Cfg cfg, FastFarmTarget t, EspionageReport report, CharacterClass playerClass) {
 			string key = Key(t);
 			if (!report.IsInactive) {
@@ -771,6 +924,14 @@ namespace Tbot.Workers {
 			if (!report.IsDefenceless(false)) {
 				t.BlockedUntilUtc = DateTime.UtcNow.AddHours(6);
 				t.BlockReason = "Defended";
+				Resources defLoot = report.Loot(playerClass);
+				t.Metal = defLoot.Metal;
+				t.Crystal = defLoot.Crystal;
+				t.Deuterium = defLoot.Deuterium;
+				t.Weighted = Weigh(cfg, defLoot);
+				t.DefShips = UnitList(report, "LightFighter", "HeavyFighter", "Cruiser", "Battleship", "Battlecruiser", "Bomber", "Destroyer", "Deathstar", "SmallCargo", "LargeCargo", "ColonyShip", "Recycler", "Crawler", "Reaper", "Pathfinder");
+				t.DefDefence = UnitList(report, "RocketLauncher", "LightLaser", "HeavyLaser", "GaussCannon", "IonCannon", "PlasmaTurret", "SmallShieldDome", "LargeShieldDome", "AntiBallisticMissiles", "InterplanetaryMissiles");
+				t.DefReportServer = report.Date;
 				t.ReportServer = null;
 				t.SweepValue = 0;
 				t.Verify = false;
@@ -813,6 +974,10 @@ namespace Tbot.Workers {
 		}
 
 		private async Task<(int sent, bool bedTime)> SweepSpyPhase(Cfg cfg, List<OriginState> origins, int free) {
+			if (DateTime.UtcNow < _berichtPauseBis) {
+				DoLog(LogLevel.Information, $"Probe pause after a round without any report, {(_berichtPauseBis - DateTime.UtcNow).TotalSeconds:0} s left.");
+				return (0, false);
+			}
 			var fleets = _tbotInstance.UserData.fleets ?? new List<Fleet>();
 			Func<FastFarmTarget, bool> free2 = t => !t.Pending && !IsBlocked(t)
 				&& !fleets.Any(f => (f.Mission == Missions.Attack || f.Mission == Missions.Spy) && f.Destination != null && f.Destination.IsSame(Coord(t)));
@@ -916,7 +1081,7 @@ namespace Tbot.Workers {
 				_state.ScanCursor++;
 				done++;
 				try {
-					GalaxyInfo info = await GalaxyCacheHub.GetOrLiveAsync(_tbotInstance, _ogameService, galaxy, system, GalaxyCacheConfig.Read(_tbotInstance).UseInFastFarm);
+					GalaxyInfo info = await GalaxyCacheHub.GetOrLiveAsync(_tbotInstance, _ogameService, galaxy, system, GalaxyCacheConfig.Read(_tbotInstance).UseInFastFarm, TimeSpan.FromHours(GalaxyCacheConfig.Read(_tbotInstance).FastFarmMaxAgeHours));
 					if (info?.Planets == null)
 						continue;
 					foreach (var p in info.Planets.Where(p => p != null && p.Inactive && !p.Administrator && !p.Banned && !p.Vacation)) {

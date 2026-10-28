@@ -22,6 +22,9 @@ namespace Tbot.Workers {
 		private readonly ICalculationService _calculationService;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
 		private int _nextOriginIndex;
+		private readonly ExpeditionDiagnostics.RepeatLimiter _repeat = new();
+		private const string RepeatNoSend = "nosend";
+		private const string RepeatOriginConfig = "origincfg";
 
 		private ExpeditionDurationTracker _durationTracker;
 		private readonly object _durationTrackerLock = new();
@@ -82,6 +85,8 @@ namespace Tbot.Workers {
 		private ExpoFindsStore _expoStore;
 		private async System.Threading.Tasks.Task RefreshExpoFinds() {
 			try {
+				if (!ReadExpeditionReportsEnabled())
+					return;
 				_expoStore ??= new ExpoFindsStore(ExpoFindsStore.PathFor(_tbotInstance.InstanceAlias));
 				if (!_expoStore.Due(DateTime.UtcNow, TimeSpan.FromMinutes(20)))
 					return;
@@ -92,11 +97,54 @@ namespace Tbot.Workers {
 					var price = _calculationService.CalcPrice(b, 1);
 					return price.Metal / Resources.MetalPerDeuterium + price.Crystal / Resources.CrystalPerDeuterium + price.Deuterium;
 				}
-				int added = _expoStore.Add(messages, ShipValue, DateTime.UtcNow);
+				bool baseline = (_expoStore.Current?.Reports ?? 0) == 0;
+				var fresh = new List<ExpoFindsStore.Entry>();
+				int added = _expoStore.Add(messages, ShipValue, DateTime.UtcNow, fresh);
 				if (added > 0)
 					DoLog(LogLevel.Information, $"Expedition reports: {added} new report(s) saved, {_expoStore.Current?.Reports ?? 0} in total.");
+				if (!baseline)
+					await NotifyExpoFinds(fresh);
 			} catch (Exception e) {
 				DoLog(LogLevel.Debug, $"Expedition reports could not be read: {e.Message}");
+			}
+		}
+
+		private bool ReadExpeditionReportsEnabled() {
+			try {
+				var g = _tbotInstance?.InstanceSettings;
+				if (g == null || !SettingsService.IsSettingSet(g, "Experimental") || !SettingsService.IsSettingSet(g.Experimental, "ReportReading"))
+					return true;
+				var r = g.Experimental.ReportReading;
+				return !SettingsService.IsSettingSet(r, "Expeditions") || (bool) r.Expeditions;
+			} catch (Exception) {
+				return true;
+			}
+		}
+
+		private readonly List<ExpoFindsStore.Entry> _expoPending = new();
+		private DateTime _expoPendingSince = DateTime.MinValue;
+		private async System.Threading.Tasks.Task NotifyExpoFinds(List<ExpoFindsStore.Entry> fresh) {
+			try {
+				var exp = _tbotInstance.InstanceSettings.Expeditions;
+				if (!SettingsService.IsSettingSet(exp, "TelegramMessenger") || !SettingsService.IsSettingSet(exp.TelegramMessenger, "Active") || !(bool) exp.TelegramMessenger.Active) {
+					_expoPending.Clear();
+					return;
+				}
+				bool onlyFinds = !SettingsService.IsSettingSet(exp.TelegramMessenger, "OnlyFinds") || (bool) exp.TelegramMessenger.OnlyFinds;
+				int window = SettingsService.IsSettingSet(exp.TelegramMessenger, "WindowMinutes") ? Math.Max(0, (int) exp.TelegramMessenger.WindowMinutes) : 0;
+				var now = DateTime.UtcNow;
+				var neu = fresh.Where(e => e.Utc >= now.AddHours(-26)).ToList();
+				if (neu.Count > 0 && _expoPending.Count == 0)
+					_expoPendingSince = now;
+				_expoPending.AddRange(neu);
+				if (_expoPending.Count == 0 || (window > 0 && (now - _expoPendingSince).TotalMinutes < window))
+					return;
+				string text = ExpoFindsStore.FormatTelegram(_expoPending, onlyFinds);
+				_expoPending.Clear();
+				if (text != null)
+					await _tbotInstance.SendTelegramMessage(text);
+			} catch (Exception e) {
+				DoLog(LogLevel.Debug, $"Expedition message could not be sent: {e.Message}");
 			}
 		}
 
@@ -211,9 +259,28 @@ namespace Tbot.Workers {
 					}
 				}
 			} catch (Exception e) {
-				DoLog(LogLevel.Warning, $"Expeditions.Origin MaxExpeditions could not be read, using the global value: {e.Message}");
+				bool warn = _repeat.ShouldLog(RepeatOriginConfig, e.Message, DateTime.UtcNow, TimeSpan.FromHours(6));
+				DoLog(warn ? LogLevel.Warning : LogLevel.Debug, $"Expeditions.Origin MaxExpeditions could not be read, using the global value: {e.Message}");
 			}
 			return globalMax;
+		}
+
+		protected override void OnWorkerStarting() {
+			var configured = _tbotInstance.InstanceSettings.Expeditions.Origin;
+			if (configured == null || configured.Length == 0) {
+				DoLog(LogLevel.Information, "Expedition origins in the loaded settings: none set (automatic choice).");
+				return;
+			}
+			var parts = new List<string>();
+			foreach (var o in configured) {
+				string text = $"{o.Galaxy}:{o.System}:{o.Position} {(o.Type == null ? "Planet" : o.Type.ToString())}";
+				try {
+					if (SettingsService.IsSettingSet(o, "MaxExpeditions") && (int) o.MaxExpeditions > 0)
+						text += $" (max {(int) o.MaxExpeditions})";
+				} catch (Exception) { }
+				parts.Add(text);
+			}
+			DoLog(LogLevel.Information, $"Expedition origins in the loaded settings ({parts.Count}): {string.Join(", ", parts)}");
 		}
 
 		private List<Celestial> ResolveExpeditionOrigins() {
@@ -285,7 +352,42 @@ namespace Tbot.Workers {
 				(long)_tbotInstance.InstanceSettings.Expeditions.ManualShips.Ships.Pathfinder);
 		}
 
-		private Ships BuildExpeditionFleet(Celestial origin, LFBonuses lfBonuses) {
+		private Ships BuildSmartExpeditionFleet(Ships availableShips, Buildables primaryShip, LFBonuses lfBonuses, int pendingFromOrigin) {
+			var researches = _tbotInstance.UserData.researches;
+			var serverData = _tbotInstance.UserData.serverData;
+			var playerClass = _tbotInstance.UserData.userInfo.Class;
+			var exp = _tbotInstance.InstanceSettings.Expeditions;
+
+			Buildables mixShip = Buildables.SmallCargo;
+			if (SettingsService.IsSettingSet(exp, "SmartMixShip")) {
+				string mixText = (string) exp.SmartMixShip;
+				if (!Enum.TryParse<Buildables>(mixText, true, out mixShip))
+					mixShip = Buildables.SmallCargo;
+			}
+
+			Func<Buildables, int> capacityOf = ship => {
+				float cargoBonus = lfBonuses != null && lfBonuses.LfShipBonusesInt != null && lfBonuses.LfShipBonusesInt.TryGetValue((int) ship, out var shipBonus) ? shipBonus.CargoCapacity : 0;
+				return _calculationService.CalcShipCapacity(ship, researches.HyperspaceTechnology, serverData, cargoBonus, playerClass, serverData.ProbeCargo);
+			};
+			float expeditionBonus = lfBonuses?.LfResourceBonuses != null ? lfBonuses.LfResourceBonuses.ResourcesExpedition : 0;
+			var ideal = _calculationService.CalcIdealExpeditionShips(primaryShip, researches.HyperspaceTechnology, expeditionBonus, lfBonuses?.LfShipBonusesInt, serverData, playerClass, serverData.ProbeCargo);
+			long fuelCargo = SettingsService.IsSettingSet(exp, "FuelToCarry") ? Convert.ToInt64(exp.FuelToCarry) : 0;
+
+			var fleet = SmartExpeditionFleet.Build(new SmartExpeditionInput {
+				Available = availableShips,
+				Primary = primaryShip,
+				Mix = mixShip,
+				Pending = pendingFromOrigin,
+				IdealPrimary = ideal.GetAmount(primaryShip),
+				ExtraCapacity = fuelCargo,
+				CapacityPrimary = capacityOf(primaryShip),
+				CapacityMix = mixShip == Buildables.Null ? 0 : capacityOf(mixShip)
+			});
+			DoLog(LogLevel.Debug, $"SmartShips: {pendingFromOrigin} expedition(s) still planned from this origin, fleet {fleet}.");
+			return fleet;
+		}
+
+		private Ships BuildExpeditionFleet(Celestial origin, LFBonuses lfBonuses, int pendingFromOrigin = 1) {
 			if ((bool)_tbotInstance.InstanceSettings.Expeditions.ManualShips.Active)
 				return BuildManualExpeditionFleet();
 
@@ -304,7 +406,8 @@ namespace Tbot.Workers {
 					availableShips.GetAmount(primaryShip) - (long)_tbotInstance.InstanceSettings.Expeditions.PrimaryToKeep));
 			}
 
-			var autoFleet = _calculationService.CalcFullExpeditionShips(
+			bool smartShips = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Expeditions, "SmartShips") && (bool) _tbotInstance.InstanceSettings.Expeditions.SmartShips;
+			Ships autoFleet = smartShips ? BuildSmartExpeditionFleet(availableShips, primaryShip, lfBonuses, pendingFromOrigin) : _calculationService.CalcFullExpeditionShips(
 				availableShips,
 				primaryShip,
 				1,
@@ -313,6 +416,26 @@ namespace Tbot.Workers {
 				lfBonuses,
 				_tbotInstance.UserData.userInfo.Class,
 				_tbotInstance.UserData.serverData.ProbeCargo);
+
+			if (!smartShips) try {
+				long fuelCargo = 0;
+				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Expeditions, "FuelToCarry"))
+					fuelCargo = Convert.ToInt64(_tbotInstance.InstanceSettings.Expeditions.FuelToCarry);
+				if (fuelCargo > 0 && autoFleet.GetAmount(primaryShip) > 0) {
+					float cargoBonus = lfBonuses != null && lfBonuses.LfShipBonusesInt != null && lfBonuses.LfShipBonusesInt.TryGetValue((int) primaryShip, out var shipBonus) ? shipBonus.CargoCapacity : 0;
+					int capacity = _calculationService.CalcShipCapacity(primaryShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
+					if (capacity > 0) {
+						long extra = (fuelCargo + capacity - 1) / capacity;
+						long add = Math.Min(extra, Math.Max(0, availableShips.GetAmount(primaryShip) - autoFleet.GetAmount(primaryShip)));
+						if (add > 0) {
+							autoFleet.Add(primaryShip, add);
+							DoLog(LogLevel.Debug, $"FuelToCarry {fuelCargo:N0} needs cargo space: {add:N0} extra {primaryShip} added on {origin.Coordinate} (capacity {capacity:N0} each).");
+						}
+					}
+				}
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"Expeditions.FuelToCarry could not be added to the fleet size: {e.Message}");
+			}
 
 			int minPrimary = 0;
 			try {
@@ -344,7 +467,7 @@ namespace Tbot.Workers {
 				if (vorhanden >= min)
 					return true;
 				DoLog(LogLevel.Warning, $"Expedition from {origin.Coordinate} skipped: deuterium {vorhanden:N0} is below the minimum {min:N0} on this moon.");
-				string schluessel = origin.Coordinate.ToString();
+				string schluessel = ExpeditionDiagnostics.DeutKey(_tbotInstance.InstanceAlias, _tbotInstance.UserData?.serverData?.Name, origin.Coordinate.ToString());
 				lock (_deutMeldung) {
 					if (_deutMeldung.TryGetValue(schluessel, out DateTime zuletzt) && (DateTime.UtcNow - zuletzt).TotalHours < 6)
 						return false;
@@ -573,9 +696,86 @@ namespace Tbot.Workers {
 			}
 		}
 
+		private void LogNoSend(string reason, long intervalMs) {
+			try {
+				string text = "Expeditions: nothing sent - " + (reason ?? "reason not determined.");
+				bool info = _repeat.ShouldLog(RepeatNoSend, text, DateTime.UtcNow, TimeSpan.FromMinutes(30));
+				DoLog(info ? LogLevel.Information : LogLevel.Debug, $"{text} Next check at {DateTime.Now.AddMilliseconds(intervalMs)}.");
+			} catch (Exception) {
+			}
+		}
+
+		private sealed class ExpCycle {
+			public long Id;
+			public string Tag;
+			public System.Diagnostics.Stopwatch Uhr = System.Diagnostics.Stopwatch.StartNew();
+			public TimeSpan Timeout;
+			public int Versuche;
+			public int Gesendet;
+			public readonly HashSet<string> Gemeldet = new();
+		}
+		private long _zyklusZaehler;
+		private long _neuesterZyklus;
+		private int _aktiveZyklen;
+		private long _versuchZaehler;
+
+		private bool PruefeVeraltet(ExpCycle c, string ort, bool immerMelden = false) {
+			try {
+				long neuester = System.Threading.Interlocked.Read(ref _neuesterZyklus);
+				bool veraltet = neuester != c.Id;
+				bool ueberZeit = c.Uhr.Elapsed > c.Timeout;
+				if ((veraltet || ueberZeit) && (immerMelden || c.Gemeldet.Add(ort))) {
+					if (veraltet)
+						DoLog(LogLevel.Warning, $"[{c.Tag}] STALE cycle still active at '{ort}': newer cycle E{neuester} has already started (this one is {c.Uhr.Elapsed.TotalSeconds:F0}s old, ExecuteTimeout {c.Timeout.TotalSeconds:F0}s, sent {c.Gesendet}). Two expedition cycles are running in parallel.");
+					else
+						DoLog(LogLevel.Warning, $"[{c.Tag}] cycle is past ExecuteTimeout at '{ort}' ({c.Uhr.Elapsed.TotalSeconds:F0}s > {c.Timeout.TotalSeconds:F0}s): WorkerBase has abandoned it, the worker lock stays held until it ends (or 10 min without heartbeat).");
+				}
+				return veraltet;
+			} catch (Exception) {
+				return false;
+			}
+		}
+
 		protected override async Task Execute() {
+			var c = new ExpCycle();
+			try {
+				c.Id = System.Threading.Interlocked.Increment(ref _zyklusZaehler);
+				c.Tag = $"E{c.Id}";
+				c.Timeout = ExecuteTimeout;
+				int aktiv = System.Threading.Interlocked.Increment(ref _aktiveZyklen);
+				long vorher = System.Threading.Interlocked.Exchange(ref _neuesterZyklus, c.Id);
+				if (aktiv > 1)
+					DoLog(LogLevel.Warning, $"[{c.Tag}] cycle start while {aktiv - 1} older cycle(s) are still running (previous newest: E{vorher}) - overlapping expedition cycles. Thread {Environment.CurrentManagedThreadId}.");
+				else
+					DoLog(LogLevel.Debug, $"[{c.Tag}] cycle start (ExecuteTimeout {c.Timeout.TotalSeconds:F0}s, thread {Environment.CurrentManagedThreadId}).");
+			} catch (Exception) {
+			}
+			string ergebnis = "completed";
+			try {
+				await ExecuteCore(c);
+			} catch (Exception e) {
+				ergebnis = "exception: " + e.Message;
+				throw;
+			} finally {
+				try {
+					int uebrig = System.Threading.Interlocked.Decrement(ref _aktiveZyklen);
+					long neuester = System.Threading.Interlocked.Read(ref _neuesterZyklus);
+					string zusatz = $"{c.Uhr.Elapsed.TotalSeconds:F0}s, attempts {c.Versuche}, sent {c.Gesendet}, result {ergebnis}, other cycles still active {uebrig}";
+					if (neuester != c.Id)
+						DoLog(LogLevel.Warning, $"[{c.Tag}] STALE cycle finished after newer cycle E{neuester} had started ({zusatz}, ExecuteTimeout {c.Timeout.TotalSeconds:F0}s). Its end handling may still have changed the worker period / ended the worker.");
+					else if (c.Uhr.Elapsed > c.Timeout)
+						DoLog(LogLevel.Warning, $"[{c.Tag}] cycle finished only after ExecuteTimeout ({zusatz}, ExecuteTimeout {c.Timeout.TotalSeconds:F0}s); WorkerBase had abandoned it, no newer cycle had started.");
+					else
+						DoLog(LogLevel.Debug, $"[{c.Tag}] cycle end ({zusatz}).");
+				} catch (Exception) {
+				}
+			}
+		}
+
+		private async Task ExecuteCore(ExpCycle cyc) {
 			bool stop = false;
 			bool delay = false;
+			string noSendReason = null;
 
 			try {
 				if (!(bool)_tbotInstance.InstanceSettings.Expeditions.Active)
@@ -646,6 +846,7 @@ namespace Tbot.Workers {
 					(double)expeditionsToSend < Math.Round((double)_tbotInstance.UserData.slots.ExpTotal / 2D, 0, MidpointRounding.ToZero) + 1D)
 					expeditionsToSend = 0;
 
+				int? prioritySlotsResult = null;
 				if (expeditionsToSend > 0) {
 					int prioritySlots = _calculationService.CalcSlotsPriority(
 						Feature.Expeditions,
@@ -653,16 +854,26 @@ namespace Tbot.Workers {
 						_tbotInstance.UserData.slots,
 						_tbotInstance.UserData.fleets,
 						(int)_tbotInstance.InstanceSettings.General.SlotsToLeaveFree);
+					prioritySlotsResult = prioritySlots;
 					expeditionsToSend = Math.Min(expeditionsToSend, Math.Max(0, prioritySlots));
 				}
 
 				if (expeditionsToSend <= 0) {
+					var exp = _tbotInstance.InstanceSettings.Expeditions;
+					bool waitAll = SettingsService.IsSettingSet(exp, "WaitForAllExpeditions") && (bool) exp.WaitForAllExpeditions;
+					bool waitMajority = SettingsService.IsSettingSet(exp, "WaitForMajorityOfExpeditions") && (bool) exp.WaitForMajorityOfExpeditions;
+					noSendReason = ExpeditionDiagnostics.ExplainNoSend(
+						(int) _tbotInstance.UserData.slots.ExpTotal, (int) _tbotInstance.UserData.slots.ExpInUse,
+						_tbotInstance.UserData.slots.Free, _tbotInstance.UserData.slots.Total,
+						(int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree, waitAll, waitMajority, prioritySlotsResult)
+						?? "no expedition may be sent (reason not determined).";
 					delay = true;
 					return;
 				}
 
 				if (!_tbotInstance.GhostSleepAllowsNewExpedition(GetDurationTracker().GetMaxDurationSeconds())) {
 					DoLog(LogLevel.Information, "GhostSleep drain: no new expeditions before sleeping - they would not be back in time.");
+					noSendReason = "GhostSleep drain: new expeditions would not be back before bedtime.";
 					delay = true;
 					return;
 				}
@@ -670,6 +881,7 @@ namespace Tbot.Workers {
 				var origins = ResolveExpeditionOrigins();
 				if (origins.Count == 0) {
 					DoLog(LogLevel.Warning, "No valid expedition origin is configured.");
+					noSendReason = "no valid expedition origin is configured.";
 					delay = true;
 					return;
 				}
@@ -730,24 +942,35 @@ namespace Tbot.Workers {
 					var origin = origins[originIndex];
 					for (var attempt = 0; attempt < count && remaining > 0; attempt++) {
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
+						PruefeVeraltet(cyc, "after UpdateFleets (loop)");
 						if (CountActiveExpeditionsFromOrigin(origin) >= MaxExpeditionsForOrigin(origin, defaultMax[originIndex]))
 							break;
 
 						_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
+						PruefeVeraltet(cyc, "after UpdateSlots (loop)");
 						if (_tbotInstance.UserData.slots.ExpFree <= 0 ||
 							_tbotInstance.UserData.slots.Free <= (int)_tbotInstance.InstanceSettings.General.SlotsToLeaveFree) {
+							noSendReason = $"slots ran out while sending (expedition slots free {_tbotInstance.UserData.slots.ExpFree}, fleet slots free {_tbotInstance.UserData.slots.Free}/{_tbotInstance.UserData.slots.Total}, SlotsToLeaveFree {(int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree}).";
 							delay = true;
 							return;
 						}
 
 						var refreshedShips = await RefreshExpeditionShips(origin);
+						PruefeVeraltet(cyc, "after RefreshExpeditionShips");
 						if (refreshedShips == null) {
 							unavailableOrigins[originIndex] = true;
 							retryableUnavailableOrigins[originIndex] = true;
 							break;
 						}
 
-						var fleet = BuildExpeditionFleet(origin, lfBonuses);
+						int pendingFromOrigin = Math.Max(1, new[] {
+							count - attempt,
+							remaining,
+							_tbotInstance.UserData.slots.ExpFree,
+							_tbotInstance.UserData.slots.Free - (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree,
+							MaxExpeditionsForOrigin(origin, defaultMax[originIndex]) - CountActiveExpeditionsFromOrigin(origin)
+						}.Min());
+						var fleet = BuildExpeditionFleet(origin, lfBonuses, pendingFromOrigin);
 						if (fleet == null || fleet.IsEmpty() || !refreshedShips.HasAtLeast(fleet, 1)) {
 							DoLog(LogLevel.Information,
 								$"No usable expedition fleet on {origin.Coordinate}; excluding this origin until the bounded retry.");
@@ -769,19 +992,35 @@ namespace Tbot.Workers {
 							payload.Deuterium = (long)_tbotInstance.InstanceSettings.Expeditions.FuelToCarry;
 
 						DoLog(LogLevel.Information, $"Sending expedition from {origin.Coordinate} to {destination}");
-						var fleetId = await _fleetScheduler.SendFleet(
-							origin,
-							fleet,
-							destination,
-							Missions.Expedition,
-							sendSpeed,
-							payload);
+						string versuchId = $"A{System.Threading.Interlocked.Increment(ref _versuchZaehler)}";
+						cyc.Versuche++;
+						bool veraltetVorSenden = PruefeVeraltet(cyc, "before SendFleet", true);
+						DoLog(veraltetVorSenden ? LogLevel.Warning : LogLevel.Debug,
+							$"[{cyc.Tag}/{versuchId}] {(veraltetVorSenden ? "STALE cycle is about to SEND" : "about to send")}: sender {origin.Coordinate} ({origin.Coordinate.Type}), destination {destination}, speed {sendSpeed}, ships {fleet}, cycle age {cyc.Uhr.Elapsed.TotalSeconds:F0}s, attempt {cyc.Versuche} of this cycle, sent so far {cyc.Gesendet}, active cycles {System.Threading.Volatile.Read(ref _aktiveZyklen)}.");
+						int fleetId;
+						try {
+							fleetId = await _fleetScheduler.SendFleet(
+								origin,
+								fleet,
+								destination,
+								Missions.Expedition,
+								sendSpeed,
+								payload,
+								shrinkDeuteriumPayload: true);
+						} catch (Exception sendEx) {
+							DoLog(LogLevel.Warning, $"[{cyc.Tag}/{versuchId}] send attempt from {origin.Coordinate} FAILED with exception after {cyc.Uhr.Elapsed.TotalSeconds:F0}s: {sendEx.Message}");
+							throw;
+						}
+						bool veraltetNachSenden = PruefeVeraltet(cyc, "after SendFleet", true);
+						DoLog(veraltetNachSenden || fleetId <= (int)SendFleetCode.GenericError ? LogLevel.Warning : LogLevel.Debug,
+							$"[{cyc.Tag}/{versuchId}] send attempt from {origin.Coordinate} finished: result {(fleetId > (int)SendFleetCode.GenericError ? "fleet id " + fleetId : "code " + fleetId)}{(veraltetNachSenden ? " (cycle was STALE)" : "")}, cycle age {cyc.Uhr.Elapsed.TotalSeconds:F0}s.");
 
 						if (fleetId == (int)SendFleetCode.AfterSleepTime) {
 							stop = true;
 							return;
 						}
 						if (fleetId == (int)SendFleetCode.NotEnoughSlots) {
+							noSendReason = "SendFleet refused the fleet: no free slot (taken by another worker in the meantime, or reserved for the fleetsave).";
 							delay = true;
 							return;
 						}
@@ -791,7 +1030,9 @@ namespace Tbot.Workers {
 							break;
 						}
 
+						cyc.Gesendet++;
 						GetDurationTracker().NoteSent(fleetId, origin.Coordinate, DateTime.UtcNow);
+						_repeat.Reset(RepeatNoSend);
 						sentByOrigin[originIndex]++;
 						remaining--;
 						progressInPass = true;
@@ -802,6 +1043,7 @@ namespace Tbot.Workers {
 						if (maxWait < minWait)
 							(minWait, maxWait) = (maxWait, minWait);
 						await Task.Delay((int)RandomizeHelper.CalcRandomIntervalSecToMs(minWait, maxWait), _ct);
+						PruefeVeraltet(cyc, "after pause between fleets");
 					}
 				}
 
@@ -830,16 +1072,20 @@ namespace Tbot.Workers {
 				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 
 				long interval;
+				long? nextReturn = ExpeditionDiagnostics.NextReturnSeconds(expeditionFleets);
 				if (expeditionFleets.Count == 0 ||
 					(_tbotInstance.UserData.slots.ExpFree > 0 &&
 					 !(bool)_tbotInstance.InstanceSettings.Expeditions.WaitForAllExpeditions &&
 					 !(bool)_tbotInstance.InstanceSettings.Expeditions.WaitForMajorityOfExpeditions)) {
 					interval = RandomizeHelper.CalcRandomInterval(IntervalType.AboutFiveMinutes);
-				} else {
-					interval = (int)((1000 * expeditionFleets.First().BackIn) +
+				} else if (nextReturn.HasValue) {
+					interval = 1000 * nextReturn.Value +
 						RandomizeHelper.CalcRandomIntervalSecToMs(
 							(int)_tbotInstance.InstanceSettings.Expeditions.MinWaitNextRound,
-							(int)_tbotInstance.InstanceSettings.Expeditions.MaxWaitNextRound));
+							(int)_tbotInstance.InstanceSettings.Expeditions.MaxWaitNextRound);
+				} else {
+					interval = RandomizeHelper.CalcRandomInterval(IntervalType.AboutFiveMinutes);
+					DoLog(LogLevel.Debug, "No expedition has a valid return time (BackIn missing) - using the default check interval.");
 				}
 
 				ChangeWorkerPeriod(interval);
@@ -856,15 +1102,16 @@ namespace Tbot.Workers {
 					if (delay) {
 						_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 						long interval;
-						try {
-							interval = (_tbotInstance.UserData.fleets.OrderBy(f => f.BackIn).First().BackIn ?? 0) * 1000 +
-								RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
-						} catch {
+						long? nextBack = ExpeditionDiagnostics.NextReturnSeconds(_tbotInstance.UserData.fleets);
+						if (nextBack.HasValue) {
+							interval = nextBack.Value * 1000 + RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
+						} else {
 							interval = RandomizeHelper.CalcRandomInterval(
-								(int)_tbotInstance.InstanceSettings.Expeditions.CheckIntervalMin,
-								(int)_tbotInstance.InstanceSettings.Expeditions.CheckIntervalMax);
+								(int)_tbotInstance.InstanceSettings.Expeditions.MinWaitNextRound,
+								(int)_tbotInstance.InstanceSettings.Expeditions.MaxWaitNextRound);
 						}
 						ChangeWorkerPeriod(interval);
+						LogNoSend(noSendReason, interval);
 					}
 
 					await _tbotOgameBridge.CheckCelestials();

@@ -45,6 +45,16 @@ namespace Tbot.Includes {
 			}
 		}
 
+		private long _nextFireTicks;
+		private long _lastEndTicks;
+		private volatile bool _callbackRunning;
+		public DateTime? NextFireUtc { get { long t = Interlocked.Read(ref _nextFireTicks); return t == 0 ? (DateTime?) null : new DateTime(t, DateTimeKind.Utc); } }
+		public DateTime? LastEndUtc { get { long t = Interlocked.Read(ref _lastEndTicks); return t == 0 ? (DateTime?) null : new DateTime(t, DateTimeKind.Utc); } }
+		public bool CallbackRunning => _callbackRunning;
+		private void SetNextFire(TimeSpan wait) {
+			Interlocked.Exchange(ref _nextFireTicks, wait == Timeout.InfiniteTimeSpan ? 0 : DateTime.UtcNow.Add(wait).Ticks);
+		}
+
 		public bool _IsRunning { get; private set; }
 		public bool IsRunning {
 			get {
@@ -80,18 +90,27 @@ namespace Tbot.Includes {
 			await _startStopSemaphore.WaitAsync();
 			_canSetBiggerPeriod = true;
 			try {
-				_cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+				var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+				_cts = cts;
 
 				_scheduledAction = Task.Run(async () => {
 					Thread.CurrentThread.Name = $"AT_{_name}";
 					IsRunning = true;
 
 					try {
-						while (_cts.Token.IsCancellationRequested == false) {
+						while (cts.Token.IsCancellationRequested == false) {
 
-							await Task.Delay(DueTime, _cts.Token);
+							SetNextFire(DueTime);
+							await Task.Delay(DueTime, cts.Token);
 
-							await _callback(_cts.Token);
+							Interlocked.Exchange(ref _nextFireTicks, 0);
+							_callbackRunning = true;
+							try {
+								await _callback(cts.Token);
+							} finally {
+								_callbackRunning = false;
+								Interlocked.Exchange(ref _lastEndTicks, DateTime.UtcNow.Ticks);
+							}
 
 							lock (_changeLock) {
 								_canSetBiggerPeriod = true;
@@ -101,14 +120,16 @@ namespace Tbot.Includes {
 								break;
 							}
 
-							await Task.Delay(Period, _cts.Token);
+							SetNextFire(Period);
+							await Task.Delay(Period, cts.Token);
 						}
 					} catch (OperationCanceledException) {
 					} finally {
-						IsRunning = false;
+						if (_cts == null || ReferenceEquals(_cts, cts))
+							IsRunning = false;
 					}
 
-				}, _cts.Token);
+				}, cts.Token);
 			} finally {
 				_startStopSemaphore.Release();
 			}

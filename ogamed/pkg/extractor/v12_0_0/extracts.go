@@ -8,6 +8,7 @@ import (
 	"github.com/alaingilbert/ogame/pkg/utils"
 	"math"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -92,6 +93,14 @@ func extractHighscoreFromDoc(doc *goquery.Document) (out ogame.Highscore, err er
 		shipsParts := shipsRgx.FindStringSubmatch(shipsTitle)
 		if len(shipsParts) == 2 {
 			p.Ships = utils.ParseInt(shipsParts[1])
+		}
+		statusRgx := regexp.MustCompile(`status_abbr_([A-Za-z]+)`)
+		for _, st := range s.Find("[class*='status_abbr_']").EachIter() {
+			for _, sm := range statusRgx.FindAllStringSubmatch(st.AttrOr("class", ""), -1) {
+				if len(sm) == 2 && !slices.Contains(p.Status, sm[1]) {
+					p.Status = append(p.Status, sm[1])
+				}
+			}
 		}
 		out.Players = append(out.Players, p)
 	}

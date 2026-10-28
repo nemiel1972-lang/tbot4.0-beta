@@ -31,6 +31,7 @@ type HighscorePlayer struct {
 	HonourPoints int64
 	Homeworld    Coordinate
 	Ships        int64
+	Status       []string
 }
 
 func (h HighscorePlayer) String() string {

@@ -319,6 +319,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	if err != nil {
 		return err
 	}
+	bot.StartDailyLogin(ctx)
 
 	e := echo.New()
 	if corsEnabled {
@@ -367,6 +368,9 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/language", wrapper.GetLanguageHandler)
 	e.GET("/bot/empire/type/:typeID", wrapper.GetEmpireHandler)
 	e.POST("/bot/page-content", wrapper.PageContentHandler)
+	e.POST("/bot/post-page-content", wrapper.PostPageContentHandler)
+	e.POST("/bot/directives/chapter/:chapterID/claim-all", wrapper.ChapterClaimAllHandler)
+	e.POST("/bot/directives/task/:taskID/collect", wrapper.ChapterCollectRewardHandler)
 	e.GET("/bot/login", wrapper.LoginHandler)
 	e.GET("/bot/logout", wrapper.LogoutHandler)
 	e.GET("/bot/username", wrapper.GetUsernameHandler)
@@ -397,6 +401,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/attacks", wrapper.GetAttacksHandler)
 	e.POST("/bot/simulate-battle", wrapper.SimulateBattleHandler)
 	e.GET("/bot/galaxy-infos/:galaxy/:system", wrapper.GalaxyInfosHandler)
+	e.GET("/bot/highscore/:category/:type/:page", wrapper.HighscoreHandler)
 	e.GET("/bot/get-research", wrapper.GetResearchHandler)
 	e.GET("/bot/buy-offer-of-the-day", wrapper.BuyOfferOfTheDayHandler)
 	e.GET("/bot/price/:ogameID/:nbr", wrapper.GetPriceHandler)

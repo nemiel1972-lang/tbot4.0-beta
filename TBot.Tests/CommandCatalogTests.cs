@@ -1,3 +1,4 @@
+using System.Linq;
 using Tbot.Common.Commands;
 using Xunit;
 

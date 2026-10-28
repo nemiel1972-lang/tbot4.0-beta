@@ -250,6 +250,51 @@ namespace Tbot.Workers {
 			}
 		}
 
+		public async Task<List<string>> DryRunFleetSave(Celestial celestial, long minDuration) {
+			var res = new List<string>();
+			try {
+				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Ships);
+				ShadowFleetWorker.ExcludeFromFleetSave(_tbotInstance.InstanceSettings, celestial);
+				var movable = celestial.Ships.GetMovableShips();
+				if (movable.IsEmpty()) {
+					res.Add($"warn|No fleet to save on {celestial}: the fleetsave would be skipped (resources alone stay where they are).");
+					return res;
+				}
+				celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Resources);
+				long deut = celestial.Resources.Deuterium;
+				if (deut == 0) {
+					res.Add("bad|No deuterium on the celestial: the fleetsave would be skipped (no fuel).");
+					return res;
+				}
+				res.Add($"info|Fleet to save: {movable.GetFleetPoints():N0} points, deuterium {deut:N0}, metal {celestial.Resources.Metal:N0}, crystal {celestial.Resources.Crystal:N0}.");
+				var departure = await _tbotOgameBridge.GetDateTime();
+				if (!Missions.TryParse(_tbotInstance.InstanceSettings.SleepMode.AutoFleetSave.DefaultMission, out Missions first))
+					first = Missions.Harvest;
+				var chain = new List<Missions> { first, Missions.Deploy };
+				if (celestial.Ships.ColonyShip > 0)
+					chain.Add(Missions.Colonize);
+				if (celestial.Ships.EspionageProbe > 0)
+					chain.Add(Missions.Spy);
+				chain.Add(Missions.Transport);
+				foreach (var mission in chain.Distinct()) {
+					var hyp = await GetFleetSaveDestination(_tbotInstance.UserData.celestials, celestial, departure, minDuration, mission, deut);
+					var usable = hyp.Where(h => h.Fuel <= deut).OrderBy(h => h.Fuel).ToList();
+					if (usable.Count == 0) {
+						res.Add($"info|{mission}: no suitable destination ({hyp.Count} candidates, none usable with the fuel and flight time).");
+						continue;
+					}
+					var f = usable[0];
+					res.Add($"ok|{mission}: first choice would be {f.Destination}, flight {TimeSpan.FromSeconds(f.Duration):hh\\:mm\\:ss}, speed {f.Speed * 10}%, fuel {f.Fuel:N0} ({usable.Count} usable candidates).");
+					res.Add($"ok|Cargo: everything (metal, crystal, food, deuterium minus fuel). Recall after the last attack wave. Nothing is sent in this test.");
+					return res;
+				}
+				res.Add("bad|No destination found for any mission: the fleet would NOT be saved.");
+			} catch (Exception e) {
+				res.Add($"bad|Fleetsave dry run failed: {e.Message}");
+			}
+			return res;
+		}
+
 		public async Task AutoFleetSave(Celestial celestial, bool isSleepTimeFleetSave = false, long minDuration = 0, bool WaitFleetsReturn = false, Missions TelegramMission = Missions.None, bool fromTelegram = false, bool saveall = false) {
 			DateTime departureTime = await _tbotOgameBridge.GetDateTime();
 			_tbotInstance.SleepDuration = minDuration;
@@ -670,7 +715,7 @@ namespace Tbot.Workers {
 		}
 
 		public async Task<int> SendFleet(Celestial origin, Ships ships, Coordinate destination, Missions mission, decimal speed, Resources payload = null, CharacterClass playerClass = CharacterClass.NoClass, bool force = false, bool ignoreLedger = false, long deutToLeave = 0, bool allowSpeedReduction = false, bool shrinkDeuteriumPayload = false, bool fleetsave = false) {
-			_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending fleet from {origin.Coordinate.ToString()} to {destination.ToString()}. Mission: {mission.ToString()}. Speed: {(speed * 10).ToString()}% Ships: {ships.ToString()}");
+			_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending fleet from {origin.Coordinate.ToString()} to {destination.ToString()}. Mission: {mission.ToString()}. Speed: {(speed * 10).ToString()}% Ships: {ships.ToString()}{(string.IsNullOrEmpty(LedgerTBot.CurrentOwner) ? "" : " [worker: " + LedgerTBot.CurrentOwner + "]")}");
 
 			if (playerClass == CharacterClass.NoClass)
 				playerClass = _tbotInstance.UserData.userInfo.Class;
@@ -995,9 +1040,9 @@ if (
 				return await _ogameService.GetFleets();
 			} catch (Exception e) {
 				_tbotInstance.log(LogLevel.Debug, LogSender.Tbot, $"UpdateFleets() Exception: {e.Message}");
-				_tbotInstance.log(LogLevel.Debug, LogSender.Tbot, $"UpdateFleets() Exception: {e.Message}");
 				_tbotInstance.log(LogLevel.Warning, LogSender.Tbot, $"Stacktrace: {e.StackTrace}");
-				return new();
+				var letzte = _tbotInstance.UserData.fleets;
+				return letzte != null ? new List<Fleet>(letzte) : new();
 			}
 		}
 
@@ -1623,8 +1668,25 @@ if (
 			return 0;
 		}
 
+		private static string TransportReason(Celestial dest, string what, Resources cost) {
+			string owner = LedgerTBot.CurrentOwner;
+			string text = " - requested by " + (string.IsNullOrEmpty(owner) ? "unknown worker" : owner);
+			if (!string.IsNullOrEmpty(what))
+				text += " for " + what;
+			if (dest != null)
+				text += " on " + dest.ToString();
+			if (cost != null)
+				text += $" (full cost {cost.TransportableResources})";
+			return text;
+		}
+
+		private static string LevelText(Func<int> currentLevel) {
+			try { return " level " + (currentLevel() + 1); } catch { return ""; }
+		}
+
 		public async Task<int> HandleMinerTransport(Celestial origin, Celestial destination, Celestial differentDestination, Resources resources, Buildables buildable = Buildables.Null, Buildings maxBuildings = null, Facilities maxFacilities = null, Facilities maxLunarFacilities = null, AutoMinerSettings autoMinerSettings = null) {
 			try {
+				string forWhat = TransportReason(destination, buildable != Buildables.Null ? buildable.ToString() + LevelText(() => destination.GetLevel(buildable)) : "", resources);
 				if (origin.ID == destination.ID) {
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping transport: origin and destination are the same.");
 					return 0;
@@ -1774,7 +1836,7 @@ if (
 								) {
 									if (differentDestination != null && differentDestination.ID != 0)
 										destination = differentDestination;
-									_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}");
+									_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}{forWhat}");
 									return await SendFleet(origin, ships, destination.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, _tbotInstance.UserData.userInfo.Class);
 								} else {
 									_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "Skipping transport: it is quicker to wait for production.");
@@ -1783,7 +1845,7 @@ if (
 							} else {
 								if (differentDestination != null && differentDestination.ID != 0)
 									destination = differentDestination;
-								_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}");
+								_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}{forWhat}");
 								return await SendFleet(origin, ships, destination.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, _tbotInstance.UserData.userInfo.Class);
 							}
 						} else {
@@ -1804,6 +1866,7 @@ if (
 
 		public async Task<int> HandleMinerTransport(Celestial origin, Celestial destination, Celestial differentDestination, Resources resources, LFBuildables buildable = LFBuildables.None, LFBuildings maxLFBuildings = null, bool preventIfMoreExpensiveThanNextMine = false) {
 			try {
+				string forWhat = TransportReason(destination, buildable != LFBuildables.None ? buildable.ToString() + LevelText(() => destination.GetLevel(buildable)) : "", resources);
 				if (origin.ID == destination.ID) {
 					_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, "Skipping transport: origin and destination are the same.");
 					return 0;
@@ -1919,13 +1982,19 @@ if (
 								true:
 								false;
 						
-						if (mischflotte != null || idealShips <= VerfuegbareTransportSchiffe(origin, preferredShip) || (doMultipleTransports && !origin.Ships.IsEmpty())) {
+						if (mischflotte != null || idealShips <= VerfuegbareTransportSchiffe(origin, preferredShip)) {
 							if (mischflotte != null) {
 									ships = mischflotte;
 								} else if (doMultipleTransports) {
 								ships.Add(preferredShip, VerfuegbareTransportSchiffe(origin, preferredShip));
 							} else {
 								ships.Add(preferredShip, idealShips);
+							}
+
+							Coordinate pruefZiel = (differentDestination != null && differentDestination.ID != 0) ? differentDestination.Coordinate : destination.Coordinate;
+							if (!KannVollstaendigLiefern(origin, ships, pruefZiel, missingResources, resToLeave)) {
+								_tbotInstance.log(LogLevel.Warning, LogSender.FleetScheduler, $"Skipping transport: partial delivery blocked - {origin.ToString()} cannot deliver {missingResources.TransportableResources} completely (resources/fuel/cargo space).");
+								return (int) SendFleetCode.NotEnoughRessources;
 							}
 
 							if (destination.Coordinate.Type == Celestials.Planet) {
@@ -1953,7 +2022,7 @@ if (
 								) {
 									if (differentDestination != null && differentDestination.ID != 0)
 										destination = differentDestination;
-									_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}");
+									_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}{forWhat}");
 									return await SendFleet(origin, ships, destination.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, _tbotInstance.UserData.userInfo.Class);
 								} else {
 									_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "Skipping transport: it is quicker to wait for production.");
@@ -1962,7 +2031,7 @@ if (
 							} else {
 								if (differentDestination != null && differentDestination.ID != 0)
 									destination = differentDestination;
-								_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}");
+								_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending {ships.ToString()} with {missingResources.TransportableResources} from {origin.ToString()} to {destination.ToString()}{forWhat}");
 								return await SendFleet(origin, ships, destination.Coordinate, Missions.Transport, Speeds.HundredPercent, missingResources, _tbotInstance.UserData.userInfo.Class);
 							}
 						} else {
@@ -2416,7 +2485,20 @@ if (
 									_tbotInstance.log(LogLevel.Warning, LogSender.AutoRepatriate, $"Repatriate: transport limit could not be checked ({slotEx.Message}) - only the slot check in SendFleet applies.");
 								}
 								ExtraLog.Write(_tbotInstance, "Repatriate", $"Repatriate send attempt: origin={tempCelestial}, destination={destinationCoordinate}, mission={Missions.Transport}, ships={ships}, cargo M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}, deutToLeave={applicableDeutToLeave:N0}.");
-								var fleetId = await SendFleet(tempCelestial, ships, destinationCoordinate, Missions.Transport, Speeds.HundredPercent, payload, deutToLeave: applicableDeutToLeave);
+								long deutToLeaveEff = applicableDeutToLeave;
+								try {
+									if (applicableDeutToLeave > 0) {
+										long spritBedarf = _calcService.CalcFleetPrediction(tempCelestial, destinationCoordinate, ships, Missions.Transport, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Fuel;
+										long moeglich = Math.Max(0L, tempCelestial.Resources.Deuterium - spritBedarf);
+										if (moeglich < applicableDeutToLeave) {
+											_tbotInstance.log(LogLevel.Information, LogSender.AutoRepatriate, $"Repatriate: deuterium reserve {applicableDeutToLeave:N0} on {tempCelestial.ToString()} cannot be kept in full (stock {tempCelestial.Resources.Deuterium:N0}, fuel {spritBedarf:N0}) - keeping {moeglich:N0}.");
+											deutToLeaveEff = moeglich;
+										}
+									}
+								} catch (Exception reserveEx) {
+									_tbotInstance.log(LogLevel.Debug, LogSender.AutoRepatriate, $"Repatriate: reserve check failed ({reserveEx.Message}), using the configured reserve.");
+								}
+								var fleetId = await SendFleet(tempCelestial, ships, destinationCoordinate, Missions.Transport, Speeds.HundredPercent, payload, deutToLeave: deutToLeaveEff, shrinkDeuteriumPayload: true);
 								if (fleetId == (int) SendFleetCode.AfterSleepTime) {
 									return RepatriateCode.Stop;
 								}

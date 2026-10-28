@@ -72,10 +72,26 @@ far targets, but you need to have researched and built them. A new account shoul
 | `Proxy.Address`, `Type`, `Username`, `Password` | Proxy address, type (e.g. `socks5`) and login. Real values in `secrets/proxy`. |
 | `Proxy.LoginOnly` | `true` = proxy is used only for the login, not for game requests. |
 | `AnonymizeLogs` | Optional, default `false`. `true` replaces player name, universe and e-mail in all log lines by `[Player]`, `[Universe]`, `[Email]`. `false` shows the real names. Read at start. |
+| `ShowUpdateNotes` | Optional, default `true`. After a version change the bot shows one short note about what is new, in the log and on Telegram/Discord. `false` = no note. |
 | `CaptchaAPIKey` | API key of the captcha solving service (optional). |
 | `LoginPause.*` | Protects the IP: after `FailuresBeforePause` (2) failed logins in a row the bot waits `PauseMinutes` (30), doubling with each further failure up to `MaxPauseMinutes` (120), instead of retrying. The manual captcha page `/bot/captcha` stays usable; solving it ends the pause. State in `data/login_pause_<alias>.json`. `Active` switches it off. |
 | `SlotsToLeaveFree` | Fleet slots no worker may use, kept free for you. |
 | `SlotPriorityLevel.*` | Who gets free slots first when workers compete. Lower number = served first. Keys: `Brain`, `Expeditions`, `AutoFarm`, `AutoColonize`/`Colonize`, `AutoDiscovery`, `AutoHarvest`. |
+
+## TelegramMessenger (global settings.json)
+
+Telegram bot for alerts and commands. Token and chat ID live in `secrets/telegram`.
+
+| Field | Meaning |
+|---|---|
+| `Active` | Switch for Telegram messages and commands. |
+| `Logging` | Default off. On: log lines of the bot are sent to your chat, filtered by `LogLevel` and `LogLevels`. Off: only alerts (Defender, fleetsave, sleep, expedition finds) and answers to your commands. |
+| `LogLevel` | Lowest level of log lines sent to Telegram: `Error`, `Warning` (default), `Information`, `Debug`. Applies to every worker without its own entry. The Telegram command `/setloglevel` changes it only until the next restart. |
+| `LogLevels` | Optional own level per worker, for example `{ "Expeditions": "Information", "AutoMine": "Information", "AutoFarm": "Off" }`. Names are the log senders (`Defender`, `Expeditions`, `AutoMine`, `AutoFarm`, `FleetScheduler`, ...). `Off` sends nothing of that worker, `Default` or a missing entry uses `LogLevel`. Read at start. |
+| `RepeatMinutes` | Default `0` (off). The same log line of a worker (numbers such as times are ignored when comparing) goes to Telegram at most once in this many minutes. Applies to every worker without its own entry in `LogRepeatMinutes`. The log file is not affected. |
+| `LogRepeatMinutes` | Optional own repeat time per worker in minutes, for example `{ "Expeditions": 120, "AutoFarm": 0 }`. `0` = never hold back lines of this worker. |
+
+Example: default `Warning` plus `Expeditions` and `AutoMine` on `Information` sends warnings and errors of every worker, and in addition the normal lines of those two (expedition sent, slots, build checks).
 
 ## DiscordWebhook
 
@@ -130,6 +146,8 @@ Sleep variant that fleetsaves everything with a ghost flight but keeps Expeditio
 
 Detects incoming attacks and reacts.
 
+**Test:** the Defender page has a *Test (simulated attack)* section. Enter origin, target, arrival time and optionally attacker ID/points; the bot plays the attack through your Defender settings (whitelist, filters, alerts, fleetsave, lockdown) and shows what it would do and why. Read-only: nothing is sent, built or changed.
+
 | Field | Meaning |
 |---|---|
 | `Active` | Switch. |
@@ -171,9 +189,19 @@ Shared settings for all Brain workers that move resources.
 | `RoundResources` | Round the amount sent so fleets are not sent for tiny differences. |
 | `SendToTheMoonIfPossible` | Deliver to the moon instead of the planet when one exists. |
 | `MaxSlots` | Slots Brain transports may use at the same time. |
+| `MaxBundledBuildings` | Optional, default `0`. How many additional buildings one delivery may bring along besides the worker's own target. `0` = only the one target (matches the resource reservation). |
 | `CheckMoonOrPlanetFirst` | Check the moon or the planet of a location first when looking for resources. |
 | `DoMultipleTransportIsNotEnoughShipButSamePosition` | If one ship type is not enough, send several transports from the same position. |
 | `MultipleOrigins.*` | Collect from several celestials: `Active`, `OnlyFromMoons`, `MinimumResourcesToSend`, `PriorityToProximityOverQuantity`, `Exclude` list. |
+
+### Brain.ResourceLedger
+
+Bookkeeping that reserves resources for builds, so workers do not fight over the same stock or order the same delivery twice. On by default.
+
+| Field | Meaning |
+|---|---|
+| `Active` | Switch (default `true`). |
+| `PriorityByCost` | Default `true`. Per celestial the cheapest build wish gets the stock first; a build that is not yet fully funded releases its held stock to cheaper ones, so small builds do not starve behind a big one. `false` = first come, first served. |
 
 ### Brain.AutoMine
 
@@ -211,6 +239,7 @@ Builds mines, storage, energy and facilities on all planets.
 | `OptimizeForStart` | Early-game research order. |
 | `EnsureExpoSlots` | Research Computer Technology / Astrophysics as needed to get expedition slots. |
 | `PrioritizeAstrophysics`, `PrioritizeComputerTechnology`, `PrioritizePlasmaTechnology`, … | Research these first (one flag per technology). |
+| `PlasmaPriorityChecksPayback` | `false` (default): `PrioritizePlasmaTechnology` is a hard priority - Plasma is researched first while it is below `MaxPlasmaTechnology` and unlocked. `true`: only when its payback is within the last mine payback and `Brain.AutoMine.MaxDaysOfInvestmentReturn`. |
 | `ForceResearchWhateverTheLabLevel` | Research even if the lab is still low. |
 
 ### Brain.LifeformAutoMine
@@ -251,6 +280,19 @@ Builds cargo ships and other ship types. The config key stays `AutoCargo`.
 | `SupplyMoonFromPlanet` | Moons get ships from the planet at the same position. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | Skip moons; random order; skip a celestial that already has a transport coming; excluded celestials. |
 
+Example for `Ships` (priority = order of the list; one order per celestial and run, for the first entry whose `Target` is not reached yet):
+
+```json
+"Ships": [
+  { "Type": "Pathfinder",   "Target": 20,  "MaxPerRun": 5 },
+  { "Type": "Recycler",     "Target": 50,  "MaxPerRun": 20 },
+  { "Type": "HeavyFighter", "Target": 500, "MaxPerRun": 100 },
+  { "Type": "Deathstar",    "Target": 10,  "MaxPerRun": 2 }
+]
+```
+
+Here pathfinders are built first (up to 20 per celestial, 5 per order), then recyclers, heavy fighters and deathstars. The numbers are examples only. The cargo ships from `CargoType` are always handled first; the `Ships` list comes after them.
+
 ### Brain.AutoDefence
 
 | Field | Meaning |
@@ -273,7 +315,24 @@ Sends resources from your planets to one target.
 | `LeaveDeut.OnlyOnMoons`, `DeutToLeave` | Keep this much deuterium behind (optionally only on moons). |
 | `CargoType` | Ship type used. |
 | `Reverse.*` | Reverse repatriation (fetch resources back out for a build): `Active`, `ReturnFuelFactor` (deuterium taken along = fuel of the return flight x factor, 1.1 = +10 %), `PendingTtlMinutes`. The outbound leg carries 10 % more cargo space than needed (fixed). The return flight takes exactly the ships that flew out. Advanced. |
+| `ReserveTransportSlots` | Optional, default `0`. The reverse fetch stays this many slots below `Brain.Transports.MaxSlots`, so it never takes slots from the mine/lifeform/research workers. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | As above. |
+
+### Brain.Directives
+
+Works through the in-game directives (tutorial chapters). Off by default. Runs in the Brain group (one build at a time with AutoMine etc.).
+
+| Field | Meaning |
+|---|---|
+| `Active` | Default off. |
+| `IntervalMinutes` | Default 10. Pause between two checks of the chapters. |
+| `CollectRewards` | Default on. Collects finished tasks and chapters. |
+| `Fulfil` | Default off. Builds / researches what open tasks ask for: buildings and research up to exactly the task level, ships and defence in the asked amount. Also lifeform buildings of the home planet (e.g. Residential Sector, Biosphere Farm; missing lifeform prerequisites are built first) and the lifeform research "Advance the X lifeform research to level N" (only already unlocked techs; unlocking slots and choosing techs stays manual) and missing prerequisites of normal tasks (lab, shipyard, techs). Your `MaxXxx` limits are ignored for this (only up to the task target). One building and one research at a time; waits when resources are missing (no transports). |
+| `Fleets` | Default off. Sends fleet tasks itself: colony ship from the home planet to the nearest free position (only if a planet slot is free), and an expedition of up to 5 small cargos to position 16 of the home system (at most once per hour), a spy mission (1 small cargo + 1 probe, 500 metal) to position 16 and the recall task (recalls that fleet). Other fleet tasks stay log-only. |
+| `DryRun` | Default off. With `Fulfil`: only log what would be done. |
+| `LastChapter` | Default 7 (chapters 4001-4007; the test server has 8). |
+
+Not automated (only listed in the log): alliance, buddy request, rename planet, spying another player, demolishing, character class, resource trader, artifacts, lifeform tasks, and the fleet tasks debris and discovery (colonise, expedition, spy 16 and recall need `Fleets`).
 
 ### Brain.KeepBoosters
 
@@ -308,12 +367,16 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 |---|---|
 | `Active` | Switch. |
 | `Origin` | Celestials expeditions start from. |
-| `PrimaryShip` | Auto mode (`ManualShips.Active` = false): main cargo ship type per expedition, e.g. `LargeCargo`. The bot sends as many as are needed to carry the largest possible find (depends on the server's top score, class and lifeform bonus), or all that are available. It adds 1 espionage probe, the single strongest combat ship (Reaper, Destroyer, Bomber, Battlecruiser, Battleship, Pathfinder, Cruiser, Heavy Fighter, Light Fighter) and a Pathfinder if none is in yet. |
+| `SmartShips` / `SmartMixShip` | Default off / `SmallCargo`. New auto fleet selection (only with `ManualShips.Active` = false): per expedition 1 probe, 1 Pathfinder and 1 combat ship (Reaper first, then Destroyer, Bomber, Battlecruiser, Battleship, Cruiser, Heavy/Light Fighter), each only if available. The main cargo ships are split equally across all expeditions still planned from the origin (stock / planned sends, rounded down); missing cargo capacity (ideal amount incl. lifeform bonus and `FuelToCarry`) is filled up with the mix ship (`Null` = no mixing). |
+| `PrimaryShip` | Auto mode (`ManualShips.Active` = false): main cargo ship type per expedition, e.g. `LargeCargo`. The bot sends as many as are needed to carry the largest possible find (depends on the server's top score, class and lifeform bonus), or all that are available. It adds 1 espionage probe, the single strongest combat ship (Reaper, Destroyer, Bomber, Battlecruiser, Battleship, Pathfinder, Cruiser, Heavy Fighter, Light Fighter) and 1 Pathfinder if available (unless it already counts as the combat ship). |
 | `PrimaryToKeep` | Auto mode: this many primary ships always stay at home. |
 | `MinPrimaryToSend` | Auto mode: minimum number of primary ships per expedition. If the origin has fewer left after `PrimaryToKeep`, no expedition is sent from it (0 = no minimum). |
 | `ManualShips.Active`, `Ships` | Use a fixed fleet per expedition instead of the automatic one. |
 | `FuelToCarry` | Deuterium taken along. |
 | `MinDeuteriumOnMoon` | Moons used as expedition origin need at least this much deuterium (0 = no check). Below it the moon is skipped and a Telegram/Discord message is sent (at most every 6 h per moon). |
+| `TelegramMessenger.Active` | Telegram message when new expedition reports arrive, with the summed finds (default off). The first read after the first start only learns existing reports. |
+| `TelegramMessenger.OnlyFinds` | Default on: no message when every new expedition came back empty. |
+| `TelegramMessenger.WindowMinutes` | Default 0 = message right after new reports are read. With a number, reports are collected and one summed message is sent once that many minutes have passed since the first collected report (reports collected but not yet sent are lost on restart). |
 | `MaxExpeditionsPerOrigin` | Max parallel expeditions per origin. |
 | `Origin[].MaxExpeditions` | Optional per origin: max parallel expeditions for this origin. Absent or 0: with one origin `MaxExpeditionsPerOrigin` applies; with several origins the expedition slots are distributed round-robin (13 slots: 2 origins 7+6, 3 origins 5+4+4; capped by `MaxExpeditionsPerOrigin`). |
 | `SplitExpeditionsBetweenSystems.Active`, `Range` | Spread targets over systems within this range. |
@@ -405,7 +468,9 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `Active` | Switch. |
 | `HarvestOwnDF`, `HarvestForeignDF`, `HarvestDeepSpace` | Which debris fields to harvest. |
 | `MinimumResourcesOwnDF`, `…ForeignDF`, `…DeepSpace` | Minimum content worth a trip. |
-| `DeepSpaceRange` | Systems around the origin searched for deep-space fields. |
+| `DeepSpaceRange` | Systems to each side of every own planet searched for deep-space (expedition) fields. |
+| `ForeignDFRange` | Systems to each side of every own planet searched for foreign debris fields (0 = only the planet's own system, default). Each system is scanned once per cycle. |
+| `ScanOnlyExpeditionOrigins` | Default off. On: the deep-space and foreign-field search runs only around the systems of `Expeditions.Origin` instead of every own planet (all planets if no origins are set). Own debris fields at your planets are always checked. |
 | `MaxSlots` | Slots used. |
 
 ## AutoColonize
@@ -449,12 +514,15 @@ Resource farming mode with one goal: collect as much deuterium as possible. It w
 | `MinDeuterium` | Minimum lootable deuterium for an attack. |
 | `TopTargets` | Highest number of attacks per round. |
 | `ReportMaxAgeMinutes` | A fresh check report older than this is not attacked; the target is checked again. |
-| `DeleteReports` | Deletes each report after reading it (keeps the inbox from filling up). |
+| `DeleteReports` | Deletes each report after reading it (keeps the inbox from filling up). **Do not delete espionage reports by hand or with a browser add-on while FastFarm runs** - missing reports look like lost probes and cause malfunctions. |
+| `NoReportHours` | Default 24, 0 = off. A target that gave no report three times in a row (probes probably destroyed) is not probed again for this many hours. Cleared by the FastFarm reset. |
 | `FleetSpeedPercent` | Speed of the cargo fleets (10-100). |
 | `CargoSurplusPercent` | Extra cargo space on top of the expected loot. |
 | `MinFillPercent` | A target is skipped when the available ships carry less than this share of its loot. |
 | `MaxSystemsPerScanStep` | Systems the full scan of a round visits per step. |
 | `ShrinkDiscardPercent` | Drop a target when its fresh weighted loot is at least this many percent below the value from the full sweep (default 10). `MinLoot`/`MinDeuterium` still apply. |
+| `ResetOnActivate` | On bot start and when FastFarm is switched on again after a pause, discard the old state (targets, blocks, sweep position) so nothing from the day before lingers. Statistics are kept. Default true. |
+| `ResetMinHours` | Lock: at most one such reset every this many hours (default 6), so frequent restarts or on/off switching do not wipe everything each time. 0 = no lock. |
 
 State and statistics are kept in `data/fastfarm_<Alias>.json` (written by the worker, shown on the overview page).
 
@@ -473,7 +541,9 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | `BotPause.AttackMarginMinutes` | Default 15. A pause is refused if an attack arrives within this time (with `StopDefender` on: plus the pause length). While paused, spy, attack, expedition, colonize, discovery and harvest missions are blocked (fleetsave, transports and Telegram commands stay possible). |
 | `DefenderRecheck.Active` | Default off. Shortly before the fleetsave the Defender fetches the attack list once more: attack recalled -> fleetsave skipped; attack later -> fleetsave moved; question fails or times out -> fleetsave sent as planned. |
 | `DefenderRecheck.TimeoutSeconds` | How long to wait for the answer (default 4, 1-10). |
-| `ExtraDebugLog.Active` | Default on (a missing block counts as on; `false` switches it off). Files older than 7 days are deleted automatically. Writes extra diagnosis lines to their own file `devlog/TBot-debug-<date>.log` (anonymized: player, universe, celestial names, mail, IP, tokens; coordinates become x:x:position, amounts stay) (max. 50 MB per day), the normal log stays small. Topics (all default on, they only apply when the log is active): `Repatriate`, `Ledger`, `BotPause`, `DefenderRecheck`, `FleetsaveSlot`, `MinePlanRanking`, `AsteroidHunt`, `ShadowFleet`, `GalaxyCache`, `FleetTargets`, `Requests` (request counters every 10 minutes), `BrowserProxy` (error 100 retries of the browser proxy) - one for every experimental function. Useful when a function does not send and you need to see why. |
+| `CollectLogs.Active` | Default off. While on, every log line (from debug up) and all lines of the extra debug log (all topics) go into ONE file `devlogs/TBot-collect-<start>.log` (max. 300 MB). Stops by itself after `CollectLogs.Hours` (default 12), also across restarts; switch off and on to collect again. `CollectLogs.Anonymize` (default on) replaces player, universe, mail, celestial names, coordinates (x:x:position), IP and tokens. |
+| `ExtraDebugLog.Active` | Only writes while `Experimental.CollectLogs` is collecting (without a running collection nothing is written outside the normal log). Default on (a missing block counts as on; `false` switches it off). Files older than 7 days are deleted automatically. Writes extra diagnosis lines to their own file `devlogs/TBot-debug-<date>.log` (anonymized: player, universe, celestial names, mail, IP, tokens; coordinates become x:x:position, amounts stay) (max. 50 MB per day), the normal log stays small. Topics (all default on, they only apply when the log is active): `Repatriate`, `Ledger`, `BotPause`, `DefenderRecheck`, `FleetsaveSlot`, `MinePlanRanking`, `AsteroidHunt`, `ShadowFleet`, `GalaxyCache`, `FleetTargets`, `Requests` (request counters every 10 minutes), `BrowserProxy` (error 100 retries of the browser proxy) - one for every experimental function. Useful when a function does not send and you need to see why. |
+| `ReportReading.Expeditions` | Default on (a missing block counts as on). Off: the expedition worker no longer fetches your expedition reports (normally about every 20 minutes). The stored statistics (finds, daily averages) and the Telegram find messages then stay empty, and the mine plan runs without expedition averages. |
 | `RepatriateLedgerHold.Ignore` | Default off. On: repatriate, reverse repatriate and `/collect` ignore the resource ledger completely (all stock is free). |
 | `RepatriateLedgerHold.MinPercent` | Default 30. Repatriate and /collect leave stock alone that a waiting build claim already holds at least this share of its total need (metal+crystal+deuterium). Claims below that (far-away goals such as a metal mine to 995 M) no longer freeze the whole stock. Claims with flights or fully covered always protect. 0 = every held amount is protected (old behavior), 100 = only fully covered claims. |
 | `MinePlanRanking.Mode` | How the page Minenplan ranks the next investments (display only): `Payback` (default, like AutoMine), `Cheapest` (lowest cost first), `Npv` (highest gain over the horizon minus cost). The page can override this in your browser. |
@@ -490,8 +560,13 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | `AsteroidHunt.SaveJson` | Default on. Log of all attempts and finds in `data/asteroiden_funde_<alias>.json`. |
 | `GalaxyCache.Active` | Default on. Shared store of all galaxy scans (`data/galaxycache_<alias>.json`). Every scan of any worker is saved with a time stamp; FastFarm and Colonize read the cache first. Off: everything queries live again. |
 | `GalaxyCache.MaxAgeHours` | Default 12. How old an entry may be to be used instead of a live query. |
-| `GalaxyCache.RangeSystems` / `DelayMinSeconds` / `DelayMaxSeconds` | Background scan: systems left and right of every own system (default 15, 0 = only passive recording) and the pause between two queries (default 20-45 s). Pauses while the bot sleeps or is paused. |
-| `GalaxyCache.UseInFastFarm` / `UseInColonize` | Default on. FastFarm takes the inactive-target scan from a fresh cache. Colonize skips positions the cache shows as occupied; free positions are still checked live. |
+| `GalaxyCache.HoursPerGalaxy` / `FullScanIntervalHours` | Full scan (with `ScanAll`): time budget per galaxy (default 1 h, pause per system follows, about 7 s; 0 = use `DelayMinSeconds`/`DelayMaxSeconds`) and repeat interval (default 24 h). The scan starts at the home world and moves outwards. |
+| `GalaxyCache.UseApi` | Default on. Reads the player list (status, alliance, rank) from the public OGame API (`players.xml`, `highscore.xml`; host from `AutoFarm.AllianceWhitelist.ServerHost` or derived from universe number and language). The galaxy scans decide the status, because the API can lag. Off = highscore pages. |
+| `GalaxyCache.UseHighscore` / `HighscoreIntervalHours` | Default on / 24 h. Reads the highscore into a player database (status inactive/long inactive/banned/vacation, rank, alliance, home world). Systems of inactive players are kept fresh first; rank and status also correct old cache entries. |
+| `GalaxyCache.AutoFarmMaxAgeHours` | Default 36. AutoFarm reads cache entries up to this age instead of querying live. |
+| `GalaxyCache.FastFarmMaxAgeHours` | Default 36. FastFarm reads cache entries up to this age in its galaxy scan instead of querying live (before: the general `MaxAgeHours`, 12 h). Espionage before an attack stays live. |
+| `GalaxyCache.ScanAll` / `RangeSystems` / `EmptyMaxAgeHours` / `DelayMinSeconds` / `DelayMaxSeconds` | Background scan. `ScanAll` (default on) slowly scans all galaxies and systems for a complete picture, own surroundings first; off = only `RangeSystems` systems left and right of every own system (default 15). Empty systems are not scanned again for `EmptyMaxAgeHours` (default 72). Pause between two queries default 4-8 s. Pauses while the bot sleeps or is paused. |
+| `GalaxyCache.UseInFastFarm` / `UseInColonize` / `UseInAutoFarm` | Default on. FastFarm and AutoFarm take the inactive-target scan from a fresh cache (AutoFarm still re-checks live before an attack). Colonize skips positions the cache shows as occupied; free positions are still checked live. |
 | `GalaxyCache.Events` / `Telegram` | Default on. Changes between two scans of a system (new colony, planet gone, new moon, status change, move = a player disappears at one place and appears at another within 72 h) go to the log; new colonies and moves also to Telegram / Discord. Your own colonies are ignored. The first scan of a system is only the baseline. |
 | `ShadowFleet.Active` | Default off. **Not fully tested - use with care.** **Needs a deuterium reserve on the chosen celestial** - every flight burns fuel, and the fleet carries deuterium for `DeuteriumFlights` flights. The chosen ships of ONE celestial fly one after another to the nearest debris field (harvest mission, at `SpeedPercent`), are recalled after half of the planned time and fly again after a short random pause. Only one celestial is covered, so only its deuterium and one fleet slot are used. |
 | `ShadowFleet.Celestial` | `Galaxy`, `System`, `Position`, `Type` (`Planet` or `Moon`) of the one celestial that is secured. |

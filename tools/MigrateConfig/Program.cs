@@ -5,38 +5,40 @@ using Newtonsoft.Json.Linq;
 
 namespace MigrateConfig {
 	public static class Program {
-		private static readonly Dictionary<string, string> Legacy = new() {
-			["Brain.LifeformAutoMine.MaxT2Building"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxT3Building"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding6"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding7"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding8"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding9"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding10"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding11"] = "now taken from lifeform_targets.json",
-			["Brain.LifeformAutoMine.MaxBuilding12"] = "now taken from lifeform_targets.json",
-			["Brain.AutoMine.DeutPlanets"] = "no longer exists - use Brain.AutoMine.ColonyOverrides",
-			["Brain.AutoMine.DeutPlanet"] = "no longer exists - use Brain.AutoMine.ColonyOverrides"
-		};
+		private static readonly Dictionary<string, string> Legacy = LoadRemoved();
+
+		private static Dictionary<string, string> LoadRemoved() {
+			var d = new Dictionary<string, string>();
+			foreach (string raw in ReadResource("removed_keys.txt").Split('\n')) {
+				string line = raw.Trim();
+				if (line.Length == 0 || line.StartsWith("#")) continue;
+				int hash = line.IndexOf('#');
+				string path = (hash >= 0 ? line.Substring(0, hash) : line).Trim();
+				string why = hash >= 0 ? line.Substring(hash + 1).Trim() : "no longer used";
+				if (path.Length > 0) d[path] = why;
+			}
+			return d;
+		}
 
 		private static bool _interactive = true;
 
 		public static int Main(string[] args) {
 			string dir = AppContext.BaseDirectory;
-			bool dryRun = false, yes = false;
+			bool dryRun = false, yes = false, clean = false;
 			for (int i = 0; i < args.Length; i++) {
 				switch (args[i]) {
 					case "--dir" when i + 1 < args.Length: dir = Path.GetFullPath(args[++i]); break;
 					case "--dry-run": dryRun = true; break;
 					case "--yes": yes = true; break;
+					case "--clean": clean = true; break;
 					default:
-						Console.WriteLine("Usage: MigrateConfig [--dir <folder>] [--dry-run] [--yes]");
+						Console.WriteLine("Usage: MigrateConfig [--clean] [--dir <folder>] [--dry-run] [--yes]");
 						return Pause(2);
 				}
 			}
 			_interactive = !yes;
 			try {
-				return Pause(Run(dir, dryRun, yes));
+				return Pause(clean ? RunClean(dir, dryRun, yes) : Run(dir, dryRun, yes));
 			} catch (Exception e) {
 				Console.WriteLine("ERROR: " + e.Message);
 				Console.WriteLine("Nothing was changed.");
@@ -118,6 +120,167 @@ namespace MigrateConfig {
 			Console.WriteLine("  3. Something wrong? Copy the file from the backup folder back.");
 			Console.WriteLine("=====================================================================");
 			return 0;
+		}
+
+		private static int RunClean(string dir, bool dryRun, bool yes) {
+			Console.WriteLine("TBot config clean-up (removes entries that no longer exist)");
+			Console.WriteLine("Folder: " + dir);
+			Console.WriteLine();
+			var files = FindInstanceFiles(dir);
+			if (files.Count == 0) {
+				Console.WriteLine("No instance_settings.json found in this folder.");
+				return 1;
+			}
+			JObject template = JObject.Parse(ReadResource("config.vorlage.json"));
+			var jobs = new List<CleanJob>();
+			foreach (string file in files) {
+				Console.WriteLine("--- " + Path.GetFileName(file));
+				var job = new CleanJob { File = file, BaseDir = Path.GetDirectoryName(Path.GetFullPath(file)) };
+				job.Files[job.File] = JObject.Parse(File.ReadAllText(file), new JsonLoadSettings { CommentHandling = CommentHandling.Ignore });
+				JObject json = job.Files[job.File];
+				bool split = json.Descendants().OfType<JProperty>().Any(p => p.Name == "Load");
+				var present = new List<string>();
+				foreach (string k in Legacy.Keys) {
+					if (RemoveIn(job, json, job.File, k.Split('.'), 0, false))
+						present.Add(k);
+				}
+				if (split)
+					Console.WriteLine("Split config (\"Load\"): entries inside the referenced files (conf.d/...) are cleaned there too.");
+				if (present.Count == 0) {
+					Console.WriteLine("Nothing to remove.");
+				} else {
+					Console.WriteLine("Will be removed (" + present.Count + "):");
+					foreach (string k in present) Console.WriteLine("  " + k + "  (" + Legacy[k] + ")");
+					job.Paths = present;
+					jobs.Add(job);
+				}
+				{
+					var unknown = new List<string>();
+					Unknown(split ? MergeLoaded(job, json) : json, template, "", unknown);
+					unknown = unknown.Where(u => !Legacy.Keys.Any(k => u == k || u.StartsWith(k + "."))).ToList();
+					if (unknown.Count > 0) {
+						Console.WriteLine("Not in the template and not on the list (NOT touched; may be your own entries or an old setting):");
+						foreach (string u in unknown.Take(40)) Console.WriteLine("  " + u);
+						if (unknown.Count > 40) Console.WriteLine("  ... and " + (unknown.Count - 40) + " more");
+					}
+				}
+				Console.WriteLine();
+			}
+			if (jobs.Count == 0) {
+				Console.WriteLine("Nothing to clean.");
+				return 0;
+			}
+			if (dryRun) {
+				Console.WriteLine("Dry run: nothing was written.");
+				return 0;
+			}
+			if (!yes) {
+				Console.Write("Make a backup and remove these entries? [y/N] ");
+				string answer = (Console.ReadLine() ?? "").Trim().ToLowerInvariant();
+				if (answer != "y" && answer != "yes" && answer != "j" && answer != "ja") {
+					Console.WriteLine("Cancelled, nothing was changed.");
+					return 0;
+				}
+			}
+			string backup = Path.Combine(dir, "backups", "config-clean-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+			Directory.CreateDirectory(backup);
+			foreach (var job in jobs) {
+				foreach (string k in job.Paths)
+					RemoveIn(job, job.Files[job.File], job.File, k.Split('.'), 0, true);
+				foreach (string f in job.Dirty) {
+					string rel = Path.GetRelativePath(job.BaseDir, f);
+					string bak = Path.Combine(backup, rel);
+					Directory.CreateDirectory(Path.GetDirectoryName(bak));
+					File.Copy(f, bak, true);
+					File.WriteAllText(f, job.Files[f].ToString(Formatting.Indented), new UTF8Encoding(false));
+				}
+				foreach (string o in job.Orphans.Distinct())
+					Console.WriteLine("Note: " + o + " is no longer referenced and can be deleted by hand.");
+			}
+			Console.WriteLine();
+			Console.WriteLine("Done. Backup of the old config: " + backup);
+			Console.WriteLine("Restart the bot for the change to take effect. Something wrong? Copy the file from the backup folder back.");
+			return 0;
+		}
+
+		private static void Unknown(JObject node, JObject template, string path, List<string> result) {
+			foreach (var prop in node.Properties()) {
+				string p = path == "" ? prop.Name : path + "." + prop.Name;
+				if (!template.TryGetValue(prop.Name, out JToken t))
+					result.Add(p);
+				else if (prop.Value is JObject o && t is JObject to)
+					Unknown(o, to, p, result);
+			}
+		}
+
+		private static JObject MergeLoaded(CleanJob job, JObject node) {
+			var result = new JObject();
+			foreach (string f in LoadFiles(node, job.BaseDir)) {
+				if (!job.Files.TryGetValue(f, out JObject fo)) {
+					try { fo = JObject.Parse(File.ReadAllText(f), new JsonLoadSettings { CommentHandling = CommentHandling.Ignore }); } catch { continue; }
+					job.Files[f] = fo;
+				}
+				result.Merge(MergeLoaded(job, fo), new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Replace });
+			}
+			foreach (var prop in node.Properties()) {
+				if (prop.Name.Equals("Load", StringComparison.OrdinalIgnoreCase)) continue;
+				if (prop.Value is JObject o && result.TryGetValue(prop.Name, out JToken ex) && ex is JObject eo) {
+					eo.Merge(MergeLoaded(job, o), new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Replace });
+				} else {
+					result[prop.Name] = prop.Value is JObject o2 ? MergeLoaded(job, o2) : prop.Value.DeepClone();
+				}
+			}
+			return result;
+		}
+
+		private sealed class CleanJob {
+			public string File, BaseDir;
+			public List<string> Paths = new();
+			public Dictionary<string, JObject> Files = new(StringComparer.OrdinalIgnoreCase);
+			public HashSet<string> Dirty = new(StringComparer.OrdinalIgnoreCase);
+			public List<string> Orphans = new();
+		}
+
+		private static List<string> LoadFiles(JObject node, string baseDir) {
+			var result = new List<string>();
+			if (!node.TryGetValue("Load", StringComparison.OrdinalIgnoreCase, out JToken t)) return result;
+			var refs = t.Type == JTokenType.String ? new List<string> { t.Value<string>() }
+				: t is JArray arr && arr.All(x => x.Type == JTokenType.String) ? arr.Select(x => x.Value<string>()).ToList() : new List<string>();
+			foreach (string r in refs) {
+				string path = (r ?? "").Trim().Replace('\\', '/');
+				if (path.Length == 0 || Path.IsPathRooted(path)) continue;
+				if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) path += ".json";
+				string full = Path.GetFullPath(Path.Combine(baseDir, path.Contains('/') ? path : Path.Combine("conf.d", path)));
+				string root = Path.GetFullPath(baseDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+				if (full.StartsWith(root, StringComparison.Ordinal) && File.Exists(full)) result.Add(full);
+			}
+			return result;
+		}
+
+		private static bool RemoveIn(CleanJob job, JObject node, string owner, string[] parts, int i, bool apply) {
+			if (i >= parts.Length) return false;
+			bool found = false;
+			if (node.TryGetValue(parts[i], out JToken child)) {
+				if (i == parts.Length - 1) {
+					found = true;
+					if (apply) {
+						if (child is JObject co)
+							foreach (string f in LoadFiles(co, job.BaseDir)) job.Orphans.Add(Path.GetRelativePath(job.BaseDir, f));
+						node.Remove(parts[i]);
+						job.Dirty.Add(owner);
+					}
+				} else if (child is JObject co) {
+					found |= RemoveIn(job, co, owner, parts, i + 1, apply);
+				}
+			}
+			foreach (string f in LoadFiles(node, job.BaseDir)) {
+				if (!job.Files.TryGetValue(f, out JObject fo)) {
+					try { fo = JObject.Parse(File.ReadAllText(f), new JsonLoadSettings { CommentHandling = CommentHandling.Ignore }); } catch { continue; }
+					job.Files[f] = fo;
+				}
+				found |= RemoveIn(job, fo, f, parts, i, apply);
+			}
+			return found;
 		}
 
 		private sealed class Plan {

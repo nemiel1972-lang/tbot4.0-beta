@@ -27,6 +27,7 @@ namespace TBot.Ogame.Infrastructure.Enums {
 		AsteroidHunt = 20,
 		ShadowFleet = 21,
 		GalaxyCache = 22,
+		Directives = 23,
 #if FASTFARM
 		FastFarm = 18,
 #endif

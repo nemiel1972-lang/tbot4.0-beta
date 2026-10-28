@@ -13,6 +13,7 @@ namespace Tbot.Services {
 		public int Position { get; set; }
 		public int PlayerId { get; set; }
 		public string PlayerName { get; set; }
+		public int Rank { get; set; }
 		public string Name { get; set; }
 		public bool Inactive { get; set; }
 		public bool Vacation { get; set; }
@@ -50,8 +51,42 @@ namespace Tbot.Services {
 		public string Coord => $"{Galaxy}:{System}:{Position}";
 	}
 
+	public class GalaxyPlayer {
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public int Rank { get; set; }
+		public int AllianceId { get; set; }
+		public int HomeGalaxy { get; set; }
+		public int HomeSystem { get; set; }
+		public int HomePosition { get; set; }
+		public bool Inactive { get; set; }
+		public bool LongInactive { get; set; }
+		public bool Banned { get; set; }
+		public bool Vacation { get; set; }
+		public bool Newbie { get; set; }
+		public bool StrongPlayer { get; set; }
+		public DateTime SeenUtc { get; set; }
+		public bool StatusFromApi { get; set; }
+	}
+
+	public class GalaxyScanInfo {
+		public int Galaxies { get; set; }
+		public int Systems { get; set; }
+		public int IntervalHours { get; set; }
+		public double MeanPauseSec { get; set; }
+		public bool ScanAll { get; set; }
+		public int LastGalaxy { get; set; }
+		public int LastSystem { get; set; }
+		public DateTime LastUtc { get; set; }
+		public string LastKind { get; set; }
+	}
+
 	public class GalaxyCacheData {
+		public GalaxyScanInfo ScanInfo { get; set; }
 		public Dictionary<string, GalaxyCacheSystem> Systems { get; set; } = new();
+		public Dictionary<int, GalaxyPlayer> Players { get; set; } = new();
+		public DateTime HighscoreUtc { get; set; } = DateTime.MinValue;
+		public bool HighscoreHasStatus { get; set; }
 		public List<GalaxyEvent> Events { get; set; } = new();
 	}
 
@@ -85,6 +120,7 @@ namespace Tbot.Services {
 				if (d != null) {
 					d.Systems ??= new();
 					d.Events ??= new();
+					d.Players ??= new();
 					lock (_lock)
 						_data = d;
 				}
@@ -117,6 +153,7 @@ namespace Tbot.Services {
 				Position = p.Coordinate?.Position ?? 0,
 				PlayerId = p.Player?.ID ?? 0,
 				PlayerName = p.Player?.Name,
+				Rank = p.Player?.Rank ?? 0,
 				Name = p.Name,
 				Inactive = p.Inactive,
 				Vacation = p.Vacation,
@@ -219,17 +256,21 @@ namespace Tbot.Services {
 				return new GalaxyInfo {
 					Galaxy = galaxy,
 					System = system,
-					Planets = s.Entries.Select(e => new Planet {
-						Name = e.Name,
-						Coordinate = new Coordinate(galaxy, system, e.Position, Celestials.Planet),
-						Inactive = e.Inactive,
-						Vacation = e.Vacation,
-						Newbie = e.Newbie,
-						Banned = e.Banned,
-						Administrator = e.Administrator,
-						StrongPlayer = e.StrongPlayer,
-						Player = new Player { ID = e.PlayerId, Name = e.PlayerName },
-						Moon = e.HasMoon ? new Moon() : null
+					Planets = s.Entries.Select(e => {
+						_data.Players.TryGetValue(e.PlayerId, out var hp);
+						bool neuer = _data.HighscoreHasStatus && hp != null && !hp.StatusFromApi && hp.SeenUtc > s.SeenUtc;
+						return new Planet {
+							Name = e.Name,
+							Coordinate = new Coordinate(galaxy, system, e.Position, Celestials.Planet),
+							Inactive = neuer ? hp.Inactive : e.Inactive,
+							Vacation = neuer ? hp.Vacation : e.Vacation,
+							Newbie = neuer ? hp.Newbie : e.Newbie,
+							Banned = neuer ? hp.Banned : e.Banned,
+							Administrator = e.Administrator,
+							StrongPlayer = neuer ? hp.StrongPlayer : e.StrongPlayer,
+							Player = new Player { ID = e.PlayerId, Name = e.PlayerName, Rank = hp != null && hp.Rank > 0 ? hp.Rank : e.Rank },
+							Moon = e.HasMoon ? new Moon() : null
+						};
 					}).ToList()
 				};
 			}
@@ -245,17 +286,104 @@ namespace Tbot.Services {
 			}
 		}
 
-		public (int Galaxy, int System)? NextToScan(IEnumerable<(int Galaxy, int System)> candidates, TimeSpan maxAge, DateTime nowUtc) {
+		public (int Galaxy, int System)? NextToScan(IEnumerable<(int Galaxy, int System)> candidates, TimeSpan maxAge, DateTime nowUtc, TimeSpan? emptyMaxAge = null) {
 			lock (_lock) {
 				(int Galaxy, int System)? best = null;
 				DateTime bestSeen = DateTime.MaxValue;
 				foreach (var c in candidates) {
-					DateTime seen = _data.Systems.TryGetValue(Key(c.Galaxy, c.System), out var s) ? s.SeenUtc : DateTime.MinValue;
-					if (nowUtc - seen <= maxAge)
+					bool known = _data.Systems.TryGetValue(Key(c.Galaxy, c.System), out var s);
+					DateTime seen = known ? s.SeenUtc : DateTime.MinValue;
+					TimeSpan limit = known && s.Entries.Count == 0 && emptyMaxAge.HasValue && emptyMaxAge.Value > maxAge ? emptyMaxAge.Value : maxAge;
+					if (nowUtc - seen <= limit)
 						continue;
 					if (seen < bestSeen) {
 						bestSeen = seen;
 						best = c;
+					}
+				}
+				return best;
+			}
+		}
+
+
+		public void SetScanInfo(GalaxyScanInfo info) {
+			lock (_lock) {
+				_data.ScanInfo = info;
+				_dirty = true;
+			}
+		}
+
+		public int PlayerCount {
+			get { lock (_lock) return _data.Players.Count; }
+		}
+
+		public DateTime HighscoreUtc {
+			get { lock (_lock) return _data.HighscoreUtc; }
+		}
+
+		public void RecordHighscore(IEnumerable<HighscorePlayer> players, DateTime nowUtc, bool statusFromApi = false) {
+			if (players == null)
+				return;
+			lock (_lock) {
+				foreach (var p in players) {
+					if (p == null || p.ID <= 0)
+						continue;
+					var st = p.Status ?? new List<string>();
+					_data.Players.TryGetValue(p.ID, out var alt);
+					bool hatHome = p.Homeworld != null && p.Homeworld.Galaxy > 0;
+					_data.Players[p.ID] = new GalaxyPlayer {
+						Id = p.ID, Name = p.Name, Rank = p.Position, AllianceId = p.AllianceID, StatusFromApi = statusFromApi,
+						HomeGalaxy = hatHome ? p.Homeworld.Galaxy : alt?.HomeGalaxy ?? 0, HomeSystem = hatHome ? p.Homeworld.System : alt?.HomeSystem ?? 0, HomePosition = hatHome ? p.Homeworld.Position : alt?.HomePosition ?? 0,
+						Inactive = st.Contains("inactive") || st.Contains("longinactive"),
+						LongInactive = st.Contains("longinactive"),
+						Banned = st.Contains("banned"), Vacation = st.Contains("vacation"),
+						Newbie = st.Contains("noob"), StrongPlayer = st.Contains("strong"),
+						SeenUtc = nowUtc
+					};
+				}
+				_dirty = true;
+			}
+		}
+
+		public void FinishHighscore(DateTime startedUtc, DateTime nowUtc) {
+			lock (_lock) {
+				foreach (var id in _data.Players.Where(kv => kv.Value.SeenUtc < startedUtc).Select(kv => kv.Key).ToList())
+					_data.Players.Remove(id);
+				_data.HighscoreUtc = nowUtc;
+				_data.HighscoreHasStatus = _data.Players.Values.Any(p => p.Inactive || p.Banned || p.Vacation);
+				_dirty = true;
+			}
+		}
+
+		public (int Galaxy, int System)? NextInactiveSystem(TimeSpan maxAge, DateTime nowUtc) {
+			lock (_lock) {
+				var ids = new HashSet<int>(_data.Players.Values.Where(p => p.Inactive && !p.Vacation && !p.Banned).Select(p => p.Id));
+				foreach (var sys in _data.Systems.Values)
+					foreach (var e in sys.Entries)
+						if (e.Inactive && !e.Vacation && !e.Banned && e.PlayerId > 0)
+							ids.Add(e.PlayerId);
+				if (ids.Count == 0)
+					return null;
+				var systems = new HashSet<(int, int)>();
+				foreach (var p in _data.Players.Values)
+					if (ids.Contains(p.Id) && p.HomeGalaxy > 0 && p.HomeSystem > 0)
+						systems.Add((p.HomeGalaxy, p.HomeSystem));
+				foreach (var kv in _data.Systems) {
+					if (kv.Value.Entries.Any(e => ids.Contains(e.PlayerId))) {
+						var parts = kv.Key.Split(':');
+						if (parts.Length == 2 && int.TryParse(parts[0], out int gg) && int.TryParse(parts[1], out int ss))
+							systems.Add((gg, ss));
+					}
+				}
+				(int Galaxy, int System)? best = null;
+				DateTime bestSeen = DateTime.MaxValue;
+				foreach (var c in systems) {
+					DateTime seen = _data.Systems.TryGetValue(Key(c.Item1, c.Item2), out var s) ? s.SeenUtc : DateTime.MinValue;
+					if (nowUtc - seen <= maxAge)
+						continue;
+					if (seen < bestSeen) {
+						bestSeen = seen;
+						best = (c.Item1, c.Item2);
 					}
 				}
 				return best;

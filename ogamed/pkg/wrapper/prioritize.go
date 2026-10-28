@@ -753,13 +753,13 @@ func (b *Prioritize) GetChapter(chapterID int64) (ogame.Chapter, error) {
 	return b.bot.getChapter(chapterID)
 }
 
-func (b *Prioritize) ChapterClaimAll(chapterID int64) error {
+func (b *Prioritize) ChapterClaimAll(chapterID int64) ([]byte, error) {
 	b.begin("GetChapter")
 	defer b.done()
 	return b.bot.chapterClaimAll(chapterID)
 }
 
-func (b *Prioritize) ChapterCollectReward(taskID int64) error {
+func (b *Prioritize) ChapterCollectReward(taskID int64) ([]byte, error) {
 	b.begin("GetChapter")
 	defer b.done()
 	return b.bot.chapterCollectReward(taskID)

@@ -95,8 +95,8 @@ type Prioritizable interface {
 	GetPlanets() ([]Planet, error)
 	GetPositionsAvailableForDiscoveryFleet(galaxy int64, system int64, opts ...Option) ([]ogame.Coordinate, error)
 	GetChapter(chapterID int64) (ogame.Chapter, error)
-	ChapterClaimAll(chapterID int64) error
-	ChapterCollectReward(taskID int64) error
+	ChapterClaimAll(chapterID int64) ([]byte, error)
+	ChapterCollectReward(taskID int64) ([]byte, error)
 	GetResearch() (ogame.Researches, error)
 	GetSlots() (ogame.Slots, error)
 	GetUserInfos() (ogame.UserInfos, error)

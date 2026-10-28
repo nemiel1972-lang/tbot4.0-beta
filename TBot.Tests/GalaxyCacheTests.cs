@@ -90,5 +90,48 @@ namespace TBot.Tests {
 			Assert.Equal((1, 6), c.NextToScan(kandidaten, TimeSpan.FromHours(12), T0.AddHours(13)));
 			Assert.Null(c.NextToScan(kandidaten, TimeSpan.FromHours(12), T0.AddHours(1)));
 		}
+
+		[Fact]
+		public void NextToScan_laesst_leere_Systeme_laenger_liegen() {
+			var c = new GalaxyCache(null);
+			c.Record(Sys(9), T0);
+			var kandidaten = new[] { (1, 9) };
+			Assert.Null(c.NextToScan(kandidaten, TimeSpan.FromHours(12), T0.AddHours(13), TimeSpan.FromHours(72)));
+			Assert.Equal((1, 9), c.NextToScan(kandidaten, TimeSpan.FromHours(12), T0.AddHours(73), TimeSpan.FromHours(72)));
+		}
+
+		[Fact]
+		public void Highscore_Datenbank_liefert_Systeme_inaktiver_Spieler_und_ueberschreibt_den_Status() {
+			var c = new GalaxyCache(null);
+			var hp = new System.Collections.Generic.List<HighscorePlayer> {
+				new HighscorePlayer { ID = 10, Name = "A", Position = 5, Homeworld = new Coordinate(1, 20, 4, Celestials.Planet), Status = new System.Collections.Generic.List<string> { "inactive" } },
+				new HighscorePlayer { ID = 11, Name = "B", Position = 6, Homeworld = new Coordinate(1, 30, 4, Celestials.Planet), Status = new System.Collections.Generic.List<string> { "inactive", "vacation" } },
+				new HighscorePlayer { ID = 12, Name = "C", Position = 7, Homeworld = new Coordinate(1, 40, 4, Celestials.Planet), Status = new System.Collections.Generic.List<string> { "active" } }
+			};
+			c.RecordHighscore(hp, T0);
+			c.FinishHighscore(T0.AddMinutes(-1), T0);
+			Assert.Equal((1, 20), c.NextInactiveSystem(TimeSpan.FromHours(12), T0));
+			c.Record(Sys(20, P(20, 4, 10, "A", inactive: true)), T0);
+			Assert.Null(c.NextInactiveSystem(TimeSpan.FromHours(12), T0.AddHours(1)));
+			c.Record(Sys(25, P(25, 2, 10, "A", inactive: true)), T0.AddHours(2));
+			Assert.Equal((1, 20), c.NextInactiveSystem(TimeSpan.FromHours(12), T0.AddHours(13)));
+			hp[0].Status = new System.Collections.Generic.List<string> { "active" };
+			c.RecordHighscore(hp, T0.AddHours(3));
+			c.FinishHighscore(T0.AddHours(3).AddMinutes(-1), T0.AddHours(3));
+			var info = c.TryGet(1, 25, TimeSpan.FromHours(24), T0.AddHours(4));
+			Assert.False(info.Planets[0].Inactive);
+			Assert.Equal(5, info.Planets[0].Player.Rank);
+		}
+
+		[Fact]
+		public void Inaktive_werden_auch_ohne_Highscore_Marker_aus_den_Galaxie_Scans_erkannt() {
+			var c = new GalaxyCache(null);
+			c.RecordHighscore(new[] { new HighscorePlayer { ID = 10, Name = "A", Position = 5, Homeworld = new Coordinate(1, 20, 4, Celestials.Planet), Status = new System.Collections.Generic.List<string>() } }, T0);
+			c.FinishHighscore(T0.AddMinutes(-1), T0);
+			c.Record(Sys(20, P(20, 4, 10, "A", inactive: true)), T0.AddHours(-20));
+			Assert.Equal((1, 20), c.NextInactiveSystem(TimeSpan.FromHours(12), T0));
+			var info = c.TryGet(1, 20, TimeSpan.FromHours(48), T0.AddHours(1));
+			Assert.True(info.Planets[0].Inactive);
+		}
 	}
 }

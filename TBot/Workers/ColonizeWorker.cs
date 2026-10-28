@@ -181,13 +181,20 @@ namespace Tbot.Workers {
 								var maxTemp = (int) _tbotInstance.InstanceSettings.AutoColonize.Abandon.MaxTemperatureAcceptable;
 								var minFields = (int) _tbotInstance.InstanceSettings.AutoColonize.Abandon.MinFields;
 								List <Coordinate> targets = new();
+								var rangeIdxOf = new Dictionary<string, int>();
+								var rangeRest = new Dictionary<int, int>();
+								int rangeNo = 0;
 								foreach (var t in _tbotInstance.InstanceSettings.AutoColonize.Targets) {
 									var planetsInThisRange = _calculationService.CountPlanetsInRange(_tbotInstance.UserData.celestials, (int) t.Galaxy, (int) t.StartSystem, (int) t.EndSystem, (int) t.StartPosition, (int) t.EndPosition, minFields, minTemp, maxTemp);
 									var maxPlanetsInThisRange = (int) t.MaxPlanets;
+									int thisRange = rangeNo++;
 									if (planetsInThisRange >= maxPlanetsInThisRange) {
 										DoLog(LogLevel.Information, $"You already have {planetsInThisRange.ToString()} planets that fit temperature and fields settings in the range [{t.Galaxy}:{t.StartSystem}-{t.EndSystem}:{t.StartPosition}-{t.EndPosition}]. The max number is {maxPlanetsInThisRange}. Skipping...");
 										continue;
 									}
+									int unterwegs = (_tbotInstance.UserData.fleets ?? new List<Fleet>()).Count(f => f.Mission == Missions.Colonize && !f.ReturnFlight && f.Destination.Galaxy == (int) t.Galaxy
+										&& f.Destination.System >= (int) t.StartSystem && f.Destination.System <= (int) t.EndSystem && f.Destination.Position >= (int) t.StartPosition && f.Destination.Position <= (int) t.EndPosition);
+									rangeRest[thisRange] = maxPlanetsInThisRange - planetsInThisRange - unterwegs;
 									for (int i = (int) t.StartSystem; i <= (int) t.EndSystem; i++) {
 										for (int ii = (int) t.StartPosition; ii <= (int) t.EndPosition; ii++) {
 											Coordinate targetCoords = new(
@@ -197,6 +204,7 @@ namespace Tbot.Workers {
 												Celestials.Planet
 											);
 											if (_calculationService.IsAstrophysicsPositionValid((int) targetCoords.Position, (int) _tbotInstance.UserData.researches.Astrophysics)) {
+												rangeIdxOf.TryAdd(ZielKey(targetCoords), thisRange);
 												targets.Add(targetCoords);
 											}
 										}
@@ -219,6 +227,11 @@ namespace Tbot.Workers {
 									}
 									filteredTargets.Add(t);
 								}
+								filteredTargets = filteredTargets
+									.GroupBy(t => rangeIdxOf.TryGetValue(ZielKey(t), out int ri) ? ri : -1)
+									.SelectMany(g => g.Key < 0 || !rangeRest.ContainsKey(g.Key) ? g.AsEnumerable()
+										: g.OrderBy(t => _calculationService.CalcDistance(origin.Coordinate, t, _tbotInstance.UserData.serverData)).Take(Math.Max(0, rangeRest[g.Key])))
+									.ToList();
 								if (filteredTargets.Count() > 0) {
 									if ((bool) _tbotInstance.InstanceSettings.AutoColonize.RandomPosition) {
 										List<Coordinate> filteredTargetsRdm = new();
@@ -251,8 +264,13 @@ namespace Tbot.Workers {
 										.OrderBy(t => _calculationService.CalcFleetPrediction(origin, t, ships, Missions.Colonize, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Time)
 										.ToList();
 									int indexList = 0;
+									int shipsLeft = (int) origin.Ships.ColonyShip;
 									foreach (var target in filteredTargets) {
 										indexList++;
+										if (shipsLeft <= 0) {
+											_tbotInstance.log(LogLevel.Information, LogSender.Colonize, "No colony ship left for the remaining targets - waiting for the next cycle.");
+											break;
+										}
 										_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 										var colonize = _tbotInstance.UserData.fleets
 											.Where(f => f.Mission == Missions.Colonize)
@@ -273,6 +291,7 @@ namespace Tbot.Workers {
 												interval = RandomizeHelper.CalcRandomInterval(IntervalType.SomeSeconds);
 												continue;
 											}
+											if (fleetId > 0) shipsLeft--;
 											_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
 											List<Fleet> orderedFleet = _tbotInstance.UserData.fleets
 												.Where(fleet => fleet.Mission == Missions.Colonize)

@@ -49,6 +49,9 @@ find "$AUSGABE" -maxdepth 1 \( -name '*settings*.json' -o -name '*.db' -o -name 
 mkdir -p "$AUSGABE/config"
 cp config/config.vorlage.json "$AUSGABE/config/"
 cp config/REFERENCE.md "$AUSGABE/config/REFERENCE.md"
+# Kommentierte Referenz (alle Eintraege mit ##-Erklaerung, nicht lauffaehig), deutsch und englisch
+cp config/instance_settings_kommentiert_de.txt "$AUSGABE/config/instance_settings_kommentiert_de.txt"
+cp config/instance_settings_kommentiert_en.txt "$AUSGABE/config/instance_settings_kommentiert_en.txt"
 cp config/lifeform_targets.json "$AUSGABE/lifeform_targets.json"
 
 # Standalone helper that takes an OLD instance_settings.json over into the new template (own EXE, embedded template).
@@ -57,6 +60,12 @@ echo "== MigrateConfig ("$RID") =="
 (cd tools/MigrateConfig && dotnet publish -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \
   -p:TemplatePath="$OLDPWD/$AUSGABE/config/config.vorlage.json" -p:DebugType=none -p:DebugSymbols=false \
   -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: MigrateConfig build failed (package is built without it)."
+
+# Standalone plausibility check of the config (read-only, same rules as the start page). A failure here never stops the package build.
+echo "== ConfigDoctor ("$RID") =="
+(cd tools/ConfigDoctor && dotnet publish -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \
+  -p:DebugType=none -p:DebugSymbols=false \
+  -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: ConfigDoctor build failed (package is built without it)."
 
 # Helper for "Install update" in the WebUI (unpacks the zip, replaces files, restarts or leaves the restart to systemd)
 echo "== TBotUpdater ($RID) =="
@@ -84,6 +93,14 @@ mkdir -p "$AUSGABE/config/split"
 cp -a "$SPLIT_TMP/instance_settings.json" "$SPLIT_TMP/settings.json" "$SPLIT_TMP/conf.d" "$SPLIT_TMP/secrets" "$AUSGABE/config/split/"
 chmod 700 "$AUSGABE/config/split/secrets"; chmod 600 "$AUSGABE/config/split/secrets/"*.json
 rm -rf "$SPLIT_TMP"
+
+cat > "$AUSGABE/clean_config.sh" <<'SH'
+#!/usr/bin/env bash
+# Removes config entries that no longer exist in this version (list: removed_keys.txt inside MigrateConfig).
+# Shows what it will remove, asks, and makes a backup in backups/config-clean-<time> first. Options: --dry-run, --yes
+cd "$(dirname "$0")"
+exec ./MigrateConfig --clean "$@"
+SH
 
 cat > "$AUSGABE/start.sh" <<'SH'
 #!/usr/bin/env bash
@@ -123,13 +140,17 @@ It contains NO config, credentials or data - you create those yourself (steps be
 Folder contents
   TBot, ogamed             the bot and the connector (keep them in the same folder)
   start.sh                 starts the bot in this folder
+  clean_config.sh          removes config entries that no longer exist (asks first, makes a backup)
   tbot.service.example     optional systemd unit
   lifeform_targets.json    target table for Lifeform AutoMine (keep it next to TBot)
   TBotUpdater              helper for "Install update" in the WebUI (do not start it by hand)
   MigrateConfig            takes an old config over into the new template (see "Updating from an older version")
+  ConfigDoctor             checks the config for implausible values (read-only; exit code 0 = ok, 1 = warnings, 2 = errors)
   config/config.vorlage.json   anonymised template as ONE file (alternative)
   config/split/                the same template pre-split: instance_settings.json, settings.json, conf.d/, secrets/
   config/REFERENCE.md          explains every field of the template (start with "New account quick start")
+  config/instance_settings_kommentiert_en.txt   every setting with a ## explanation, English (reading aid, NOT a working config)
+  config/instance_settings_kommentiert_de.txt   the same in German
   (the native libraries next to TBot, e.g. libe_sqlite3.so, belong to the bot - do not delete them)
 
 First start (recommended: split config - secrets are kept in their own files)
@@ -177,6 +198,8 @@ Updating from an older version or from the original TBot
   before it writes anything. It makes a backup in backups/config-<time>, keeps ALL your old values, adds the new
   settings with default values and switches every new worker OFF. Options: --dry-run (only show), --yes (no question).
   Afterwards: restart the bot and CHECK the config - especially Lifeform AutoMine (see lifeform_targets.json).
+  Old entries that no longer exist stay in your file (and are listed as "not used by this version"). Run ./clean_config.sh when you want
+  them removed: it shows the list, asks, and makes a backup first. Only entries from its built-in list are removed, never your own ones.
 
 Notes about this build
   - Lifeform AutoMine needs lifeform_targets.json. If it is missing, LF building is skipped (warning in the log).
@@ -184,9 +207,11 @@ Notes about this build
     lifeform_targets.json.
 TXT
 
-chmod +x "$AUSGABE/start.sh" "$AUSGABE/ogamed"
+chmod +x "$AUSGABE/start.sh" "$AUSGABE/clean_config.sh" "$AUSGABE/ogamed"
 [ -f "$AUSGABE/TBot" ] && chmod +x "$AUSGABE/TBot"
+[ -f "$AUSGABE/ConfigDoctor" ] && chmod +x "$AUSGABE/ConfigDoctor"
 
+# zip keeps the Unix executable bits; plain "zip" is needed (apt install zip)
 (cd dist && rm -f "$NAME.zip" && zip -qr "$NAME.zip" "$NAME")
 echo "Package: dist/$NAME.zip"
 echo "Done."

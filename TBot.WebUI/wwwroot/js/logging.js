@@ -35,6 +35,7 @@ function Initialize(logsUrl, getLogsUrl) {
 	_getLogsUrl = getLogsUrl;
 	_loadMoreButton = $("#loadMore").parent();
 	logsDiv = $("#logsDiv");
+	initHideDataBox();
 
 	$('#logsearch').on('input propertychange paste', function () {
 		clearTimeout(typingTimer);
@@ -195,6 +196,43 @@ function getLogLevelNum(logLevel) {
 	}
 }
 
+const MASK_STOPWORDS = new Set(["to", "from", "at", "on", "in", "for", "of", "the", "and", "or", "with", "by", "via", "is", "no", "nach", "von", "bei", "auf", "in", "fuer", "und", "oder", "mit", "zu", "zum", "zur", "der", "die", "das", "an", "am", "im", "target", "origin", "celestial", "planet", "moon", "colony", "->", "=>", "-", ":"]);
+function isHideData() {
+	return window.tbotHideData ? window.tbotHideData.get() : false;
+}
+function maskText(text) {
+	if (!text) return text;
+	let t = String(text).replace(/\[[^\]\s]+@[^\]\s]+\]/g, "[*****]");
+	t = t.replace(/((?:[^\s\[\]]+ ){1,3})(\[[PMpm]?:?\d+:\d+:\d+(?::[PMpm])?\])/g, function (m, words, coord) {
+		let parts = words.trim().split(" ");
+		let keep = [];
+		while (parts.length) {
+			let w = parts[parts.length - 1];
+			if (MASK_STOPWORDS.has(w.toLowerCase()) || /[:,.;)(]$/.test(w)) break;
+			parts.pop();
+			keep.push(w);
+		}
+		if (!keep.length) return m;
+		return (parts.length ? parts.join(" ") + " " : "") + "***** " + coord;
+	});
+	t = t.replace(/\[[PMpm]?:?\d+:\d+:\d+(?::[PMpm])?\]|\b\d:\d{1,3}:\d{1,2}(?::[PMpm])?\b/g, "[*****]");
+	return t;
+}
+function applyMaskToRows() {
+	for (const e of logData) {
+		e.row.find(".log-msg").text(isHideData() ? maskText(e.message) : e.message);
+	}
+}
+function initHideDataBox() {
+	let box = document.getElementById("loghide");
+	if (!box) return;
+	box.checked = isHideData();
+	box.addEventListener("change", function () {
+		if (window.tbotHideData) window.tbotHideData.set(box.checked);
+		applyMaskToRows();
+	});
+}
+
 function createLogElement(timestamp, level, message, sender) {
 	let row = $("<div class='row logEntry'></div>");
 	let colTs = $("<div class='col-5 col-lg-3 col-xl-2 log-ts'></div>").text(timestamp)
@@ -207,7 +245,7 @@ function createLogElement(timestamp, level, message, sender) {
 	colLevel.addClass(level)
 		.addClass("loglevel");
 
-	let colMsg = $("<div class='col-12 col-lg-5 col-xl-7 log-msg'></div>").text(message)
+	let colMsg = $("<div class='col-12 log-msg'></div>").text(isHideData() ? maskText(message) : message)
 		.addClass("logmessage");
 
 	row.append(colTs)

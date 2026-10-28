@@ -29,6 +29,8 @@ namespace Tbot.Services {
 		}
 
 		private void initWatch() {
+			try { changeCallback?.Dispose(); } catch (Exception) { }
+			try { p?.Dispose(); } catch (Exception) { }
 			p = new PhysicalFileProvider(Path.GetDirectoryName(_absFpToWatch));
 			var tokens = new List<IChangeToken> { p.Watch(Path.GetFileName(_absFpToWatch)) };
 			foreach (var glob in _extraGlobs)
@@ -42,6 +44,8 @@ namespace Tbot.Services {
 				changeCallback.Dispose();
 				changeCallback = null;
 			}
+			try { p?.Dispose(); } catch (Exception) { }
+			p = null;
 		}
 
 		private async void onChanged(object state) {
@@ -49,10 +53,11 @@ namespace Tbot.Services {
 			await _changedSem.WaitAsync();
 			try {
 				_watchFunc();
-			} catch (Exception) {
+			} catch (Exception ex) {
+				Console.Error.WriteLine($"[SettingsFileWatcher] Reload of {_absFpToWatch} failed: {ex.Message}");
 			} finally {
 				_changedSem.Release();
-				try { initWatch(); } catch (Exception) { }
+				try { initWatch(); } catch (Exception ex) { Console.Error.WriteLine($"[SettingsFileWatcher] Re-arming watch failed: {ex.Message}"); }
 			}
 		}
 	}

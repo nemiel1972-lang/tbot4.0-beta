@@ -201,12 +201,40 @@ namespace Tbot.Services {
 			instances.Clear();
 		}
 
+		private void ApplyTelegramLogLevels() {
+			try {
+				string def = null;
+				var perSender = new List<KeyValuePair<string, string>>();
+				var tm = _mainSettings.TelegramMessenger;
+				if (SettingsService.IsSettingSet(tm, "LogLevel"))
+					def = (string) tm.LogLevel;
+				if (SettingsService.IsSettingSet(tm, "LogLevels")) {
+					foreach (var kv in (IEnumerable<KeyValuePair<string, object>>) tm.LogLevels)
+						perSender.Add(new KeyValuePair<string, string>(kv.Key, kv.Value?.ToString()));
+				}
+				_telegramLogger.ConfigureTelegramLevels(def, perSender);
+
+				int repeatDefault = 0;
+				if (SettingsService.IsSettingSet(tm, "RepeatMinutes"))
+					repeatDefault = Convert.ToInt32(tm.RepeatMinutes);
+				var repeatPer = new List<KeyValuePair<string, string>>();
+				if (SettingsService.IsSettingSet(tm, "LogRepeatMinutes")) {
+					foreach (var kv in (IEnumerable<KeyValuePair<string, object>>) tm.LogRepeatMinutes)
+						repeatPer.Add(new KeyValuePair<string, string>(kv.Key, kv.Value?.ToString()));
+				}
+				_telegramLogger.ConfigureTelegramRepeat(repeatDefault, repeatPer);
+			} catch (Exception e) {
+				_logger.WriteLog(LogLevel.Warning, LogSender.Main, $"Telegram log levels could not be read, keeping the defaults: {e.Message}");
+			}
+		}
+
 		private async Task InitializeTelegramMessenger() {
 			if (
 				SettingsService.IsSettingSet(_mainSettings, "TelegramMessenger") &&
 				SettingsService.IsSettingSet(_mainSettings.TelegramMessenger, "Active") &&
 				(bool) _mainSettings.TelegramMessenger.Active
 			) {
+				ApplyTelegramLogLevels();
 				if (telegramMessenger == null) {
 					_logger.WriteLog(LogLevel.Information, LogSender.Main, "Activating Telegram Messenger");
 					var logEnabled = SettingsService.IsSettingSet(_mainSettings.TelegramMessenger, "Logging") && (bool) _mainSettings.TelegramMessenger.Logging;

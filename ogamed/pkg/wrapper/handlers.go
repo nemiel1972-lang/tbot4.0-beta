@@ -83,6 +83,55 @@ func PageContentHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(pageHTML))
 }
 
+func PostPageContentHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	if err := c.Request().ParseForm(); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	vals := url.Values{}
+	for k, v := range c.QueryParams() {
+		vals[k] = v
+	}
+	payload := url.Values{}
+	for k, v := range c.Request().PostForm {
+		payload[k] = v
+	}
+	if t := payload.Get("token"); t == "" || t == "auto" {
+		payload.Set("token", bot.cache.token.Get())
+	}
+	pageHTML, err := bot.PostPageContent(vals, payload)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(pageHTML))
+}
+
+func ChapterClaimAllHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	id, err := utils.ParseI64(c.Param("chapterID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid chapter id"))
+	}
+	resp, err := bot.ChapterClaimAll(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(string(resp)))
+}
+
+func ChapterCollectRewardHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	id, err := utils.ParseI64(c.Param("taskID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid task id"))
+	}
+	resp, err := bot.ChapterCollectReward(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(string(resp)))
+}
+
 func LoginHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	if _, _, err := bot.LoginWithExistingCookies(); err != nil {
@@ -303,6 +352,27 @@ func GalaxyInfosHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
 	res, err := bot.GalaxyInfos(galaxy, system)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(res))
+}
+
+func HighscoreHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	category, err := utils.ParseI64(c.Param("category"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	typ, err := utils.ParseI64(c.Param("type"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	page, err := utils.ParseI64(c.Param("page"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	res, err := bot.Highscore(category, typ, page)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}

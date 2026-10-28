@@ -15,5 +15,7 @@ namespace TBot.Common.Logging {
 		bool IsTelegramLoggerEnabled();
 		void SetTelegramLoggerLogLevel(LogEventLevel logLevel);
 		LogEventLevel GetTelegramLoggerLevel();
+		void ConfigureTelegramLevels(string defaultLevel, IEnumerable<KeyValuePair<string, string>> perSender) { }
+		void ConfigureTelegramRepeat(int defaultMinutes, IEnumerable<KeyValuePair<string, string>> perSender) { }
 	}
 }

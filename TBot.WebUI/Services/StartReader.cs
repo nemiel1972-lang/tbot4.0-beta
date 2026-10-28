@@ -13,7 +13,7 @@ namespace TBot.WebUI.Services {
 #if FASTFARM
 			"FastFarm",
 #endif
-			"Defender", "SleepMode", "GhostSleep", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave" 
+			"Defender", "SleepMode", "GhostSleep", "Brain", "AutoHarvest", "AutoColonize", "AutoDiscovery", "DebrisSave",
 		};
 
 		private static bool RunsInOverride(string name) {
@@ -23,7 +23,7 @@ namespace TBot.WebUI.Services {
 			return name == "Defender" || name == "SleepMode" || name == "GhostSleep";
 		}
 
-		public static JObject Read(string alias, JObject mainConfig, bool legacy, bool modeOverride, bool keepExpeditions) {
+		public static JObject Read(string alias, JObject mainConfig, bool legacy, bool modeOverride, bool keepExpeditions, bool keepAuction = false) {
 			var result = new JObject();
 			result["instance"] = alias;
 			result["legacy"] = legacy;
@@ -52,12 +52,27 @@ namespace TBot.WebUI.Services {
 				if (mainConfig[name] is not JObject block || block["Active"]?.Type != JTokenType.Boolean)
 					continue;
 				bool active = (bool) block["Active"]!;
-				bool overridden = modeOverride && !RunsInOverride(name) && !(name == "Expeditions" && keepExpeditions);
+				bool overridden = modeOverride && !RunsInOverride(name) && !(name == "Expeditions" && keepExpeditions) && !(name == "AutoBidAuction" && keepAuction);
 				workers.Add(new JObject { ["name"] = name, ["active"] = active, ["overridden"] = overridden });
+				if (name == "Brain" && block["AutoFleetJumpGate"] is JObject jump && jump["Active"]?.Type == JTokenType.Boolean) {
+					bool jumpActive = active && (bool) jump["Active"]!;
+					workers.Add(new JObject { ["name"] = "AutoFleetJumpGate", ["block"] = "Brain", ["active"] = jumpActive, ["overridden"] = overridden });
+				}
 			}
 			result["workers"] = workers;
 			result["modeOverride"] = modeOverride;
 			result["events"] = ReadEvents(12);
+			foreach (var (key, prefix) in new[] { ("boosters", "booster_status_"), ("boosterStock", "booster_stock_") }) {
+				try {
+					string bp = Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"{prefix}{alias}.json"));
+					if (File.Exists(bp)) {
+						using var fs = new FileStream(bp, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+						using var sr = new StreamReader(fs);
+						result[key] = JObject.Parse(sr.ReadToEnd());
+					}
+				} catch {
+				}
+			}
 			return result;
 		}
 

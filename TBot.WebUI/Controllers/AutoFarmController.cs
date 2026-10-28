@@ -35,7 +35,7 @@ namespace TBot.WebUI.Controllers {
 		}
 
 		private static readonly object CommandLock = new();
-		private static readonly HashSet<string> AllowedCommands = new() { "clearBlacklist", "removeBlacklist", "removeTarget", "clearSystems", "resetDb" };
+		private static readonly HashSet<string> AllowedCommands = new() { "clearBlacklist", "removeBlacklist", "removeTarget", "clearSystems", "resetDb", "attackDefendedNow" };
 
 		[HttpPost]
 		public async Task<IActionResult> Command(string instance, string cmd, string? coord) {
@@ -46,7 +46,7 @@ namespace TBot.WebUI.Controllers {
 					return Json(new { success = false, error = "Unknown instance." });
 				if (!AllowedCommands.Contains(cmd ?? string.Empty))
 					return Json(new { success = false, error = "Unknown command." });
-				if ((cmd == "removeBlacklist" || cmd == "removeTarget") && !System.Text.RegularExpressions.Regex.IsMatch(coord ?? string.Empty, @"^\d{1,2}:\d{1,3}:\d{1,2}$"))
+				if ((cmd == "removeBlacklist" || cmd == "removeTarget" || cmd == "attackDefendedNow") && !System.Text.RegularExpressions.Regex.IsMatch(coord ?? string.Empty, @"^\d{1,2}:\d{1,3}:\d{1,2}$"))
 					return Json(new { success = false, error = "Invalid coordinate." });
 
 				string path = AutoFarmDashboardReader.GetCommandPath(selected);
@@ -90,7 +90,8 @@ namespace TBot.WebUI.Controllers {
 				Losses = storage.Losses,
 				Blacklist = storage.Blacklist,
 				PendingCommands = storage.PendingCommands,
-				Deuterium = storage.Deuterium
+				Deuterium = storage.Deuterium,
+				Galaxy = GalaxyScanReader.Read(selected)
 			};
 		}
 

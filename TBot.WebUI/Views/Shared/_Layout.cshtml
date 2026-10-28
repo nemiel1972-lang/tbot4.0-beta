@@ -22,8 +22,12 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
+    <link id="tb-ui-css" rel="stylesheet" href="~/css/tbot-ui.css" asp-append-version="true" />
+    <script>try { if (localStorage.getItem("tb.ui") === "classic") document.getElementById("tb-ui-css").disabled = true; } catch (e) { }</script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>window.tbotHideDefault = @(TBot.WebUI.Services.HideDataDefault.Get() ? "true" : "false");</script>
+    <script>window.tbotNoAuction = @(TBot.WebUI.Services.BuildInfo.NoAuction ? "true" : "false");</script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @if (uiLang != "en")
     {
@@ -31,6 +35,7 @@
     }
     <script src="~/js/i18n-ui.js" asp-append-version="true"></script>
     <script src="~/js/whatsnew.js" asp-append-version="true"></script>
+    <script src="~/js/tbot-ui.js" asp-append-version="true" defer></script>
 </head>
 <body>
     <header>
@@ -61,7 +66,17 @@
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-controller="Minenplan" asp-action="Index">Mine plan</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-controller="Belohnungen" asp-action="Index">Rewards</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-controller="Logistik" asp-action="Index">Logistics</a>
+                        </li>
                     </ul>
+                    @if (!string.IsNullOrEmpty(TBot.Common.BuildInfo.Display))
+                    {
+                        <span class="text-secondary small me-3" title="Build (commit and build time)">Build @TBot.Common.BuildInfo.Display</span>
+                    }
                     <select id="ui-langsel" class="form-select form-select-sm w-auto me-2" title="Language" data-setlang="@Url.Action("SetLanguage", "Config")">
                         @foreach (var l in Tbot.Common.Settings.UiLanguage.Available())
                         {

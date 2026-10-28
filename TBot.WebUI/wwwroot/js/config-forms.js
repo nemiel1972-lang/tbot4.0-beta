@@ -262,7 +262,7 @@
         return el('section', { class: 'cfg-sec' }, [el('h3', null, [title, pill ? el('span', { class: 'cfg-pill' + (pill === 'new' ? ' new' : ''), text: pill }) : null])].concat(kids));
     }
 
-    var handled = ['Active', 'Origin', 'ManualShips', 'PrimaryShip', 'MinPrimaryToSend', 'PrimaryToKeep', 'SleepWave'];
+    var handled = ['Active', 'Origin', 'ManualShips', 'PrimaryShip', 'MinPrimaryToSend', 'PrimaryToKeep', 'SmartShips', 'SmartMixShip', 'SleepWave', 'TelegramMessenger'];
 
     var RETURN_EXAMPLES = [
         ['WakeUp', 'back exactly at wake-up'],
@@ -290,8 +290,15 @@
     function renderExpeditions(body) {
         var d = state;
         if (d.Active === undefined) d.Active = false;
+        if (!d.TelegramMessenger || typeof d.TelegramMessenger !== 'object') d.TelegramMessenger = {};
+        if (d.TelegramMessenger.Active === undefined) d.TelegramMessenger.Active = false;
+        if (d.TelegramMessenger.OnlyFinds === undefined) d.TelegramMessenger.OnlyFinds = true;
+        if (d.TelegramMessenger.WindowMinutes === undefined) d.TelegramMessenger.WindowMinutes = 0;
         body.appendChild(sec('General', [
-            withHelp(row('Expeditions active', 'Master switch for the expedition worker', toggle(d, 'Active', ['Active'])), 'Expeditions.Active')
+            withHelp(row('Expeditions active', 'Master switch for the expedition worker', toggle(d, 'Active', ['Active'])), 'Expeditions.Active'),
+            withHelp(row('Telegram message on finds', 'Message when new expedition reports arrive', toggle(d.TelegramMessenger, 'Active', ['TelegramMessenger', 'Active'])), 'Expeditions.TelegramMessenger.Active'),
+            withHelp(row('Only reports with finds', 'On: no message for empty expeditions', toggle(d.TelegramMessenger, 'OnlyFinds', ['TelegramMessenger', 'OnlyFinds'])), 'Expeditions.TelegramMessenger.OnlyFinds'),
+            withHelp(row('Collect window (minutes)', '0 = message right away; otherwise collect and send one message per window', num(d.TelegramMessenger, 'WindowMinutes', ['TelegramMessenger', 'WindowMinutes'], { min: 0, step: 5 })), 'Expeditions.TelegramMessenger.WindowMinutes')
         ]));
 
         if (!Array.isArray(d.Origin)) d.Origin = [];
@@ -372,7 +379,11 @@
                 if (!d.PrimaryShip) d.PrimaryShip = 'LargeCargo';
                 fleetBox.appendChild(withHelp(row('Keep at home', 'PrimaryToKeep: ships of the primary type that stay home', num(d, 'PrimaryToKeep', ['PrimaryToKeep'], { min: 0 })), 'Expeditions.PrimaryToKeep'));
                 fleetBox.appendChild(withHelp(row('Minimum to send', 'MinPrimaryToSend: no expedition if fewer primary ships are available (0 = off)', num(d, 'MinPrimaryToSend', ['MinPrimaryToSend'], { min: 0 })), 'Expeditions.MinPrimaryToSend'));
-                fleetBox.appendChild(el('div', { class: 'cfg-note', text: 'Auto: cargo count from server top score and Lifeform bonus, plus 1 probe and the strongest combat ship (Pathfinder if none).' }));
+                if (d.SmartShips === undefined) d.SmartShips = false;
+                if (!d.SmartMixShip) d.SmartMixShip = 'SmallCargo';
+                fleetBox.appendChild(withHelp(row('Smart ships', 'Always 1 probe, 1 pathfinder and 1 combat ship (Reaper first) if available; cargo is split equally across all planned expeditions of the origin, missing cargo is filled up with the mix ship', toggle(d, 'SmartShips', ['SmartShips'])), 'Expeditions.SmartShips'));
+                fleetBox.appendChild(withHelp(row('Mix ship', 'Fills up missing cargo (Null = do not mix)', select(d, 'SmartMixShip', ['SmartMixShip'], ['SmallCargo', 'LargeCargo', 'Null'])), 'Expeditions.SmartMixShip'));
+                fleetBox.appendChild(el('div', { class: 'cfg-note', text: 'Auto: cargo count from server top score and Lifeform bonus, plus 1 probe, the strongest combat ship and 1 pathfinder if available. With "Smart ships": see the switch above.' }));
             }
         }
         drawSeg(); drawFleet();
@@ -601,13 +612,72 @@
         ]);
 
         foldTo(body, 'Timing', [
-            fld(d, 'CheckIntervalMin', P, 'Check interval, min', null, 'num', { min: 0, unit: 'seconds' }),
-            fld(d, 'CheckIntervalMax', P, 'Check interval, max', null, 'num', { min: 0, unit: 'seconds' })
+            fld(d, 'CheckIntervalMin', P, 'Check interval, min', null, 'num', { min: 0, unit: 'minutes' }),
+            fld(d, 'CheckIntervalMax', P, 'Check interval, max', null, 'num', { min: 0, unit: 'minutes' })
         ]);
+
+        foldTo(body, 'Test (simulated attack)', [defenderTestBox()]);
 
         var known = ['Active', 'IgnoreProbes', 'DefendFromMissiles', 'RandomActivity', 'IgnoreWeakAttack', 'WeakAttackRatio', 'IgnoreAttackIfIHave', 'Home', 'Autofleet', 'Discord', 'TelegramMessenger', 'Alarm', 'SpyAttacker', 'MessageAttacker', 'WhiteList', 'CheckIntervalMin', 'CheckIntervalMax'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
+    }
+
+    function defenderTestBox() {
+        var main = document.getElementById('cfg-main');
+        var runUrl = main && main.dataset.deftestrun, resUrl = main && main.dataset.deftestresult, inst = (main && main.dataset.instance) || '';
+        var inp = function (ph, val, w) { return el('input', { type: 'text', placeholder: ph, value: val || '', style: 'width:' + (w || '9em') }); };
+        var origin = inp('1:1:1:M', '1:1:1:M', '9em'), target = inp('2:2:2:M', '2:2:2:M', '11em');
+        var minutes = inp('30', '30', '4em'), aid = inp('0', '0', '7em'), pts = inp('0', '0', '7em');
+        var probes = el('input', { type: 'checkbox' });
+        var mission = el('select', null, [el('option', { value: 'Attack', text: 'Attack' }), el('option', { value: 'Missile', text: 'Missile attack' })]);
+        var out = el('div', { style: 'margin-top:8px;min-height:240px;max-height:70vh;resize:vertical;overflow:auto;background:rgba(0,0,0,.25);border-radius:6px;padding:8px;font:12px/1.5 monospace;display:none' });
+        var status = el('span', { class: 'cfg-unit', text: '' });
+        var timer = null, tries = 0;
+        var colors = { ok: '#6c6', warn: '#e6b422', bad: '#e66', info: '' };
+        function show(res) {
+            out.style.display = 'block'; out.textContent = '';
+            (res.lines || res.Lines || []).forEach(function (ln) {
+                var lv = ln.l || ln.L || 'info', tx = ln.t || ln.T || '';
+                if (window.tbotHideData && window.tbotHideData.get()) tx = tx.replace(/\[?[PM]:\d+:\d+:\d+\]?|\b\d+:\d+:\d+(:[PMpm])?\b(?!\s*(UTC|bot))/g, function (m) { return /^\d\d:\d\d:\d\d$/.test(m) ? m : '*****'; });
+                var d = el('div', { text: tx }); if (colors[lv]) d.style.color = colors[lv];
+                out.appendChild(d);
+            });
+        }
+        function poll() {
+            tries++;
+            fetch(resUrl + '?instance=' + encodeURIComponent(inst) + '&_=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+                if (j && (j.lines || j.Lines)) { clearInterval(timer); status.textContent = ''; show(j); return; }
+                if (tries > 12) { clearInterval(timer); status.textContent = 'No answer from the bot (running? update installed?).'; }
+            }).catch(function () { });
+        }
+        var btn = el('button', {
+            class: 'cfg-btn', type: 'button', text: 'Run test', onclick: function () {
+                if (!runUrl) return;
+                var fd = new URLSearchParams();
+                fd.set('instance', inst); fd.set('origin', origin.value); fd.set('target', target.value);
+                fd.set('arriveInMinutes', parseInt(minutes.value, 10) || 0); fd.set('attackerId', parseInt(aid.value, 10) || 0);
+                fd.set('attackerPoints', parseInt(pts.value, 10) || 0); fd.set('onlyProbes', probes.checked ? 'true' : 'false'); fd.set('mission', mission.value);
+                status.textContent = 'Waiting for the bot…'; out.style.display = 'none'; tries = 0; clearInterval(timer);
+                fetch(runUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() })
+                    .then(function (r) { return r.json(); }).then(function (j) {
+                        if (!j.success) { status.textContent = 'Error: ' + (j.error || ''); return; }
+                        timer = setInterval(poll, 1000);
+                    }).catch(function (e) { status.textContent = 'Error: ' + e; });
+            }
+        });
+        return el('div', null, [
+            el('div', { class: 'cfg-note', text: 'Plays an assumed attack through your Defender settings and shows what the bot would do and why. Read-only: nothing is sent, built or changed. The bot answers within a few seconds.' }),
+            row('Attacker origin', 'galaxy:system:position', origin),
+            row('Target (your planet/moon)', 'e.g. 1:50:8 or 1:50:8:M', target),
+            row('Mission', null, mission),
+            row('Arrives in', null, minutes, 'minutes'),
+            row('Attacker player ID', '0 = unknown', aid),
+            row('Attacker points', '0 = unknown', pts),
+            row('Probes only', null, probes),
+            el('div', null, [btn, ' ', status]),
+            out
+        ]);
     }
 
     function timeHintNode(d) { var n = el('div', { class: 'cfg-note' }); if (window.tbotTimeHint) window.tbotTimeHint(n, [['Go to sleep', function () { return d.GoToSleep; }], ['Wake up', function () { return d.WakeUp; }]]); return n; }
@@ -734,6 +804,20 @@
 
         if (X && typeof X === 'object') {
             var xp = ['Experimental'];
+            if (X.CollectLogs && typeof X.CollectLogs === 'object') {
+                var cl = X.CollectLogs, clp = xp.concat('CollectLogs');
+                body.appendChild(sec('Collect logs for development (time limited)', [
+                    el('div', { class: 'cfg-note', text: 'While on, every log line (from debug up) and all lines of the extra debug log are saved into ONE file in the folder devlogs. The collection stops by itself after the hours below; switch it off and on again to collect again.' }),
+                    fld(cl, 'Active', clp, 'Collect logs', 'Off by default', 'toggle'),
+                    fld(cl, 'Hours', clp, 'Collect for (hours)', 'Default 12', null),
+                    fld(cl, 'Anonymize', clp, 'Anonymize the collected logs', 'Names, universe, mail, celestials, coordinates, IP and tokens are replaced (default on)', 'toggle')
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Collect logs for development (time limited)', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet (off). Add it to collect the logs of the next hours into the folder devlogs.' }),
+                    addDefault(X, 'CollectLogs', { Active: false, Hours: 12, Anonymize: true }, 'Collect logs settings', null)
+                ]));
+            }
             if (X.BotPause && typeof X.BotPause === 'object') {
                 var bp = X.BotPause, bpp = xp.concat('BotPause');
                 body.appendChild(sec('Bot pause (Pause button and /pause)', [
@@ -768,7 +852,7 @@
             if (X.ExtraDebugLog && typeof X.ExtraDebugLog === 'object') {
                 var xl = X.ExtraDebugLog, xlp = xp.concat('ExtraDebugLog');
                 body.appendChild(sec('Extra debug log (own file)', [
-                    el('div', { class: 'cfg-note', text: 'Writes extra diagnosis lines to devlog/TBot-debug-<date>.log (anonymized, safe to share), so the normal log stays small. Switch it on when a function does not send and you need to see why.' }),
+                    el('div', { class: 'cfg-note', text: 'Writes extra diagnosis lines to devlogs/TBot-debug-<date>.log (anonymized, safe to share), so the normal log stays small. Switch it on when a function does not send and you need to see why.' }),
                     fld(xl, 'Active', xlp, 'Write the extra log', 'On by default', 'toggle'),
                     fld(xl, 'Repatriate', xlp, 'Topic: repatriate', 'Candidates, payload after ledger, send attempts and results', 'toggle'),
                     fld(xl, 'Ledger', xlp, 'Topic: resource ledger', 'Which claims hold how much and which count for repatriate and collect', 'toggle'),
@@ -786,6 +870,18 @@
                 body.appendChild(sec('Extra debug log (own file)', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet (the default is on). Add it to change the settings.' }),
                     addDefault(X, 'ExtraDebugLog', { Active: true, Repatriate: true, Ledger: true, BotPause: true, DefenderRecheck: true, FleetsaveSlot: true, MinePlanRanking: true, AsteroidHunt: true, ShadowFleet: true, GalaxyCache: true, Requests: true, BrowserProxy: true }, 'Extra debug log settings', null)
+                ]));
+            }
+            if (X.ReportReading && typeof X.ReportReading === 'object') {
+                var rr = X.ReportReading, rrp = xp.concat('ReportReading');
+                body.appendChild(sec('Reading game reports', [
+                    el('div', { class: 'cfg-note', text: 'The bot reads your expedition reports about every 20 minutes to collect finds and daily averages. Switch it off if you do not need the statistics (for example because another tool does it): the bot then sends no report requests at all.' }),
+                    fld(rr, 'Expeditions', rrp, 'Read expedition reports', 'On (default): finds and daily averages are collected. Off: no report requests; the statistics stay empty and the mine plan runs without expedition averages', 'toggle')
+                ].filter(Boolean)));
+            } else {
+                body.appendChild(sec('Reading game reports', [
+                    el('div', { class: 'cfg-note', text: 'Not in your config yet - the default (reading on) applies. Add it to change that.' }),
+                    addDefault(X, 'ReportReading', { Expeditions: true }, 'Report reading settings', null)
                 ]));
             }
             if (X.RepatriateLedgerHold && typeof X.RepatriateLedgerHold === 'object') {
@@ -818,13 +914,13 @@
                 var mr = X.MinePlanRanking, mrp = xp.concat('MinePlanRanking');
                 body.appendChild(sec('Mine plan: ranking of the next steps', [
                     el('div', { class: 'cfg-note', text: 'How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. By default this is display only; switch on "AutoMine follows the build plan" below to let AutoMine use it.' }),
-                    fld(mr, 'Mode', mrp, 'Ranking', 'Payback = like AutoMine; Cheapest = lowest cost first; Npv = most gain over the horizon', 'select', { options: ['Payback', 'Cheapest', 'Npv'] }),
+                    fld(mr, 'Mode', mrp, 'Ranking', 'Payback = like AutoMine; Cheapest = lowest cost first across mines, lifeform buildings and research (the payback limit then only applies with \'Only sensible steps\'); Npv = most gain over the horizon', 'select', { options: ['Payback', 'Cheapest', 'Npv'] }),
                     fld(mr, 'HorizonDays', mrp, 'Horizon (Npv)', 'Steps that do not pay back within this time are left out', 'num', { min: 1, unit: 'days' }),
                     fld(mr, 'OnlySensible', mrp, 'Only sensible steps', 'Hide steps with a payback longer than the limit', 'toggle'),
                     fld(mr, 'MaxPaybackDays', mrp, 'Longest sensible payback', null, 'num', { min: 1, unit: 'days' }),
                     fld(mr, 'IncludeResearch', mrp, 'Include research', 'Rank plasma technology next to the mine steps', 'toggle'),
                     fld(mr, 'DailyBudgetDeut', mrp, 'Daily budget (build plan)', 'Deuterium equivalent per day, e.g. expedition income; 0 = enter it on the page', 'num', { min: 0, unit: 'D-eq/day' }),
-                    fld(mr, 'UsePlanForAutoMine', mrp, 'AutoMine follows the build plan', 'AutoMine only builds a mine when its planet is among the first steps of the build plan (best payback first, across all planets). Off = every planet builds on its own', 'toggle'),
+                    fld(mr, 'UsePlanForAutoMine', mrp, 'AutoMine follows the build plan', 'AutoMine only builds a mine when its planet is among the first steps of the build plan (best payback first, across all planets). LifeformAutoMine builds the next lifeform building of the plan the same way (within the targets). Off = every planet builds on its own', 'toggle'),
                     fld(mr, 'PlanLookahead', mrp, 'Plan look-ahead', 'How many steps of the plan count as due', 'num', { min: 1, unit: 'steps' })
                 ].filter(Boolean)));
             } else {
@@ -839,18 +935,28 @@
                     el('div', { class: 'cfg-note', text: 'Every galaxy scan of any worker is stored with a time stamp. FastFarm and Colonize read the cache first and only ask the server live when an entry is too old. A slow background scan keeps the systems around your planets fresh and reports new colonies and moves of other players.' }),
                     fld(gc, 'Active', gcp, 'Use the galaxy cache', 'On by default', 'toggle'),
                     fld(gc, 'MaxAgeHours', gcp, 'Entry valid for (hours)', 'Older entries are queried live again', 'num', { min: 1 }),
-                    fld(gc, 'RangeSystems', gcp, 'Background scan: systems around each planet', '0 = no background scan, only passive recording', 'num', { min: 0 }),
-                    fld(gc, 'DelayMinSeconds', gcp, 'Pause between background queries, from (seconds)', null, 'num', { min: 5 }),
-                    fld(gc, 'DelayMaxSeconds', gcp, 'Pause between background queries, to (seconds)', null, 'num', { min: 5 }),
+                    fld(gc, 'ScanAll', gcp, 'Background scan: whole universe (on) or only around my planets (off)', 'ON = every galaxy and system, slowly, your own surroundings first. The setting "Systems around each planet" is ignored then. OFF = only the systems around your own planets, as many as set there', 'toggle'),
+                    fld(gc, 'HoursPerGalaxy', gcp, 'Whole-universe scan: hours per galaxy (only when ON)', 'The pause between systems follows from this (1 = about 7 seconds). 0 = use the pauses below', 'num', { min: 0, step: 'any' }),
+                    fld(gc, 'FullScanIntervalHours', gcp, 'Whole-universe scan: repeat after (hours) (only when ON)', 'Every system is scanned at most this often (24 = once a day)', 'num', { min: 1 }),
+                    fld(gc, 'UseHighscore', gcp, 'Player database from the highscore', 'Reads the highscore once a day (status i / I / banned / vacation, rank, home world). Systems of inactive players are kept fresh first', 'toggle'),
+                    fld(gc, 'UseApi', gcp, 'Read the player list from the OGame API', 'players.xml and highscore.xml: one request each, no load in the game. Off: read the highscore pages instead', 'toggle'),
+                    fld(gc, 'HighscoreIntervalHours', gcp, 'Read the highscore every (hours)', null, 'num', { min: 1 }),
+                    fld(gc, 'FastFarmMaxAgeHours', gcp, 'FastFarm uses entries up to (hours)', 'Older entries are queried live', 'num', { min: 1 }),
+                    fld(gc, 'AutoFarmMaxAgeHours', gcp, 'AutoFarm uses entries up to (hours)', 'Older entries are queried live', 'num', { min: 1 }),
+                    fld(gc, 'RangeSystems', gcp, 'Systems around each planet (used only when the switch above is OFF)', '15 = 15 systems left and right = 31 around each planet. No effect while the whole-universe scan is on', 'num', { min: 0 }),
+                    fld(gc, 'EmptyMaxAgeHours', gcp, 'Empty systems valid for (hours)', 'Systems without any planet are not scanned again before this time', 'num', { min: 1 }),
+                    fld(gc, 'DelayMinSeconds', gcp, 'Pause between background queries, from (seconds)', null, 'num', { min: 2 }),
+                    fld(gc, 'DelayMaxSeconds', gcp, 'Pause between background queries, to (seconds)', null, 'num', { min: 2 }),
                     fld(gc, 'UseInFastFarm', gcp, 'FastFarm reads the cache', null, 'toggle'),
                     fld(gc, 'UseInColonize', gcp, 'Colonize reads the cache', 'Occupied positions are skipped without a live query; free ones are still checked live', 'toggle'),
+                    fld(gc, 'UseInAutoFarm', gcp, 'AutoFarm reads the cache', 'The scan for inactive targets uses fresh cache entries instead of live queries; the target is still re-checked live before an attack', 'toggle'),
                     fld(gc, 'Events', gcp, 'Write detected events to the log', 'New colony, planet gone, new moon, status change, move', 'toggle'),
                     fld(gc, 'Telegram', gcp, 'Warn by Telegram / Discord', 'For new colonies and moves of other players', 'toggle')
                 ].filter(Boolean)));
             } else {
                 body.appendChild(sec('Galaxy cache (shared galaxy scans)', [
                     el('div', { class: 'cfg-note', text: 'Not in your config yet (the default is on). Add it to change the values.' }),
-                    addDefault(X, 'GalaxyCache', { Active: true, MaxAgeHours: 12, RangeSystems: 15, DelayMinSeconds: 20, DelayMaxSeconds: 45, UseInFastFarm: true, UseInColonize: true, Events: true, Telegram: true }, 'Galaxy cache settings', null)
+                    addDefault(X, 'GalaxyCache', { Active: true, MaxAgeHours: 12, ScanAll: true, HoursPerGalaxy: 1, FullScanIntervalHours: 24, UseApi: true, UseHighscore: true, HighscoreIntervalHours: 24, AutoFarmMaxAgeHours: 36, FastFarmMaxAgeHours: 36, RangeSystems: 15, EmptyMaxAgeHours: 72, DelayMinSeconds: 4, DelayMaxSeconds: 8, UseInFastFarm: true, UseInColonize: true, UseInAutoFarm: true, Events: true, Telegram: true }, 'Galaxy cache settings', null)
                 ]));
             }
             if (X.AsteroidHunt && typeof X.AsteroidHunt === 'object') {
@@ -954,6 +1060,19 @@
             if (B.KeepBoosters && typeof B.KeepBoosters === 'object') {
                 brainSub(body, 'KeepBoosters', 'KeepBoosters', buildKeepBoosters, B, bpath);
             }
+            if (B.Directives && typeof B.Directives === 'object') {
+                var Dv = B.Directives, dvp = bpath.concat('Directives');
+                body.appendChild(sec('Directives (in-game tutorial)', [
+                    el('div', { class: 'cfg-note', text: 'Works through the in-game directives: collects finished rewards and, if switched on, builds / researches what open tasks ask for (up to exactly the task level, your caps are ignored for that). Alliance, buddy, rename, demolish and similar tasks stay manual. Start with Dry run on and read the log.' }),
+                    fld(Dv, 'Active', dvp, 'Active', null, 'toggle'),
+                    fld(Dv, 'CollectRewards', dvp, 'Collect rewards', 'Claim finished tasks and chapters', 'toggle'),
+                    fld(Dv, 'Fulfil', dvp, 'Fulfil tasks', 'Build / research / order ships and defence for open tasks', 'toggle'),
+                    fld(Dv, 'Fleets', dvp, 'Fleet tasks', 'Colony ship, expedition, spy mission to position 16 and recall', 'toggle'),
+                    fld(Dv, 'DryRun', dvp, 'Dry run', 'Only write to the log what would be done', 'toggle'),
+                    fld(Dv, 'IntervalMinutes', dvp, 'Check every', null, 'num', { min: 1, unit: 'minutes' }),
+                    fld(Dv, 'LastChapter', dvp, 'Last chapter', '7 = chapters I to VII (the test server has 8)', 'num', { min: 1, max: 12 })
+                ].filter(Boolean)));
+            }
         }
         if ((!X || typeof X !== 'object') && (!G || typeof G !== 'object') && (!B || typeof B !== 'object'))
             body.appendChild(el('div', { class: 'cfg-note', text: 'The General and Brain blocks were not found in the config, so nothing can be shown here.' }));
@@ -1014,6 +1133,98 @@
         }).catch(function () { });
     }
 
+    var TG_LEVELS = ['Error', 'Warning', 'Information', 'Debug'];
+    function levelPicker(current, options, onPick) {
+        var s = el('select');
+        options.forEach(function (o) { var op = el('option', { value: o, text: o }); if (String(current).toLowerCase() === o.toLowerCase()) op.selected = true; s.appendChild(op); });
+        s.addEventListener('change', function () { onPick(s.value); });
+        return s;
+    }
+    var TG_WORKERS = ['Defender', 'Expeditions', 'SleepMode', 'FleetScheduler', 'AutoFarm', 'FastFarm', 'Colonize', 'Harvest', 'AsteroidHunt', 'ShadowFleet',
+        'Brain', 'AutoMine', 'AutoResearch', 'LifeformsAutoMine', 'LifeformsAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'KeepBoosters', 'AutoFleetJumpGate',
+        'AutoDiscovery', 'GalaxyCache', 'AutoBidAuction', 'Tbot', 'Main', 'OGameD', 'Telegram'];
+    if (window.tbotNoAuction) TG_WORKERS = TG_WORKERS.filter(function (w) { return w !== 'AutoBidAuction'; });
+    function telegramLevelRows(d, P) {
+        var rows = [];
+        var cur = d.LogLevel == null || d.LogLevel === '' ? 'Warning' : String(d.LogLevel);
+        rows.push(withHelp(row('Default log level', 'Lowest level that goes to Telegram for every worker without its own value below. Needs "Send the log to Telegram" on',
+            levelPicker(cur, TG_LEVELS, function (v) { d.LogLevel = v; update(); })), fullKey(P, 'LogLevel')));
+        var defRep = el('input', { type: 'number', min: '0', step: '1', value: d.RepeatMinutes == null ? '0' : String(d.RepeatMinutes) });
+        defRep.style.width = '7em';
+        defRep.addEventListener('change', function () {
+            var n = parseInt(defRep.value, 10);
+            if (isNaN(n) || n < 0) n = 0;
+            if (n === 0 && d.RepeatMinutes == null) return;
+            d.RepeatMinutes = n; update();
+        });
+        rows.push(withHelp(row('Same message at most once per', 'The same log line of a worker (numbers such as times are ignored) goes to Telegram at most once in this time. 0 = off, every line is sent. Applies to every worker without its own value below', el('span', null, [defRep, document.createTextNode(' min')])), fullKey(P, 'RepeatMinutes')));
+        var names = TG_WORKERS.slice();
+        if (d.LogLevels && typeof d.LogLevels === 'object') Object.keys(d.LogLevels).forEach(function (k) { if (names.indexOf(k) < 0) names.push(k); });
+        var items = names.map(function (w) {
+            var own = d.LogLevels && typeof d.LogLevels === 'object' && d.LogLevels[w] != null && d.LogLevels[w] !== '' ? String(d.LogLevels[w]) : 'Default';
+            return withHelp(row(w, null, levelPicker(own, ['Default', 'Off'].concat(TG_LEVELS), function (v) {
+                if (!d.LogLevels || typeof d.LogLevels !== 'object') d.LogLevels = {};
+                if (v === 'Default') delete d.LogLevels[w]; else d.LogLevels[w] = v;
+                if (!Object.keys(d.LogLevels).length && origAt(P.concat('LogLevels')) === undefined) delete d.LogLevels;
+                update();
+            })), fullKey(P, 'LogLevels'));
+        });
+        var nameIn = el('input', { type: 'text', placeholder: 'name as in the log', spellcheck: 'false', autocomplete: 'off' });
+        var addBtn = el('button', { type: 'button', class: 'cfg-btn', text: 'Add as Off' });
+        addBtn.addEventListener('click', function () {
+            var n = nameIn.value.trim();
+            if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(n)) return;
+            if (!d.LogLevels || typeof d.LogLevels !== 'object') d.LogLevels = {};
+            if (d.LogLevels[n] == null) d.LogLevels[n] = 'Off';
+            update(); render();
+        });
+        items.push(row('Other worker', 'Any log name that is not in the list (for example an add-on worker). Then pick its level in the list', el('span', null, [nameIn, document.createTextNode(' '), addBtn])));
+        var repNames = TG_WORKERS.slice();
+        if (d.LogRepeatMinutes && typeof d.LogRepeatMinutes === 'object') Object.keys(d.LogRepeatMinutes).forEach(function (k) { if (repNames.indexOf(k) < 0) repNames.push(k); });
+        var repItems = repNames.map(function (w) {
+            var has = d.LogRepeatMinutes && typeof d.LogRepeatMinutes === 'object' && d.LogRepeatMinutes[w] != null && d.LogRepeatMinutes[w] !== '';
+            var inp = el('input', { type: 'number', min: '0', step: '1', placeholder: 'default', value: has ? String(d.LogRepeatMinutes[w]) : '' });
+            inp.style.width = '7em';
+            inp.addEventListener('change', function () {
+                var t = inp.value.trim();
+                if (t === '' || isNaN(parseInt(t, 10)) || parseInt(t, 10) < 0) {
+                    if (d.LogRepeatMinutes && typeof d.LogRepeatMinutes === 'object') delete d.LogRepeatMinutes[w];
+                    if (d.LogRepeatMinutes && !Object.keys(d.LogRepeatMinutes).length && origAt(P.concat('LogRepeatMinutes')) === undefined) delete d.LogRepeatMinutes;
+                } else {
+                    if (!d.LogRepeatMinutes || typeof d.LogRepeatMinutes !== 'object') d.LogRepeatMinutes = {};
+                    d.LogRepeatMinutes[w] = parseInt(t, 10);
+                }
+                update();
+            });
+            return withHelp(row(w, null, el('span', null, [inp, document.createTextNode(' min')])), fullKey(P, 'LogRepeatMinutes'));
+        });
+        rows.push(secFold('Repeat time per worker', [el('div', { class: 'cfg-note', text: 'Empty = use the value above. 0 = never hold back lines of this worker. Otherwise the same line of this worker goes to Telegram at most once in that many minutes. The log file is not affected.' })].concat(repItems)));
+        rows.push(secFold('Log level per worker', [el('div', { class: 'cfg-note', text: 'Default = use the default level above. Off = no log lines of this worker go to Telegram. A level lets that worker send lines from that level up (Debug = everything, Error = errors only). Alerts and command answers are not affected.' })].concat(items)));
+        return rows;
+    }
+    function renderEventOverview(body) {
+        var box = el('div', { class: 'cfg-note', text: 'Loading...' });
+        body.appendChild(sec('Alerts and event messages', [
+            el('div', { class: 'cfg-note', text: 'These messages are sent in addition to the log and are switched on the page of their function. Here you only see whether they are on.' }), box
+        ]));
+        function link(name, text) { return el('a', { href: '?instance=' + encodeURIComponent(instance || '') + '&block=' + encodeURIComponent(name), text: text }); }
+        function on(o) { return o && typeof o === 'object' && o.Active === true; }
+        function get(name) { return getBlock(name).then(function (r) { return r && r.success ? JSON.parse(r.data) : null; }).catch(function () { return null; }); }
+        Promise.all([get('Defender'), get('Expeditions'), get('SleepMode')]).then(function (rs) {
+            var d = rs[0], e = rs[1], s = rs[2];
+            var items = [];
+            function add(label, state, name, page) {
+                items.push(row(label, null, el('span', null, [el('b', { text: state === null ? 'not in config' : (state ? 'on' : 'off') + '  ' }), document.createTextNode(' '), link(name, page)])));
+            }
+            add('Attack alert (Telegram)', d ? on(d.TelegramMessenger) : null, 'Defender', 'Defender');
+            add('Attack alert (Discord)', d ? (d.Discord && typeof d.Discord === 'object' ? on(d.Discord) : null) : null, 'Defender', 'Defender');
+            add('Fleetsave message (Telegram)', d && d.Autofleet ? on(d.Autofleet.TelegramMessenger) : null, 'Defender', 'Defender');
+            add('Sleep and wake-up message (Telegram)', s ? on(s.TelegramMessenger) : null, 'SleepMode', 'Sleep / GhostSleep');
+            add('Expedition finds (Telegram)', e ? on(e.TelegramMessenger) : null, 'Expeditions', 'Expeditions');
+            box.replaceWith(el('div', null, items));
+        }).catch(function () { box.textContent = 'The overview could not be loaded.'; });
+    }
+
     function renderMessengerPage(body) {
         renderCommandPrompt(body);
         function block1(name, title, d, build) {
@@ -1030,13 +1241,14 @@
             var out = [
                 secretField(d, 'API', P, 'Bot token', 'From @BotFather'),
                 secretField(d, 'ChatId', P, 'Chat ID', 'The chat the bot talks to'),
-                fld(d, 'Logging', P, 'Log Telegram traffic', 'Write messages sent and received to the log', 'toggle')];
+                fld(d, 'Logging', P, 'Send the log to Telegram', 'On: log lines go to your chat, filtered by the levels below. Off: only alerts and command answers', 'toggle')];
+            telegramLevelRows(d, P).forEach(function (x) { out.push(x); });
             var ping = d.TelegramAutoPing && typeof d.TelegramAutoPing === 'object' ? d.TelegramAutoPing : null;
             if (ping) {
                 out.push(fld(ping, 'Active', P.concat('TelegramAutoPing'), 'Auto ping', 'Sends a regular "still alive" message', 'toggle'));
                 out.push(fld(ping, 'EveryHours', P.concat('TelegramAutoPing'), 'Ping every', null, 'num', { min: 1, unit: 'hours' }));
             }
-            var rest = Object.keys(d).filter(function (k) { return ['Active', 'API', 'ChatId', 'Logging', 'TelegramAutoPing', 'Load'].indexOf(k) < 0; });
+            var rest = Object.keys(d).filter(function (k) { return ['Active', 'API', 'ChatId', 'Logging', 'LogLevel', 'LogLevels', 'RepeatMinutes', 'LogRepeatMinutes', 'TelegramAutoPing', 'Load'].indexOf(k) < 0; });
             if (rest.length) out.push(genericObject(d, rest, P));
             return out;
         });
@@ -1048,6 +1260,7 @@
             if (rest.length) out.push(genericObject(d, rest, P));
             return out;
         });
+        renderEventOverview(body);
     }
 
     function has(o, k) { return o && Object.prototype.hasOwnProperty.call(o, k); }
@@ -1086,6 +1299,63 @@
         if (lab) lab.appendChild(q);
         r.appendChild(box);
         return r;
+    }
+    var COLLAPSE_KEY = 'tbot.cfg.collapsed';
+    var collapseCb = null;
+    function loadCollapsed() { try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}') || {}; } catch (e) { return {}; } }
+    function storeCollapsed(key, on) {
+        try { var m = loadCollapsed(); if (on) m[key] = 1; else delete m[key]; localStorage.setItem(COLLAPSE_KEY, JSON.stringify(m)); } catch (e) { }
+    }
+    function syncCollapseCb() {
+        if (!collapseCb) return;
+        var all = root.querySelectorAll('section.cfg-sec[data-cfg-key]');
+        var n = 0, c = 0;
+        for (var i = 0; i < all.length; i++) { n++; if (all[i].classList.contains('cfg-collapsed')) c++; }
+        collapseCb.checked = n > 0 && c === n;
+        collapseCb.disabled = n === 0;
+    }
+    function makeCollapsible(body) {
+        var saved = loadCollapsed();
+        var pageKey = COMBINED ? COMBINED_TITLE : block;
+        var secs = body.querySelectorAll('section.cfg-sec');
+        var seen = {};
+        for (var i = 0; i < secs.length; i++) {
+            (function (sec) {
+                var h = sec.querySelector(':scope > h3');
+                if (!h) return;
+                var title = (h.firstChild && h.firstChild.nodeType === 3 ? h.firstChild.nodeValue : h.textContent) || ('block' + i);
+                var key = pageKey + '/' + title.trim();
+                if (seen[key]) key += '#' + (seen[key]++); else seen[key] = 1;
+                sec.setAttribute('data-cfg-key', key);
+                var arrow = el('span', { class: 'cfg-arrow', text: '▾' });
+                h.insertBefore(arrow, h.firstChild);
+                h.classList.add('cfg-collapsible');
+                h.title = 'Click to collapse or expand this block';
+                function apply(on) { sec.classList.toggle('cfg-collapsed', on); arrow.textContent = on ? '▸' : '▾'; }
+                apply(!!saved[key]);
+                h.addEventListener('click', function (ev) {
+                    if (ev.target.closest && ev.target.closest('input,button,select,a')) return;
+                    var on = !sec.classList.contains('cfg-collapsed');
+                    apply(on); storeCollapsed(key, on); syncCollapseCb();
+                });
+            })(secs[i]);
+        }
+        syncCollapseCb();
+    }
+    function collapseLabel() {
+        var cb = el('input', { type: 'checkbox' });
+        collapseCb = cb;
+        cb.addEventListener('change', function () {
+            var all = root.querySelectorAll('section.cfg-sec[data-cfg-key]');
+            for (var i = 0; i < all.length; i++) {
+                var on = cb.checked;
+                all[i].classList.toggle('cfg-collapsed', on);
+                var ar = all[i].querySelector(':scope > h3 > .cfg-arrow');
+                if (ar) ar.textContent = on ? '▸' : '▾';
+                storeCollapsed(all[i].getAttribute('data-cfg-key'), on);
+            }
+        });
+        return el('span', { class: 'cfg-masklbl' }, [el('label', { class: 'cfg-masklbl', title: 'Collapse or expand all blocks on this page (the state is remembered in this browser)' }, [cb, ' Collapse all'])]);
     }
     function helpLabel() {
         var cb = el('input', { type: 'checkbox' });
@@ -1500,6 +1770,7 @@
         return el('div', null, [el('div', { class: 'cfg-note', text: 'Level cap per slot (one tech per race in each slot, 0 = do not research). The tick marks a slot as priority: ticked slots are researched first, in the order they were ticked (hover the tick to see the position).' }), grid]);
     }
     var BRAIN_HELP = {
+        ResourceLedger: 'The bookkeeping that reserves resources for builds so several workers do not fight over the same stock or order the same delivery twice. On by default.',
         Transports: 'Shared settings for every Brain worker that moves resources: where it collects from, which cargo ships it uses and how many slots it may take. Pathfinders are never used.',
         AutoMine: 'Builds mines, storage, energy and facilities up to the caps you set. 0 = do not build. The caps at the top are for the home world, "Colony" is for all other planets, single planets can get their own caps.',
         AutoResearch: 'Researches technologies up to the caps you set on the chosen planet. 0 = do not research. The priority switches decide what is researched first.',
@@ -1588,6 +1859,8 @@
             k.push(fld(o, 'UseTransportChain', p, 'Plan transports as a chain', null, 'toggle'));
             k.push(fld(o, 'CompactSlotPlan', p, 'Compact slot plan', 'Replan with fewer shipments if slots are short', 'toggle'));
             k.push(fld(o, 'MaxSlots', p, 'Max slots', 'Slots Brain transports may use at the same time', 'num', { min: 0 }));
+            if (!has(o, 'MaxBundledBuildings')) o.MaxBundledBuildings = 0;
+            k.push(fld(o, 'MaxBundledBuildings', p, 'Extra buildings per delivery', 'How many additional buildings one delivery may bring along (0 = only the one target of the worker)', 'num', { min: 0 }));
             if (!has(o, 'DeutToLeaveOnPlanets')) o.DeutToLeaveOnPlanets = 0;
             k.push(fld(o, 'DeutToLeaveOnMoons', p, 'Deuterium left on moons', 'Transports out of a moon only go if payload + this reserve + the flight fuel fit', 'num', { min: 0 }));
             k.push(fld(o, 'DeutToLeaveOnPlanets', p, 'Deuterium left on planets', 'Same reserve for transports out of a planet (0 = keep nothing)', 'num', { min: 0 }));
@@ -1607,7 +1880,7 @@
                     Array.isArray(mo.Exclude) ? withHelp(row('Excluded', 'Never collected from', listTable(mo.Exclude, COORD_COLS, newCoord, '+ Add exclusion', p.concat('MultipleOrigins', 'Exclude'))), 'Brain.Transports.MultipleOrigins.Exclude') : null
                 ]));
             }
-            restRows(o, p, ['Active', 'Origin', 'CargoType', 'CargoFallback', 'MixFleet', 'UseTransportChain', 'CompactSlotPlan', 'MaxSlots', 'DeutToLeaveOnMoons', 'DeutToLeaveOnPlanets', 'RoundResources', 'SendToTheMoonIfPossible', 'CheckMoonOrPlanetFirst', 'DoMultipleTransportIsNotEnoughShipButSamePosition', 'KeepOnOrigin', 'MultipleOrigins']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Origin', 'CargoType', 'CargoFallback', 'MixFleet', 'UseTransportChain', 'CompactSlotPlan', 'MaxSlots', 'MaxBundledBuildings', 'DeutToLeaveOnMoons', 'DeutToLeaveOnPlanets', 'RoundResources', 'SendToTheMoonIfPossible', 'CheckMoonOrPlanetFirst', 'DoMultipleTransportIsNotEnoughShipButSamePosition', 'KeepOnOrigin', 'MultipleOrigins']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoMine', 'AutoMine', function (k, o, p) {
@@ -1732,11 +2005,18 @@
             k.push(fld(o, 'ExcludeMoons', p, 'Skip moons', null, 'toggle'));
             k.push(fld(o, 'RandomOrder', p, 'Random order', null, 'toggle'));
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
+            if (!has(o, 'ReserveTransportSlots')) o.ReserveTransportSlots = 0;
+            k.push(fld(o, 'ReserveTransportSlots', p, 'Transport slots kept free for builders', 'The reverse fetch stays this many slots below Brain Max slots, so it never takes slots from the mines/lifeform/research workers (0 = off)', 'num', { min: 0 }));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'Target', 'TargetAssociateMoon', 'MinimumResources', 'LeaveDeut', 'CargoType', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'Reverse', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Target', 'TargetAssociateMoon', 'MinimumResources', 'LeaveDeut', 'CargoType', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'ReserveTransportSlots', 'Reverse', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
+        brainSub(body, 'ResourceLedger', 'ResourceLedger', function (k, o, p) {
+            if (!has(o, 'PriorityByCost')) o.PriorityByCost = true;
+            k.push(fld(o, 'PriorityByCost', p, 'Cheapest build first', 'On: per celestial the cheapest build wish gets the stock first and a not yet funded expensive build gives its held stock to cheaper ones. Off: first come, first served', 'toggle'));
+            restRows(o, p, ['Active', 'PriorityByCost']).forEach(function (r) { k.push(r); });
+        });
         brainSub(body, 'BuyOfferOfTheDay', 'BuyOfferOfTheDay', function (k, o, p) {
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
@@ -1756,7 +2036,7 @@
             restRows(o, p, ['Active', 'Target', 'Exclude', 'MinimumAmountOfShipPointsToTeleport', 'MinimumAmountOfShipsToBeLeftOnMoon', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
-        var known = ['Active', 'Transports', 'AutoMine', 'AutoResearch', 'LifeformAutoMine', 'LifeformAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'KeepBoosters', 'AutoFleetJumpGate'];
+        var known = ['Active', 'Transports', 'AutoMine', 'AutoResearch', 'LifeformAutoMine', 'LifeformAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'KeepBoosters', 'AutoFleetJumpGate', 'Directives', 'ResourceLedger'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
@@ -1778,8 +2058,11 @@
                 el('div', { class: 'cfg-note', text: 'Proxy user name and password and the captcha key are neither shown nor editable in the web UI. Set them directly in the config file (secrets/).' })
             ].filter(Boolean)));
         }
-        body.appendChild(sec('Logs', [
-            has(d, 'AnonymizeLogs') ? fld(d, 'AnonymizeLogs', P, 'Hide names in logs', 'On: player name, universe and e-mail are replaced by [Player], [Universe] and [Email] - useful before posting logs. Off: real names are shown. Applies after a restart', 'toggle') : addDefault(d, 'AnonymizeLogs', false, 'Hide names in logs', 'On: player name, universe and e-mail are replaced in the log lines')
+        body.appendChild(sec('Anonymizer', [
+            has(d, 'AnonymizeLogs') ? fld(d, 'AnonymizeLogs', P, 'Hide data', 'On: player name, universe and e-mail are replaced by [Player], [Universe] and [Email] in the log lines (applies after a restart) and the Hide data switch on every web UI page starts switched on. The switch on a page overrides this in that browser only', 'toggle') : addDefault(d, 'AnonymizeLogs', false, 'Hide data', 'On: player name, universe and e-mail are replaced in the log lines')
+        ].filter(Boolean)));
+        body.appendChild(sec('Update notes', [
+            fld(d, 'ShowUpdateNotes', P, 'Show update notes', 'After a version change: one short message in the log and to Telegram/Discord (default on)', 'toggle')
         ].filter(Boolean)));
         body.appendChild(sec('Fleet slots', [
             fld(d, 'SlotsToLeaveFree', P, 'Slots to leave free', 'No worker may use these slots - they stay free for you', 'num', { min: 0 })
@@ -1790,7 +2073,7 @@
                 el('div', { class: 'cfg-note', text: 'Who gets a free slot first when several workers compete. Lower number = served first.' })
             ].concat(Object.keys(sp).map(function (k) { return fld(sp, k, ['SlotPriorityLevel'], k, null, 'num', { min: 0 }); }))));
         }
-        var rest = Object.keys(d).filter(function (k) { return ['Host', 'Port', 'Proxy', 'SlotsToLeaveFree', 'SlotPriorityLevel', 'AnonymizeLogs', 'CaptchaAPIKey', 'BasicAuth', 'LoginPause', 'BotPause'].indexOf(k) < 0; });
+        var rest = Object.keys(d).filter(function (k) { return ['Host', 'Port', 'Proxy', 'ShowUpdateNotes', 'SlotsToLeaveFree', 'SlotPriorityLevel', 'AnonymizeLogs', 'CaptchaAPIKey', 'BasicAuth', 'LoginPause', 'BotPause'].indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
@@ -1801,6 +2084,10 @@
             fld(d, 'MaxSlots', P, 'Max slots', null, 'num', { min: 0 }),
             el('div', { class: 'cfg-note', text: 'Without an Origin of its own the moon at the Defender "Home" coordinates is used as the start.' })
         ].filter(Boolean)));
+        body.appendChild(sec('Origins', [
+            el('div', { class: 'cfg-note', text: 'Celestials the harvest fleets start from. Only the recyclers and pathfinders that lie on these are used; several are possible and the nearest one with enough ships is taken.' }),
+            Array.isArray(d.Origin) ? listTable(d.Origin, COORD_COLS, newCoord, '+ Add origin', ['Origin']) : addDefault(d, 'Origin', [{ Galaxy: 1, System: 1, Position: 1, Type: 'Moon' }], 'Own origins', 'Without this the moon at the Defender Home coordinates is used')
+        ]));
         body.appendChild(sec('Which debris fields', [
             fld(d, 'HarvestOwnDF', P, 'Own debris fields', null, 'toggle'),
             fld(d, 'MinimumResourcesOwnDF', P, 'Minimum content (own)', 'Smaller fields are not worth a trip', 'num', { min: 0 }),
@@ -1808,10 +2095,12 @@
             fld(d, 'MinimumResourcesForeignDF', P, 'Minimum content (foreign)', null, 'num', { min: 0 }),
             fld(d, 'HarvestDeepSpace', P, 'Deep space', null, 'toggle'),
             fld(d, 'MinimumResourcesDeepSpace', P, 'Minimum content (deep space)', null, 'num', { min: 0 }),
-            fld(d, 'DeepSpaceRange', P, 'Deep space range', 'Systems around the origin that are searched', 'num', { min: 0 })
+            fld(d, 'DeepSpaceRange', P, 'Look around X systems (expedition debris)', 'Systems to each side of every own planet that are searched for deep space fields', 'num', { min: 0 }),
+            fld(d, 'ScanOnlyExpeditionOrigins', P, 'Use only expedition starts', 'Search around the expedition start celestials only, not around all planets', 'toggle'),
+            fld(d, 'ForeignDFRange', P, 'Look around X systems (normal debris)', 'Systems to each side of every own planet searched for foreign debris fields; 0 = only the planet\'s own system', 'num', { min: 0 })
         ].filter(Boolean)));
         foldTo(body, 'Timing', intervalRows(d, P));
-        var rest = Object.keys(d).filter(function (k) { return ['Active', 'MaxSlots', 'HarvestOwnDF', 'MinimumResourcesOwnDF', 'HarvestForeignDF', 'MinimumResourcesForeignDF', 'HarvestDeepSpace', 'MinimumResourcesDeepSpace', 'DeepSpaceRange', 'CheckIntervalMin', 'CheckIntervalMax'].indexOf(k) < 0; });
+        var rest = Object.keys(d).filter(function (k) { return ['Active', 'MaxSlots', 'Origin', 'HarvestOwnDF', 'MinimumResourcesOwnDF', 'HarvestForeignDF', 'MinimumResourcesForeignDF', 'HarvestDeepSpace', 'MinimumResourcesDeepSpace', 'DeepSpaceRange', 'ForeignDFRange', 'ScanOnlyExpeditionOrigins', 'CheckIntervalMin', 'CheckIntervalMax'].indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
 
@@ -1875,10 +2164,12 @@
     function renderFastFarm(body) {
         var d = state, P = [];
         body.appendChild(sec('FastFarm', [
+            el('div', { class: 'cfg-warnbox' }, [el('b', { text: 'Do not delete espionage reports yourself. ' }), document.createTextNode('FastFarm reads and deletes its own reports. If you delete them by hand, or a browser add-on or other tool does (for example one that removes reports after reading), reports go missing before FastFarm sees them. Targets then look as if the probes were lost, and malfunctions are likely. Close such tools or switch off their auto-delete while FastFarm runs.')]),
             el('div', { class: 'cfg-note', text: 'Resource farming mode with one goal: collect as much deuterium as possible. It scans the galaxy for inactive players, spies them with a fixed number of probes and raids the best ones with cargo ships. While it is on, all other workers except the Defender stay off.' }),
             fld(d, 'Active', P, 'FastFarm active', 'Master switch', 'toggle'),
             fld(d, 'OnlyWorker', P, 'Switch off all other workers', 'Defender and sleep mode always stay on', 'toggle'),
             fld(d, 'KeepExpeditions', P, 'Keep expeditions running', 'Only used when the other workers are switched off', 'toggle'),
+            window.tbotNoAuction ? null : fld(d, 'KeepAuction', P, 'Keep auction worker running', 'Only used when the other workers are switched off', 'toggle'),
             fld(d, 'BuildCheckMinutes', P, 'Construction check while farming', 'Build and research workers look for possible constructions this often (and always while transports with resources are on their way). 0 = they stay off', 'num', { min: 0, unit: 'minutes' })
         ].filter(Boolean)));
         if (Array.isArray(d.Origin)) body.appendChild(sec('Origins', [
@@ -1892,7 +2183,9 @@
         ]));
         body.appendChild(sec('Sweep', [
             el('div', { class: 'cfg-note', text: 'FastFarm works in rounds: scan one galaxy, spy every target, sort by loot, then check the best ones again with fresh probes right before the attack. Targets whose loot shrank by the set share are dropped.' }),
-            fld(d, 'ShrinkDiscardPercent', P, 'Drop target when loot shrank by', null, 'num', { min: 0, max: 100, unit: '%' })
+            fld(d, 'ShrinkDiscardPercent', P, 'Drop target when loot shrank by', null, 'num', { min: 0, max: 100, unit: '%' }),
+            fld(d, 'ResetOnActivate', P, 'Discard old data on bot start / reactivation', 'Targets, blocks and sweep position; statistics stay', 'toggle'),
+            fld(d, 'ResetMinHours', 'NoReportHours', P, 'At most one reset every', null, 'num', { min: 0, unit: 'h' })
         ].filter(Boolean)));
         body.appendChild(sec('Ships and slots', [
             fld(d, 'CargoType', P, 'Cargo ships', 'Both = small cargos first, large cargos for the rest', 'select', { options: ['SmallCargo', 'LargeCargo', 'Both'] }),
@@ -1913,10 +2206,11 @@
         ].filter(Boolean)));
         foldTo(body, 'Reports and timing', [
             fld(d, 'DeleteReports', P, 'Delete reports after reading', 'Keeps the inbox empty so it does not fill up', 'toggle'),
+            fld(d, 'NoReportHours', P, 'Skip targets without report for', 'After three missing reports in a row (probes probably destroyed). 0 = off', 'num', { min: 0, unit: 'hours' }),
             fld(d, 'ReportMaxAgeMinutes', P, 'Max report age', 'Older reports are not attacked', 'num', { min: 1, unit: 'minutes' }),
             fld(d, 'MaxSystemsPerScanStep', P, 'Systems per scan step', null, 'num', { min: 1 })
         ].filter(Boolean));
-        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'BuildCheckMinutes', 'Origin', 'ScanRange', 'ShrinkDiscardPercent', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'MaxSystemsPerScanStep'];
+        var known = ['Active', 'OnlyWorker', 'KeepExpeditions', 'KeepAuction', 'BuildCheckMinutes', 'Origin', 'ScanRange', 'ShrinkDiscardPercent', 'ResetOnActivate', 'ResetMinHours', 'CargoType', 'ProbesPerTarget', 'SlotsToLeaveFree', 'FleetSpeedPercent', 'CargoSurplusPercent', 'MinFillPercent', 'WeightMetal', 'WeightCrystal', 'WeightDeuterium', 'MinLoot', 'MinDeuterium', 'TopTargets', 'DeleteReports', 'ReportMaxAgeMinutes', 'MaxSystemsPerScanStep'];
         var rest = Object.keys(d).filter(function (k) { return known.indexOf(k) < 0; });
         if (rest.length) foldTo(body, 'More settings (' + rest.length + ')', [genericObject(d, rest, [])]);
     }
@@ -1933,7 +2227,7 @@
 
     var BLOCK_HELP = {
         Expeditions: ['Sends expeditions automatically from your origin celestials and refills the slots as the fleets return.', [
-            ['Fleet', 'Automatic: as many cargo ships as needed to carry the largest possible find, plus 1 probe and the strongest combat ship. Or a fixed fleet per expedition.'],
+            ['Fleet', 'Automatic: as many cargo ships as needed to carry the largest possible find, plus 1 probe, the strongest combat ship and 1 pathfinder if available. Or a fixed fleet per expedition.'],
             ['Slots', 'With several origins the expedition slots are shared round-robin (13 slots: 7+6, with 3 origins 5+4+4).'],
             ['Split systems', 'Spreads the targets over systems in a range.'],
             ['Sleep wave', 'One extra wave right before the bot falls asleep, timed to return around wake-up.'],
@@ -2028,7 +2322,7 @@
             tabs.appendChild(b);
         });
         root.appendChild(el('div', { class: 'cfg-head' }, [
-            el('h1', { text: COMBINED ? COMBINED_TITLE : block }), sens(el('span', { class: 'sub grow', text: file })), helpLabel(), maskLabel(), tabs
+            el('h1', { text: COMBINED ? COMBINED_TITLE : block }), sens(el('span', { class: 'sub grow', text: file })), helpLabel(), collapseLabel(), maskLabel(), tabs
         ]));
         if (addedDefaults.length) root.appendChild(el('div', { class: 'cfg-note' }, [
             el('b', { text: 'New options added with default values (saved with the next Save):' }), document.createTextNode(' '),
@@ -2038,8 +2332,22 @@
         if (view === 'form') {
             if (!COMBINED && state && typeof state.Active === 'boolean' && !state.Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'FastFarm') renderFastFarm(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else if (block === 'Testing') renderTestingPage(body); else renderSleepPage(body); } else renderGeneric(body);
         } else if (view === 'json') {
-            ta = el('textarea', { class: 'cfg-json', spellcheck: 'false' }); ta.value = shown(state); if (mask) { ta.readOnly = true; ta.title = 'Hide data is on - switch it off to edit'; } body.appendChild(ta);
+            ta = el('textarea', { class: 'cfg-json', spellcheck: 'false' }); ta.value = shown(state); if (mask) { ta.readOnly = true; ta.title = 'Hide data is on - switch it off to edit'; }
+            ta.addEventListener('input', function () {
+                if (ta.readOnly) return;
+                try {
+                    var parsedLive = JSON.parse(ta.value);
+                    restoreSecrets(parsedLive, state); state = parsedLive;
+                    ta.style.outline = ''; update();
+                    if (dirtyLbl && dirty()) dirtyLbl.style.color = '';
+                } catch (e) {
+                    ta.style.outline = '2px solid #c0392b';
+                    if (dirtyLbl) { dirtyLbl.textContent = '⚠ invalid JSON: ' + e.message; dirtyLbl.style.color = '#c0392b'; }
+                }
+            });
+            body.appendChild(ta);
         } else body.appendChild(simpleDiff());
+        if (view === 'form') makeCollapsible(body);
         root.appendChild(body);
 
         saveBtn = el('button', { type: 'button', class: 'cfg-btn p', text: 'Save', onclick: save });

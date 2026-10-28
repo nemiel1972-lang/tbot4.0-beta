@@ -1,0 +1,39 @@
+# Config entries that no longer exist in this version (one path per line, "# reason" after it).
+# "MigrateConfig" lists them; "MigrateConfig --clean" (or clean_config) removes them from your instance_settings.json
+# after a backup. Only paths listed here are ever removed - your own additions are never touched.
+# Maintainers: add a line whenever an entry is removed or renamed in the code.
+Brain.LifeformAutoMine.MaxT2Building      # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxT3Building      # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding6       # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding7       # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding8       # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding9       # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding10      # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding11      # now taken from lifeform_targets.json
+Brain.LifeformAutoMine.MaxBuilding12      # now taken from lifeform_targets.json
+Brain.AutoMine.DeutPlanets                # no longer exists - use Brain.AutoMine.ColonyOverrides
+Brain.AutoMine.DeutPlanet                 # no longer exists - use Brain.AutoMine.ColonyOverrides
+DeutFarm                                  # renamed to FastFarm
+FastFarm.DefendedRecheckHours             # no longer exists
+FastFarm.RespyAfterAttackMinutes          # no longer exists
+FastFarm.FarmMode                         # no longer exists
+Experimental.AsteroidHunt.MaxSystemOffset # no longer exists
+General.BotPause                          # moved to Experimental.BotPause
+General.CustomTitle                       # no longer exists
+General.ResourceReserve                   # no longer exists
+Brain.AutoRepatriate.Reverse.ReturnAllShips        # no longer exists
+Brain.AutoRepatriate.Reverse.KeepShips             # no longer exists
+Brain.AutoRepatriate.Reverse.OutboundCapacityFactor # no longer exists
+Expeditions.SecondaryShip                 # no longer exists
+Expeditions.MinSecondaryToSend            # no longer exists
+Expeditions.SecondaryToPrimaryRatio       # no longer exists
+AutoFarm.SpeedFleetCargoTypes             # no longer exists
+AutoFarm.MaxWaitTime                      # no longer exists
+AutoDiscovery.MinDelayBetweenSendsMs      # no longer exists
+AutoDiscovery.MaxDelayBetweenSendsMs      # no longer exists
+AutoDiscovery.MaxFailures                 # no longer exists
+AutoDiscovery.RandomizeDestination        # no longer exists
+SleepMode.LogoutOnSleep                   # logout during sleep was removed from the code (no effect)
+AutoFarm.ActiveScan                       # background scanner removed - the galaxy scanner and the normal AutoFarm scan cover it
+AutoFarm.Block11MinCount                  # went with ActiveScan
+AutoFarm.Block11MaxAgeHours               # went with ActiveScan

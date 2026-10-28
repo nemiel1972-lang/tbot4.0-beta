@@ -48,6 +48,10 @@ namespace Tbot.Workers {
 			}
 		}
 
+		public DateTime? NextRunUtc => _timer?.NextFireUtc;
+		public DateTime? LastRunUtc => _timer?.LastEndUtc;
+		public bool IsBusy => _timer != null && _timer.CallbackRunning;
+
 		public WorkerBase(ITBotMain parentInstance) {
 			_tbotInstance = parentInstance;
 		}
@@ -69,9 +73,17 @@ namespace Tbot.Workers {
 			_tbotInstance.log(level, GetLogSender(), format);
 		}
 
+		protected virtual void OnWorkerStarting() { }
+
+		private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _workerAus = new();
+		private string WorkerSchluessel => $"{_tbotInstance.InstanceAlias}|{GetWorkerName()}";
+		private bool WorkerIstAus => _workerAus.TryGetValue(WorkerSchluessel, out var aus) && aus;
+		private bool MeldeAus() { bool war = WorkerIstAus; _workerAus[WorkerSchluessel] = true; return !war; }
+
 		public async Task StartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
 
-			DoLog(LogLevel.Information, $"Starting Worker \"{GetWorkerName()}\"..");
+			DoLog(WorkerIstAus ? LogLevel.Debug : LogLevel.Information, $"Starting Worker \"{GetWorkerName()}\"..");
+			try { OnWorkerStarting(); } catch (Exception) {  }
 
 			await StopWorker();
 
@@ -87,9 +99,10 @@ namespace Tbot.Workers {
 		public async Task StopWorker() {
 			RemoveAllTimers();
 			if (_timer != null) {
-				DoLog(LogLevel.Information, $"Closing Worker \"{GetWorkerName()}\"..");
+				var schliessenLevel = WorkerIstAus ? LogLevel.Debug : LogLevel.Information;
+				DoLog(schliessenLevel, $"Closing Worker \"{GetWorkerName()}\"..");
 				await _timer.DisposeAsync();
-				DoLog(LogLevel.Information, $"Worker \"{GetWorkerName()}\" closed!");
+				DoLog(schliessenLevel, $"Worker \"{GetWorkerName()}\" closed!");
 				_timer = null;
 			}
 			await Task.WhenAll(_celestialWorkers.Values.ToList().Select(w => w.StopWorker()));
@@ -224,19 +237,23 @@ namespace Tbot.Workers {
 		}
 #endif
 
-		private async Task ExecutionWrapper(CancellationToken ct) {
+		protected Task RunNowAsync(bool ignoreSwitches = false) => ExecutionWrapper(_ct, ignoreSwitches);
+
+		private Task ExecutionWrapper(CancellationToken ct) => ExecutionWrapper(ct, false);
+
+		private async Task ExecutionWrapper(CancellationToken ct, bool ignoreSwitches) {
 			TBot.Ogame.Infrastructure.RequestStats.Current.Value = GetWorkerName();
 
 			if (_tbotInstance.UserData.isSleeping == true) {
 				DoLog(LogLevel.Debug, $"Sleeping... Ending {GetWorkerName()}");
 				await EndExecution();
 				return;
-			} else if (IsWorkerEnabledBySettings() == false) {
-				DoLog(LogLevel.Information, $"{GetWorkerName()} not enabled by settings. Ending...");
+			} else if (IsWorkerEnabledBySettings() == false && !ignoreSwitches) {
+				DoLog(MeldeAus() ? LogLevel.Information : LogLevel.Debug, $"{GetWorkerName()} not enabled by settings. Ending...");
 				await EndExecution();
 				return;
 #if FASTFARM
-			} else if (IsSuppressedByFastFarm()) {
+			} else if (!ignoreSwitches && IsSuppressedByFastFarm()) {
 				int zugang = FastFarmBuildAccess(out TimeSpan fastFarmWait);
 				if (zugang == 2) {
 					DoLog(LogLevel.Debug, $"{GetWorkerName()}: FastFarm is active, next construction check in {fastFarmWait:hh\\:mm\\:ss}.");
@@ -244,12 +261,14 @@ namespace Tbot.Workers {
 					return;
 				}
 				if (zugang == 0) {
-					DoLog(LogLevel.Information, $"{GetWorkerName()} is switched off while FastFarm is active. Ending...");
+					DoLog(MeldeAus() ? LogLevel.Information : LogLevel.Debug, $"{GetWorkerName()} is switched off while FastFarm is active. Ending...");
 					await EndExecution();
 					return;
 				}
 #endif
 			}
+
+			_workerAus[WorkerSchluessel] = false;
 
 			var pauseGate = _tbotInstance.PauseGateDelay(GetFeature());
 			if (pauseGate != null) {

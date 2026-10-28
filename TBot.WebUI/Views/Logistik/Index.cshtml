@@ -1,0 +1,203 @@
+@{
+    var instances = (IReadOnlyList<string>) ViewBag.Instances;
+    var selected = (string) ViewBag.Selected;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/autofarm.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tbot-theme.css" asp-append-version="true" />
+    <style>
+        .lg-card { margin: 14px 0; padding: 12px 14px; border: 1px solid rgba(128,128,128,.35); border-radius: 8px; }
+        .lg-card h2 { font-size: 1.05rem; margin: 0 0 6px; }
+        .lg-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 6px 0 10px; }
+        .lg-table th, .lg-table td { padding: 3px 8px; text-align: right; border-bottom: 1px solid rgba(128,128,128,.25); white-space: nowrap; }
+        .lg-table th:first-child, .lg-table td:first-child { text-align: left; }
+        .lg-warn { color: #e0a030; font-weight: 600; }
+        .lg-bad { color: #d9534f; font-weight: 600; }
+        .lg-ok { color: #2ea36b; }
+        .lg-muted { opacity: .7; font-size: .85rem; }
+        .lg-scroll { overflow-x: auto; }
+        .lg-skip { opacity: .55; }
+        .lg-form label { margin-right: 14px; }
+        .lg-form input { width: 5.5em; }
+        .lg-grid { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+        .lg-grid div span { opacity: .7; margin-right: 4px; }
+    </style>
+}
+
+<div class="autofarm-page tbot-dark" id="lg-page" data-instance="@selected">
+    <div class="autofarm-shell">
+        <header class="autofarm-header">
+            <div>
+                <h1>Logistics</h1>
+                <p class="intro">Calculation only: what it would take to bring everything from all celestials to the base before sleep. The bot sends nothing. Phase 1 shows how many transporters are missing on each celestial, phase 2 the flight times, the slots needed and the latest start. Classic = the ships lie on the celestial, reverse = they fly from the base and back.</p>
+            </div>
+            <form method="get" class="instance-picker" style="@(instances.Count <= 1 ? "display:none" : null)">
+                <label for="instance">Instance</label>
+                <div class="instance-controls">
+                    <select id="instance" name="instance">
+                        @foreach (var instance in instances)
+                        {
+                            if (string.Equals(instance, selected, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@instance" data-name="@instance" selected>*****</option>
+                            }
+                            else
+                            {
+                                <option value="@instance" data-name="@instance">*****</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="refresh-button">Open</button>
+                </div>
+            </form>
+        </header>
+
+        <div class="dashboard-toolbar" role="status" aria-live="polite">
+            <span id="lg-status">Loading data...</span>
+            <span id="lg-updated"></span>
+            <button type="button" class="refresh-button" id="lg-recalc" style="margin-left:12px">Recalculate</button>
+            <label style="margin-left:auto"><input type="checkbox" id="lg-mask" /> Hide data</label>
+        </div>
+
+        <div id="lg-content"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    (function () {
+        var page = document.getElementById('lg-page');
+        var instance = page.getAttribute('data-instance');
+        var content = document.getElementById('lg-content');
+        var statusEl = document.getElementById('lg-status');
+        var updatedEl = document.getElementById('lg-updated');
+        var maskEl = document.getElementById('lg-mask');
+        var recalcBtn = document.getElementById('lg-recalc');
+        var last = null, waiting = false;
+        maskEl.checked = window.tbotHideData.get();
+
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+        function mask(s) { return maskEl.checked ? '*****' : esc(s); }
+        function n(v) { return v == null ? '-' : Number(v).toLocaleString(); }
+        function dur(sec) {
+            if (sec == null) return '-';
+            if (sec < 0) return '<span class="lg-bad">not possible</span>';
+            var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+            return h > 0 ? h + 'h ' + ('0' + m).slice(-2) + 'm' : m + 'm ' + ('0' + s).slice(-2) + 's';
+        }
+        function when(iso) { return iso ? new Date(iso).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '<span class="lg-bad">not possible</span>'; }
+
+        function render(res) {
+            if (!res || !res.available) {
+                statusEl.textContent = res && res.pending ? 'Calculating...' : 'No data yet';
+                updatedEl.textContent = '';
+                content.innerHTML = settingsCard(res) + '<div class="lg-card"><p>No plan yet. Press <strong>Recalculate</strong>; the bot reads resources and ships of all celestials (a few seconds per celestial) and writes the plan. To keep it updated automatically every 15 minutes, create an empty file <code>logistik.on</code> in the program folder and restart the bot.</p></div>';
+                return;
+            }
+            var d = res.data;
+            statusEl.textContent = res.pending ? 'Calculating...' : 'Plan ready';
+            updatedEl.textContent = d.updated ? 'Updated ' + new Date(d.updated).toLocaleString() : '';
+            var h = settingsCard(res);
+            var sl = d.slots || {}, p1 = d.phase1 || {}, p2 = d.phase2 || {};
+            h += '<div class="lg-card"><h2>Overview</h2><div class="lg-grid">'
+                + '<div><span>Base</span>' + mask(d.base) + '</div>'
+                + '<div><span>Transporters</span>' + esc((d.cargoTypes || []).join(', ')) + '</div>'
+                + '<div><span>Slots total</span>' + sl.total + '</div><div><span>in use</span>' + sl.inUse + '</div><div><span>free now</span>' + sl.free + '</div>'
+                + '<div><span>kept free (SlotsToLeaveFree)</span>' + sl.leaveFree + '</div>'
+                + '<div><span>usable now</span>' + sl.now + '</div><div><span>usable with reservation</span>' + sl.plan + '</div>'
+                + (sl.transportsMax ? '<div><span>Brain.Transports.MaxSlots</span>' + sl.transportsMax + '</div>' : '')
+                + '<div><span>Collectable now</span>' + n(p2.collectableNow) + '</div></div></div>';
+            var short = p1.shortAtBase > 0;
+            h += '<div class="lg-card"><h2>Phase 1: transporters on the celestials</h2><div class="lg-grid">'
+                + '<div><span>Missing (' + esc(p1.type) + ')</span>' + n(p1.missingTotal) + '</div>'
+                + '<div><span>Available at the base</span>' + n(p1.atBase) + '</div>'
+                + '<div><span>Short at the base</span>' + (short ? '<span class="lg-bad" style="opacity:1">' + n(p1.shortAtBase) + '</span>' : '<span class="lg-ok" style="opacity:1">0</span>') + '</div>'
+                + '<div><span>Longest outbound flight</span>' + dur(p1.maxOutSec) + '</div>'
+                + '<div><span>Deuterium for the outbound flights</span>' + n(p1.fuel) + '</div></div>'
+                + '<div class="lg-muted">Needed capacity per celestial = (stock + production over the horizon, capped by storage, minus the deuterium that stays) plus the buffer. Existing transporters on the celestial are counted.</div></div>';
+            h += sleepCard(d);
+            h += '<div class="lg-card"><h2>Celestials</h2><div class="lg-scroll"><table class="lg-table"><tr><th>Celestial</th><th>Collectable now</th><th>Projected</th><th>Needed capacity</th><th>Transporters there</th><th>Capacity there</th><th>Missing</th><th>Outbound</th><th>Home (classic)</th><th>Reverse (out + back)</th></tr>';
+            (d.celestials || []).forEach(function (c) {
+                var nm = mask(c.name) + ' <span class="lg-muted">' + mask(c.coord) + (c.moon ? ' (moon)' : '') + '</span>';
+                if (c.status === 'skipped') { h += '<tr class="lg-skip"><td>' + nm + '</td><td colspan="9" style="text-align:left">skipped: ' + esc(c.reason) + '</td></tr>'; return; }
+                if (c.status === 'nothing') { h += '<tr class="lg-skip"><td>' + nm + '</td><td colspan="9" style="text-align:left">nothing to collect</td></tr>'; return; }
+                var have = Object.keys(c.have || {}).map(function (k) { return n(c.have[k]) + ' ' + esc(k); }).join(', ') || '0';
+                h += '<tr><td>' + nm + '</td><td>' + n(c.now && c.now.collectable) + '</td><td>' + n(c.projected) + '</td><td>' + n(c.need) + '</td><td>' + have + '</td><td>' + n(c.haveCapacity) + '</td><td>'
+                    + (c.missing > 0 ? '<span class="lg-warn">' + n(c.missing) + '</span>' : '0') + '</td><td>' + dur(c.outSec) + '</td><td>' + dur(c.homeSec) + '</td><td>' + dur(c.reverseSec)
+                    + (c.reverseShips ? ' <span class="lg-muted">(' + n(c.reverseShips) + ' ships)</span>' : '') + '</td></tr>';
+            });
+            h += '</table></div><div class="lg-muted">Flight times at 100 % speed (deploy). Stock and production come from the last bot refresh; the real amounts are only known when the ships start.</div></div>';
+            content.innerHTML = h;
+        }
+
+        function sleepCard(d) {
+            var sl = d.sleep || [], r = (d.settings || {}).reserveMinutes;
+            if (!sl.length) return '<div class="lg-card"><h2>Phase 2: collecting before sleep</h2><div class="lg-muted">No sleep time found (SleepMode / GhostSleep: GoToSleep).</div></div>';
+            var h = '<div class="lg-card"><h2>Phase 2: collecting before sleep</h2><div class="lg-muted" style="margin-bottom:6px">Latest start so that everything has arrived at the base at the start of sleep, minus ' + r + ' min reserve. "Plan" assumes the slots are reserved (all slots except the ones kept free), "now" uses the slots free right now. ' + ((d.phase2 || {}).fleets || 0) + ' fleets (one per celestial) would be needed.</div>';
+            sl.forEach(function (s) {
+                h += '<div style="margin-top:6px"><strong>' + esc(s.name) + '</strong> <span class="lg-muted">' + (s.active ? 'active' : 'not active') + ', goes to sleep ' + when(s.next) + '</span></div>';
+                h += '<div class="lg-scroll"><table class="lg-table"><tr><th>Variant</th><th>Slots</th><th>Waves</th><th>Total time</th><th>Latest start</th></tr>';
+                [['Classic, slots reserved', 'ClassicPlan', d.slots.plan], ['Classic, slots free now', 'ClassicNow', d.slots.now], ['Reverse, slots reserved', 'ReversePlan', d.slots.plan], ['Reverse, slots free now', 'ReverseNow', d.slots.now]].forEach(function (v) {
+                    var tot = s['total' + v[1]];
+                    h += '<tr><td>' + v[0] + '</td><td>' + v[2] + '</td><td>' + (s['waves' + v[1]] < 0 ? '-' : s['waves' + v[1]]) + '</td><td>' + dur(tot) + '</td><td>' + when(s['start' + v[1]]) + '</td></tr>';
+                });
+                h += '</table></div>';
+            });
+            return h + '</div>';
+        }
+
+        function settingsCard(res) {
+            var s = (res && res.settings) || { BufferPercent: 20, HorizonHours: 24, ReserveMinutes: 20 };
+            return '<div class="lg-card"><h2>Calculation settings</h2><div class="lg-form">'
+                + '<label>Buffer <input type="number" id="lg-buf" min="0" max="500" step="1" value="' + s.BufferPercent + '"> %</label>'
+                + '<label>Production horizon <input type="number" id="lg-hor" min="0" max="240" step="1" value="' + s.HorizonHours + '"> hours</label>'
+                + '<label>Time reserve before sleep <input type="number" id="lg-res" min="0" max="600" step="1" value="' + s.ReserveMinutes + '"> min</label>'
+                + '<button type="button" class="refresh-button" id="lg-save">Save and recalculate</button></div>'
+                + '<div class="lg-muted">Buffer = surplus on top of the expected amount. Horizon = hours of production added to the current stock (a day = 24).</div></div>';
+        }
+
+        function post(url, body) {
+            return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() }).then(function (r) { return r.json(); });
+        }
+        function startWait() { waiting = true; statusEl.textContent = 'Calculating...'; var t = 0; var iv = setInterval(function () { t++; load(function (res) { if (!res.pending || t > 60) { clearInterval(iv); waiting = false; } }); }, 4000); }
+
+        content.addEventListener('click', function (ev) {
+            if (ev.target && ev.target.id === 'lg-save') {
+                var b = new URLSearchParams();
+                b.set('instance', instance);
+                b.set('bufferPercent', document.getElementById('lg-buf').value);
+                b.set('horizonHours', document.getElementById('lg-hor').value);
+                b.set('reserveMinutes', document.getElementById('lg-res').value);
+                post('@Url.Action("SaveSettings", "Logistik")', b).then(function (r) {
+                    if (!r.success) { statusEl.textContent = 'Could not save: ' + (r.error || ''); return; }
+                    startWait();
+                }).catch(function () { statusEl.textContent = 'Could not save'; });
+            }
+        });
+        recalcBtn.addEventListener('click', function () {
+            var b = new URLSearchParams(); b.set('instance', instance);
+            post('@Url.Action("Recalc", "Logistik")', b).then(function (r) { if (r.success) startWait(); else statusEl.textContent = 'Could not start: ' + (r.error || ''); });
+        });
+
+        function load(cb) {
+            fetch('@Url.Action("Snapshot", "Logistik")?instance=' + encodeURIComponent(instance), { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) { var keep = document.activeElement && document.activeElement.tagName === 'INPUT' && /^lg-/.test(document.activeElement.id || ''); last = res; if (!keep) render(res); if (cb) cb(res); })
+                .catch(function () { statusEl.textContent = 'Could not load data'; });
+        }
+        function maskInstances() {
+            var opts = document.querySelectorAll('#instance option');
+            for (var i = 0; i < opts.length; i++) opts[i].textContent = maskEl.checked ? '*****' : (opts[i].getAttribute('data-name') || '');
+        }
+        maskInstances();
+        maskEl.addEventListener('change', function () {
+            window.tbotHideData.set(maskEl.checked);
+            maskInstances();
+            if (last) render(last);
+        });
+        load();
+        setInterval(function () { if (!waiting) load(); }, 60000);
+    })();
+    </script>
+}

@@ -47,6 +47,9 @@ cp config/config.vorlage.json "$AUSGABE/config/"
 
 # Field-by-field explanation of the config template
 cp config/REFERENCE.md "$AUSGABE/config/REFERENCE.md"
+# Kommentierte Referenz (alle Eintraege mit ##-Erklaerung, nicht lauffaehig), deutsch und englisch
+cp config/instance_settings_kommentiert_de.txt "$AUSGABE/config/instance_settings_kommentiert_de.txt"
+cp config/instance_settings_kommentiert_en.txt "$AUSGABE/config/instance_settings_kommentiert_en.txt"
 
 # LF target table: the Lifeform AutoMine needs it next to the config (without it LF building is skipped)
 cp config/lifeform_targets.json "$AUSGABE/lifeform_targets.json"
@@ -57,6 +60,12 @@ echo "== MigrateConfig (win-x64) =="
 (cd tools/MigrateConfig && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true \
   -p:TemplatePath="$OLDPWD/$AUSGABE/config/config.vorlage.json" -p:DebugType=none -p:DebugSymbols=false \
   -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: MigrateConfig build failed (package is built without it)."
+
+# Standalone plausibility check of the config (read-only, same rules as the start page). A failure here never stops the package build.
+echo "== ConfigDoctor (win-x64) =="
+(cd tools/ConfigDoctor && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true \
+  -p:DebugType=none -p:DebugSymbols=false \
+  -o "$OLDPWD/$AUSGABE" -nologo -clp:"ErrorsOnly;Summary") || echo "WARNING: ConfigDoctor build failed (package is built without it)."
 rm -f "$AUSGABE"/*.pdb
 
 # Update helper: the "Install update" button on the WebUI start page starts it. It replaces the files after the bot has stopped
@@ -77,6 +86,13 @@ TBot.exe
 pause
 BAT
 
+cat > "$AUSGABE/clean_config.bat" <<'BAT'
+@echo off
+rem Removes config entries that no longer exist in this version. Shows the list, asks, makes a backup first.
+cd /d "%~dp0"
+MigrateConfig.exe --clean %*
+BAT
+
 cat > "$AUSGABE/README.txt" <<'TXT'
 TBot for Windows
 ================
@@ -86,12 +102,16 @@ It contains NO config, credentials or data - you create those yourself (steps be
 Folder contents
   TBot.exe, ogamed.exe     the bot and the connector (keep them in the same folder)
   start.bat                starts the bot in this folder
+  clean_config.bat         removes config entries that no longer exist (asks first, makes a backup)
   lifeform_targets.json    target table for Lifeform AutoMine (keep it next to TBot.exe)
   MigrateConfig.exe        takes an old config over into the new template (see "Updating from an older version")
+  ConfigDoctor.exe         checks the config for implausible values (read-only; exit code 0 = ok, 1 = warnings, 2 = errors)
   TBotUpdater.exe          helper for "Install update" in the WebUI (do not start it by hand)
   version.txt              the installed version (used by the update check)
   config\config.vorlage.json   anonymised template for the instance config
   config\REFERENCE.md          explains every field of the template (start with "New account quick start")
+  config\instance_settings_kommentiert_en.txt   every setting with a ## explanation, English (reading aid, NOT a working config)
+  config\instance_settings_kommentiert_de.txt   the same in German
   (the two native DLLs next to TBot.exe belong to the bot, do not delete them)
 
 First start
@@ -131,6 +151,8 @@ Updating from an older version or from the original TBot
   before it writes anything. It makes a backup in backups\config-<time>, keeps ALL your old values, adds the new
   settings with default values and switches every new worker OFF. Options: --dry-run (only show), --yes (no question).
   Afterwards: restart the bot and CHECK the config - especially Lifeform AutoMine (see lifeform_targets.json).
+  Old entries that no longer exist stay in your file (and are listed as "not used by this version"). Run clean_config.bat when you want
+  them removed: it shows the list, asks, and makes a backup first. Only entries from its built-in list are removed, never your own ones.
 
 Notes about this build
   - Lifeform AutoMine needs lifeform_targets.json. If it is missing, LF building is skipped (warning in the log).
@@ -143,7 +165,7 @@ Notes about this build
 TXT
 
 # Windows-friendly line endings for the text files
-sed -i 's/$/\r/' "$AUSGABE/README.txt" "$AUSGABE/start.bat"
+sed -i 's/$/\r/' "$AUSGABE/README.txt" "$AUSGABE/start.bat" "$AUSGABE/clean_config.bat"
 
 if command -v zip >/dev/null 2>&1; then
   (cd dist && rm -f TBot-win-x64.zip && zip -qr TBot-win-x64.zip TBot-win-x64)

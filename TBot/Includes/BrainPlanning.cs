@@ -18,7 +18,7 @@ namespace Tbot.Includes {
 				Buildables.Terraformer => 0,
 				Buildables.SolarPlant or Buildables.FusionReactor => 1,
 				Buildables.Crawler or Buildables.MetalStorage or Buildables.CrystalStorage or Buildables.DeuteriumTank => 2,
-				Buildables.RoboticsFactory or Buildables.NaniteFactory or Buildables.Shipyard or Buildables.ResearchLab or Buildables.MissileSilo or Buildables.SpaceDock => 3,
+				Buildables.RoboticsFactory or Buildables.NaniteFactory or Buildables.Shipyard or Buildables.ResearchLab or Buildables.MissileSilo or Buildables.SpaceDock or Buildables.InterstellarAnomalyScanner => 3,
 				Buildables.MetalMine or Buildables.CrystalMine or Buildables.DeuteriumSynthesizer => 4,
 				_ => 5
 			};

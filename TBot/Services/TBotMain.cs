@@ -130,7 +130,25 @@ namespace Tbot.Services {
 			}
 		}
 
+		private void ConfigureCollectLogs() {
+			try {
+				bool aktiv = false, anonym = true;
+				double stunden = 12;
+				if (SettingsService.IsSettingSet(InstanceSettings, "Experimental") && SettingsService.IsSettingSet(InstanceSettings.Experimental, "CollectLogs")) {
+					var c = InstanceSettings.Experimental.CollectLogs;
+					aktiv = SettingsService.IsSettingSet(c, "Active") && (bool) c.Active;
+					if (SettingsService.IsSettingSet(c, "Hours"))
+						stunden = (double) c.Hours;
+					if (SettingsService.IsSettingSet(c, "Anonymize"))
+						anonym = (bool) c.Anonymize;
+				}
+				TBot.Common.Logging.CollectLogs.Configure(aktiv, stunden, anonym);
+			} catch (Exception) {
+			}
+		}
+
 		private Credentials GetCredentialsFromSettings() {
+			ConfigureCollectLogs();
 			TBot.Common.Logging.LogAnonymizer.Enabled = SettingsService.IsSettingSet(InstanceSettings.General, "AnonymizeLogs") && (bool) InstanceSettings.General.AnonymizeLogs;
 			TBot.Common.Logging.LogAnonymizer.Register((string) InstanceSettings.Credentials.Email, "[Email]");
 			TBot.Common.Logging.LogAnonymizer.Register((string) InstanceSettings.Credentials.Universe, "[Universe]");
@@ -425,6 +443,8 @@ namespace Tbot.Services {
 			log(LogLevel.Information, LogSender.Tbot, "Initializing data...");
 			userData.celestials = await _tbotOgameBridge.GetPlanets();
 			userData.researches = await _tbotOgameBridge.UpdateResearches();
+			_ = Task.Run(() => Tbot.Workers.RewardsCapture.Loop(this, _ogameService, userData.celestials, cts.Token));
+			_ = Task.Run(() => Tbot.Workers.LogistikPlaner.Loop(this, _tbotOgameBridge, _helpersService, cts.Token));
 			await _fleetScheduler.ReconcilePendingRecalls();
 			userData.scheduledFleets = new();
 			userData.farmTargets = new();
@@ -434,6 +454,8 @@ namespace Tbot.Services {
 				InstanceSettings = await SettingsService.GetSettings(InstanceSettingsPath);
 			}
 
+			RunConfigDoctor(true);
+
 			ConfigureDiscordWebhook();
 
 			InitializeSleepMode();
@@ -442,12 +464,39 @@ namespace Tbot.Services {
 
 			InitializeSleepStatusWriter();
 
+			_defenderTestTimer = new Timer(DefenderTestPoll, null, 5000, 3000);
+
 			settingsWatcher = new SettingsFileWatcher(OnSettingsChanged, InstanceSettingsPath,
 				new[] { SettingsService.DefaultLoadDirectory + "/**/*.json", SettingsService.SecretsDirectory + "/**/*.json" });
 		}
 
+		private Timer _defenderTestTimer;
+		private int _defenderTestBusy;
+		private async void DefenderTestPoll(object state) {
+			if (System.Threading.Interlocked.Exchange(ref _defenderTestBusy, 1) == 1)
+				return;
+			try {
+				string req = Tbot.Workers.DefenderTest.RequestPath(InstanceAlias);
+				if (!System.IO.File.Exists(req))
+					return;
+				string text = System.IO.File.ReadAllText(req);
+				System.IO.File.Delete(req);
+				var lines = await Tbot.Workers.DefenderTest.Run(this, Newtonsoft.Json.Linq.JObject.Parse(text));
+				var result = new { updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), lines };
+				string target = Tbot.Workers.DefenderTest.ResultPath(InstanceAlias);
+				System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target));
+				AtomicFile.WriteAllText(target, Newtonsoft.Json.JsonConvert.SerializeObject(result));
+				log(LogLevel.Information, LogSender.Defender, $"Defender test run ({lines.Count} lines, nothing was sent).");
+			} catch (Exception e) {
+				log(LogLevel.Debug, LogSender.Defender, $"Defender test failed: {e.Message}");
+			} finally {
+				System.Threading.Interlocked.Exchange(ref _defenderTestBusy, 0);
+			}
+		}
+
 		public async ValueTask DisposeAsync() {
 			log(LogLevel.Information, LogSender.Tbot, "Deinitializing instance...");
+			try { _defenderTestTimer?.Dispose(); } catch { }
 
 			if (settingsWatcher != null) {
 				settingsWatcher.deinitWatch();
@@ -713,6 +762,7 @@ namespace Tbot.Services {
 
 				log(LogLevel.Information, LogSender.Tbot, "Reloading Settings file");
 				InstanceSettings = newSettings;
+				ConfigureCollectLogs();
 				ConfigureDiscordWebhook();
 
 				cts = new();
@@ -2231,6 +2281,12 @@ namespace Tbot.Services {
 			}
 			timers.Add("SleepStatusTimer", new Timer(HandleSleepStatusWrite, null, 5000, SleepStatusTickMs));
 
+			if (timers.TryGetValue("StartDataTimer", out Timer oldSd)) {
+				oldSd.Dispose();
+				timers.Remove("StartDataTimer");
+			}
+			timers.Add("StartDataTimer", new Timer(HandleStartDataRefresh, null, 12000, 60 * 1000));
+
 			if (timers.TryGetValue("SlotCmdTimer", out Timer oldCmd)) {
 				oldCmd.Dispose();
 				timers.Remove("SlotCmdTimer");
@@ -2271,6 +2327,7 @@ namespace Tbot.Services {
 			,{ "w_lfresearch", "Brain.LifeformAutoResearch.Active" }
 			,{ "w_boosters", "Brain.KeepBoosters.Active" }
 			,{ "w_offer", "Brain.BuyOfferOfTheDay.Active" }
+			,{ "w_jumpgate", "Brain.AutoFleetJumpGate.Active" }
 			,{ "w_colonize", "AutoColonize.Active" }
 		};
 
@@ -2289,6 +2346,7 @@ namespace Tbot.Services {
 				case "w_lfresearch": return new List<Feature> { Feature.BrainLifeformAutoResearch, Feature.BrainCelestialLifeformAutoResearch };
 				case "w_boosters": return new List<Feature> { Feature.BrainKeepBoosters };
 				case "w_offer": return new List<Feature> { Feature.BrainOfferOfTheDay };
+				case "w_jumpgate": return new List<Feature> { Feature.BrainAutoFleetJumpGate };
 				case "w_colonize": return new List<Feature> { Feature.Colonize };
 				case "w_transport": return new List<Feature>();
 				case "w_brain": return Features.AllFeatures.Where(f => f.ToString().StartsWith("Brain")).ToList();
@@ -2314,6 +2372,7 @@ namespace Tbot.Services {
 					case "Brain.LifeformAutoResearch.Active": return (bool) InstanceSettings.Brain.LifeformAutoResearch.Active;
 					case "Brain.KeepBoosters.Active": return (bool) InstanceSettings.Brain.KeepBoosters.Active;
 					case "Brain.BuyOfferOfTheDay.Active": return (bool) InstanceSettings.Brain.BuyOfferOfTheDay.Active;
+					case "Brain.AutoFleetJumpGate.Active": return (bool) InstanceSettings.Brain.AutoFleetJumpGate.Active;
 					case "AutoColonize.Active": return (bool) InstanceSettings.AutoColonize.Active;
 					default: return null;
 				}
@@ -2340,6 +2399,7 @@ namespace Tbot.Services {
 					case "Brain.LifeformAutoResearch.Active": InstanceSettings.Brain.LifeformAutoResearch.Active = v; return true;
 					case "Brain.KeepBoosters.Active": InstanceSettings.Brain.KeepBoosters.Active = v; return true;
 					case "Brain.BuyOfferOfTheDay.Active": InstanceSettings.Brain.BuyOfferOfTheDay.Active = v; return true;
+					case "Brain.AutoFleetJumpGate.Active": InstanceSettings.Brain.AutoFleetJumpGate.Active = v; return true;
 					case "AutoColonize.Active": InstanceSettings.AutoColonize.Active = v; return true;
 					default: return false;
 				}
@@ -2531,6 +2591,110 @@ namespace Tbot.Services {
 			try { await WriteSleepStatusAsync(); } catch { }
 		}
 
+		private int _startDataBusy = 0;
+
+		private object _globalItems = null;
+		private DateTime _globalItemsAt = DateTime.MinValue;
+		private async Task RefreshGlobalItems(List<Celestial> list) {
+			if ((DateTime.UtcNow - _globalItemsAt).TotalMinutes < 10)
+				return;
+			_globalItemsAt = DateTime.UtcNow;
+			try {
+				var planets = list.OfType<Planet>().Take(2).ToList();
+				if (planets.Count == 0)
+					return;
+				var lists = new List<List<ActiveItem>>();
+				foreach (var p in planets) {
+					lists.Add(await _ogameService.GetActiveItems(p) ?? new List<ActiveItem>());
+					await Task.Delay(1500);
+				}
+				var resourceBound = new System.Text.RegularExpressions.Regex("metal|metall|crystal|kristall|deuterium|energy|energie|crawler|raupe", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+				string KeyOf(ActiveItem i) => string.IsNullOrEmpty(i.Ref) ? i.Name : i.Ref;
+				var items = lists[0]
+					.Where(i => !resourceBound.IsMatch(i.Name ?? ""))
+					.Where(i => lists.Skip(1).All(l => l.Any(x => KeyOf(x) == KeyOf(i))))
+					.Select(i => new { name = i.Name, remainingSec = i.TimeRemaining, totalSec = i.TotalDuration, img = i.ImgSmall })
+					.ToList();
+				_globalItems = new { fetchedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), items };
+			} catch (Exception e) {
+				log(LogLevel.Debug, LogSender.Tbot, $"Global items not loaded: {e.Message}");
+			}
+		}
+
+		private DateTime _configCheckAt = DateTime.MinValue;
+		private string _configCheckHash = "";
+		private void RunConfigDoctor(bool force) {
+			try {
+				if (!force && DateTime.UtcNow - _configCheckAt < TimeSpan.FromHours(1))
+					return;
+				_configCheckAt = DateTime.UtcNow;
+				var cfg = SettingsService.ReadResolvedObject(InstanceSettingsPath);
+				var owned = (userData?.celestials ?? new List<Celestial>())
+					.Select(c => ConfigDoctor.CoordKey((int) c.Coordinate.Galaxy, (int) c.Coordinate.System, (int) c.Coordinate.Position, c.Coordinate.Type == Celestials.Moon ? "Moon" : "Planet")).ToList();
+				var findings = ConfigDoctor.Check(cfg, owned);
+				string hash = string.Join("|", findings.Select(x => x.ToString()));
+				if (hash != _configCheckHash) {
+					_configCheckHash = hash;
+					if (findings.Count == 0)
+						log(LogLevel.Information, LogSender.Tbot, "Config check: no problems found.");
+					foreach (var x in findings)
+						log(x.Severity == "info" ? LogLevel.Information : LogLevel.Warning, LogSender.Tbot, $"Config check ({x.Severity}) {x.Path}: {x.Message}");
+				}
+				string dir = Path.Combine(AppContext.BaseDirectory, "data");
+				Directory.CreateDirectory(dir);
+				var tips = new List<ConfigFinding>();
+				var all = findings.Concat(tips).ToList();
+				long startMs = new DateTimeOffset(System.Diagnostics.Process.GetCurrentProcess().StartTime).ToUnixTimeMilliseconds();
+				var file = new { updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), startMs, findings = all.Select(x => new { severity = x.Severity, path = x.Path, message = x.Message }).ToList() };
+				AtomicFile.WriteAllText(Path.Combine(dir, Path.GetFileName($"config_check_{InstanceAlias}.json")), Newtonsoft.Json.JsonConvert.SerializeObject(file));
+			} catch (Exception e) {
+				log(LogLevel.Debug, LogSender.Tbot, $"Config check failed: {e.Message}");
+			}
+		}
+
+		private async void HandleStartDataRefresh(object state) { try {
+			if (Interlocked.Exchange(ref _startDataBusy, 1) == 1)
+				return;
+			try {
+				if (_ghostSleeping || _pauseActive || userData == null || userData.isSleeping || userData.celestials == null)
+					return;
+				var list = userData.celestials.Unique().ToList();
+				bool Stale(Celestial c, string kind, bool hasData) => !hasData || StartDataFreshness.AgeMinutes(c, kind) >= 10;
+				var todo = list
+					.Select(c => new {
+						c,
+						res = Stale(c, StartDataFreshness.Resources, c.Resources != null),
+						ships = Stale(c, StartDataFreshness.Ships, c.Ships != null),
+						prod = c is Planet && Stale(c, StartDataFreshness.Production, c.ResourcesProduction != null),
+						age = Math.Max(StartDataFreshness.AgeMinutes(c, StartDataFreshness.Resources), StartDataFreshness.AgeMinutes(c, StartDataFreshness.Ships))
+					})
+					.Where(x => x.res || x.ships || x.prod)
+					.OrderByDescending(x => x.age)
+					.ToList();
+				int done = 0;
+				foreach (var x in todo) {
+					var c = x.c;
+					string key = c.Coordinate.ToString();
+					try {
+						if (x.res) await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Resources);
+						if (x.ships) await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
+						if (x.prod) await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.ResourcesProduction);
+					} catch (Exception e) {
+						log(LogLevel.Debug, LogSender.Tbot, $"Start page data for {key} not loaded: {e.Message}");
+					}
+					if (++done % 4 == 0 && done < todo.Count)
+						await WriteSleepStatusAsync();
+					await Task.Delay(1500);
+				}
+				RunConfigDoctor(false);
+				await RefreshGlobalItems(list);
+				await WriteSleepStatusAsync();
+			} finally {
+				Interlocked.Exchange(ref _startDataBusy, 0);
+			}
+		} catch (Exception ex) { log(LogLevel.Debug, LogSender.Tbot, $"Start page refresh: {ex.Message}"); }
+		}
+
 		private async void HandleSleepStatusWrite(object state) { try {
 			try {
 				await WriteSleepStatusAsync();
@@ -2704,6 +2868,7 @@ namespace Tbot.Services {
 				lfresearch = ReadBoolSetting("Brain.LifeformAutoResearch.Active"),
 				boosters = ReadBoolSetting("Brain.KeepBoosters.Active"),
 				offer = ReadBoolSetting("Brain.BuyOfferOfTheDay.Active"),
+				jumpgate = ReadBoolSetting("Brain.AutoFleetJumpGate.Active"),
 				colonize = ReadBoolSetting("AutoColonize.Active")
 			};
 
@@ -2722,10 +2887,17 @@ namespace Tbot.Services {
 				var cel = userData?.celestials;
 				if (ui != null) {
 					long m = 0, k = 0, d = 0, dm = 0;
-					int planets = 0, moons = 0, withResources = 0;
+					long pm = 0, pk = 0, pd = 0;
+					int planets = 0, moons = 0, withResources = 0, withProd = 0;
 					if (cel != null) {
 						foreach (var c in cel) {
 							if (c?.Coordinate?.Type == Celestials.Moon) moons++; else planets++;
+							if (c?.ResourcesProduction != null) {
+								withProd++;
+								pm += c.ResourcesProduction.Metal?.CurrentProduction ?? 0;
+								pk += c.ResourcesProduction.Crystal?.CurrentProduction ?? 0;
+								pd += c.ResourcesProduction.Deuterium?.CurrentProduction ?? 0;
+							}
 							if (c?.Resources != null) {
 								withResources++;
 								m += c.Resources.Metal; k += c.Resources.Crystal; d += c.Resources.Deuterium;
@@ -2739,6 +2911,7 @@ namespace Tbot.Services {
 						playerClass = ui.Class.ToString(),
 						rank = ui.Rank, total = ui.Total, points = ui.Points,
 						planets, moons,
+						prodPerHour = withProd > 0 ? new { metal = pm, crystal = pk, deuterium = pd, planets = withProd } : null,
 						metal = withResources > 0 ? (long?) m : null, crystal = withResources > 0 ? (long?) k : null,
 						deuterium = withResources > 0 ? (long?) d : null, darkmatter = withResources > 0 ? (long?) dm : null,
 						artifacts = userData.artifactsCollected >= 0 ? (long?) userData.artifactsCollected : null,
@@ -2746,6 +2919,58 @@ namespace Tbot.Services {
 					};
 				}
 			} catch { account = null; }
+
+			object fleetStock = null;
+			try {
+				var celestials = userData?.celestials;
+				if (celestials != null) {
+					var totals = new Dictionary<string, long>();
+					int known = 0;
+					long points = 0;
+					foreach (var c in celestials) {
+						if (c?.Ships == null) continue;
+						known++;
+						points += c.Ships.GetFleetPoints();
+						foreach (var prop in typeof(Ships).GetProperties()) {
+							if (prop.PropertyType != typeof(long) || prop.Name == "SolarSatellite" || prop.Name == "Crawler") continue;
+							long n = (long) prop.GetValue(c.Ships);
+							if (n > 0) totals[prop.Name] = (totals.TryGetValue(prop.Name, out long old) ? old : 0) + n;
+						}
+					}
+					if (known > 0)
+						fleetStock = new { ships = totals.OrderByDescending(t => t.Value).Select(t => new { type = t.Key, count = t.Value }).ToList(), celestials = known, of = celestials.Count, points };
+				}
+			} catch { fleetStock = null; }
+
+			object fleetsRunning = null;
+			try {
+				var fl = userData?.fleets;
+				if (fl != null) {
+					var byMission = fl.GroupBy(f => f.Mission.ToString())
+						.Select(g => new { mission = g.Key, outbound = g.Count(f => !f.ReturnFlight), back = g.Count(f => f.ReturnFlight) })
+						.OrderByDescending(g => g.outbound + g.back).ToList();
+					var next = fl.OrderBy(f => f.ArriveIn).Take(6)
+						.Select(f => new {
+							mission = f.Mission.ToString(), back = f.ReturnFlight,
+							origin = f.Origin?.ToString(), dest = f.Destination?.ToString(),
+							inSec = (long) Math.Max(0, f.ArriveIn),
+							ships = f.Ships?.GetFleetPoints() ?? 0
+						}).ToList();
+					fleetsRunning = new { total = fl.Count, byMission, next, more = Math.Max(0, fl.Count - 6) };
+				}
+			} catch { fleetsRunning = null; }
+
+			object fleetsAnim = null;
+			try {
+				var fa = userData?.fleets;
+				if (fa != null) {
+					fleetsAnim = fa.Take(40).Select(f => new {
+						m = f.Mission.ToString(),
+						b = f.ReturnFlight,
+						a = f.Mission == Missions.Attack || f.Mission == Missions.FederalAttack || f.Mission == Missions.Destroy || f.Mission == Missions.MissileAttack
+					}).ToList();
+				}
+			} catch { fleetsAnim = null; }
 
 			var pauseInfo = new {
 				active = _pauseActive,
@@ -2767,6 +2992,22 @@ namespace Tbot.Services {
 				}
 			} catch { clock = null; }
 
+			object workerRuns = null;
+			try {
+				workerRuns = workers.Select(kv => {
+					var wb = kv.Value as WorkerBase;
+					if (wb == null || !wb.IsWorkerRunning()) return null;
+					var next = wb.NextRunUtc; var last = wb.LastRunUtc;
+					return new {
+						name = kv.Key.ToString(),
+						busy = wb.IsBusy,
+						nextInSec = next.HasValue ? (long?) Math.Max(0, (long) (next.Value - DateTime.UtcNow).TotalSeconds) : null,
+						lastAgoSec = last.HasValue ? (long?) Math.Max(0, (long) (DateTime.UtcNow - last.Value).TotalSeconds) : null,
+						periodSec = wb.Period == System.Threading.Timeout.InfiniteTimeSpan ? null : (long?) wb.Period.TotalSeconds
+					};
+				}).Where(x => x != null).OrderBy(x => x.name).ToList();
+			} catch { workerRuns = null; }
+
 			var payload = new {
 				sleeping,
 				clock,
@@ -2782,9 +3023,14 @@ namespace Tbot.Services {
 				slotUse,
 				slotLimits,
 				workers = workerStates,
+				workerRuns,
+				globalItems = _globalItems,
 				priorities,
 				modeOverride,
 				account,
+				fleetStock,
+				fleetsRunning,
+				fleetsAnim,
 				lang = UiLanguage.Read(),
 				updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			};
