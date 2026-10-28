@@ -16,7 +16,10 @@
       "Fixed: AutoFarm - a target was treated as defended when a ship or defence entry with 0 was in the report",
       "Fixed: Defender - WeakAttackRatio of 0 no longer causes a division by zero",
       "Fixed: captcha solver reads the picture width instead of a fixed size; two wrong entries in its table",
-      "Fixed: the Expeditions page did not load in German; missing German translations added"
+      "Fixed: the Expeditions page did not load in German; missing German translations added",
+      "Fixed: sleep - the sleep status tile and the GhostSleep schedule loaded a game page every 30-60 s while the bot slept (the active celestial changed in the game); now no game request is made for the clock while asleep",
+      "Fixed: no rewards capture and no defender fake activity while the bot sleeps",
+      "Fixed: AutoFarm - targets whose espionage report never arrived stayed skipped forever; they are released after 60 minutes"
     ],
     "de": [
       "Neu: Menüeintrag Bauplanung - Autobuilds (Bauplan) und Minenplan (Bauberechnung) sind Reiter unter einem Eintrag",
@@ -28,7 +31,10 @@
       "Behoben: AutoFarm - ein Ziel galt als verteidigt, wenn im Bericht ein Schiff oder eine Verteidigung mit 0 stand",
       "Behoben: Defender - WeakAttackRatio von 0 verursacht keine Division durch 0 mehr",
       "Behoben: Captcha-Löser liest die Bildbreite statt einer festen Größe; zwei falsche Einträge in seiner Tabelle",
-      "Behoben: Die Seite Expeditionen lud auf Deutsch nicht; fehlende deutsche Übersetzungen ergänzt"
+      "Behoben: Die Seite Expeditionen lud auf Deutsch nicht; fehlende deutsche Übersetzungen ergänzt",
+      "Behoben: Schlaf - die Statuskachel und der GhostSleep-Zeitplan luden alle 30-60 s eine Spielseite, während der Bot schlief (der aktive Himmelskörper wechselte im Spiel); im Schlaf wird für die Uhrzeit jetzt keine Spielanfrage mehr gemacht",
+      "Behoben: keine Rewards-Erfassung und keine Schein-Aktivität des Defenders, solange der Bot schläft",
+      "Behoben: AutoFarm - Ziele, deren Spionagebericht nie ankam, blieben für immer übersprungen; sie werden nach 60 Minuten wieder freigegeben"
     ]
   }
 }

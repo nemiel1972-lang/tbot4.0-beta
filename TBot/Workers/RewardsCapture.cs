@@ -25,6 +25,8 @@ namespace Tbot.Workers {
 					return;
 				while (!ct.IsCancellationRequested) {
 					try {
+						while (inst.IsAsleep || inst.IsBotPaused)
+							await Task.Delay(TimeSpan.FromMinutes(1), ct);
 						if (await Einmal(inst, ogame, celestials)) {
 							AbschaltenNachLetzterBelohnung(inst);
 							return;

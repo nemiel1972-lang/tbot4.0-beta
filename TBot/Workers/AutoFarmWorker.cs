@@ -35,6 +35,8 @@ namespace Tbot.Workers {
 		private readonly AutoFarmStateStore _stateStore;
 		private bool _stateLoaded;
 		private readonly Dictionary<long, int> _nonActionableReportAttempts = new();
+		private readonly Dictionary<string, DateTime> _probesSentSince = new();
+		private const int ProbesSentTimeoutMinutes = 60;
 
 		private bool _defendedHalfToggle;
 
@@ -958,6 +960,7 @@ namespace Tbot.Workers {
 
 		private async Task PruneOldReports(List<Fleet> fleets) {
 			var newTime = await _tbotOgameBridge.GetDateTime();
+			ReleaseStaleProbesSent(fleets);
 			var removeReports = _tbotInstance.UserData.farmTargets.Where(t => t.State == FarmState.AttackSent || (!t.HeldForManualReview && t.Report != null && DateTime.Compare(t.Report.Date.AddMinutes((double) _tbotInstance.InstanceSettings.AutoFarm.KeepReportFor), newTime) < 0)).ToList();
 			int attackGraceSeconds = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "AttackGraceSeconds", 60);
 			foreach (var remove in removeReports) {
@@ -989,6 +992,34 @@ namespace Tbot.Workers {
 				_tbotInstance.UserData.farmTargets.Remove(remove);
 				_tbotInstance.UserData.farmTargets.Add(updateReport);
 			}
+		}
+
+		private void ReleaseStaleProbesSent(List<Fleet> fleets) {
+			var nowUtc = DateTime.UtcNow;
+			var current = _tbotInstance.UserData.farmTargets
+				.Where(t => t != null && t.State == FarmState.ProbesSent && t.Report == null && t.Celestial?.Coordinate != null)
+				.ToList();
+			var keys = new HashSet<string>(current.Select(t => t.Celestial.Coordinate.ToString()));
+			foreach (var gone in _probesSentSince.Keys.Where(k => !keys.Contains(k)).ToList())
+				_probesSentSince.Remove(gone);
+			foreach (var t in current) {
+				string key = t.Celestial.Coordinate.ToString();
+				if (!_probesSentSince.TryGetValue(key, out var since)) {
+					_probesSentSince[key] = nowUtc;
+					continue;
+				}
+				if ((nowUtc - since).TotalMinutes < ProbesSentTimeoutMinutes)
+					continue;
+				bool probeStillFlying = (fleets ?? new List<Fleet>()).Any(f => f != null && f.Mission == Missions.Spy && f.Destination?.IsSame(t.Celestial.Coordinate) == true);
+				if (probeStillFlying)
+					continue;
+				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
+					$"No espionage report arrived for {t} within {ProbesSentTimeoutMinutes} min - target released for a new probe.");
+				t.State = FarmState.ProbesPending;
+				_probesSentSince.Remove(key);
+			}
+			if (current.Any(t => t.State == FarmState.ProbesPending))
+				PersistTargets();
 		}
 
 		private Dictionary<int, long> GetCachedCelestialProbes(List<Celestial> origins) {

@@ -1095,7 +1095,7 @@ namespace Tbot.Services {
 					return;
 				}
 
-				DateTime time = await _tbotOgameBridge.GetDateTime();
+				DateTime time = await GameNowQuiet();
 				bool shouldBeAsleep = ComputeShouldBeAsleep(time, goToSleep, wakeUp);
 
 				int preMinutes = GhostSleepPreSleepMinutes();
@@ -1451,6 +1451,7 @@ namespace Tbot.Services {
 		private volatile bool _pauseStopsDefender = false;
 		private volatile bool _pauseGateMode = false;
 		public bool IsBotPaused => _pauseActive;
+		public bool IsAsleep => _ghostSleeping || (userData != null && userData.isSleeping);
 
 		public bool FastFarmBlocksNewTransports {
 			get {
@@ -2747,10 +2748,20 @@ namespace Tbot.Services {
 			});
 		}
 
+		private TimeSpan? _gameClockOffset;
+
+		private async Task<DateTime> GameNowQuiet() {
+			if (IsAsleep && _gameClockOffset.HasValue)
+				return DateTime.Now + _gameClockOffset.Value;
+			DateTime gameNow = await _tbotOgameBridge.GetDateTime();
+			_gameClockOffset = gameNow - DateTime.Now;
+			return gameNow;
+		}
+
 		private async Task WriteSleepStatusAsync() {
 			DateTime gameNow;
 			try {
-				gameNow = await _tbotOgameBridge.GetDateTime();
+				gameNow = await GameNowQuiet();
 			} catch {
 				gameNow = DateTime.Now;
 			}
