@@ -199,7 +199,7 @@ namespace Tbot.Workers {
 			string low = t.ToLowerInvariant();
 
 			bool hasLevel = Regex.IsMatch(low, "stufe|level");
-			if ((!hasLevel && Regex.IsMatch(low, "allianz|alliance")) || Regex.IsMatch(low, "buddy|umbenenn|rename|charakterklasse|character class|rohstoffh|resource trader|merchant|artefakt|artefact|artifact|rei(ss|ß)e .* ab|abrei|demolish|tear down|technologiebaum|technology tree|lebensform finden|lebensform .*zuweis|assign .*life|find .*life")) {
+			if ((!hasLevel && Regex.IsMatch(low, "allianz|alliance")) || Regex.IsMatch(low, "buddy|umbenenn|benenne .* um\\b|rename|charakterklasse|character class|rohstoffh|resource trader|merchant|artefakt|artefact|artifact|rei(ss|ß)e .* ab|abrei|demolish|tear down|technologiebaum|technology tree|lebensform finden|lebensform .*zuweis|assign .*life|find .*life")) {
 				a.Kind = GoalKind.Manual;
 				return a;
 			}
