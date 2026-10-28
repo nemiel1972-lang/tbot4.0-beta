@@ -419,6 +419,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `MaxDefensePoints` | Skip targets above this defence value. |
 | `MinLootPerDefensePoint` | Skip defended targets whose loot per defence point is too low. |
 | `KeepReportFor` | Minutes a spy report stays valid. |
+| `NotSuitableRetryMinutes` | Optional, default `720`. Minutes after which a target judged unsuitable (loot too small) is probed again; the shorter of this and `KeepReportFor` counts. `0` = same as `KeepReportFor`. |
 | `MaxReportAgeMinutesForAttack` | Hard limit for the age of a spy report right before the defence check (default 120, 0 = off). Older reports are not attacked; the target is queued for a fresh probe. |
 | `MaxAttackDelaySec` | Maximum delay an attack may be postponed to fit the timing (default 600). |
 | `DebrisCreditPercent` | Share of the debris field that counts as profit in the profit calculation, minus recycler fuel (default 80). |

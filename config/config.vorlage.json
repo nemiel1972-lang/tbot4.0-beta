@@ -677,6 +677,7 @@
         "MaxDefensePoints": 50000000,
         "MinLootPerDefensePoint": 20,
         "KeepReportFor": 1440,
+        "NotSuitableRetryMinutes": 720,
         "MaxReportAgeMinutesForAttack": 120,
         "MaxAttackDelaySec": 600,
         "DebrisCreditPercent": 80,

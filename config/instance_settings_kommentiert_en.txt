@@ -1119,6 +1119,8 @@
     "MinLootPerDefensePoint": 20,
     ## Minutes an espionage report counts as valid before the target has to be probed again.
     "KeepReportFor": 1440,
+    ## Minutes after which a target that was found unsuitable (loot too small, not worth it) is probed again. Shorter than KeepReportFor = daily runs reach it again. 0 = same as KeepReportFor.
+    "NotSuitableRetryMinutes": 720,
     ## Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off.
     "MaxReportAgeMinutesForAttack": 120,
     ## Longest time in seconds an attack may be held back so that the recyclers arrive right behind it.

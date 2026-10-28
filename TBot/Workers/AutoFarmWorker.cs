@@ -961,7 +961,10 @@ namespace Tbot.Workers {
 		private async Task PruneOldReports(List<Fleet> fleets) {
 			var newTime = await _tbotOgameBridge.GetDateTime();
 			ReleaseStaleProbesSent(fleets);
-			var removeReports = _tbotInstance.UserData.farmTargets.Where(t => t.State == FarmState.AttackSent || (!t.HeldForManualReview && t.Report != null && DateTime.Compare(t.Report.Date.AddMinutes((double) _tbotInstance.InstanceSettings.AutoFarm.KeepReportFor), newTime) < 0)).ToList();
+			int keepReportMinutes = (int) _tbotInstance.InstanceSettings.AutoFarm.KeepReportFor;
+			int notSuitableRetryMinutes = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "NotSuitableRetryMinutes", 720);
+			double ReportValidMinutes(FarmTarget t) => t.State == FarmState.NotSuitable && notSuitableRetryMinutes > 0 ? Math.Min(keepReportMinutes, notSuitableRetryMinutes) : keepReportMinutes;
+			var removeReports = _tbotInstance.UserData.farmTargets.Where(t => t.State == FarmState.AttackSent || (!t.HeldForManualReview && t.Report != null && DateTime.Compare(t.Report.Date.AddMinutes(ReportValidMinutes(t)), newTime) < 0)).ToList();
 			int attackGraceSeconds = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "AttackGraceSeconds", 60);
 			foreach (var remove in removeReports) {
 				if (remove.State == FarmState.AttackSent) {

@@ -988,6 +988,7 @@
    "Replan with fewer shipments if slots are short": "Mit weniger Sendungen neu planen, wenn Slots knapp sind",
    "Report query limit (not attackable)": "Berichtsabfrage-Limit (nicht angreifbar)",
    "Report valid for": "Bericht gültig für",
+   "Retry unsuitable targets after": "Ungeeignete Ziele erneut prüfen nach",
    "Reports and timing": "Berichte und Timing",
    "Research caps (0 = do not research)": "Forschungslimits (0 = nicht erforschen)",
    "Research even with a low lab": "Auch mit niedrigem Labor forschen",
@@ -2637,6 +2638,9 @@
    },
    "KeepReportFor": {
     "t": "Minuten, die ein Spionagebericht gültig bleibt, bevor das Ziel erneut ausspioniert werden muss."
+   },
+   "NotSuitableRetryMinutes": {
+    "t": "Minuten, nach denen ein als ungeeignet erkanntes Ziel (Beute zu klein, lohnt nicht) erneut ausspioniert wird. Es zählt der kürzere Wert aus diesem und der Berichtsgültigkeit, damit tägliche Läufe solche Ziele wieder erreichen. 0 = wie die Berichtsgültigkeit."
    },
    "MaxReportAgeMinutesForAttack": {
     "t": "Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus."

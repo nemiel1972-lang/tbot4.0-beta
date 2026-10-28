@@ -1119,6 +1119,8 @@
     "MinLootPerDefensePoint": 20,
     ## Minuten, die ein Spionagebericht gültig bleibt, bevor das Ziel erneut ausspioniert werden muss.
     "KeepReportFor": 1440,
+    ## Minuten, nach denen ein als ungeeignet erkanntes Ziel (Beute zu klein, lohnt nicht) erneut ausspioniert wird. Kürzer als KeepReportFor = tägliche Läufe erreichen es wieder. 0 = wie KeepReportFor.
+    "NotSuitableRetryMinutes": 720,
     ## Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus.
     "MaxReportAgeMinutesForAttack": 120,
     ## Längste Zeit in Sekunden, die ein Angriff zurückgehalten werden darf, damit die Recycler direkt dahinter ankommen.

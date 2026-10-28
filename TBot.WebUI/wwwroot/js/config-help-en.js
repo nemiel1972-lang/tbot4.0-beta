@@ -61,6 +61,9 @@ window.CFG_HELP.en = {
   "KeepReportFor": {
    "t": "Minutes an espionage report counts as valid before the target has to be probed again."
   },
+  "NotSuitableRetryMinutes": {
+   "t": "Minutes after which a target that was found unsuitable (loot too small, not worth it) is probed again. The shorter of this value and the report validity counts, so daily runs reach such targets again. 0 = same as the report validity."
+  },
   "MaxReportAgeMinutesForAttack": {
    "t": "Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off."
   },

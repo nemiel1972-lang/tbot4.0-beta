@@ -6,6 +6,7 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - **Config page**: the Expeditions page also shows the expedition moon options (jump gate, supply, slots research) in one place.
 - **ConfigDoctor**: suggestions have a "Known" checkbox that hides a suggestion for good ("Show again" resets it).
 - **Rewards page**: switch for the Telegram messages.
+- **AutoFarm** `NotSuitableRetryMinutes` (default `720`): targets found unsuitable are probed again earlier than `KeepReportFor`, so daily runs reach them again. `0` = same as `KeepReportFor`.
 
 ## Fixed
 - AutoFarm: the number of cargo ships uses the Lifeform cargo bonus of the sending planet, and cargo capacity is checked again right before sending.
@@ -31,6 +32,7 @@ Update as usual. New switches default to off; existing settings keep their behav
 - **Config-Seite**: Die Seite Expeditionen zeigt auch die Expeditionsmond-Optionen (Sprungtor, Versorgung, Slot-Forschung) an einer Stelle.
 - **ConfigDoctor**: Hinweise haben ein Häkchen „Bekannt“, das einen Hinweis dauerhaft ausblendet („Wieder anzeigen“ setzt es zurück).
 - **Belohnungen-Seite**: Schalter für die Telegram-Meldungen.
+- **AutoFarm** `NotSuitableRetryMinutes` (Standard `720`): als ungeeignet erkannte Ziele werden früher erneut ausspioniert als nach `KeepReportFor`, damit tägliche Läufe sie wieder erreichen. `0` = wie `KeepReportFor`.
 
 ## Behoben
 - AutoFarm: Die Zahl der Transporter nutzt den Lebensform-Laderaumbonus des sendenden Planeten, und der Laderaum wird direkt vor dem Senden nochmals geprüft.
