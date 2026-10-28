@@ -153,6 +153,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
+          body_path: RELEASE_NOTES.md
           generate_release_notes: false
           fail_on_unmatched_files: true
           overwrite_files: true
