@@ -130,7 +130,7 @@ namespace TBot.Tests {
 		public void CargoCapacityHyperspaceBonusMatchesOverloadWithoutLf() {
 			var s = Svc();
 			Assert.Equal(43750, s.CalcShipCapacity(Buildables.LargeCargo, 15, Server(), 0f));
-			Assert.Equal(s.CalcShipCapacity(Buildables.LargeCargo, 15, Server()), s.CalcShipCapacity(Buildables.LargeCargo, 15, Server(), 0f));
+			Assert.Equal(s.CalcShipCapacity(Buildables.LargeCargo, 15, Server(), CharacterClass.NoClass, 0), s.CalcShipCapacity(Buildables.LargeCargo, 15, Server(), 0f));
 		}
 
 		[Fact]
