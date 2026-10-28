@@ -370,12 +370,6 @@ namespace TBot.WebUI.Controllers {
 				}
 #endif
 				model.Blocks.RemoveAll(b => string.Equals(b.Name, ExperimentalBlock, StringComparison.OrdinalIgnoreCase));
-#if !AUCTION
-				model.Blocks.RemoveAll(b => string.Equals(b.Name, StringComparison.OrdinalIgnoreCase));
-#else
-				if (!model.Blocks.Any(b => string.Equals(b.Name, AuctionBlock, StringComparison.OrdinalIgnoreCase)) && AuctionTemplate() != null)
-					model.Blocks.Add(new ConfigBlockInfo { Name = AuctionBlock, Active = false, Mode = "custom" });
-#endif
 				model.Blocks.Add(new ConfigBlockInfo { Name = TestingPage, Label = "Testing", Mode = "custom" });
 				if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase))
 					block = TestingPage;
