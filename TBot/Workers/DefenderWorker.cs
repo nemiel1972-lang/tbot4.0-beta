@@ -559,9 +559,10 @@ namespace Tbot.Workers {
 
 						return;
 					}
+					int weakAttackRatio = Math.Max(1, (int) _tbotInstance.InstanceSettings.Defender.WeakAttackRatio);
 					if (
 						(bool) _tbotInstance.InstanceSettings.Defender.IgnoreWeakAttack &&
-						attack.Ships.GetFleetPoints() < (attackedCelestial.Ships.GetFleetPoints() / (int) _tbotInstance.InstanceSettings.Defender.WeakAttackRatio)
+						attack.Ships.GetFleetPoints() < (attackedCelestial.Ships.GetFleetPoints() / weakAttackRatio)
 					) {
 						DoLog(LogLevel.Information, $"Attack {attack.ID.ToString()} skipped: weak attack.");
 						return;

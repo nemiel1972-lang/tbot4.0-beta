@@ -106,6 +106,19 @@
    "None free at all": "Gar keiner frei",
    "These are the checks a function makes at the start of its cycle (once per cycle, not per minute). They only show that a limit was hit, not that the function had something to send - for that see \"Proven need\".": "Das sind die Prüfungen, die eine Funktion zu Beginn ihres Zyklus macht (einmal pro Zyklus, nicht pro Minute). Sie zeigen nur, dass eine Grenze erreicht war, nicht dass die Funktion etwas zu senden hatte - dafür siehe „Nachgewiesener Bedarf“.",
    "Slots": "Slots",
+   "This page is still empty.": "Diese Seite ist noch leer.",
+   "Show": "Anzeigen",
+   "Won": "Gewonnen",
+   "Lost": "Verloren",
+   "Auction": "Auktion",
+   "Item": "Gegenstand",
+   "Result": "Ergebnis",
+   "Bids": "Gebote",
+   "Ended": "Beendet",
+   "Running, you lead": "Läuft, du führst",
+   "Running": "Läuft",
+   "No bid": "Kein Gebot",
+   "you": "du",
    "Measured fleet slot usage. The bot records the slots once a minute (who holds how many) and counts how often a function could not send because no slot was free. Nothing is controlled by this page; it is the basis for adjusting the slot limits later.": "Gemessene Slot-Nutzung. Der Bot erfasst einmal pro Minute die Slots (wer wie viele hält) und zählt, wie oft eine Funktion nicht senden konnte, weil kein Slot frei war. Diese Seite steuert nichts; sie ist die Grundlage, um die Slot-Grenzen später anzupassen.",
    "1 day": "1 Tag",
    "3 days": "3 Tage",
@@ -1346,6 +1359,15 @@
    "Metal": "Metall",
    "Mine": "Mine",
    "Mine plan": "Minenplan",
+   "Build planning": "Bauplanung",
+   "Build order": "Baureihenfolge",
+   "Build calculation": "Bauberechnung",
+   "Known": "Bekannt",
+   "Show again": "Wieder anzeigen",
+   "Suggestions marked as known (hidden):": "Als bekannt markierte Vorschläge (ausgeblendet):",
+   "Telegram messages": "Telegram-Nachrichten",
+   "Reward messages:": "Belohnungs-Nachrichten:",
+   "Messages when a rank reward has been claimed and when the last rank reward is collected. Does not affect the log.": "Nachrichten, wenn eine Rang-Belohnung abgeholt wurde und wenn die letzte Rang-Belohnung geholt ist. Das Log bleibt unverändert.",
    "Net gain (": "Nettogewinn (",
    "Net gain over horizon": "Nettogewinn im Betrachtungszeitraum",
    "New version": "Neue Version",
@@ -1606,7 +1628,276 @@
    "Below 1: no planet is ever due.": "Unter 1: kein Planet kommt je an die Reihe.",
    "Below 1: no step pays back within the limit.": "Unter 1: kein Schritt amortisiert sich innerhalb der Grenze.",
    "The plan is on but AutoMine is off: the plan only shows a preview.": "Der Plan ist an, aber AutoMine ist aus: der Plan zeigt nur eine Vorschau.",
-   "Mode Cheapest ignores the payback limit as long as 'Only sensible steps' is off: expensive steps with a very long payback also enter the plan.": "Der Modus Cheapest ignoriert die Amortisationsgrenze, solange 'Only sensible steps' aus ist: auch teure Schritte mit sehr langer Amortisation kommen in den Plan."
+   "Mode Cheapest ignores the payback limit as long as 'Only sensible steps' is off: expensive steps with a very long payback also enter the plan.": "Der Modus Cheapest ignoriert die Amortisationsgrenze, solange 'Only sensible steps' aus ist: auch teure Schritte mit sehr langer Amortisation kommen in den Plan.",
+   "Opacity": "Deckkraft",
+   "Incoming attacks": "Eingehende Angriffe",
+   "ACS attack": "Verbandsangriff",
+   "Destroy": "Zerstören",
+   "Moon destruction": "Mondzerstörung",
+   "Missiles": "Raketen",
+   "Points": "Punkte",
+   "Yield = current hourly mine production of": "Ertrag = aktuelle stündliche Minenproduktion von",
+   "Event:": "Ereignis:",
+   "Bonus": "Bonus",
+   "Discoverer": "Entdecker",
+   "From": "Von",
+   "Free": "Frei",
+   "Sleeping": "Schläft",
+   "Mode": "Modus",
+   "Installed": "Installiert",
+   "Install": "Installieren",
+   "Ship / dark matter finds: bonus not reported by the game under a known name yet (see the \"Bonus ...\" rows).": "Schiffs- / Dunkle-Materie-Funde: Der Bonus wird vom Spiel noch nicht unter einem bekannten Namen gemeldet (siehe die Zeilen \"Bonus ...\").",
+   "Testing": "Testen",
+   "Experimental": "Experimentell",
+   "General": "Allgemein",
+   "Messenger": "Messenger",
+   "Smart ships": "Smarte Schiffe",
+   "Mix ship": "Mischschiff",
+   "Fills up missing cargo (Null = do not mix)": "Füllt fehlende Ladung auf (Null = nicht mischen)",
+   "Null": "Null",
+   "MinPrimaryToSend: no expedition if fewer primary ships are available (0 = off)": "MinPrimaryToSend: keine Expedition, wenn weniger Hauptschiffe verfügbar sind (0 = aus)",
+   "Always 1 probe, 1 pathfinder and 1 combat ship (Reaper first) if available; cargo is split equally across all planned expeditions of the origin, missing cargo is filled up with the mix ship": "Immer 1 Spionagesonde, 1 Pathfinder und 1 Kampfschiff (zuerst Reaper), falls vorhanden; die Ladung wird gleichmäßig auf alle geplanten Expeditionen des Ursprungs verteilt, fehlende Ladung wird mit dem Mischschiff aufgefüllt",
+   "Auto: cargo count from server top score and Lifeform bonus, plus 1 probe, the strongest combat ship and 1 pathfinder if available. With \"Smart ships\": see the switch above.": "Auto: Anzahl der Transporter aus der Server-Topwertung und dem Lebensform-Bonus, dazu 1 Spionagesonde, das stärkste Kampfschiff und 1 Pathfinder, falls vorhanden. Mit \"Smarte Schiffe\": siehe den Schalter oben.",
+   "Own:": "Eigene:",
+   "Met": "Met",
+   "Net": "Netto",
+   "Loot": "Beute",
+   "Expedition bonus:": "Expeditionsbonus:",
+   "Home": "Heimat",
+   "Autofleet": "Autoflotte",
+   "Alarm": "Alarm",
+   "Alerts": "Warnungen",
+   "Messages": "Nachrichten",
+   "Whitelist": "Whitelist",
+   "Timing": "Zeitverhalten",
+   "Test (simulated attack)": "Test (simulierter Angriff)",
+   "Missile": "Rakete",
+   "Missile attack": "Raketenangriff",
+   "No answer from the bot (running? update installed?).": "Keine Antwort vom Bot (läuft er? Update installiert?).",
+   "Run test": "Test starten",
+   "Waiting for the bot…": "Warte auf den Bot…",
+   "Error:": "Fehler:",
+   "Attacker origin": "Herkunft des Angreifers",
+   "Target (your planet/moon)": "Ziel (dein Planet/Mond)",
+   "Arrives in": "Ankunft in",
+   "Attacker player ID": "Spieler-ID des Angreifers",
+   "Attacker points": "Punkte des Angreifers",
+   "Probes only": "Nur Sonden",
+   "Plays an assumed attack through your Defender settings and shows what the bot would do and why. Read-only: nothing is sent, built or changed. The bot answers within a few seconds.": "Spielt einen angenommenen Angriff mit deinen Defender-Einstellungen durch und zeigt, was der Bot tun würde und warum. Nur lesend: nichts wird gesendet, gebaut oder geändert. Der Bot antwortet innerhalb weniger Sekunden.",
+   "Random": "Zufall",
+   "Recall": "Rückruf",
+   "Sleep:": "Schlaf:",
+   "GhostSleep:": "GhostSleep:",
+   "Anonymize": "Anonymisieren",
+   "Gate": "Gate",
+   "Stop": "Stopp",
+   "Repatriate": "Repatriierung",
+   "Ledger": "Buchführung",
+   "Requests": "Anfragen",
+   "Ignore": "Ignorieren",
+   "Npv": "Kapitalwert",
+   "Events": "Ereignisse",
+   "Window from": "Fenster von",
+   "Not fully tested.": "Nicht vollständig getestet.",
+   "Deuterium reserve needed.": "Deuterium-Reserve nötig.",
+   "Shadow fleet settings": "Schattenflotten-Einstellungen",
+   "Reverse": "Rückholen",
+   "Directives": "Direktiven",
+   "Directives (in-game tutorial)": "Direktiven (Tutorial im Spiel)",
+   "Works through the in-game directives: collects finished rewards and, if switched on, builds / researches what open tasks ask for (up to exactly the task level, your caps are ignored for that). Alliance, buddy, rename, demolish and similar tasks stay manual. Start with Dry run on and read the log.": "Arbeitet die Direktiven im Spiel ab: sammelt fertige Belohnungen ein und baut / erforscht, wenn eingeschaltet, was offene Aufgaben verlangen (genau bis zur Aufgabenstufe, deine Grenzen werden dafür ignoriert). Allianz-, Freunde-, Umbenennen-, Abriss- und ähnliche Aufgaben bleiben manuell. Starte mit eingeschaltetem Probelauf und lies das Log.",
+   "Collect rewards": "Belohnungen einsammeln",
+   "Claim finished tasks and chapters": "Fertige Aufgaben und Kapitel abholen",
+   "Fulfil": "Erfüllen",
+   "Fulfil tasks": "Aufgaben erfüllen",
+   "Build / research / order ships and defence for open tasks": "Für offene Aufgaben bauen / erforschen / Schiffe und Verteidigung bestellen",
+   "Fleets": "Flotten",
+   "Fleet tasks": "Flottenaufgaben",
+   "Colony ship, expedition, spy mission to position 16 and recall": "Kolonieschiff, Expedition, Spionagemission nach Position 16 und Rückruf",
+   "Dry run": "Probelauf",
+   "Only write to the log what would be done": "Nur ins Log schreiben, was getan würde",
+   "Check every": "Prüfen alle",
+   "Last chapter": "Letztes Kapitel",
+   "Enter": "Eingabe",
+   "Main": "Haupt",
+   "Same message at most once per": "Gleiche Meldung höchstens einmal pro",
+   "The same log line of a worker (numbers such as times are ignored) goes to Telegram at most once in this time. 0 = off, every line is sent. Applies to every worker without its own value below": "Dieselbe Logzeile eines Workers (Zahlen wie Zeiten werden ignoriert) geht in dieser Zeit höchstens einmal an Telegram. 0 = aus, jede Zeile wird gesendet. Gilt für jeden Worker ohne eigenen Wert unten",
+   "Default": "Standard",
+   "Repeat time per worker": "Wiederholzeit pro Worker",
+   "Empty = use the value above. 0 = never hold back lines of this worker. Otherwise the same line of this worker goes to Telegram at most once in that many minutes. The log file is not affected.": "Leer = Wert von oben verwenden. 0 = Zeilen dieses Workers nie zurückhalten. Sonst geht dieselbe Zeile dieses Workers höchstens einmal in so vielen Minuten an Telegram. Die Logdatei ist nicht betroffen.",
+   "Load": "Laden",
+   "Webhooks": "Webhooks",
+   "Username": "Benutzername",
+   "Click to collapse or expand this block": "Klicken, um diesen Block ein- oder auszuklappen",
+   "Collapse all": "Alle einklappen",
+   "Collapse or expand all blocks on this page (the state is remembered in this browser)": "Alle Blöcke dieser Seite ein- oder ausklappen (der Zustand wird in diesem Browser gemerkt)",
+   "Fly": "Fliegen",
+   "Blacklist": "Blacklist",
+   "1 prefers a larger escort": "1 bevorzugt eine größere Eskorte",
+   "Cap:": "Grenze:",
+   "Humans": "Menschen",
+   "Rock'tal": "Rock'tal",
+   "Rocktal": "Rock'tal",
+   "Mechas": "Mechas",
+   "Kaelesh": "Kaelesh",
+   "Order": "Reihenfolge",
+   "Prio": "Prio",
+   "Bronze": "Bronze",
+   "Silver": "Silber",
+   "Platinum": "Platin",
+   "Tiers": "Stufen",
+   "Switch": "Schalter",
+   "Types": "Typen",
+   "Excluded": "Ausgeschlossen",
+   "Builds ships on your celestials, up to the amounts you set: cargo ships, plus Recycler, Pathfinder, Reaper, Crawler and more (config key: AutoCargo).": "Baut Schiffe auf deinen Himmelskörpern bis zu den eingestellten Mengen: Transporter sowie Recycler, Pathfinder, Reaper, Crawler und mehr (Config-Schlüssel: AutoCargo).",
+   "Single planets with their own caps. Matched by exact coordinate; only the fields you set replace the Colony caps. A new planet starts with all caps at 0 (nothing is built there until you raise them).": "Einzelne Planeten mit eigenen Grenzen. Zuordnung über die genaue Koordinate; nur die Felder, die du setzt, ersetzen die Kolonie-Grenzen. Ein neuer Planet startet mit allen Grenzen auf 0 (dort wird nichts gebaut, bis du sie erhöhst).",
+   "Build per run (0 = no limit)": "Bau pro Durchlauf (0 = keine Grenze)",
+   "Extra ship types": "Weitere Schiffstypen",
+   "Built after the cargo ships, one order per celestial and run, in list order": "Wird nach den Transportern gebaut, ein Auftrag pro Himmelskörper und Durchlauf, in Listenreihenfolge",
+   "Recycler, Pathfinder, Reaper, Crawler and more": "Recycler, Pathfinder, Reaper, Crawler und mehr",
+   "Connection": "Verbindung",
+   "Enabled": "Aktiviert",
+   "On: player name, universe and e-mail are replaced in the log lines": "An: Spielername, Universum und E-Mail werden in den Logzeilen ersetzt",
+   "Look around X systems (expedition debris)": "Umkreis X Systeme (Expeditions-Trümmer)",
+   "Systems to each side of every own planet that are searched for deep space fields": "Systeme zu jeder Seite jedes eigenen Planeten, die nach Tiefenraum-Feldern abgesucht werden",
+   "Use only expedition starts": "Nur Expeditionsstarts verwenden",
+   "Search around the expedition start celestials only, not around all planets": "Nur um die Expeditions-Startkörper suchen, nicht um alle Planeten",
+   "Look around X systems (normal debris)": "Umkreis X Systeme (normale Trümmer)",
+   "Systems to each side of every own planet searched for foreign debris fields; 0 = only the planet's own system": "Systeme zu jeder Seite jedes eigenen Planeten, die nach fremden Trümmerfeldern abgesucht werden; 0 = nur das System des Planeten",
+   "Targets": "Ziele",
+   "Abandon": "Aufgeben",
+   "Do not delete espionage reports yourself.": "Spionageberichte nicht selbst löschen.",
+   "Sweep": "Durchlauf",
+   "Both": "Beides",
+   "Value": "Wert",
+   "Rarity": "Seltenheit",
+   "Celestials": "Himmelskörper",
+   "Ms": "ms",
+   "Features": "Funktionen",
+   "Fleet": "Flotte",
+   "Dashboard": "Dashboard",
+   "Fleetsave": "Fleetsave",
+   "Filters": "Filter",
+   "Counter-measures": "Gegenmaßnahmen",
+   "Activity": "Aktivität",
+   "Build ships and defence up to target amounts.": "Schiffe und Verteidigung bis zu Zielmengen bauen.",
+   "Diff": "Unterschied",
+   "Discard": "Verwerfen",
+   "The bot reads your expedition reports about every 20 minutes to collect finds and daily averages. Switch it off if you do not need the statistics (for example because another tool does it): the bot then sends no report requests at all.": "Der Bot liest etwa alle 20 Minuten deine Expeditionsberichte, um Funde und Tagesdurchschnitte zu sammeln. Schalte es aus, wenn du die Statistik nicht brauchst (zum Beispiel weil ein anderes Tool das macht): Der Bot sendet dann gar keine Berichtsanfragen.",
+   "On (default): finds and daily averages are collected. Off: no report requests; the statistics stay empty and the mine plan runs without expedition averages": "An (Standard): Funde und Tagesdurchschnitte werden gesammelt. Aus: keine Berichtsanfragen; die Statistik bleibt leer und der Minenplan läuft ohne Expeditionsdurchschnitte",
+   "Not in your config yet - the default (reading on) applies. Add it to change that.": "Noch nicht in deiner Config - es gilt der Standard (Lesen an). Füge es hinzu, um das zu ändern.",
+   "How the page Minenplan sorts the best next investments. Mines and research (plasma technology) are ranked together. By default this is display only; switch on \"AutoMine follows the build plan\" below to let AutoMine use it.": "Wie die Seite Minenplan die besten nächsten Investitionen sortiert. Minen und Forschung (Plasmatechnik) werden zusammen gerankt. Standardmäßig dient das nur der Anzeige; schalte unten \"AutoMine folgt dem Bauplan\" ein, damit AutoMine es nutzt.",
+   "Your time = bot time": "Deine Zeit = Bot-Zeit",
+   "The times here are bot time (game server time). Now:": "Die Zeiten hier sind Bot-Zeit (Spielserver-Zeit). Jetzt:",
+   "Log:": "Log:",
+   "Updated": "Aktualisiert",
+   "Missing (": "Fehlt (",
+   "Could not save:": "Konnte nicht speichern:",
+   "Could not start:": "Konnte nicht starten:",
+   "Could not load:": "Konnte nicht laden:",
+   "LF-AutoMine": "LF-AutoMine",
+   "LF-AutoResearch": "LF-AutoResearch",
+   "Built (24 h)": "Gebaut (24 h)",
+   "No entries.": "Keine Einträge.",
+   "When": "Wann",
+   "Worker": "Worker",
+   "Build": "Bau",
+   "ROI = days until the build pays for itself through the extra production (bot calculation, including geologist and server speed). Smaller is better.": "ROI = Tage, bis sich der Bau durch die Mehrproduktion amortisiert (Bot-Berechnung, inklusive Geologe und Serverspeed). Kleiner ist besser.",
+   "Attacks out": "Angriffe unterwegs",
+   "Free slots": "Freie Slots",
+   "Totals": "Summen",
+   "Attacks sent": "Angriffe gesendet",
+   "Player": "Spieler",
+   "State": "Zustand",
+   "Queued": "In Warteschlange",
+   "Failed:": "Fehlgeschlagen:",
+   "Failed": "Fehlgeschlagen",
+   "Blocked": "Blockiert",
+   "Defended": "Verteidigt",
+   "Defended target": "Verteidigtes Ziel",
+   "Met / Kris / Deut": "Met / Kris / Deut",
+   "Reason": "Grund",
+   "Sent": "Gesendet",
+   "Live": "Live",
+   "Sorted by value. \"Scan + attack\" hands one target to the AutoFarm worker: it spies it again, checks all AutoFarm limits (only the Attack Defended Targets switch is ignored) and attacks it with an escort, or drops it. AutoFarm needs a complete configuration for this.": "Nach Wert sortiert. \"Scan + Angriff\" übergibt ein Ziel an den AutoFarm-Worker: Er spioniert es erneut aus, prüft alle AutoFarm-Grenzen (nur der Schalter \"Verteidigte Ziele angreifen\" wird ignoriert) und greift es mit einer Eskorte an oder verwirft es. Dafür braucht AutoFarm eine vollständige Konfiguration.",
+   "100 years": "100 Jahre",
+   "Built live by AutoMine": "Live von AutoMine gebaut",
+   "Only planets among the first": "Nur Planeten unter den ersten",
+   "Only": "Nur",
+   "Built live now (one step per planet, marked &#9654; in the build plan):": "Jetzt live gebaut (ein Schritt pro Planet, im Bauplan mit &#9654; markiert):",
+   "Fleeter": "Fleeter",
+   "Build (commit and build time)": "Build (Commit und Bauzeit)",
+   "Development": "Entwicklung",
+   "Height = slots held, full height = all": "Höhe = gehaltene Slots, volle Höhe = alle",
+   "No rewards data found. Create an empty file": "Keine Belohnungsdaten gefunden. Lege eine leere Datei an",
+   "Tritium per task": "Tritium pro Aufgabe",
+   "Tritium": "Tritium",
+   "Could not read the log:": "Konnte das Log nicht lesen:",
+   "Could not load the log.": "Konnte das Log nicht laden.",
+   "Database": "Datenbank",
+   "Used": "Belegt",
+   "Available": "Verfügbar",
+   "Maximum": "Maximum",
+   "Galaxy scan": "Galaxie-Scan",
+   "Remove": "Entfernen",
+   "Unprofitable": "Unrentabel",
+   "Added": "Hinzugefügt",
+   "Expires": "Läuft ab",
+   "Maintenance": "Wartung",
+   "Last scan": "Letzter Scan",
+   "Next refresh": "Nächste Aktualisierung",
+   "Destination": "Ziel",
+   "Report": "Bericht",
+   "Copy errors": "Fehler kopieren",
+   "Source": "Quelle",
+   "Message": "Nachricht",
+   "Attacks": "Angriffe",
+   "Systems": "Systeme",
+   "Copied": "Kopiert",
+   "Offen": "Offen",
+   "No galaxy cache yet. It appears once the galaxy cache has scanned its first systems (Experimental.GalaxyCache).": "Noch kein Galaxie-Cache. Er erscheint, sobald der Galaxie-Cache seine ersten Systeme gescannt hat (Experimental.GalaxyCache).",
+   "Shown per resource (Met = metal, Kris = crystal, Deut = deuterium). Profit after losses and fuel = actual loot (cargo of the returning fleet) &minus; ship losses &minus; fuel (fuel is deuterium). Fleets that were not observed are marked unknown and not counted.": "Je Rohstoff angezeigt (Met = Metall, Kris = Kristall, Deut = Deuterium). Gewinn nach Verlusten und Treibstoff = tatsächliche Beute (Ladung der zurückkehrenden Flotte) &minus; Schiffsverluste &minus; Treibstoff (Treibstoff ist Deuterium). Nicht beobachtete Flotten werden als unbekannt markiert und nicht gezählt.",
+   "Writes extra diagnosis lines to devlogs/TBot-debug-": "Schreibt zusätzliche Diagnosezeilen nach devlogs/TBot-debug-",
+   "Pending": "Offen",
+   "with known loot.": "mit bekannter Beute.",
+   "with known loot (first 300 shown).": "mit bekannter Beute (erste 300 angezeigt).",
+   "unknown": "unbekannt",
+   "just now": "gerade eben",
+   "complete": "vollständig",
+   "started": "gestartet",
+   "since": "seit",
+   "Expedition moons keep only what expeditions need": "Expeditions-Monde behalten nur, was Expeditionen brauchen",
+   "On: on the expedition start moons only the ships for the planned expeditions plus the backup stay (the rest, also expedition finds, jumps out). Replaces the general minimum there": "An: Auf den Expeditions-Startmonden bleiben nur die Schiffe für die geplanten Expeditionen plus das Backup (der Rest, auch Expeditionsfunde, springt heraus). Ersetzt dort die allgemeine Mindestmenge",
+   "Supply expedition moons": "Expeditions-Monde versorgen",
+   "On: if an expedition moon lacks ships or deuterium for its expeditions (plus the backup), the shortfall is noted and sent from the base in the next repatriate cycle": "An: Fehlen auf einem Expeditions-Mond Schiffe oder Deuterium für seine Expeditionen (plus Backup), wird die Fehlmenge gemerkt und im nächsten Repatriate-Zyklus von der Basis geschickt",
+   "(you)": "(du)",
+   "Expedition moons (jump gate and supply)": "Expeditions-Monde (Sprungtor und Versorgung)",
+   "Expedition slots (research)": "Expeditions-Slots (Forschung)",
+   "Expedition moons are the moons you list as Origins above. Expeditions send ships away and bring finds back, so such a moon needs a reserve of ships and deuterium. The two switches below keep that reserve in order: the jump gate keeps only what the next expeditions need on the moon, and the supply sends what is missing from your base. The workers behind them live on the Brain page; their settings are shown here because they only matter for expeditions.": "Expeditions-Monde sind die Monde, die du oben als Startpunkte (Origins) einträgst. Expeditionen schicken Schiffe weg und bringen Funde zurück, deshalb braucht so ein Mond einen Vorrat an Schiffen und Deuterium. Die beiden Schalter unten halten diesen Vorrat in Ordnung: Das Sprungtor lässt nur auf dem Mond, was die nächsten Expeditionen brauchen, und die Versorgung schickt aus deiner Basis nach, was fehlt. Die Worker dahinter laufen auf der Seite Brain; ihre Einstellungen stehen hier, weil sie nur für Expeditionen eine Rolle spielen.",
+   "on the expedition start moons only the ships for the planned expeditions plus the backup stay; everything else, finds included, jumps out to your jump gate target. Replaces the general minimum there.": "Auf den Start-Monden der Expeditionen bleiben nur die Schiffe für die geplanten Expeditionen plus die Reserve; alles andere, auch Funde, springt zum Ziel deines Sprungtors. Ersetzt dort das allgemeine Minimum.",
+   "if a moon lacks ships or deuterium for its planned expeditions plus the backup, the shortfall is sent from your base (the first Target of AutoRepatriate) in the next repatriate cycle. Ships on expeditions and deliveries already on their way count as present.": "Fehlen einem Mond Schiffe oder Deuterium für seine geplanten Expeditionen plus die Reserve, wird der Fehlbetrag im nächsten Repatriate-Durchlauf aus deiner Basis (erstes Target von AutoRepatriate) geschickt. Schiffe auf Expedition und bereits unterwegs befindliche Lieferungen zählen als vorhanden.",
+   "the jump gate drains the surplus, the supply refills the shortfall. Both need the matching worker switched on (see below); Origins must contain moons for either to do anything.": "Das Sprungtor räumt den Überschuss ab, die Versorgung füllt den Fehlbetrag auf. Beide brauchen den passenden Worker eingeschaltet (siehe unten); in den Origins müssen Monde stehen, sonst tut keine der beiden etwas.",
+   "the numbers both functions use to calculate what a moon must hold: deuterium target = MinDeuteriumOnMoon, or expeditions x FuelToCarry if that is 0.": "Die Zahlen, mit denen beide Funktionen berechnen, was ein Mond halten muss: Deuterium-Ziel = MinDeuteriumOnMoon, oder Expeditionen x FuelToCarry, wenn das 0 ist.",
+   "Brain page": "Brain ein",
+   "Jump gate: the rest, also expedition finds, jumps out. Replaces the general minimum on those moons": "Sprungtor: der Rest, auch Expeditions-Funde, springt weg. Ersetzt dort das allgemeine Minimum",
+   "Repatriate: the shortfall is sent from the base in the next cycle": "Repatriate: Der Fehlbetrag wird im nächsten Durchlauf aus der Basis geschickt",
+   "Backup expeditions": "Reserve-Expeditionen",
+   "Reserve of expeditions worth of ships kept on the moon in addition to the planned ones": "Schiffe für so viele Expeditionen bleiben zusätzlich zu den geplanten als Reserve auf dem Mond",
+   "Deuterium per expedition": "Deuterium pro Expedition",
+   "Sent along with every expedition; also the basis of the deuterium target on the moon": "Wird jeder Expedition mitgegeben; zugleich die Grundlage für das Deuterium-Ziel auf dem Mond",
+   "Minimum deuterium on the moon": "Mindest-Deuterium auf dem Mond",
+   "0 = expeditions x deuterium per expedition": "0 = Expeditionen x Deuterium pro Expedition",
+   "Expeditions need free expedition slots, which come from Computer Technology and Astrophysics. This switch lets the research worker (Brain, AutoResearch) research them when slots are the limit.": "Expeditionen brauchen freie Expeditions-Slots; sie kommen aus Computertechnik und Astrophysik. Dieser Schalter lässt den Forschungs-Worker (Brain, AutoResearch) sie erforschen, wenn die Slots die Grenze sind.",
+   "Expeditions page": "Expeditions",
+   "(section \"Expedition moons\" / \"Expedition slots\"). The setting itself is unchanged.": " (Abschnitt \"Expeditions-Monde\" / \"Expeditions-Slots\"). Die Einstellung selbst bleibt unverändert.",
+   "Keep only what expeditions need (jump gate):": "Nur behalten, was Expeditionen brauchen (Sprungtor):",
+   "Supply expedition moons (repatriate):": "Expeditions-Monde versorgen (Repatriate):",
+   "Together:": "Zusammen:",
+   "Backup / fuel / deuterium:": "Reserve / Treibstoff / Deuterium:",
+   "Workers (switch them on the": "Worker (schalte sie auf der Seite",
+   "Supplying the expedition moons (ExpoSupply):": "Expeditions-Monde versorgen (ExpoSupply):",
+   "Expedition moons keep only what expeditions need (ExpoOverride):": "Expeditions-Monde behalten nur, was Expeditionen brauchen (ExpoOverride):",
+   "Make sure there are expedition slots (EnsureExpoSlots):": "Für Expeditions-Slots sorgen (EnsureExpoSlots):",
+   "now on the": "jetzt auf der Seite"
   },
   "phrases": [
    [
@@ -2166,6 +2457,122 @@
    [
     "^No slot was free ([\\d.,]+) % of the time \\(of (\\d+)\\), and (\\w+) missed slots in (\\d+) cycles because none were free\\. The total number of slots is the bottleneck, not the limits\\.$",
     "Zu $1 % der Zeit war kein Slot frei (von $2), und $3 bekam in $4 Zyklen keine Slots, weil keine frei waren. Die Gesamtzahl der Slots ist der Engpass, nicht die Limits."
+   ],
+   [
+    "^History \\(last ([\\d.,\\s]+)\\)$",
+    "Verlauf (letzte $1)"
+   ],
+   [
+    "^Recent AutoFarm logs \\(([\\d.,\\s]+)\\)$",
+    "Letzte AutoFarm-Logs ($1)"
+   ],
+   [
+    "^Remove (.+) from the blacklist\\?$",
+    "$1 von der Blacklist entfernen?"
+   ],
+   [
+    "^Remove target (.+) \\(and its blacklist entry\\)\\?$",
+    "Ziel $1 (und seinen Blacklist-Eintrag) entfernen?"
+   ],
+   [
+    "^Calculate escort and profit for (.+) now and attack it alone\\? \\(A fresh spy report is taken first if the stored one is too old\\. If the target does not pass it is removed\\.\\)$",
+    "Eskorte und Gewinn für $1 jetzt berechnen und es allein angreifen? (Zuerst wird ein frischer Spionagebericht erstellt, wenn der gespeicherte zu alt ist. Besteht das Ziel die Prüfung nicht, wird es entfernt.)"
+   ],
+   [
+    "^Spy (.+) again and attack it alone if it passes all AutoFarm checks\\? \\(2 fleet slots are reserved meanwhile; if it fails the target is dropped\\.\\)$",
+    "$1 erneut ausspionieren und allein angreifen, wenn es alle AutoFarm-Prüfungen besteht? (Solange sind 2 Flottenslots reserviert; fällt es durch, wird das Ziel verworfen.)"
+   ],
+   [
+    "^Failed: (.+)$",
+    "Fehlgeschlagen: $1"
+   ],
+   [
+    "^Round ([\\d.,\\s]+), galaxy ([\\d.,\\s]+), phase (.+)\\. The order shown here is the order the bot works through \\(from its next cycle\\)\\. Click a column head to sort\\. Deleted targets are dropped for 24 hours\\.$",
+    "Runde $1, Galaxie $2, Phase $3. Die hier gezeigte Reihenfolge ist die Reihenfolge, in der der Bot arbeitet (ab seinem nächsten Zyklus). Klicke auf einen Spaltenkopf zum Sortieren. Gelöschte Ziele werden 24 Stunden lang ausgelassen."
+   ],
+   [
+    "^([\\d.,\\s]+) days$",
+    "$1 Tage"
+   ],
+   [
+    "^([\\d.,\\s]+) open requests$",
+    "$1 offene Anfragen"
+   ],
+   [
+    "^(\\d+) d (\\d+) h ago$",
+    "vor $1 d $2 h"
+   ],
+   [
+    "^(\\d+) h (\\d+) min ago$",
+    "vor $1 Std. $2 Min."
+   ],
+   [
+    "^Fleet (\\S+)$",
+    "Flotte $1"
+   ],
+   [
+    "^Error while reading: (.+)$",
+    "Fehler beim Lesen: $1"
+   ],
+   [
+    "^Source: (.+) · File updated: (.+)$",
+    "Quelle: $1 · Datei aktualisiert: $2"
+   ],
+   [
+    "^([\\d.,\\s]+) min$",
+    "$1 Min."
+   ],
+   [
+    "^(\\d+) h (\\d+) min$",
+    "$1 Std. $2 Min."
+   ],
+   [
+    "^([\\d.,\\s]+) / ([\\d.,\\s]+) systems$",
+    "$1 / $2 Systeme"
+   ],
+   [
+    "^([\\d.,\\s]+) inactive targets$",
+    "$1 inaktive Ziele"
+   ],
+   [
+    "^Report #(\\d+)$",
+    "Bericht #$1"
+   ],
+   [
+    "^\\(([\\d.,\\s]+) colonies\\)$",
+    "($1 Kolonien)"
+   ],
+   [
+    "^last (.+)$",
+    "zuletzt $1"
+   ],
+   [
+    "^done in (.+)$",
+    "fertig in $1"
+   ],
+   [
+    "^complete, next pass from (.+)$",
+    "vollständig, nächster Durchlauf ab $1"
+   ],
+   [
+    "^([\\d.,\\s]+) command\\(s\\) waiting - AutoFarm runs them at the start of its next cycle\\.$",
+    "$1 Befehl(e) warten - AutoFarm führt sie zu Beginn seines nächsten Zyklus aus."
+   ],
+   [
+    "^\\(ID (\\d+)\\)$",
+    "(ID $1)"
+   ],
+   [
+    "^(AutoFleetJumpGate|AutoRepatriate): on$",
+    "$1: an"
+   ],
+   [
+    "^(AutoFleetJumpGate|AutoRepatriate): off$",
+    "$1: aus"
+   ],
+   [
+    "^(AutoFleetJumpGate|AutoRepatriate): not in config$",
+    "$1: nicht in der Config"
    ]
   ]
  },
@@ -2556,6 +2963,9 @@
    },
    "ResourceReserve.*": {
     "t": "Alte Einstellung, die diese Version des Bots nicht mehr liest. Sie hat keine Wirkung und kann aus der Config entfernt werden."
+   },
+   "ShowUpdateNotes": {
+    "t": "Nach einem Versionswechsel zeigt der Bot einmal eine kurze Notiz, was neu ist, im Log und auf Telegram/Discord. Aus = keine Notiz. Standard an."
    }
   },
   "DiscordWebhook": {
@@ -2962,10 +3372,12 @@
     "t": "Schiffstyp, der gebaut wird."
    },
    "AutoCargo.MaxCargosToBuild": {
-    "t": "Gesamtzahl an Transportern, die erreicht werden soll."
+    "t": "Die meisten Transporter, die in einem Durchlauf bestellt werden. Der Rest folgt im nächsten Durchlauf.",
+    "e": "200 = höchstens 200 Schiffe pro Durchlauf, auch wenn die Zielmenge höher ist."
    },
    "AutoCargo.MaxCargosToKeep": {
-    "t": "Wie viele Transporter behalten werden."
+    "t": "Das Ziel: Der Himmelskörper wird mit Transportern aufgefüllt, bis er so viele hat. 0 bedeutet, es wird nichts gebaut.",
+    "e": "1000 = bauen, bis 1000 Schiffe auf dem Himmelskörper sind."
    },
    "AutoCargo.LimitToCapacity": {
     "t": "Nur so viele bauen, wie die gelagerten Rohstoffe brauchen."
@@ -3026,7 +3438,8 @@
     "t": "Umgekehrte Repatriierung: Rohstoffe aus dem Ziel zurückholen, wenn sie für einen Bau gebraucht werden. Fortgeschritten."
    },
    "AutoRepatriate.Reverse.ReturnFuelFactor": {
-    "t": "Deuterium für den Rückflug = Treibstoff des Rückflugs mal dieser Faktor (1,1 = 10 % mehr). Zurück fliegen genau die Schiffe, die hingeflogen sind."
+    "t": "Deuterium für den Rückflug = Treibstoff des Rückflugs mal dieser Faktor (1,1 = 10 % mehr). Zurück fliegen genau die Schiffe, die hingeflogen sind.",
+    "e": "Der Rückflug nimmt genau die Schiffe, die hingeflogen sind."
    },
    "AutoRepatriate.Reverse.PendingTtlMinutes": {
     "t": "Wie lange ein geplanter Rückholtransport gültig bleibt."
@@ -3069,6 +3482,25 @@
    },
    "AutoFleetJumpGate.MinimumAmountOfShipPointsToTeleport": {
     "t": "Nur springen, wenn mindestens so viele Flottenpunkte mitgehen."
+   },
+   "ResourceLedger.PriorityByCost": {
+    "t": "An (Standard): Pro Himmelskörper bekommt der günstigste Bauwunsch zuerst den Bestand, und ein noch nicht voll finanzierter Bau gibt seinen reservierten Bestand an günstigere frei, damit kleine Bauten nicht hinter einem großen verhungern. Aus: Wer zuerst kommt, mahlt zuerst."
+   },
+   "Transports.MaxBundledBuildings": {
+    "t": "Wie viele ZUSÄTZLICHE Gebäude eine Lieferung neben dem Ziel des Workers mitbringen darf. 0 (Standard) = nur das eine Ziel, passend zur Rohstoffreservierung."
+   },
+   "AutoRepatriate.ReserveTransportSlots": {
+    "t": "Der Rückholtransport bleibt um diese Anzahl Slots unter Brain Transports Max slots, damit er den Minen-, Lebensform- und Forschungs-Workern keine Slots wegnimmt. 0 (Standard) = keine Reserve."
+   },
+   "ResourceLedger.Active": {
+    "t": "Die Buchführung, die Rohstoffe für Bauten reserviert, damit Worker nicht um denselben Bestand streiten oder dieselbe Lieferung doppelt bestellen. Standardmäßig an."
+   },
+   "AutoRepatriate.ExpoSupply.Active": {
+    "t": "Versorgt die Expeditions-Monde: Fehlen auf einem Mond Schiffe oder Deuterium für seine geplanten Expeditionen plus das Backup (Expeditions BackupExpeditions), wird die Fehlmenge gemerkt und im nächsten Repatriate-Zyklus per Stationieren von der Basis (erstes Target) geschickt. Schiffe in Expeditionen und schon unterwegs befindliche Lieferungen zählen als vorhanden. Standardmäßig aus.",
+    "e": "Deuterium-Ziel je Mond: MinDeuteriumOnMoon, bei 0 gilt Expeditionen x FuelToCarry."
+   },
+   "AutoFleetJumpGate.ExpoOverride": {
+    "t": "An: Auf den Expeditions-Startmonden bleiben nur die Schiffe für die geplanten Expeditionen plus das Backup (Expeditions BackupExpeditions). Alles andere, auch Expeditionsfunde, springt heraus. Das ersetzt dort die allgemeine Mindestmenge. Standardmäßig aus."
    }
   },
   "Expeditions": {
@@ -3159,6 +3591,10 @@
    },
    "MaxWaitNextRound": {
     "t": "Längste zusätzliche Pause in Sekunden nach der ersten Rückkehr vor der nächsten Runde."
+   },
+   "BackupExpeditions": {
+    "t": "Wie viele komplette Expeditionsflotten zusätzlich zu den geplanten Expeditionen als Backup auf jedem Expeditions-Startmond bleiben (genutzt vom JumpGate-Expo-Override und von der Versorgung der Expeditions-Monde). Deckt den Totalverlust einer Flotte ab. Standard 1.",
+    "e": "1 = eine zusätzliche volle Flotte bleibt auf dem Mond."
    }
   },
   "AutoHarvest": {
@@ -3720,6 +4156,9 @@
    },
    "AsteroidHunt.SaveJson": {
     "t": "Jeden Versuch und Fund nach data/asteroiden_funde_<alias>.json schreiben."
+   },
+   "BotPause.Mode": {
+    "t": "Gate (Standard): Während der Pause laufen die Worker weiter, überspringen aber ihren Zyklus und machen kurz nach der Pause mit ihrem üblichen Plan weiter, verteilt über etwa eine Minute. Stop: die alte harte Pause, jeder Worker wird gestoppt und danach neu gestartet."
    }
   }
  },

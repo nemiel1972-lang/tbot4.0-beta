@@ -51,7 +51,7 @@
                   data-get="@Url.Action("GetBlock", "Config")" data-startdata="@Url.Action("StartData", "Config")" data-deftestrun="@Url.Action("DefenderTestRun", "Config")" data-deftestresult="@Url.Action("DefenderTestResult", "Config")" data-lf="@Url.Action("LfSnapshot", "Config")" data-aflosses="@Url.Action("AfLosses", "Config")" data-allynames="@Url.Action("AllyNames", "Config")" data-boosterstock="@Url.Action("BoosterStock", "Config")" data-cmdlist="@Url.Action("CommandList", "Config")" data-cmdcheck="@Url.Action("CheckCommand", "Config")" data-lfimg="@Url.Content("~/img/lf/")" data-save="@Url.Action("SaveBlock", "Config")" data-setactive="@Url.Action("SetActive", "Config")" data-fleetsanim="@Url.Action("FleetsAnim", "Config")">
                 @if (Model.SelectedMode == "start")
                 {
-                    <div id="cfg-start" data-url="@Url.Action("StartData", "Config")" data-lf="@Url.Action("Index", "Config")" data-upd="@Url.Action("Check", "Update")" data-updstart="@Url.Action("Start", "Update")" data-upddismiss="@Url.Action("Dismiss", "Update")"><div class="cfg-loading">Loading…</div></div>
+                    <div id="cfg-start" data-url="@Url.Action("StartData", "Config")" data-lf="@Url.Action("Index", "Config")" data-known="@Url.Action("MarkDoctorKnown", "Config")" data-upd="@Url.Action("Check", "Update")" data-updstart="@Url.Action("Start", "Update")" data-upddismiss="@Url.Action("Dismiss", "Update")"><div class="cfg-loading">Loading…</div></div>
                 }
                 else if (Model.SelectedMode == "placeholder")
                 {

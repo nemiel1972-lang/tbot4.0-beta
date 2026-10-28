@@ -22,9 +22,10 @@
 
 <div class="autofarm-page tbot-dark" id="mp-page" data-instance="@selected">
     <div class="autofarm-shell">
+        @await Html.PartialAsync("_BuildPlanerTabs", selected)
         <header class="autofarm-header">
             <div>
-                <h1>Mine plan</h1>
+                <h1>Build calculation</h1>
                 <p class="intro">Next mine upgrades per planet: cost, extra yield, payback time and energy. This page only shows the calculation and never changes anything itself. Whether AutoMine builds by this plan is set in the Config (Experimental, Mine plan ranking: "AutoMine follows the build plan").</p>
             </div>
             <form method="get" class="instance-picker" style="@(instances.Count <= 1 ? "display:none" : null)">

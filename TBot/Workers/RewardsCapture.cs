@@ -63,7 +63,15 @@ namespace Tbot.Workers {
 				inst.log(LogLevel.Warning, LogSender.Tbot, $"Rewards: settings could not be switched off: {e.Message}");
 			}
 			inst.log(LogLevel.Information, LogSender.Tbot, "Rewards: the last rank reward has been collected - the Rewards worker is switched off (claiming and tasks set to off).");
-			try { _ = inst.SendTelegramMessage("Universe rewards: the last rank reward has been collected, the rewards worker is switched off."); } catch { }
+			if (TelegramOn(inst)) { try { _ = inst.SendTelegramMessage("Universe rewards: the last rank reward has been collected, the rewards worker is switched off."); } catch { } }
+		}
+
+		private static bool TelegramOn(ITBotMain inst) {
+			try {
+				string sf = Path.Combine(AppContext.BaseDirectory, "data", $"belohnungen_einstellung_{SafeAlias(inst)}.json");
+				if (!File.Exists(sf)) return true;
+				return !string.Equals((string) Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(sf))["telegram"], "off", StringComparison.OrdinalIgnoreCase);
+			} catch { return true; }
 		}
 
 		private static string EinstellungsStand(ITBotMain inst) {
@@ -199,7 +207,7 @@ namespace Tbot.Workers {
 						break;
 					var t = tiers.FirstOrDefault(x => x.Number == cl.Tier);
 					if (t != null) t.Claimed = true;
-					try { await inst.SendTelegramMessage($"Universe rewards: rank {cl.Tier} claimed: {cl.Name}"); } catch { }
+					if (TelegramOn(inst)) { try { await inst.SendTelegramMessage($"Universe rewards: rank {cl.Tier} claimed: {cl.Name}"); } catch { } }
 				}
 			} catch (Exception e) {
 				inst.log(LogLevel.Warning, LogSender.Tbot, $"Rewards: claim failed: {e.Message}");

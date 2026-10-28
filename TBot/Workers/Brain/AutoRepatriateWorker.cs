@@ -18,19 +18,24 @@ namespace Tbot.Workers.Brain {
 		private readonly IFleetScheduler _fleetScheduler;
 		private readonly ICalculationService _calculationService;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
+		private readonly TBot.Ogame.Infrastructure.IOgameService _ogameService;
 		public AutoRepatriateWorker(ITBotMain parentInstance,
 			IFleetScheduler fleetScheduler,
 			ICalculationService calculationService,
-			ITBotOgamedBridge tbotOgameBridge) :
+			ITBotOgamedBridge tbotOgameBridge,
+			TBot.Ogame.Infrastructure.IOgameService ogameService = null) :
 			base(parentInstance) {
 			_fleetScheduler = fleetScheduler;
 			_calculationService = calculationService;
 			_tbotOgameBridge = tbotOgameBridge;
+			_ogameService = ogameService;
 		}
 
 		protected override async Task Execute() {			
 			if (!_tbotInstance.UserData.isSleeping) {
 				DoLog(LogLevel.Debug, "AutoRepatriate worker cycle starting.");
+				if (_ogameService != null)
+					await ExpoSupply.RunAsync(_tbotInstance, _calculationService, _ogameService, _tbotOgameBridge, _fleetScheduler, (lvl, msg) => DoLog(lvl, msg));
 				var result = await _fleetScheduler.CollectImpl(false);
 				DoLog(result == RepatriateCode.Failure ? LogLevel.Warning : LogLevel.Debug, $"AutoRepatriate worker cycle finished with result={result}.");
 				if (result == RepatriateCode.Stop) {

@@ -18,13 +18,16 @@ namespace Tbot.Workers.Brain {
 	public class AutoFleetJumpGateWorker : WorkerBase {
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
 		private readonly IOgameService _ogameService;
+		private readonly ICalculationService _calculationService;
 
 		public AutoFleetJumpGateWorker(ITBotMain parentInstance,
 			IOgameService ogameService,
-			ITBotOgamedBridge tbotOgameBridge) :
+			ITBotOgamedBridge tbotOgameBridge,
+			ICalculationService calculationService = null) :
 			base(parentInstance) {
 			_ogameService = ogameService;
 			_tbotOgameBridge = tbotOgameBridge;
+			_calculationService = calculationService;
 		}
 
 		private dynamic GetJumpGateSettings() {
@@ -141,6 +144,20 @@ namespace Tbot.Workers.Brain {
 						pathfinder: (long) leaveCfg.Pathfinder
 					);
 
+					var expoLeave = new Dictionary<string, Ships>();
+					try {
+						if (_calculationService != null && SettingsService.IsSettingSet(jumpGateSettings, "ExpoOverride") && (bool) jumpGateSettings.ExpoOverride) {
+							var needs = await ExpoSupply.PlanAsync(_tbotInstance, _calculationService, _ogameService, (lvl, msg) => DoLog(lvl, msg));
+							expoLeave = ExpoSupply.LeaveOverrides(needs);
+							if (expoLeave.Count > 0)
+								DoLog(LogLevel.Debug, $"JumpGate expo override active for {expoLeave.Count} expedition moon(s): {string.Join("; ", needs.Select(n => $"{n.Origin.Coordinate} keeps {n.Need}"))}");
+						}
+					} catch (Exception ex) {
+						DoLog(LogLevel.Warning, $"JumpGate expo override could not be applied, using the general minimum: {ex.Message}");
+						expoLeave = new Dictionary<string, Ships>();
+					}
+					Func<Celestial, Ships> leaveFor = c => expoLeave.TryGetValue(ExpoSupply.CoordKey(c.Coordinate), out var l) ? l : shipsToLeave;
+
 					var moonsWithTeleportablePoints = new List<(Moon moon, long teleportablePoints)>();
 
 					List<(int g, int s, int p)> ausgenommen = new();
@@ -168,7 +185,7 @@ namespace Tbot.Workers.Brain {
 						var shipsToLeaveAdjusted = new Ships();
 						foreach (var shipType in jumpable) {
 							var currentAmount = moon.Ships.GetAmount(shipType);
-							var leftAmount = shipsToLeave.GetAmount(shipType);
+							var leftAmount = leaveFor(moon).GetAmount(shipType);
 							var amountToLeave = Math.Min(currentAmount, leftAmount);
 							shipsToLeaveAdjusted.SetAmount(shipType, amountToLeave);
 						}
@@ -211,7 +228,7 @@ namespace Tbot.Workers.Brain {
 						var shipsToSend = new Ships();
 						foreach (var shipType in jumpable) {
 							var currentAmount = origin.Ships.GetAmount(shipType);
-							var leftAmount = shipsToLeave.GetAmount(shipType);
+							var leftAmount = leaveFor(origin).GetAmount(shipType);
 							var amountToSend = Math.Max(0, currentAmount - leftAmount);
 							shipsToSend.SetAmount(shipType, amountToSend);
 						}

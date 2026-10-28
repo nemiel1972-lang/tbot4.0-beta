@@ -225,6 +225,7 @@ namespace TBot.WebUI.Controllers {
 			return null;
 		});
 
+
 		private static List<string> FillDefaults(string block, JObject data) {
 			var added = new List<string>();
 			if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase)) {
@@ -369,6 +370,12 @@ namespace TBot.WebUI.Controllers {
 				}
 #endif
 				model.Blocks.RemoveAll(b => string.Equals(b.Name, ExperimentalBlock, StringComparison.OrdinalIgnoreCase));
+#if !AUCTION
+				model.Blocks.RemoveAll(b => string.Equals(b.Name, StringComparison.OrdinalIgnoreCase));
+#else
+				if (!model.Blocks.Any(b => string.Equals(b.Name, AuctionBlock, StringComparison.OrdinalIgnoreCase)) && AuctionTemplate() != null)
+					model.Blocks.Add(new ConfigBlockInfo { Name = AuctionBlock, Active = false, Mode = "custom" });
+#endif
 				model.Blocks.Add(new ConfigBlockInfo { Name = TestingPage, Label = "Testing", Mode = "custom" });
 				if (string.Equals(block, ExperimentalBlock, StringComparison.OrdinalIgnoreCase))
 					block = TestingPage;
@@ -594,6 +601,7 @@ namespace TBot.WebUI.Controllers {
 #endif
 				var data = StartReader.Read(chosen.Alias, main, LegacyConfigCheck.IsLegacy(), overrides, keepExp, keepAuction);
 				data["configCheck"] = ConfigCheckFor(chosen.Alias, chosen.Path, instances);
+				data["configKnown"] = DoctorKnown.Read(chosen.Alias).Count;
 				return Content(data.ToString(Formatting.None), "application/json");
 			} catch (Exception e) {
 				return Json(new { error = e.Message });
@@ -614,7 +622,7 @@ namespace TBot.WebUI.Controllers {
 						botStart = o.Value<long?>("startMs") ?? 0;
 						if (upd > 0 && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - upd < 24L * 3600 * 1000 && o["findings"] is JArray fa) {
 							foreach (var x in fa.OfType<JObject>())
-								list.Add(new ConfigFinding { Severity = x.Value<string>("severity") ?? "warn", Path = x.Value<string>("path") ?? "", Message = x.Value<string>("message") ?? "" });
+								list.Add(new ConfigFinding { Severity = x.Value<string>("severity") ?? "warn", Path = x.Value<string>("path") ?? "", Message = x.Value<string>("message") ?? "", Key = x.Value<string>("key") ?? "" });
 							fromBot = true;
 						}
 					}
@@ -623,8 +631,9 @@ namespace TBot.WebUI.Controllers {
 					list.AddRange(ConfigDoctor.Check(SettingsService.ReadResolvedObject(path)));
 				if (instances.Count > 1)
 					list.AddRange(ConfigDoctor.CheckShared(instances));
-				foreach (var x in list.Where(x => x.Severity != "info").OrderBy(x => x.Severity == "error" ? 0 : x.Severity == "warn" ? 1 : 2).Take(30))
-					result.Add(new JObject { ["severity"] = x.Severity, ["path"] = x.Path, ["message"] = x.Message, ["start"] = botStart });
+				var known = DoctorKnown.Read(alias);
+				foreach (var x in list.Where(x => x.Severity != "info" && !(x.Severity == "tip" && known.Contains(x.Key))).OrderBy(x => x.Severity == "error" ? 0 : x.Severity == "warn" ? 1 : 2).Take(30))
+					result.Add(new JObject { ["severity"] = x.Severity, ["path"] = x.Path, ["message"] = x.Message, ["key"] = x.Key, ["start"] = botStart });
 			} catch { }
 			return result;
 		}
@@ -794,6 +803,21 @@ namespace TBot.WebUI.Controllers {
 			if (data["help"] != null)
 				sb.Append("window.CFG_HELP=window.CFG_HELP||{};window.CFG_HELP[").Append(code).Append("]=").Append(data["help"]!.ToString(Newtonsoft.Json.Formatting.None)).Append(";\n");
 			return Content(sb.ToString(), "application/javascript");
+		}
+
+		[HttpPost]
+		public IActionResult MarkDoctorKnown(string? instance, string? key, bool known = true) {
+			try {
+				var instances = GetInstances();
+				var chosen = instances.FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (chosen.Alias == null)
+					chosen = instances[0];
+				if (string.IsNullOrWhiteSpace(key)) Tbot.Common.Settings.DoctorKnown.Clear(chosen.Alias);
+				else Tbot.Common.Settings.DoctorKnown.Set(chosen.Alias, key, known);
+				return Json(new { success = true });
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
 		}
 
 		[HttpPost]

@@ -226,10 +226,10 @@
             }
             const done = g.freshSystems >= g.totalSystems && g.totalSystems > 0;
             const eta = done ? (g.nextDueUtc ? `complete, next pass from ${formatDate(g.nextDueUtc)}` : "complete") : formatEta(g.etaSeconds);
-            const lastTxt = g.lastCoord ? ` &middot; last ${escapeHtml(g.lastCoord)}` : "";
+            const lastTxt = g.lastCoord ? ` &middot; <span>last ${escapeHtml(g.lastCoord)}</span>` : "";
             return `<section class="panel">
                 <div class="panel-heading"><h2>Galaxy scan</h2><span class="panel-count">${formatNumber(g.percent)}%</span></div>
-                <p><strong>${formatNumber(g.targets)} inactive targets</strong> (${formatNumber(g.colonies)} colonies) &middot; ${formatNumber(g.freshSystems)} / ${formatNumber(g.totalSystems)} systems${lastTxt} &middot; ${escapeHtml(done ? eta : "done in " + eta)}</p>
+                <p><strong>${formatNumber(g.targets)} inactive targets</strong> <span>(${formatNumber(g.colonies)} colonies)</span> &middot; <span>${formatNumber(g.freshSystems)} / ${formatNumber(g.totalSystems)} systems</span>${lastTxt} &middot; <span>${escapeHtml(done ? eta : "done in " + eta)}</span></p>
                 <div class="progress-line"><progress max="100" value="${g.percent}"></progress></div>
             </section>`;
         }

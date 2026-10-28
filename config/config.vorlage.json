@@ -488,6 +488,9 @@
         "AutoRepatriate": {
             "Active": false,
             "ReserveTransportSlots": 0,
+            "ExpoSupply": {
+                "Active": false
+            },
             "Reverse": {
                 "Active": true,
                 "ReturnFuelFactor": 1.1,
@@ -547,6 +550,7 @@
         },
         "AutoFleetJumpGate": {
             "Active": false,
+            "ExpoOverride": false,
             "Target": [
                 {
                     "Galaxy": 1,
@@ -605,6 +609,7 @@
         },
         "FuelToCarry": 30000,
         "MinDeuteriumOnMoon": 0,
+        "BackupExpeditions": 1,
         "TelegramMessenger": {
             "Active": false,
             "OnlyFinds": true,

@@ -10,6 +10,7 @@ namespace Tbot.Common.Settings {
 		public string Severity = "warn";
 		public string Path = "";
 		public string Message = "";
+		public string Key = "";
 		public override string ToString() => $"[{Severity}] {Path}: {Message}";
 	}
 

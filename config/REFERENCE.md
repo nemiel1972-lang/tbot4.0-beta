@@ -316,6 +316,7 @@ Sends resources from your planets to one target.
 | `CargoType` | Ship type used. |
 | `Reverse.*` | Reverse repatriation (fetch resources back out for a build): `Active`, `ReturnFuelFactor` (deuterium taken along = fuel of the return flight x factor, 1.1 = +10 %), `PendingTtlMinutes`. The outbound leg carries 10 % more cargo space than needed (fixed). The return flight takes exactly the ships that flew out. Advanced. |
 | `ReserveTransportSlots` | Optional, default `0`. The reverse fetch stays this many slots below `Brain.Transports.MaxSlots`, so it never takes slots from the mine/lifeform/research workers. |
+| `ExpoSupply.Active` | Optional, default `false`. Supplies the expedition moons: if a moon lacks ships or deuterium for its expeditions plus the backup, the shortfall is noted and sent from the base (first `Target`) in the next repatriate cycle. Deuterium target per moon: `Expeditions.MinDeuteriumOnMoon`, or expeditions x `FuelToCarry`. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | As above. |
 
 ### Brain.Directives
@@ -360,6 +361,7 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 | `AutoFleetJumpGate.Exclude` | Moons that never jump (optional list of coordinates with `Type: Moon`). |
 | `MinimumAmountOfShipsToBeLeftOnMoon.*` | Ships per type that stay behind. |
 | `MinimumAmountOfShipPointsToTeleport` | Only jump if at least this many fleet points would go. |
+| `ExpoOverride` | Optional, default `false`. On the expedition start moons only the ships for the planned expeditions plus `Expeditions.BackupExpeditions` full fleets stay (replaces the general minimum there); everything else, expedition finds included, jumps out. |
 
 ## Expeditions
 
@@ -374,6 +376,7 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 | `ManualShips.Active`, `Ships` | Use a fixed fleet per expedition instead of the automatic one. |
 | `FuelToCarry` | Deuterium taken along. |
 | `MinDeuteriumOnMoon` | Moons used as expedition origin need at least this much deuterium (0 = no check). Below it the moon is skipped and a Telegram/Discord message is sent (at most every 6 h per moon). |
+| `BackupExpeditions` | Optional, default `1`. Complete expedition fleets kept as backup on each expedition start moon on top of the planned expeditions (used by `AutoFleetJumpGate.ExpoOverride` and `AutoRepatriate.ExpoSupply`). |
 | `TelegramMessenger.Active` | Telegram message when new expedition reports arrive, with the summed finds (default off). The first read after the first start only learns existing reports. |
 | `TelegramMessenger.OnlyFinds` | Default on: no message when every new expedition came back empty. |
 | `TelegramMessenger.WindowMinutes` | Default 0 = message right after new reports are read. With a number, reports are collected and one summed message is sent once that many minutes have passed since the first collected report (reports collected but not yet sent are lost on restart). |

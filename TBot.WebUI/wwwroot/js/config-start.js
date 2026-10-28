@@ -108,8 +108,27 @@
             cc.slice(0, 8).forEach(function (x) {
                 var line = el('div', null);
                 line.appendChild(el('b', null, x.severity === 'tip' ? 'Suggestion' : 'Config check'));
-                line.appendChild(document.createTextNode(' - ' + x.path + ': '));
+                if (x.severity === 'tip') {
+                    line.appendChild(document.createTextNode(' - '));
+                    line.appendChild(el('span', null, x.path));
+                    line.appendChild(document.createTextNode(': '));
+                } else {
+                    line.appendChild(document.createTextNode(' - ' + x.path + ': '));
+                }
                 line.appendChild(el('span', null, x.message));
+                if (x.severity === 'tip' && x.key && box.dataset.known) {
+                    var kl = el('label', null); kl.style.marginLeft = '10px'; kl.style.whiteSpace = 'nowrap';
+                    var kc = document.createElement('input'); kc.type = 'checkbox'; kc.style.marginRight = '4px';
+                    kc.addEventListener('change', function () {
+                        kc.disabled = true;
+                        fetch(box.dataset.known + '?instance=' + encodeURIComponent(instance) + '&key=' + encodeURIComponent(x.key) + '&known=true', { method: 'POST' })
+                            .then(function (r) { return r.json(); })
+                            .then(function (r) { if (r.success) { line.remove(); if (!ccBox.querySelector('b')) ccBox.remove(); } else { kc.disabled = false; kc.checked = false; } })
+                            .catch(function () { kc.disabled = false; kc.checked = false; });
+                    });
+                    kl.appendChild(kc); kl.appendChild(el('span', null, 'Known'));
+                    line.appendChild(kl);
+                }
                 ccBox.appendChild(line);
             });
             if (cc.length > 8) ccBox.appendChild(el('div', null, (cc.length - 8) + ' more, see the log.'));
@@ -121,6 +140,17 @@
             });
             ccBox.appendChild(ccX);
             box.appendChild(ccBox);
+        }
+        if (d.configKnown > 0 && box.dataset.known) {
+            var kn = el('div', 'st-mut', null);
+            kn.appendChild(el('span', null, 'Suggestions marked as known (hidden):'));
+            kn.appendChild(document.createTextNode(' ' + d.configKnown + ' '));
+            var ka = el('a', 'st-link', 'Show again'); ka.href = '#';
+            ka.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                fetch(box.dataset.known + '?instance=' + encodeURIComponent(instance), { method: 'POST' }).then(function () { location.reload(); });
+            });
+            kn.appendChild(ka); box.appendChild(kn);
         }
         if (d.legacy) notes.push(['bad', 'Old configuration detected: only Defender and SleepMode run. Update the config with MigrateConfig (see config/README.md).']);
         if (s && s.attacks && s.attacks.length) notes.push(['bad', s.attacks.length + (s.attacksMore ? '+' : '') + ' incoming attack' + (s.attacks.length > 1 ? 's' : '') + ', next impact in ' + dur(s.attacks[0].inSec) + ' on ' + hide(s.attacks[0].dest)]);

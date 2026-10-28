@@ -18,9 +18,10 @@
 
 <div class="autofarm-page tbot-dark" id="ab-dashboard" data-instance="@Model.SelectedInstance">
     <div class="autofarm-shell">
+        @await Html.PartialAsync("_BuildPlanerTabs", Model.SelectedInstance)
         <header class="autofarm-header">
             <div>
-                <h1>Autobuilds</h1>
+                <h1>Build order</h1>
                 <p class="intro">What the Brain workers (AutoMine, AutoResearch, LF-AutoMine, LF-AutoResearch) want to build per celestial and what they started last. Read only.</p>
             </div>
             <form method="get" class="instance-picker" style="@(Model.Instances.Count <= 1 ? "display:none" : null)">
@@ -119,9 +120,9 @@
         }
 
         function ago(value) {
-            if (!value) return "unbekannt";
+            if (!value) return "unknown";
             const t = new Date(value).getTime();
-            if (Number.isNaN(t)) return "unbekannt";
+            if (Number.isNaN(t)) return "unknown";
             let s = Math.max(0, Math.round((Date.now() - t) / 1000));
             const d = Math.floor(s / 86400); s -= d * 86400;
             const h = Math.floor(s / 3600); s -= h * 3600;
@@ -169,7 +170,7 @@
             return `<section class="panel panel-primary">
                 <div class="panel-heading"><h2>Overview</h2><span class="panel-count">${num(s.open)} open requests</span></div>
                 <div class="metric-grid">
-                    <div class="metric"><span>Offen</span><strong>${num(s.open)}</strong></div>
+                    <div class="metric"><span>Pending</span><strong>${num(s.open)}</strong></div>
                     <div class="metric"><span>Waiting for delivery</span><strong>${num(s.waiting)}</strong></div>
                     <div class="metric"><span>Delivery in transit</span><strong>${num(s.inFlight)}</strong></div>
                     <div class="metric"><span>Stock covered</span><strong>${num(s.funded)}</strong></div>
@@ -186,12 +187,12 @@
 
         function buildingCell(b) {
             if (!b) return `<span class="ab-none">-</span>`;
-            return `<span class="ab-label">${esc(b.label)}</span><span class="ab-sub">started ${esc(ago(b.startedUtc))}</span>`;
+            return `<span class="ab-label">${esc(b.label)}</span><span class="ab-sub">started <span>${esc(ago(b.startedUtc))}</span></span>`;
         }
 
         function nextCell(n) {
             if (!n) return `<span class="ab-none">-</span>`;
-            return `<span class="ab-label">${esc(n.label)}</span><span class="ab-sub">seit ${esc(ago(n.firstRequestedUtc))}</span>`;
+            return `<span class="ab-label">${esc(n.label)}</span><span class="ab-sub">since <span>${esc(ago(n.firstRequestedUtc))}</span></span>`;
         }
 
         function statusCell(n) {
@@ -280,7 +281,7 @@
             </tr>`).join("") : `<tr><td colspan="5" class="empty-cell">No completed entries yet.</td></tr>`;
             return `<section class="panel">
                 <details class="logs-details" id="ab-history">
-                    <summary>Verlauf (letzte ${num(history.length)})</summary>
+                    <summary>History (last ${num(history.length)})</summary>
                     <div class="table-wrap"><table>
                         <thead><tr><th>When</th><th>Worker</th><th>Celestial</th><th>Build</th><th>Result</th></tr></thead>
                         <tbody>${rows}</tbody>

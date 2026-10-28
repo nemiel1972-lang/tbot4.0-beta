@@ -43,9 +43,10 @@ namespace Tbot.Services {
 		private static string[] GetCaptchaImagesHashes(byte[] images) {
 			string[] result = new string[4];
 
-			Image originalImage = Image.Load(images);
+			using Image originalImage = Image.Load(images);
+			int tileWidth = originalImage.Width >= 4 ? originalImage.Width / 4 : 60;
 			for (int i = 0; i < 4; i++) {
-				Rectangle cropRect = new(i * 60, 0, 60, originalImage.Height);
+				Rectangle cropRect = new(i * tileWidth, 0, tileWidth, originalImage.Height);
 				using Image thisPicture = originalImage.Clone(p => p.Crop(cropRect));
 				using MemoryStream ms = new();
 				thisPicture.SaveAsPng(ms);
@@ -91,7 +92,6 @@ namespace Tbot.Services {
 			{ "the Castle", "c7e625146dd0a063f2903d011b2d32cd" },
 			{ "the Castlie", "c7e625146dd0a063f2903d011b2d32cd" },
 			{ "the Cherry", "cd4d09e93afc6bd0e6ad22927d2d8888" },
-			{ "the Clock", "" },
 			{ "the Cloud", "0672c2f12dd29f8a4cf8be15262ff3e4" },
 			{ "the Colourea Pencils", "21d2c060b5bad6a77cf382adb616e97b" },
 			{ "the Coloured Pencils", "21d2c060b5bad6a77cf382adb616e97b" },
@@ -1373,7 +1373,7 @@ namespace Tbot.Services {
 			{ "ee9212938d24fdbb2da640cb48b63e84", "the Rainbow" },
 			{ "eeceb2245a6d19552a0465cdfdeea705", "the Ice Cream" },
 			{ "eee9352dda5ca2287206cccfa652664e", "the Fried Egg" },
-			{ "eee9ff1f16062a005086e55e714faf7a", "the Friea Eqg" },
+			{ "eee9ff1f16062a005086e55e714faf7a", "the Fried Egg" },
 			{ "ef563f22f532d8d5e807d2cb5a620743", "the Bottle" },
 			{ "ef835eeb7f2615526d92b2ea38c83712", "the Apple" },
 			{ "efa1f31c844e0d33eab4a8e7186b68f9", "the Sun" },

@@ -142,18 +142,21 @@
                 });
                 h += '</table></div></div>';
             });
-            h += modeCard(res.mode || 'off', res.tasks || 'off');
+            h += modeCard(res.mode || 'off', res.tasks || 'off', res.telegram || 'on');
             h += ranksCard(d, res.choices);
             content.innerHTML = h;
         }
 
-        function modeCard(mode, tasks) {
+        function modeCard(mode, tasks, tg) {
             function o(v, t) { return '<option value="' + v + '"' + (mode === v ? ' selected' : '') + '>' + t + '</option>'; }
+            function o3(v, t) { return '<option value="' + v + '"' + (tg === v ? ' selected' : '') + '>' + t + '</option>'; }
             function o2(v, t) { return '<option value="' + v + '"' + (tasks === v ? ' selected' : '') + '>' + t + '</option>'; }
             return '<div class="rw-card"><h2>Automatic claiming</h2><div>Mode: <select id="rw-mode">' + o('off', 'Off') + o('dry', 'Dry run (log only)') + o('on', 'On') + '</select></div>'
                 + '<div class="rw-muted">Claims a rank only when it is reached, not yet claimed and you chose a reward for it below. Checked with every capture (about every 4 hours). Dry run only writes to the log what would be claimed.</div>'
                 + '<h2 style="margin-top:14px">Automatic tasks</h2><div>Mode: <select id="rw-tasks">' + o2('off', 'Off') + o2('dry', 'Dry run (log only)') + o2('on', 'On') + '</select></div>'
-                + '<div class="rw-muted">Visits the scrap dealer and builds missing ships (e.g. Recycler) and defence (e.g. Light Laser) on your home planet for open tasks. Only the missing amount, only if the resources are there, and the same order is not repeated within 24 hours. Costs resources, so it is off by default.</div></div>';
+                + '<div class="rw-muted">Visits the scrap dealer and builds missing ships (e.g. Recycler) and defence (e.g. Light Laser) on your home planet for open tasks. Only the missing amount, only if the resources are there, and the same order is not repeated within 24 hours. Costs resources, so it is off by default.</div>'
+                + '<h2 style="margin-top:14px">Telegram messages</h2><div>Reward messages: <select id="rw-tg">' + o3('on', 'On') + o3('off', 'Off') + '</select></div>'
+                + '<div class="rw-muted">Messages when a rank reward has been claimed and when the last rank reward is collected. Does not affect the log.</div></div>';
         }
 
         function ranksCard(d, choices) {
@@ -188,13 +191,14 @@
 
         content.addEventListener('change', function (ev) {
             var el = ev.target;
-            if (el && (el.id === 'rw-mode' || el.id === 'rw-tasks')) {
+            if (el && (el.id === 'rw-mode' || el.id === 'rw-tasks' || el.id === 'rw-tg')) {
+                var key = el.id === 'rw-tasks' ? 'tasks' : (el.id === 'rw-tg' ? 'telegram' : 'mode');
                 var b = new URLSearchParams();
                 b.set('instance', instance);
-                b.set(el.id === 'rw-tasks' ? 'tasks' : 'mode', el.value);
+                b.set(key, el.value);
                 fetch('@Url.Action("SaveMode", "Belohnungen")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: b.toString() })
                     .then(function (r) { return r.json(); })
-                    .then(function (r) { statusEl.textContent = r.success ? 'Choice saved' : 'Could not save: ' + (r.error || ''); if (r.success && last) last[el.id === 'rw-tasks' ? 'tasks' : 'mode'] = el.value; });
+                    .then(function (r) { statusEl.textContent = r.success ? 'Choice saved' : 'Could not save: ' + (r.error || ''); if (r.success && last) last[key] = el.value; });
                 return;
             }
             if (!el || !el.getAttribute || el.getAttribute('data-tier') === null) return;

@@ -1435,7 +1435,15 @@ namespace Tbot.Workers {
 			return neededProbes;
 		}
 
-		private Buildables GetConfiguredCargoType() {
+		private long CalculateFarmCargoCount(Resources loot, Buildables cargoShip, LFBonuses lfBonuses) {
+			long cargoCount = _calculationService.CalcShipNumberForPayload(loot, cargoShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, (lfBonuses ?? new LFBonuses()).GetShipCargoBonus(cargoShip), _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
+			if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "CargoSurplusPercentage") && (double) _tbotInstance.InstanceSettings.AutoFarm.CargoSurplusPercentage > 0) {
+				cargoCount = (long) Math.Round(cargoCount + (cargoCount * ((double) _tbotInstance.InstanceSettings.AutoFarm.CargoSurplusPercentage / 100.0)), 0);
+			}
+			return cargoCount;
+		}
+
+				private Buildables GetConfiguredCargoType() {
 			bool useSpeedFleet = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "UseSpeedFleet", false) && !DeuteriumGuardBlocksSpeedFleet();
 			if (useSpeedFleet) {
 				return Buildables.Pathfinder;
@@ -3012,8 +3020,11 @@ namespace Tbot.Workers {
 							tempCelestial = await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
 							tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Resources);
 							tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.LFBonuses);
+							long candidateCargo = CalculateFarmCargoCount(loot, cargoShip, tempCelestial.LFBonuses);
 							long availableCargoShips120 = tempCelestial.Ships?.GetAmount(cargoShip) ?? 0;
-							if (tempCelestial.Ships != null && availableCargoShips120 >= (numCargo + _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep)) {
+							if (tempCelestial.Ships != null && availableCargoShips120 >= (candidateCargo + _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep)) {
+								numCargo = candidateCargo;
+								attackingShips = new Ships().Add(cargoShip, numCargo);
 								speed = 0;
 								if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MinLootFuelRatio") && _tbotInstance.InstanceSettings.AutoFarm.MinLootFuelRatio != 0) {
 									long configuredMaxFlightTime114 = (long) _tbotInstance.InstanceSettings.AutoFarm.MaxFlightTime;
@@ -3067,6 +3078,8 @@ namespace Tbot.Workers {
 								tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Ships);
 								tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Resources);
 								tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.LFBonuses);
+								long candidateCargo = CalculateFarmCargoCount(loot, cargoShip, tempCelestial.LFBonuses);
+								attackingShips = new Ships().Add(cargoShip, candidateCargo);
 								speed = 0;
 								if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "FleetSpeed") && _tbotInstance.InstanceSettings.AutoFarm.FleetSpeed > 0) {
 									speed = (int) _tbotInstance.InstanceSettings.AutoFarm.FleetSpeed / 10;
@@ -3105,7 +3118,7 @@ namespace Tbot.Workers {
 								FleetPrediction prediction = _calculationService.CalcFleetPrediction(tempCelestial.Coordinate, target.Celestial.Coordinate, attackingShips, Missions.Attack, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, tempCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
 
 								if (
-									tempCelestial.Ships.GetAmount(cargoShip) < numCargo + (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep &&
+									tempCelestial.Ships.GetAmount(cargoShip) < candidateCargo + (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep &&
 									tempCelestial.Resources.Deuterium >= prediction.Fuel &&
 									(
 										!SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "MaxFlightTime") ||
@@ -3114,7 +3127,7 @@ namespace Tbot.Workers {
 									)
 								) {
 									if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "BuildCargos") && _tbotInstance.InstanceSettings.AutoFarm.BuildCargos == true) {
-										var neededCargos = numCargo + (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep - tempCelestial.Ships.GetAmount(cargoShip);
+										var neededCargos = candidateCargo + (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep - tempCelestial.Ships.GetAmount(cargoShip);
 										var cost = _calculationService.CalcPrice(cargoShip, (int) neededCargos);
 										if (tempCelestial.Resources.IsEnoughFor(cost)) {
 											_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"{tempCelestial.ToString()}: Building {neededCargos}x{cargoShip.ToString()}");
@@ -3135,12 +3148,21 @@ namespace Tbot.Workers {
 										}
 									}
 
+									tempCelestial = await _tbotOgameBridge.UpdatePlanet(tempCelestial, UpdateTypes.Ships);
 									if (tempCelestial.Ships.GetAmount(cargoShip) - (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep < (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToSend) {
 										_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Insufficient {cargoShip.ToString()} on {tempCelestial.Coordinate}, require {numCargo + (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep} {cargoShip.ToString()}.");
 										continue;
 									}
 
-									numCargo = tempCelestial.Ships.GetAmount(cargoShip) - (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep;
+									long fallbackCargo = Math.Min(tempCelestial.Ships.GetAmount(cargoShip) - (long) _tbotInstance.InstanceSettings.AutoFarm.MinCargosToKeep, candidateCargo);
+									var fallbackShips = new Ships().Add(cargoShip, fallbackCargo);
+									long fallbackCapacity = _calculationService.CalcFleetCapacity(fallbackShips, _tbotInstance.UserData.serverData, _tbotInstance.UserData.researches.HyperspaceTechnology, tempCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
+									if (fallbackCapacity < loot.TotalResources) {
+										_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Insufficient cargo space on {tempCelestial.Coordinate}: {fallbackCargo} {cargoShip} can carry {fallbackCapacity:N0} but {loot.TotalResources:N0} are needed.");
+										continue;
+									}
+									numCargo = fallbackCargo;
+									attackingShips = fallbackShips;
 									fromCelestial = tempCelestial;
 									break;
 								}
@@ -3162,12 +3184,14 @@ namespace Tbot.Workers {
 								_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"No {cargoShip.ToString()} available on {fromCelestial.ToString()} (all ships already in use). Skipping target.");
 								continue;
 							}
+							fromCelestial = await _tbotOgameBridge.UpdatePlanet(fromCelestial, UpdateTypes.LFBonuses);
 							if (availableShips < numCargo) {
 								_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Only {availableShips} {cargoShip.ToString()} available (needed {numCargo}). Adjusting fleet size.");
 								numCargo = availableShips;
 								attackingShips = new Ships();
 								attackingShips.Add(cargoShip, numCargo);
-
+							}
+							{
 								var cargoCapacity = _calculationService.CalcFleetCapacity(
 									attackingShips, _tbotInstance.UserData.serverData, _tbotInstance.UserData.researches.HyperspaceTechnology,
 									fromCelestial.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);

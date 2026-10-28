@@ -105,52 +105,23 @@ namespace TBot.Ogame.Infrastructure.Models {
 
 		public bool IsDefenceless(bool isUsingProbes = false) {
 			if (HasDefensesInformation && HasFleetInformation && !isUsingProbes) {
-				return LightFighter == null
-					&& HeavyFighter == null
-					&& Cruiser == null
-					&& Battleship == null
-					&& Battlecruiser == null
-					&& Bomber == null
-					&& Destroyer == null
-					&& Deathstar == null
-					&& SmallCargo == null
-					&& LargeCargo == null
-					&& Recycler == null
-					&& Reaper == null
-					&& Pathfinder == null
-					&& RocketLauncher == null
-					&& LightLaser == null
-					&& HeavyLaser == null
-					&& GaussCannon == null
-					&& IonCannon == null
-					&& PlasmaTurret == null
-					&& SmallShieldDome == null
-					&& LargeShieldDome == null;
+				return !HasShipOrDefence(
+					LightFighter, HeavyFighter, Cruiser, Battleship, Battlecruiser,
+					Bomber, Destroyer, Deathstar, SmallCargo, LargeCargo, Recycler,
+					Reaper, Pathfinder, RocketLauncher, LightLaser, HeavyLaser,
+					GaussCannon, IonCannon, PlasmaTurret, SmallShieldDome, LargeShieldDome);
 			} else if (HasDefensesInformation && HasFleetInformation && isUsingProbes) {
-				return SolarSatellite == null
-					&& LightFighter == null
-					&& HeavyFighter == null
-					&& Cruiser == null
-					&& Battleship == null
-					&& Battlecruiser == null
-					&& Bomber == null
-					&& Destroyer == null
-					&& Deathstar == null
-					&& SmallCargo == null
-					&& LargeCargo == null
-					&& Recycler == null
-					&& Reaper == null
-					&& Pathfinder == null
-					&& RocketLauncher == null
-					&& LightLaser == null
-					&& HeavyLaser == null
-					&& GaussCannon == null
-					&& IonCannon == null
-					&& PlasmaTurret == null
-					&& SmallShieldDome == null
-					&& LargeShieldDome == null;
+				return !HasShipOrDefence(
+					SolarSatellite, LightFighter, HeavyFighter, Cruiser, Battleship,
+					Battlecruiser, Bomber, Destroyer, Deathstar, SmallCargo, LargeCargo,
+					Recycler, Reaper, Pathfinder, RocketLauncher, LightLaser, HeavyLaser,
+					GaussCannon, IonCannon, PlasmaTurret, SmallShieldDome, LargeShieldDome);
 			}
 			return false;
+		}
+
+		private static bool HasShipOrDefence(params long?[] amounts) {
+			return amounts.Any(amount => amount.GetValueOrDefault() > 0);
 		}
 
 		public float PlunderRatio(CharacterClass playerClass) {

@@ -859,7 +859,11 @@ window.CFG_HELP.en = {
   },
   "AutoRepatriate.ReserveTransportSlots": {
    "t": "The reverse fetch stays this many slots below Brain Transports Max slots, so it never takes slots from the mines, lifeform and research workers. 0 (default) = no reserve."
+  },  "AutoRepatriate.ExpoSupply.Active": {
+   "t": "Supplies the expedition moons: if a moon lacks ships or deuterium for its planned expeditions plus the backup (Expeditions BackupExpeditions), the shortfall is noted and sent from the base (first Target) in the next repatriate cycle by deploy. Ships on expeditions and deliveries already on their way count as present. Off by default.",
+   "e": "Deuterium target per moon: MinDeuteriumOnMoon, or expeditions x FuelToCarry if that is 0."
   },
+
   "ResourceLedger.Active": {
    "t": "The bookkeeping that reserves resources for builds so workers do not fight over the same stock or order the same delivery twice. On by default."
   },
@@ -914,7 +918,10 @@ window.CFG_HELP.en = {
   },
   "AutoFleetJumpGate.Exclude": {
    "t": "Moons that never jump."
+  },  "AutoFleetJumpGate.ExpoOverride": {
+   "t": "On: on the expedition start moons only the ships for the planned expeditions plus the backup (Expeditions BackupExpeditions) stay. Everything else, expedition finds included, jumps out. This replaces the general minimum on those moons. Off by default."
   },
+
   "AutoFleetJumpGate.MinimumAmountOfShipPointsToTeleport": {
    "t": "Only jump if at least this many fleet points would go."
   }
@@ -953,7 +960,11 @@ window.CFG_HELP.en = {
   },
   "MinDeuteriumOnMoon": {
    "t": "A moon needs at least this much deuterium to start expeditions (0 = no check). Below it the moon is skipped and you get a message."
+  },  "BackupExpeditions": {
+   "t": "How many complete expedition fleets are kept as a backup on every expedition start moon, on top of the planned expeditions (used by the JumpGate expo override and the expedition moon supply). Covers the total loss of a fleet. Default 1.",
+   "e": "1 = one extra full fleet stays on the moon."
   },
+
   "TelegramMessenger.Active": {
    "t": "Send a Telegram message when new expedition reports arrive, with the summed finds (resources, dark matter, ships). Several reports found at the same time come as one message. The first read after the first start only learns the existing reports and sends nothing."
   },

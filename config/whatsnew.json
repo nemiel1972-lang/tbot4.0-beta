@@ -1,42 +1,34 @@
 {
-  "version": "4.0-beta15",
-  "date": "2026-10-28",
+  "version": "4.0-beta16",
+  "date": "2026-10-29",
   "title": {
-    "en": "What's new in 4.0 beta15",
-    "de": "Neu in 4.0 beta15"
+    "en": "What's new in 4.0 beta16",
+    "de": "Neu in 4.0 beta16"
   },
   "lines": {
     "en": [
-      "New: Directives (off by default): works through the in-game directive tasks for you (build/research to a level, ships and defence, colonise, expedition, spy mission to position 16 and its recall, lithium conversion); what it cannot do is only logged; dry-run mode available",
-      "New: Rewards page - overview of the universe reward tasks (Tritium tasks and ranks)",
-      "New: Logistics page - planner and calculator for fleet transports",
-      "New: new look of the web UI",
-      "New: Defender test (Defender page, Test section): plays an assumed attack from A on B through your settings and shows what the bot calculates and would do - nothing is sent or changed",
-      "New: ConfigDoctor - checks your config for implausible values (start page notes, bot log, standalone ConfigDoctor tool in the package)",
-      "New: Expeditions \"Smart ships\" (off by default): per expedition 1 probe, 1 pathfinder and 1 combat ship, cargo split equally across all planned expeditions, missing cargo filled with a second cargo type",
-      "New: config page blocks can be collapsed (click the heading, \"Collapse all\" next to \"Show all help\"); the state is remembered",
-      "New: Harvest - search ranges for expedition debris and normal debris, option \"only around expedition starts\", automatic detection of the location with the most pathfinders/recyclers",
-      "Fixed: Harvest no longer reports a false \"stuck\" error on long cycles; mine plan no longer overflows (\"Invalid Date\", plasma above level 100)",
-      "Fixed: calculation errors (deuterium mine and Lifeform bonus, cargo capacity, Lifeform speed bonus), AutoResearch interval, Admiral slot count",
-      "Mine plan: Cheapest mode drives the build plan across all queues, next step per queue on the page; AutoResearch respects max levels and the priority list",
-      "New: build commit and build time are shown in the navigation bar",
-      "New: the bot time (game server time) is shown with browser conversion on the start page"
+      "New: Build planning menu entry - Autobuilds (Build order) and Mine plan (Build calculation) are tabs under one entry",
+      "New: expedition moon supply (off by default): AutoRepatriate.ExpoSupply sends missing ships and deuterium from the base to the expedition moons in the next repatriate cycle; AutoFleetJumpGate.ExpoOverride keeps only the planned expeditions plus backup on the expedition moons",
+      "New: the Expeditions config page also shows the expedition moon options (jump gate, supply, slots research) in one place",
+      "New: ConfigDoctor suggestions have a \"Known\" checkbox that hides a suggestion for good (\"Show again\" resets it)",
+      "New: Rewards page - switch for the Telegram messages",
+      "Fixed: AutoFarm - the number of cargo ships uses the Lifeform cargo bonus of the sending planet, and cargo capacity is checked again right before sending",
+      "Fixed: AutoFarm - a target was treated as defended when a ship or defence entry with 0 was in the report",
+      "Fixed: Defender - WeakAttackRatio of 0 no longer causes a division by zero",
+      "Fixed: captcha solver reads the picture width instead of a fixed size; two wrong entries in its table",
+      "Fixed: the Expeditions page did not load in German; missing German translations added"
     ],
     "de": [
-      "Neu: Direktiven (standardmäßig aus): arbeitet die Direktiven-Aufgaben des Spiels ab (bauen/erforschen bis zu einer Stufe, Schiffe und Verteidigung, kolonisieren, Expedition, Spionagemission zu Position 16 samt Rückruf, Lithium-Umwandlung); was er nicht kann, wird nur geloggt; mit Probelauf-Modus",
-      "Neu: Belohnungen-Seite - Übersicht der Universums-Belohnungen (Tritium-Aufgaben und Ränge)",
-      "Neu: Logistik-Seite - Planer und Rechner für Flotten-Transporte",
-      "Neu: neue Optik der Web-Oberfläche",
-      "Neu: Defender-Test (Defender-Seite, Abschnitt Test): spielt einen angenommenen Angriff von A auf B durch und zeigt, was der Bot berechnet und tun würde - es wird nichts gesendet oder geändert",
-      "Neu: ConfigDoctor - prüft deine Config auf unplausible Werte (Hinweise auf der Startseite, Bot-Log, eigenes Tool ConfigDoctor im Paket)",
-      "Neu: Expeditionen \"Smart ships\" (standardmäßig aus): je Expedition 1 Sonde, 1 Pfadfinder und 1 Kampfschiff, Ladung gleichmäßig auf alle geplanten Expeditionen verteilt, fehlende Ladung mit einem zweiten Transportertyp aufgefüllt",
-      "Neu: Blöcke der Config-Seite lassen sich einklappen (Klick auf die Überschrift, \"Alle einklappen\" neben \"Show all help\"); der Zustand wird gemerkt",
-      "Neu: Harvest - Suchreichweiten für Expeditions- und normale Trümmerfelder, Option \"nur um die Expeditions-Starts\", automatische Erkennung des Standorts mit den meisten Pfadfindern/Recyclern",
-      "Behoben: Harvest meldet bei langen Zyklen keinen falschen \"hängt\"-Fehler mehr; der Minenplan läuft nicht mehr über (\"Invalid Date\", Plasma über Stufe 100)",
-      "Behoben: Rechenfehler (Deuteriummine und Lebensform-Bonus, Laderaum, Lebensform-Geschwindigkeitsbonus), AutoResearch-Intervall, Slot-Zahl mit Admiral",
-      "Minenplan: Modus Cheapest steuert den Bauplan über alle Warteschlangen, nächster Schritt je Warteschlange auf der Seite; AutoResearch beachtet Maximalstufen und Prioritätenliste",
-      "Neu: Build-Commit und Build-Zeit stehen in der Kopfleiste",
-      "Neu: die Bot-Zeit (Serverzeit des Spiels) wird auf der Startseite mit Umrechnung im Browser angezeigt"
+      "Neu: Menüeintrag Bauplanung - Autobuilds (Bauplan) und Minenplan (Bauberechnung) sind Reiter unter einem Eintrag",
+      "Neu: Versorgung der Expeditionsmonde (standardmäßig aus): AutoRepatriate.ExpoSupply schickt fehlende Schiffe und Deuterium von der Basis zu den Expeditionsmonden im nächsten Repatriate-Zyklus; AutoFleetJumpGate.ExpoOverride lässt auf den Expeditionsmonden nur die geplanten Expeditionen plus Backup stehen",
+      "Neu: Die Config-Seite Expeditionen zeigt auch die Expeditionsmond-Optionen (Sprungtor, Versorgung, Slot-Forschung) an einer Stelle",
+      "Neu: ConfigDoctor-Hinweise haben ein Häkchen \"Bekannt\", das einen Hinweis dauerhaft ausblendet (\"Wieder anzeigen\" setzt es zurück)",
+      "Neu: Belohnungen-Seite - Schalter für die Telegram-Meldungen",
+      "Behoben: AutoFarm - die Zahl der Transporter nutzt den Lebensform-Laderaumbonus des sendenden Planeten, und der Laderaum wird direkt vor dem Senden nochmals geprüft",
+      "Behoben: AutoFarm - ein Ziel galt als verteidigt, wenn im Bericht ein Schiff oder eine Verteidigung mit 0 stand",
+      "Behoben: Defender - WeakAttackRatio von 0 verursacht keine Division durch 0 mehr",
+      "Behoben: Captcha-Löser liest die Bildbreite statt einer festen Größe; zwei falsche Einträge in seiner Tabelle",
+      "Behoben: Die Seite Expeditionen lud auf Deutsch nicht; fehlende deutsche Übersetzungen ergänzt"
     ]
   }
 }

@@ -66,12 +66,14 @@ namespace TBot.WebUI.Controllers {
 				string mpath = Path.Combine(AppContext.BaseDirectory, "data", $"belohnungen_einstellung_{safeM}.json");
 				result["mode"] = "off";
 				result["tasks"] = "off";
+				result["telegram"] = "on";
 				if (System.IO.File.Exists(mpath)) {
 					using var fs = new FileStream(mpath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 					using var sr = new StreamReader(fs);
 					var mj = JObject.Parse(sr.ReadToEnd());
 					result["mode"] = (string?) mj["mode"] ?? "off";
 					result["tasks"] = (string?) mj["tasks"] ?? "off";
+					result["telegram"] = (string?) mj["telegram"] == "off" ? "off" : "on";
 				}
 			} catch {
 			}
@@ -109,10 +111,13 @@ namespace TBot.WebUI.Controllers {
 		}
 
 		[HttpPost]
-		public async Task<IActionResult> SaveMode(string? instance, string? mode, string? tasks) {
+		public async Task<IActionResult> SaveMode(string? instance, string? mode, string? tasks, string? telegram) {
 			try {
 				mode = (mode ?? "").ToLowerInvariant();
 				tasks = (tasks ?? "").ToLowerInvariant();
+				telegram = (telegram ?? "").ToLowerInvariant();
+				if (telegram != "" && telegram != "on" && telegram != "off")
+					return Json(new { success = false, error = "Invalid mode." });
 				foreach (var v in new[] { mode, tasks })
 					if (v != "" && v != "off" && v != "dry" && v != "on")
 						return Json(new { success = false, error = "Invalid mode." });
@@ -126,8 +131,9 @@ namespace TBot.WebUI.Controllers {
 				try { if (System.IO.File.Exists(spath)) cur = JObject.Parse(System.IO.File.ReadAllText(spath)); } catch { }
 				if (mode != "") cur["mode"] = mode;
 				if (tasks != "") cur["tasks"] = tasks;
+				if (telegram != "") cur["telegram"] = telegram;
 				Tbot.Common.IO.AtomicFile.WriteAllText(spath, cur.ToString(Newtonsoft.Json.Formatting.Indented));
-				_logger.WriteLog(LogLevel.Information, LogSender.Tbot, $"[WebUI] Rewards settings saved for {alias}: claim ranks = {(string?) cur["mode"] ?? "off"}, automatic tasks = {(string?) cur["tasks"] ?? "off"}. The bot applies it within a minute.");
+				_logger.WriteLog(LogLevel.Information, LogSender.Tbot, $"[WebUI] Rewards settings saved for {alias}: claim ranks = {(string?) cur["mode"] ?? "off"}, automatic tasks = {(string?) cur["tasks"] ?? "off"}, Telegram messages = {(string?) cur["telegram"] ?? "on"}. The bot applies it within a minute.");
 				return Json(new { success = true });
 			} catch (Exception e) {
 				return Json(new { success = false, error = e.Message });

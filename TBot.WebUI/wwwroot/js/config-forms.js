@@ -124,6 +124,7 @@
     }
     function clone(o) { return JSON.parse(JSON.stringify(o)); }
     function dirty() { return JSON.stringify(state) !== JSON.stringify(original); }
+    function mainObj() { return block === 'Expeditions' && COMBINED ? state.Expeditions : state; }
 
     var onSidebarActive = null;
     function wireSwitches() {
@@ -156,16 +157,16 @@
     function getBlock(name) {
         return fetch(main.dataset.get + '?instance=' + encodeURIComponent(instance) + '&block=' + encodeURIComponent(name) + (SCOPE[name] ? '&scope=' + SCOPE[name] : ''), { cache: 'no-store' }).then(function (r) { return r.json(); });
     }
-    var COMBINED = block === 'SleepMode' ? ['SleepMode', 'GhostSleep'] : (block === 'Messenger' ? ['TelegramMessenger', 'DiscordWebhook'] : (block === 'Testing' ? ['Experimental', 'General', 'Brain'] : null));
-    var COMBINED_TITLE = block === 'Messenger' ? 'Messenger' : (block === 'Testing' ? 'Testing' : 'Sleep / GhostSleep');
+    var COMBINED = block === 'Expeditions' ? ['Expeditions', 'Brain'] : block === 'SleepMode' ? ['SleepMode', 'GhostSleep'] : (block === 'Messenger' ? ['TelegramMessenger', 'DiscordWebhook'] : (block === 'Testing' ? ['Experimental', 'General', 'Brain'] : null));
+    var COMBINED_TITLE = block === 'Expeditions' ? 'Expeditions' : block === 'Messenger' ? 'Messenger' : (block === 'Testing' ? 'Testing' : 'Sleep / GhostSleep');
     var loading = COMBINED
         ? Promise.all(COMBINED.map(getBlock)).then(function (rs) {
             var data = {}, files = [], firstError = null;
             rs.forEach(function (r, i) {
-                if (r.success) { data[COMBINED[i]] = JSON.parse(r.data); files.push(r.file); } else if (!firstError) firstError = r;
+                if (r.success) { data[COMBINED[i]] = JSON.parse(r.data); if (files.indexOf(r.file) < 0) files.push(r.file); } else if (!firstError) firstError = r;
             });
             if (!Object.keys(data).length) return firstError;
-            if (block === 'SleepMode' && !data.SleepMode) return firstError;
+            if ((block === 'SleepMode' || block === 'Expeditions') && !data[block]) return firstError;
             return { success: true, data: JSON.stringify(data), file: files.join(' + ') };
         })
         : getBlock(block);
@@ -181,8 +182,8 @@
             });
             originalText = JSON.stringify(original, null, 2);
             var dr = readDrafts();
-            if (!COMBINED && dr.__active && dr.__active[block] !== undefined && dr[block] === undefined && typeof state.Active === 'boolean') state.Active = !!dr.__active[block];
-            onSidebarActive = function (name, v) { if (!COMBINED && name === block && state && typeof state.Active === 'boolean') { state.Active = v; render(); } };
+            if ((!COMBINED || block === 'Expeditions') && dr.__active && dr.__active[block] !== undefined && dr[block] === undefined && typeof mainObj().Active === 'boolean') mainObj().Active = !!dr.__active[block];
+            onSidebarActive = function (name, v) { var mo = mainObj(); if ((!COMBINED || block === 'Expeditions') && name === block && mo && typeof mo.Active === 'boolean') { mo.Active = v; render(); } };
             (COMBINED || [block]).forEach(function (n) {
                 if (dr[n] === undefined) return;
                 if (COMBINED) state[n] = clone(dr[n]); else state = clone(dr[n]);
@@ -192,13 +193,13 @@
         .catch(function (e) { root.innerHTML = ''; root.appendChild(el('div', { class: 'cfg-error', text: String(e) })); });
 
     function changedClass(obj, key, orig) { return JSON.stringify(obj[key]) !== JSON.stringify(orig) ? ' cfg-changed' : ''; }
-    function origAt(path) { var o = original; for (var i = 0; i < path.length; i++) { if (o == null) return undefined; o = o[path[i]]; } return o; }
+    function origAt(path) { var o = original; if (block === 'Expeditions' && path[0] !== 'Brain' && path[0] !== 'Expeditions') path = ['Expeditions'].concat(path); for (var i = 0; i < path.length; i++) { if (o == null) return undefined; o = o[path[i]]; } return o; }
 
     function toggle(obj, key, path) {
         var b = el('button', { type: 'button', class: 'cfg-toggle' + (obj[key] ? ' on' : '') });
         b.addEventListener('click', function () {
             obj[key] = !obj[key]; b.classList.toggle('on', !!obj[key]); update();
-            if (key === 'Active' && path && ((path.length === 1 && !COMBINED && state === obj) || (path.length === 2 && COMBINED && state[path[0]] === obj) || (path.length === 2 && !COMBINED && block === 'Brain' && state[path[0]] === obj) || (path.length === 3 && COMBINED && block === 'Testing' && state[path[0]] && state[path[0]][path[1]] === obj))) render();
+            if (key === 'Active' && path && ((path.length === 1 && !COMBINED && state === obj) || (path.length === 1 && block === 'Expeditions' && state.Expeditions === obj) || (path.length === 2 && COMBINED && state[path[0]] === obj) || (path.length === 2 && !COMBINED && block === 'Brain' && state[path[0]] === obj) || (path.length === 3 && COMBINED && block === 'Testing' && state[path[0]] && state[path[0]][path[1]] === obj))) render();
         });
         return b;
     }
@@ -262,7 +263,7 @@
         return el('section', { class: 'cfg-sec' }, [el('h3', null, [title, pill ? el('span', { class: 'cfg-pill' + (pill === 'new' ? ' new' : ''), text: pill }) : null])].concat(kids));
     }
 
-    var handled = ['Active', 'Origin', 'ManualShips', 'PrimaryShip', 'MinPrimaryToSend', 'PrimaryToKeep', 'SmartShips', 'SmartMixShip', 'SleepWave', 'TelegramMessenger'];
+    var handled = ['Active', 'Origin', 'ManualShips', 'PrimaryShip', 'MinPrimaryToSend', 'PrimaryToKeep', 'SmartShips', 'SmartMixShip', 'SleepWave', 'TelegramMessenger', 'BackupExpeditions', 'FuelToCarry', 'MinDeuteriumOnMoon'];
 
     var RETURN_EXAMPLES = [
         ['WakeUp', 'back exactly at wake-up'],
@@ -288,7 +289,7 @@
         return el('div', null, [input, chips, list]);
     }
     function renderExpeditions(body) {
-        var d = state;
+        var d = mainObj();
         if (d.Active === undefined) d.Active = false;
         if (!d.TelegramMessenger || typeof d.TelegramMessenger !== 'object') d.TelegramMessenger = {};
         if (d.TelegramMessenger.Active === undefined) d.TelegramMessenger.Active = false;
@@ -389,6 +390,8 @@
         drawSeg(); drawFleet();
         body.appendChild(sec('Fleet (global)', [withHelp(row('Mode', null, seg), 'Expeditions.ManualShips.Active'), fleetBox]));
 
+        expoMoonsSection(body, d);
+
         if (!d.SleepWave) d.SleepWave = { Active: false, ReturnAt: '', SpeedPercent: 50 };
         var sw = d.SleepWave;
         body.appendChild(sec('Sleep wave', [
@@ -407,11 +410,65 @@
         if (rest.length) {
             var det = el('details', { class: 'cfg-sec cfg-more' }, [
                 el('summary', { text: 'More settings (' + rest.length + ')' }),
-                genericObject(d, rest, [])
+                genericObject(d, rest, ['Expeditions'])
             ]);
             if (moreOpen) det.open = true;
             det.addEventListener('toggle', function () { moreOpen = det.open; });
             body.appendChild(det);
+        }
+    }
+
+    function expoMovedNote(what) {
+        var a = document.querySelector('#cfg-blocks li[data-name="Expeditions"] a');
+        return el('div', { class: 'cfg-note' }, [
+            el('b', { text: what + ': ' }), 'now on the ',
+            a ? el('a', { href: a.getAttribute('href'), text: 'Expeditions page' }) : document.createTextNode('Expeditions page'),
+            ' (section "Expedition moons" / "Expedition slots"). The setting itself is unchanged.'
+        ]);
+    }
+    function brainPageLink(label) {
+        var a = document.querySelector('#cfg-blocks li[data-name="Brain"] a');
+        return a ? el('a', { href: a.getAttribute('href'), text: label }) : document.createTextNode(label);
+    }
+    function workerState(o, name) {
+        var w = o && o[name];
+        if (!w || typeof w !== 'object') return el('b', { text: name + ': not in config' });
+        return el('b', { text: name + ': ' + (w.Active ? 'on' : 'off') });
+    }
+    function expoMoonsSection(body, d) {
+        var B = state.Brain;
+        if (!B || typeof B !== 'object') return;
+        var J = B.AutoFleetJumpGate, R = B.AutoRepatriate, A = B.AutoResearch;
+        var kids = [
+            el('div', { class: 'cfg-note', text: 'Expedition moons are the moons you list as Origins above. Expeditions send ships away and bring finds back, so such a moon needs a reserve of ships and deuterium. The two switches below keep that reserve in order: the jump gate keeps only what the next expeditions need on the moon, and the supply sends what is missing from your base. The workers behind them live on the Brain page; their settings are shown here because they only matter for expeditions.' }),
+            el('ul', { class: 'cfg-helplist' }, [
+                el('li', null, [el('b', { text: 'Keep only what expeditions need (jump gate): ' }), 'on the expedition start moons only the ships for the planned expeditions plus the backup stay; everything else, finds included, jumps out to your jump gate target. Replaces the general minimum there.']),
+                el('li', null, [el('b', { text: 'Supply expedition moons (repatriate): ' }), 'if a moon lacks ships or deuterium for its planned expeditions plus the backup, the shortfall is sent from your base (the first Target of AutoRepatriate) in the next repatriate cycle. Ships on expeditions and deliveries already on their way count as present.']),
+                el('li', null, [el('b', { text: 'Together: ' }), 'the jump gate drains the surplus, the supply refills the shortfall. Both need the matching worker switched on (see below); Origins must contain moons for either to do anything.']),
+                el('li', null, [el('b', { text: 'Backup / fuel / deuterium: ' }), 'the numbers both functions use to calculate what a moon must hold: deuterium target = MinDeuteriumOnMoon, or expeditions x FuelToCarry if that is 0.'])
+            ]),
+            el('div', { class: 'cfg-note' }, [
+                'Workers (switch them on the ', brainPageLink('Brain page'), '): ',
+                workerState(B, 'AutoFleetJumpGate'), ', ', workerState(B, 'AutoRepatriate')
+            ])
+        ];
+        if (J && typeof J === 'object') {
+            if (!has(J, 'ExpoOverride')) J.ExpoOverride = false;
+            kids.push(fld(J, 'ExpoOverride', ['Brain', 'AutoFleetJumpGate'], 'Expedition moons keep only what expeditions need', 'Jump gate: the rest, also expedition finds, jumps out. Replaces the general minimum on those moons', 'toggle'));
+        }
+        if (R && typeof R === 'object') {
+            if (!R.ExpoSupply || typeof R.ExpoSupply !== 'object') R.ExpoSupply = { Active: false };
+            kids.push(fld(R.ExpoSupply, 'Active', ['Brain', 'AutoRepatriate', 'ExpoSupply'], 'Supply expedition moons', 'Repatriate: the shortfall is sent from the base in the next cycle', 'toggle'));
+        }
+        kids.push(fld(d, 'BackupExpeditions', ['Expeditions'], 'Backup expeditions', 'Reserve of expeditions worth of ships kept on the moon in addition to the planned ones', 'num', { min: 0 }));
+        kids.push(fld(d, 'FuelToCarry', ['Expeditions'], 'Deuterium per expedition', 'Sent along with every expedition; also the basis of the deuterium target on the moon', 'num', { min: 0 }));
+        kids.push(fld(d, 'MinDeuteriumOnMoon', ['Expeditions'], 'Minimum deuterium on the moon', '0 = expeditions x deuterium per expedition', 'num', { min: 0 }));
+        body.appendChild(sec('Expedition moons (jump gate and supply)', kids.filter(Boolean), 'new'));
+        if (A && typeof A === 'object' && has(A, 'EnsureExpoSlots')) {
+            body.appendChild(sec('Expedition slots (research)', [
+                el('div', { class: 'cfg-note', text: 'Expeditions need free expedition slots, which come from Computer Technology and Astrophysics. This switch lets the research worker (Brain, AutoResearch) research them when slots are the limit.' }),
+                fld(A, 'EnsureExpoSlots', ['Brain', 'AutoResearch'], 'Make sure there are expedition slots', 'Researches Computer Technology / Astrophysics as needed', 'toggle')
+            ].filter(Boolean)));
         }
     }
 
@@ -1928,7 +1985,7 @@
             k.push(inner('brain:AutoResearch:caps', 'Research caps (0 = do not research)', autoRows(o, p, numKeys(o, /^Max/))));
             k.push(inner('brain:AutoResearch:prio', 'Priorities (researched first)', autoRows(o, p, boolKeys(o, /^Prioritize/))));
             k.push(fld(o, 'OptimizeForStart', p, 'Early-game order', null, 'toggle'));
-            k.push(fld(o, 'EnsureExpoSlots', p, 'Make sure there are expedition slots', 'Researches Computer Technology / Astrophysics as needed', 'toggle'));
+            k.push(expoMovedNote('Make sure there are expedition slots (EnsureExpoSlots)'));
             k.push(fld(o, 'ForceResearchWhateverTheLabLevel', p, 'Research even with a low lab', null, 'toggle'));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
             restRows(o, p, ['Active', 'Transports', 'Target', 'OptimizeForStart', 'EnsureExpoSlots', 'ForceResearchWhateverTheLabLevel', 'CheckIntervalMin', 'CheckIntervalMax'].concat(numKeys(o, /^Max/), boolKeys(o, /^Prioritize/))).forEach(function (r) { k.push(r); });
@@ -2007,9 +2064,11 @@
             k.push(fld(o, 'SkipIfIncomingTransport', p, 'Skip if a transport is on its way', null, 'toggle'));
             if (!has(o, 'ReserveTransportSlots')) o.ReserveTransportSlots = 0;
             k.push(fld(o, 'ReserveTransportSlots', p, 'Transport slots kept free for builders', 'The reverse fetch stays this many slots below Brain Max slots, so it never takes slots from the mines/lifeform/research workers (0 = off)', 'num', { min: 0 }));
+            if (!o.ExpoSupply || typeof o.ExpoSupply !== 'object') o.ExpoSupply = { Active: false };
+            k.push(expoMovedNote('Supplying the expedition moons (ExpoSupply)'));
             k.push(coordList(o, 'Exclude', 'Excluded celestials', 'Never touched', '+ Add exclusion', p));
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'Target', 'TargetAssociateMoon', 'MinimumResources', 'LeaveDeut', 'CargoType', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'ReserveTransportSlots', 'Reverse', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Target', 'TargetAssociateMoon', 'MinimumResources', 'LeaveDeut', 'CargoType', 'ExcludeMoons', 'RandomOrder', 'SkipIfIncomingTransport', 'ReserveTransportSlots', 'Reverse', 'ExpoSupply', 'Exclude', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'ResourceLedger', 'ResourceLedger', function (k, o, p) {
@@ -2026,6 +2085,8 @@
             if (Array.isArray(o.Target)) k.push(withHelp(row('Target moons', 'Where the fleet jumps to (jump gates exist on moons only; only the first entry is used)',
                 listTable(o.Target, COORD_COLS.slice(0, 3), function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Moon' }; }, '+ Add target', ['Target'])), fullKey(p, 'Target')));
             k.push(fld(o, 'MinimumAmountOfShipPointsToTeleport', p, 'Min fleet points to jump', null, 'num', { min: 0 }));
+            if (!has(o, 'ExpoOverride')) o.ExpoOverride = false;
+            k.push(expoMovedNote('Expedition moons keep only what expeditions need (ExpoOverride)'));
             if (!Array.isArray(o.Exclude)) o.Exclude = [];
             k.push(withHelp(row('Excluded moons', 'These moons never jump', listTable(o.Exclude, COORD_COLS.slice(0, 3), function () { return { Galaxy: 1, System: 1, Position: 1, Type: 'Moon' }; }, '+ Add exclusion', ['Exclude'])), fullKey(p, 'Exclude')));
             if (o.MinimumAmountOfShipsToBeLeftOnMoon && typeof o.MinimumAmountOfShipsToBeLeftOnMoon === 'object') {
@@ -2033,7 +2094,7 @@
                 k.push(inner('brain:Jump:left', 'Ships that stay on the moon', autoRows(M, mp, Object.keys(M))));
             }
             intervalRows(o, p).forEach(function (r) { k.push(r); });
-            restRows(o, p, ['Active', 'Target', 'Exclude', 'MinimumAmountOfShipPointsToTeleport', 'MinimumAmountOfShipsToBeLeftOnMoon', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Target', 'Exclude', 'ExpoOverride', 'MinimumAmountOfShipPointsToTeleport', 'MinimumAmountOfShipsToBeLeftOnMoon', 'CheckIntervalMin', 'CheckIntervalMax']).forEach(function (r) { k.push(r); });
         });
 
         var known = ['Active', 'Transports', 'AutoMine', 'AutoResearch', 'LifeformAutoMine', 'LifeformAutoResearch', 'AutoCargo', 'AutoDefence', 'AutoRepatriate', 'BuyOfferOfTheDay', 'KeepBoosters', 'AutoFleetJumpGate', 'Directives', 'ResourceLedger'];
@@ -2269,7 +2330,7 @@
     }
     function renderOff(body) {
         body.appendChild(sec('Status', [
-            row('Active', 'Switch it on to show and edit the options', toggle(state, 'Active', ['Active'])),
+            row('Active', 'Switch it on to show and edit the options', toggle(mainObj(), 'Active', ['Active'])),
             el('div', { class: 'cfg-note', text: block + ' is switched off - only help is shown. Your settings are kept.' })
         ]));
         body.appendChild(helpCard(block));
@@ -2330,7 +2391,7 @@
         ]));
         var body = el('div', { class: 'cfg-body' }), ta;
         if (view === 'form') {
-            if (!COMBINED && state && typeof state.Active === 'boolean' && !state.Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'FastFarm') renderFastFarm(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else if (block === 'Testing') renderTestingPage(body); else renderSleepPage(body); } else renderGeneric(body);
+            if ((!COMBINED || block === 'Expeditions') && mainObj() && typeof mainObj().Active === 'boolean' && !mainObj().Active) renderOff(body); else if (block === 'Expeditions') renderExpeditions(body); else if (block === 'AutoFarm') renderAutoFarm(body); else if (block === 'Defender') renderDefender(body); else if (block === 'Brain') renderBrain(body); else if (block === 'General') renderGeneralPage(body); else if (block === 'AutoHarvest') renderAutoHarvest(body); else if (block === 'AutoColonize') renderAutoColonize(body); else if (block === 'AutoDiscovery') renderAutoDiscovery(body); else if (block === 'FastFarm') renderFastFarm(body); else if (block === 'DebrisSave') renderDebrisSave(body); else if (COMBINED) { if (block === 'Messenger') renderMessengerPage(body); else if (block === 'Testing') renderTestingPage(body); else renderSleepPage(body); } else renderGeneric(body);
         } else if (view === 'json') {
             ta = el('textarea', { class: 'cfg-json', spellcheck: 'false' }); ta.value = shown(state); if (mask) { ta.readOnly = true; ta.title = 'Hide data is on - switch it off to edit'; }
             ta.addEventListener('input', function () {

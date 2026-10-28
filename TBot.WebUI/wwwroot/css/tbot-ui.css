@@ -78,6 +78,10 @@ html.tb-bg .navbar { background-color: rgba(31,34,40,0.92); border-bottom: 1px s
 .navbar .nav-link { font-size: 16px; font-weight: 600; color: #c9d0de; border-bottom: 2px solid transparent; padding: 0.5rem 0.2rem; margin: 0 0.8rem 0 0; }
 .navbar .nav-link:hover { color: #fff; }
 .navbar .nav-link.tb-cur { color: #fff; border-bottom-color: var(--tb-accent); }
+.bp-tabs { display: flex; gap: 22px; margin: 4px 0 14px; border-bottom: 1px solid #2c3038; }
+.bp-tab { font-size: 16px; font-weight: 600; color: #c9d0de; text-decoration: none; padding: 8px 2px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.bp-tab:hover { color: #fff; }
+.bp-tab.bp-cur { color: #fff; border-bottom-color: var(--tb-accent, #4e9af1); }
 .tb-look { display: inline-flex; gap: 6px; margin-right: 8px; }
 .tb-look select { min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #3a4258; background: #1c2130; color: #e6e9f0; font-size: 13px; }
 

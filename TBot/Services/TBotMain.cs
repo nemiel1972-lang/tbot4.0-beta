@@ -2643,9 +2643,11 @@ namespace Tbot.Services {
 				string dir = Path.Combine(AppContext.BaseDirectory, "data");
 				Directory.CreateDirectory(dir);
 				var tips = new List<ConfigFinding>();
+				var known = DoctorKnown.Read(InstanceAlias);
+				tips = tips.Where(t => !known.Contains(t.Key)).ToList();
 				var all = findings.Concat(tips).ToList();
 				long startMs = new DateTimeOffset(System.Diagnostics.Process.GetCurrentProcess().StartTime).ToUnixTimeMilliseconds();
-				var file = new { updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), startMs, findings = all.Select(x => new { severity = x.Severity, path = x.Path, message = x.Message }).ToList() };
+				var file = new { updatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), startMs, findings = all.Select(x => new { severity = x.Severity, path = x.Path, message = x.Message, key = x.Key }).ToList() };
 				AtomicFile.WriteAllText(Path.Combine(dir, Path.GetFileName($"config_check_{InstanceAlias}.json")), Newtonsoft.Json.JsonConvert.SerializeObject(file));
 			} catch (Exception e) {
 				log(LogLevel.Debug, LogSender.Tbot, $"Config check failed: {e.Message}");
