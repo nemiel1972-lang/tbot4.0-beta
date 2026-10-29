@@ -330,8 +330,8 @@
         var path = location.pathname.toLowerCase();
         document.querySelectorAll('.navbar .nav-link').forEach(function (a) {
             var h = (a.getAttribute('href') || '').toLowerCase();
-            var also = (a.getAttribute('data-also') || '').toLowerCase();
-            if ((h && h !== '/' && path.indexOf(h) === 0) || (also && path.indexOf(also) === 0)) a.classList.add('tb-cur');
+            var also = (a.getAttribute('data-also') || '').toLowerCase().split(',');
+            if ((h && h !== '/' && path.indexOf(h) === 0) || also.some(function (x) { return x && path.indexOf(x) === 0; })) a.classList.add('tb-cur');
         });
     }
 

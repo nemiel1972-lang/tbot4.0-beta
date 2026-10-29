@@ -7,6 +7,10 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - **ConfigDoctor**: suggestions have a "Known" checkbox that hides a suggestion for good ("Show again" resets it).
 - **Rewards page**: switch for the Telegram messages.
 - **AutoFarm** `NotSuitableRetryMinutes` (default `720`): targets found unsuitable are probed again earlier than `KeepReportFor`, so daily runs reach them again. `0` = same as `KeepReportFor`.
+- **Lifeform targets**: optional `PopulationBonusLevels` per race in `lifeform_targets.json` (fine tuning of the population building, like `FoodBonusLevels`); a `MaxBase...Building` limit of `0` now means no extra limit.
+- **Rewards**: the bot also opens the resource market, another galaxy view and the inventory for those daily tasks.
+- **ConfigDoctor** warns when the manual expedition fleet carries fewer large cargo than the Lifeform-based need.
+- **Browser tiles**: the button column collapses to one symbol in a narrow window; arrow buttons move it by 2 px (Shift 20 px).
 
 ## Fixed
 - AutoFarm: the number of cargo ships uses the Lifeform cargo bonus of the sending planet, and cargo capacity is checked again right before sending.
@@ -42,6 +46,8 @@ Update as usual. New switches default to off; existing settings keep their behav
 - Die Seite Expeditionen lud auf Deutsch nicht; fehlende deutsche Übersetzungen ergänzt.
 - Schlaf: Die Statuskachel und der GhostSleep-Zeitplan luden alle 30-60 s eine Spielseite, während der Bot schlief, deshalb wechselte der aktive Himmelskörper im Spiel. Im Schlaf braucht die Uhrzeit keine Spielanfrage mehr. Keine Rewards-Erfassung und keine Schein-Aktivität des Defenders, solange der Bot schläft.
 - AutoFarm: Ziele, deren Spionagebericht nie ankam, blieben für immer übersprungen; sie werden nach 60 Minuten wieder freigegeben.
+- Lifeform research boost: the research phase no longer freezes the other buildings; only the research building waits.
+- The version number is now also set in plain builds (it was always 4.0.0.0 without a release tag).
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.

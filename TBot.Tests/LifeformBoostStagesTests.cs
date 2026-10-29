@@ -49,5 +49,22 @@ namespace TBot.Tests {
 			Assert.Contains("T2 phase", note);
 			Assert.Equal(47, levels[1]);
 		}
+
+		[Fact]
+		public void ResearchPhaseDoesNotFreezeOtherBuildings() {
+			int[] levels = Arr(74, 70, 20, 10, 9, 15, 42, 30, 29, 27, 30, 10);
+			int[] stage1 = Arr(50, 51, 8, 0, 0, 0, 9, 0, 4, 6, 0, 0);
+			int[] current = Arr(57, 54, 10, 10, 9, 15, 26, 13, 19, 14, 11, 10);
+			bool[] gelistet = new bool[13];
+			foreach (int p in new[] { 1, 2, 3, 4, 7, 9, 10 }) gelistet[p] = true;
+
+			string note = LifeformTargets.ApplyBoostStages(levels, stage1, current, 15, 20, 12, gelistet);
+
+			Assert.Contains("Research phase", note);
+			Assert.Equal(74, levels[1]);
+			Assert.Equal(70, levels[2]);
+			Assert.Equal(42, levels[7]);
+			Assert.Equal(20, levels[3]);
+		}
 	}
 }

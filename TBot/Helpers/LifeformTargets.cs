@@ -87,7 +87,11 @@ namespace Tbot.Helpers {
 						if (foodBonus != 0) {
 							levels[2] += foodBonus;
 						}
-						source = $"Slot {slot} (+{foodBonus} food)";
+						int popBonus = raceObj["PopulationBonusLevels"] != null ? (int) raceObj["PopulationBonusLevels"] : 0;
+						if (popBonus != 0) {
+							levels[1] += popBonus;
+						}
+						source = $"Slot {slot} (+{foodBonus} food" + (popBonus != 0 ? $", +{popBonus} population" : "") + ")";
 					}
 				}
 
@@ -197,7 +201,10 @@ namespace Tbot.Helpers {
 					case 2: value = s.MaxBaseFoodBuilding; break;
 					case 3: value = s.MaxBaseTechBuilding; break;
 				}
-				return value == null ? (int?) null : Convert.ToInt32(value);
+				if (value == null)
+					return null;
+				int cap = Convert.ToInt32(value);
+				return cap > 0 ? cap : (int?) null;
 			} catch {
 				return null;
 			}
@@ -233,6 +240,10 @@ namespace Tbot.Helpers {
 				if (foodBonus != 0) {
 					stage1[2] += foodBonus;
 				}
+				int popBonus1 = raceObj["PopulationBonusLevels"] != null ? (int) raceObj["PopulationBonusLevels"] : 0;
+				if (popBonus1 != 0) {
+					stage1[1] += popBonus1;
+				}
 				int[] current = new int[13];
 				for (int pos = 1; pos <= 12; pos++) {
 					current[pos] = GetByPosition(celestial.LFBuildings, celestial.LFtype, pos);
@@ -265,13 +276,8 @@ namespace Tbot.Helpers {
 			if (current[3] >= goal) {
 				return "";
 			}
-			for (int pos = 1; pos <= 12; pos++) {
-				if (pos != 3) {
-					levels[pos] = Math.Min(levels[pos], current[pos]);
-				}
-			}
 			levels[3] = Math.Max(levels[3], goal);
-			return $" Research phase P3 {current[3]}->{goal} (others frozen)";
+			return $" Research phase P3 {current[3]}->{goal} (other buildings keep growing)";
 		}
 
 		private static int GetByPosition(LFBuildings b, LFTypes type, int pos) {

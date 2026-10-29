@@ -2633,6 +2633,20 @@ namespace Tbot.Services {
 				var owned = (userData?.celestials ?? new List<Celestial>())
 					.Select(c => ConfigDoctor.CoordKey((int) c.Coordinate.Galaxy, (int) c.Coordinate.System, (int) c.Coordinate.Position, c.Coordinate.Type == Celestials.Moon ? "Moon" : "Planet")).ToList();
 				var findings = ConfigDoctor.Check(cfg, owned);
+				try {
+					var ex = cfg["Expeditions"] as Newtonsoft.Json.Linq.JObject;
+					var ms = ex?["ManualShips"] as Newtonsoft.Json.Linq.JObject;
+					var msh = ms?["Ships"] as Newtonsoft.Json.Linq.JObject;
+					long needed = userData?.ExpoLargeCargoNeeded ?? 0;
+					if (needed > 0 && msh != null && ((bool?) ex?["Active"] ?? false) && ((bool?) ms?["Active"] ?? false)) {
+						long gt = (long?) msh["LargeCargo"] ?? 0;
+						bool otherCargo = new[] { "SmallCargo", "Pathfinder", "Recycler" }.Any(s => ((long?) msh[s] ?? 0) > 0);
+						if (gt < needed && !otherCargo)
+							findings.Add(new ConfigFinding { Severity = "warn", Path = "Expeditions.ManualShips.Ships.LargeCargo", Message = $"Manual expedition fleet has {gt:N0} large cargo, but one expedition needs {needed:N0} to carry the maximum find (lifeform find bonus included). Part of a big find stays behind." });
+					}
+				} catch (Exception e) {
+					log(LogLevel.Debug, LogSender.Tbot, $"Config check (manual ships): {e.Message}");
+				}
 				string hash = string.Join("|", findings.Select(x => x.ToString()));
 				if (hash != _configCheckHash) {
 					_configCheckHash = hash;

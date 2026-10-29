@@ -1,0 +1,7 @@
+@model string
+@{
+    var cur = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+}
+<nav class="bp-tabs" aria-label="Experimental">
+    <a class="bp-tab@(cur == "Logistik" ? " bp-cur" : "")" href="@Url.Action("Index", "Logistik", new { instance = Model })">Logistics</a>
+</nav>

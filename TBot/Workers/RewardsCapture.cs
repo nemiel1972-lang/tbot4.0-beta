@@ -390,6 +390,33 @@ namespace Tbot.Workers {
 						await Task.Delay(1500);
 						await ogame.GetPageHtml(P("page", "ajax"), P("component", "technologytree"), P("ajax", "1"), P("technologyId", "1"), P("tab", "technologytree"), P("cp", cp));
 						inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards: tech tree opened for '{t.Title}'.");
+					} else if (t.Kind == RewardingLogic.TaskKind.VisitMarket) {
+						if (dry) {
+							inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards (dry run): would open the resource market for '{t.Title}'.");
+							continue;
+						}
+						await Task.Delay(1500);
+						await ogame.GetPageHtml(P("page", "ingame"), P("component", "trader"), P("action", "resources"), P("cp", cp));
+						inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards: resource market opened for '{t.Title}' (counted at the next capture).");
+					} else if (t.Kind == RewardingLogic.TaskKind.VisitGalaxy) {
+						int zg = home.Coordinate.Galaxy == 1 ? 2 : 1;
+						if (dry) {
+							inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards (dry run): would view galaxy {zg} for '{t.Title}'.");
+							continue;
+						}
+						await Task.Delay(1500);
+						await ogame.GetGalaxyInfo(zg, home.Coordinate.System);
+						inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards: galaxy {zg} viewed for '{t.Title}' (counted at the next capture).");
+					} else if (t.Kind == RewardingLogic.TaskKind.VisitInventory) {
+						if (dry) {
+							inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards (dry run): would open the inventory for '{t.Title}'.");
+							continue;
+						}
+						await Task.Delay(1500);
+						await ogame.GetPageHtml(P("page", "ingame"), P("component", "shop"), P("cp", cp));
+						await Task.Delay(800);
+						await ogame.GetPageHtml(P("page", "inventory"), P("ajax", "1"), P("cp", cp));
+						inst.log(LogLevel.Information, LogSender.Tbot, $"Rewards: inventory opened for '{t.Title}' (counted at the next capture).");
 					} else if (t.Kind == RewardingLogic.TaskKind.VisitShop || t.Kind == RewardingLogic.TaskKind.VisitHighscore) {
 						bool shop = t.Kind == RewardingLogic.TaskKind.VisitShop;
 						if (dry) {

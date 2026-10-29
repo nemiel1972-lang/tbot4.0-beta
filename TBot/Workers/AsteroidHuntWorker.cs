@@ -133,6 +133,7 @@ namespace Tbot.Workers {
 				SaveState(state);
 			} catch (Exception e) {
 				AhLog(LogLevel.Warning, $"Asteroid hunt failed: {e.Message}");
+				AhLog(LogLevel.Debug, $"Asteroid hunt failed, stack trace: {e.StackTrace}");
 			}
 			if (nextMs < 5000)
 				nextMs = 5000;

@@ -27,6 +27,7 @@ namespace Tbot.Services {
 		public float nextDOIR;
 		public Staff staff;
 		public bool isSleeping = false;
+		public long ExpoLargeCargoNeeded = 0;
 		public long artifactsCollected = -1;
 		public long artifactsLimit = 0;
 

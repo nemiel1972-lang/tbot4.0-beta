@@ -26,6 +26,10 @@ namespace TBot.Tests {
 		[InlineData("Spioniere einen Planeten aus", TaskKind.Spy)]
 		[InlineData("Starte ein Forschungsprojekt", TaskKind.StartResearch)]
 		[InlineData("Start a research project", TaskKind.StartResearch)]
+		[InlineData("Schaue dir eine andere Galaxie an", TaskKind.VisitGalaxy)]
+		[InlineData("Look at another galaxy", TaskKind.VisitGalaxy)]
+		[InlineData("Öffne das Inventar", TaskKind.VisitInventory)]
+		[InlineData("Open the inventory", TaskKind.VisitInventory)]
 		[InlineData("Irgendeine neue Aufgabe", TaskKind.Unknown)]
 		public void Classifies(string text, TaskKind kind) => Assert.Equal(kind, T(text).Kind);
 

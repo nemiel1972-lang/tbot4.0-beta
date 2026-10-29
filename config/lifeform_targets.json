@@ -4,7 +4,7 @@
     "Activation: set \"TargetSlot\": 18 under Brain.LifeformAutoMine in instance_settings.json. 0 or missing = fallback only.",
     "The race is detected per planet automatically (LFtype).",
     "Fallback: max levels per building position 1..12; used for buildings not listed in the chosen slot.",
-    "Positions: table column -> building position 1..12. FoodBonusLevels is added to position 2 when a slot is applied.",
+    "Positions: table column -> building position 1..12. FoodBonusLevels is added to position 2 and the optional PopulationBonusLevels (default 0, e.g. 1) to position 1 when a slot is applied.",
     "Slot tables come from a third party (RiV), not yet verified against the game.",
     "Optional: \"ResearchBoost\": { \"Active\": true, \"T2Slot\": 12, \"BoostLevel\": 15 } (staged build order T2 -> research -> T3)."
   ],

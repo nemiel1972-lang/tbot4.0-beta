@@ -700,7 +700,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         // rechts daneben, die Einstellungskachel mit 8 px Abstand links daneben. Passt nichts daneben (schmales
         // Fenster) oder wird kein Container gefunden, bleibt es beim Browserrand mit 10 px.
         var T_GAP = 8;
-        var tLogged = false;
+        var tLogged = false, tClockLogged = false;
         function tGameRect() {
             var sels = ['#wrapper', '#ingamepage', '#contentWrapper', '#pageContent', '#pagecontent', '#mainContent', '#middle', '#bar'];
             for (var i = 0; i < sels.length; i++) {
@@ -723,18 +723,23 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             if (!g) {
                 div.style.left = 'auto'; div.style.right = '10px'; div.style.top = '64px';
                 divL.style.left = '8px';
+                cNarrow = true; cApply();
                 tAvoidClock();
                 return;
             }
             if (!tLogged) { console.log('[TBot-tiles] game area:', g.sel, g.r.left, g.r.right); tLogged = true; }
             var wR = div.offsetWidth || 160, wL = divL.offsetWidth || 170;
             var rightLeft = g.r.right + T_GAP;
-            if (rightLeft + wR > window.innerWidth - 4) {
-                // kein Platz neben dem Spielfeld: unter die Kopfleiste setzen, damit die Serveruhr frei bleibt
+            // Entscheidung mit der vollen Spaltenbreite (nicht mit der eingeklappten), sonst springt es hin und her
+            if (rightLeft + Math.max(wR, 160) > window.innerWidth - 4) {
+                // kein Platz neben dem Spielfeld: unter die Kopfleiste setzen (Serveruhr frei) und im Auto-Modus einklappen
                 div.style.left = 'auto'; div.style.right = '10px'; div.style.top = '64px';
+                cNarrow = true;
             } else {
                 div.style.right = 'auto'; div.style.left = rightLeft + 'px'; div.style.top = '10px';
+                cNarrow = false;
             }
+            cApply();
             var leftLeft = g.r.left - T_GAP - wL;
             divL.style.left = Math.max(4, leftLeft) + 'px';
             tAvoidClock();
@@ -760,8 +765,10 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
         }
         // Die Knopfspalte darf die Serveruhr nie verdecken: ragt sie hinein, rechts neben die Uhr, sonst unter die Kopfleiste
         function tAvoidClock() {
+            if (cOff.x || cOff.y) { return; } // vom Nutzer verschoben: nicht gegenarbeiten
             var c = tClockRect();
-            if (!c) { return; }
+            if (!c) { if (!tClockLogged) { console.log('[TBot-tiles] server clock not found'); tClockLogged = true; } return; }
+            if (!tClockLogged) { console.log('[TBot-tiles] server clock:', Math.round(c.left), Math.round(c.top), Math.round(c.right), Math.round(c.bottom)); tClockLogged = true; }
             var r = div.getBoundingClientRect();
             var hitX = r.left < c.right + 4 && r.right > c.left - 4;
             var hitY = r.top < c.bottom + 2 && r.bottom > c.top - 2;
@@ -773,6 +780,65 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
                 div.style.left = 'auto'; div.style.right = '10px'; div.style.top = Math.ceil(c.bottom + 6) + 'px';
             }
         }
+        // --- Spaltensteuerung (Test): Einklappen (automatisch bei schmalem Fenster) und Verschieben mit Pfeilen ---
+        var cStyle = document.createElement('style');
+        cStyle.textContent = '#tbotCol.tbotCollapsed > *:not(.tbotCtl){display:none !important}';
+        document.head.appendChild(cStyle);
+        div.id = 'tbotCol';
+        var cMan = null, cOff = { x: 0, y: 0 }, cNarrow = false;
+        try {
+            cMan = localStorage.getItem('tbotSpalteOffen'); // null = automatisch, '1' = offen, '0' = eingeklappt
+            var cSaved = JSON.parse(localStorage.getItem('tbotSpalteOffset') || 'null');
+            if (cSaved && isFinite(cSaved.x) && isFinite(cSaved.y)) { cOff = { x: +cSaved.x, y: +cSaved.y }; }
+        } catch (e) { }
+        var ctl = document.createElement('div');
+        ctl.className = 'tbotCtl';
+        ctl.style.cssText = 'display:flex;gap:2px;margin-bottom:3px;justify-content:flex-end;';
+        var cBtns = [];
+        function cMk(txt, title, onDown) {
+            var b = document.createElement('BUTTON');
+            b.textContent = txt; b.title = title;
+            b.style.cssText = 'width:22px;height:20px;padding:0;font-size:11px;line-height:1;';
+            if (onDown) {
+                var tm = null, iv = null;
+                var stop = function() { if (tm) { clearTimeout(tm); tm = null; } if (iv) { clearInterval(iv); iv = null; } };
+                b.addEventListener('mousedown', function(ev) {
+                    ev.preventDefault(); stop();
+                    var big = ev.shiftKey ? 10 : 1;
+                    onDown(big);
+                    tm = setTimeout(function() { iv = setInterval(function() { onDown(big); }, 50); }, 350);
+                });
+                ['mouseup', 'mouseleave'].forEach(function(n) { b.addEventListener(n, stop); });
+            }
+            ctl.appendChild(b);
+            return b;
+        }
+        function cSave() {
+            try {
+                localStorage.setItem('tbotSpalteOffset', JSON.stringify(cOff));
+                if (cMan === null) { localStorage.removeItem('tbotSpalteOffen'); } else { localStorage.setItem('tbotSpalteOffen', cMan); }
+            } catch (e) { }
+        }
+        function cStep(dx, dy) { return function(m) { cOff.x += dx * 2 * m; cOff.y += dy * 2 * m; cSave(); cApply(); }; }
+        var cUp = cMk('\u25B2', 'Up (2 px, Shift 20 px)', cStep(0, -1));
+        var cDn = cMk('\u25BC', 'Down (2 px, Shift 20 px)', cStep(0, 1));
+        var cLf = cMk('\u25C0', 'Left (2 px, Shift 20 px)', cStep(-1, 0));
+        var cRt = cMk('\u25B6', 'Right (2 px, Shift 20 px)', cStep(1, 0));
+        var cRs = cMk('\u27F2', 'Reset position and auto collapse', null);
+        var cTg = cMk('', '', null);
+        function cCollapsed() { return cMan === '0' || (cMan === null && cNarrow); }
+        function cApply() {
+            var col = cCollapsed();
+            div.classList.toggle('tbotCollapsed', col);
+            [cUp, cDn, cLf, cRt, cRs].forEach(function(b) { b.style.display = col ? 'none' : 'inline-block'; });
+            cTg.textContent = col ? '\u2630' : '\u2715';
+            cTg.title = col ? 'Show buttons' : 'Collapse buttons';
+            div.style.transform = (cOff.x || cOff.y) ? 'translate(' + cOff.x + 'px,' + cOff.y + 'px)' : '';
+        }
+        cTg.onclick = function() { cMan = cCollapsed() ? '1' : '0'; cSave(); cApply(); };
+        cRs.onclick = function() { cOff = { x: 0, y: 0 }; cMan = null; cSave(); cApply(); tPlace(); };
+        div.insertBefore(ctl, div.firstChild);
+        cApply();
         tPlace();
         setInterval(tPlace, 2000);
         window.addEventListener('resize', tPlace);

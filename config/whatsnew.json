@@ -26,7 +26,12 @@
       "Changed: the browser tile button \"Pause\" is now called \"Delay\" (the config block BotPause and /pause stay)",
       "Changed: the tiles no longer cover the server clock in the browser; the version number now comes from the release tag",
       "New: Defender.CurrentlyActiveCelestialActivity (default on) - the Defender fake activity uses the celestial you are currently playing on in the browser",
-      "Changed: config pages tidied - the test functions now sit on their normal pages (General, Defender, Expeditions, Brain); only shadow fleet and the log helpers stay on Testing"
+      "Changed: config pages tidied - the test functions now sit on their normal pages (General, Defender, Expeditions, Brain); only shadow fleet and the log helpers stay on Testing",
+      "Fixed: Lifeform research boost - the research phase no longer freezes the other buildings; only the research building waits",
+      "New: Lifeform targets - optional PopulationBonusLevels per race in lifeform_targets.json (fine tuning of the population building, like FoodBonusLevels); a MaxBase...Building limit of 0 now means no extra limit",
+      "New: Rewards - the bot also opens the resource market, another galaxy view and the inventory for those daily tasks",
+      "New: ConfigDoctor warns when the manual expedition fleet carries fewer large cargo than the Lifeform-based need",
+      "Changed: browser tiles - the button column collapses to one symbol in a narrow window, and arrow buttons move it by 2 px (Shift 20 px); the version number is also set in plain builds"
     ],
     "de": [
       "Neu: Menüeintrag Bauplanung - Autobuilds (Bauplan) und Minenplan (Bauberechnung) sind Reiter unter einem Eintrag",
@@ -48,7 +53,12 @@
       "Geändert: Der Knopf „Pause“ in der Browser-Kachel heißt jetzt „Verzögern“ (Config-Block BotPause und /pause bleiben)",
       "Geändert: Die Kacheln verdecken im Browser nicht mehr die Serveruhr; die Versionsnummer kommt jetzt aus dem Release-Tag",
       "Neu: Defender.CurrentlyActiveCelestialActivity (Standard an) - die Defender-Scheinaktivität nutzt den Himmelskörper, auf dem du gerade im Browser spielst",
-      "Geändert: Config-Seiten aufgeräumt - die Testfunktionen stehen jetzt auf ihren normalen Seiten (General, Defender, Expeditions, Brain); nur Schattenflotte und Log-Helfer bleiben auf Testing"
+      "Geändert: Config-Seiten aufgeräumt - die Testfunktionen stehen jetzt auf ihren normalen Seiten (General, Defender, Expeditions, Brain); nur Schattenflotte und Log-Helfer bleiben auf Testing",
+      "Behoben: Lebensform-Forschungsschub - die Forschungsphase friert die anderen Gebäude nicht mehr ein; nur das Forschungsgebäude wartet",
+      "Neu: Lebensform-Ziele - optional PopulationBonusLevels je Rasse in lifeform_targets.json (Feintuning des Bevölkerungsgebäudes wie FoodBonusLevels); ein Limit MaxBase...Building von 0 bedeutet jetzt kein Zusatzlimit",
+      "Neu: Belohnungen - der Bot öffnet für die Tagesaufgaben auch den Rohstoffmarkt, eine andere Galaxieansicht und das Inventar",
+      "Neu: ConfigDoctor warnt, wenn die manuelle Expeditionsflotte weniger Große Transporter hat als der Lebensform-Bedarf",
+      "Geändert: Browser-Kacheln - die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen, Pfeiltasten verschieben sie um 2 px (Shift 20 px); die Versionsnummer wird auch bei normalen Builds gesetzt"
     ]
   }
 }

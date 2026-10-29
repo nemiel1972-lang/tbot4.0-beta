@@ -95,6 +95,8 @@
             VisitOfficers: 'Officers\' mess',
             VisitShop: 'Shop',
             VisitTechtree: 'Tech tree',
+            VisitGalaxy: 'Galaxy view',
+            VisitInventory: 'Inventory',
             OtherWorker: 'Other worker',
             StartResearch: 'Start research',
             Unknown: 'Unknown'
@@ -106,6 +108,8 @@
             if (t.Kind === 'VisitOfficers') return 'Open the officers\' mess page';
             if (t.Kind === 'VisitShop') return 'Open the shop page';
             if (t.Kind === 'VisitTechtree') return 'Open any tech tree';
+            if (t.Kind === 'VisitGalaxy') return 'View another galaxy (galaxy view)';
+            if (t.Kind === 'VisitInventory') return 'Open the inventory';
             if (t.Kind === 'OtherWorker') return 'Done by another worker (items / auction)';
             if (t.Kind === 'StartBuilding') return 'Planet with the cheapest next level';
             if (t.Kind === 'StartResearch') return 'Done on its own when AutoResearch or the lifeform research starts a project';

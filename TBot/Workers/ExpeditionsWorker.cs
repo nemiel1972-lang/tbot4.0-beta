@@ -218,6 +218,8 @@ namespace Tbot.Workers {
 					gtCapacity = _calculationService.CalcShipCapacity(Buildables.LargeCargo, hyper, _tbotInstance.UserData.serverData, Cargo(Buildables.LargeCargo), cls);
 				} catch (Exception) {
 				}
+				if (gtNeeded > 0)
+					_tbotInstance.UserData.ExpoLargeCargoNeeded = gtNeeded;
 				var snapshot = new {
 					updatedUtc = DateTime.UtcNow,
 					expeditionBonuses = lf.ExpeditionBonuses,

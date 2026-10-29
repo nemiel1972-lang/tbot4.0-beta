@@ -7,7 +7,7 @@ using TBot.Ogame.Infrastructure.Enums;
 
 namespace Tbot.Workers {
 	public static class RewardingLogic {
-		public enum TaskKind { Unknown, Defence, SendFleet, StartBuilding, VisitMarket, Manual, SendMessage, VisitHighscore, Transport, CollectDebris, Spy, ShipBuild, VisitScrap, VisitOfficers, VisitShop, VisitTechtree, OtherWorker, StartResearch }
+		public enum TaskKind { Unknown, Defence, SendFleet, StartBuilding, VisitMarket, Manual, SendMessage, VisitHighscore, Transport, CollectDebris, Spy, ShipBuild, VisitScrap, VisitOfficers, VisitShop, VisitTechtree, OtherWorker, StartResearch, VisitGalaxy, VisitInventory }
 
 		public class RewardTask {
 			public string Title = "";
@@ -240,7 +240,11 @@ namespace Tbot.Workers {
 					}
 				}
 			}
-			if (Regex.IsMatch(all, "techtree|technologieinformation|technology ?information|tech ?tree"))
+			if (Regex.IsMatch(all, "andere galaxie|andere galaxy|another galaxy|other galaxy|different galaxy|galaxieansicht|galaxy view"))
+				t.Kind = TaskKind.VisitGalaxy;
+			else if (Regex.IsMatch(all, "inventar|inventory"))
+				t.Kind = TaskKind.VisitInventory;
+			else if (Regex.IsMatch(all, "techtree|technologieinformation|technology ?information|tech ?tree"))
 				t.Kind = TaskKind.VisitTechtree;
 			else if (Regex.IsMatch(all, "schrotth(?:ä|ae)ndler|scrap ?merchant|junk ?(?:dealer|merchant)"))
 				t.Kind = TaskKind.VisitScrap;
