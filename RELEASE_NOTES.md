@@ -20,6 +20,8 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - The Expeditions page did not load in German; missing German translations added.
 - Sleep: the sleep status tile and the GhostSleep schedule loaded a game page every 30-60 s while the bot slept, so the active celestial changed in the game. While asleep the clock no longer needs a game request. No rewards capture and no defender fake activity while the bot sleeps.
 - AutoFarm: targets whose espionage report never arrived stayed skipped forever; they are released after 60 minutes.
+- Lifeform research boost: the research phase no longer freezes the other buildings; only the research building waits.
+- The version number is now also set in plain builds (it was always 4.0.0.0 without a release tag).
 
 ## Upgrading
 Update as usual. New switches default to off; existing settings keep their behaviour.
@@ -37,6 +39,10 @@ Update as usual. New switches default to off; existing settings keep their behav
 - **ConfigDoctor**: Hinweise haben ein Häkchen „Bekannt“, das einen Hinweis dauerhaft ausblendet („Wieder anzeigen“ setzt es zurück).
 - **Belohnungen-Seite**: Schalter für die Telegram-Meldungen.
 - **AutoFarm** `NotSuitableRetryMinutes` (Standard `720`): als ungeeignet erkannte Ziele werden früher erneut ausspioniert als nach `KeepReportFor`, damit tägliche Läufe sie wieder erreichen. `0` = wie `KeepReportFor`.
+- **Lebensform-Ziele**: optional `PopulationBonusLevels` je Rasse in `lifeform_targets.json` (Feintuning des Bevölkerungsgebäudes wie `FoodBonusLevels`); ein Limit `MaxBase...Building` von `0` bedeutet jetzt kein Zusatzlimit.
+- **Belohnungen**: Der Bot öffnet für die Tagesaufgaben auch den Rohstoffmarkt, eine andere Galaxieansicht und das Inventar.
+- **ConfigDoctor** warnt, wenn die manuelle Expeditionsflotte weniger Große Transporter hat als der Lebensform-Bedarf.
+- **Browser-Kacheln**: Die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen; Pfeiltasten verschieben sie um 2 px (Shift 20 px).
 
 ## Behoben
 - AutoFarm: Die Zahl der Transporter nutzt den Lebensform-Laderaumbonus des sendenden Planeten, und der Laderaum wird direkt vor dem Senden nochmals geprüft.
@@ -46,8 +52,8 @@ Update as usual. New switches default to off; existing settings keep their behav
 - Die Seite Expeditionen lud auf Deutsch nicht; fehlende deutsche Übersetzungen ergänzt.
 - Schlaf: Die Statuskachel und der GhostSleep-Zeitplan luden alle 30-60 s eine Spielseite, während der Bot schlief, deshalb wechselte der aktive Himmelskörper im Spiel. Im Schlaf braucht die Uhrzeit keine Spielanfrage mehr. Keine Rewards-Erfassung und keine Schein-Aktivität des Defenders, solange der Bot schläft.
 - AutoFarm: Ziele, deren Spionagebericht nie ankam, blieben für immer übersprungen; sie werden nach 60 Minuten wieder freigegeben.
-- Lifeform research boost: the research phase no longer freezes the other buildings; only the research building waits.
-- The version number is now also set in plain builds (it was always 4.0.0.0 without a release tag).
+- Lebensform-Forschungsschub: Die Forschungsphase friert die anderen Gebäude nicht mehr ein; nur das Forschungsgebäude wartet.
+- Die Versionsnummer wird jetzt auch bei normalen Builds gesetzt (ohne Release-Tag war sie immer 4.0.0.0).
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.
