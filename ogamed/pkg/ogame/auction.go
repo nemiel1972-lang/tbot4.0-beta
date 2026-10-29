@@ -5,6 +5,14 @@ import (
 	"strconv"
 )
 
+type AuctionHistoryEntry struct {
+	Item   string
+	Ref    string
+	Sum    int64
+	Player string
+	Time   string
+}
+
 type Auction struct {
 	Ref                 string
 	HasFinished         bool
@@ -27,6 +35,7 @@ type Auction struct {
 		Honor     int64
 	}
 	Resources map[string]any
+	History   []AuctionHistoryEntry
 }
 
 func (a Auction) String() string {

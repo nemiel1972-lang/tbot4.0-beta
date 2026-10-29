@@ -2407,7 +2407,14 @@ func (b *OGame) getAuction(celestialID ogame.CelestialID) (ogame.Auction, error)
 	if err != nil {
 		return ogame.Auction{}, err
 	}
-	return b.extractor.ExtractAuction(auctionHTML)
+	auction, err := b.extractor.ExtractAuction(auctionHTML)
+	if err != nil {
+		return auction, err
+	}
+	if doc, docErr := goquery.NewDocumentFromReader(bytes.NewReader(auctionHTML)); docErr == nil {
+		auction.History = parseAuctionHistory(doc)
+	}
+	return auction, nil
 }
 
 func parseAuctionHTML(pageHTML []byte, newAjaxToken string) (ogame.Auction, error) {
@@ -2418,11 +2425,18 @@ func parseAuctionHTML(pageHTML []byte, newAjaxToken string) (ogame.Auction, erro
 
 	auction := ogame.Auction{}
 	auction.HasFinished = false
+	auction.History = parseAuctionHistory(doc)
 
 	nextAuction := doc.Find("#nextAuction")
 	if nextAuction.Size() > 0 {
 		auction.Endtime = utils.DoParseI64(nextAuction.Text())
 		auction.HasFinished = true
+		auction.HighestBidder = strings.TrimSpace(doc.Find("a.currentPlayer").Text())
+		auction.HighestBidderUserID = utils.DoParseI64(doc.Find("a.currentPlayer").AttrOr("data-player-id", ""))
+		auction.NumBids = utils.DoParseI64(doc.Find("div.numberOfBids").Text())
+		auction.CurrentBid = utils.ParseInt(doc.Find("div.currentSum").Text())
+		auction.Ref = doc.Find("a.detail_button").First().AttrOr("ref", "")
+		auction.CurrentItem = strings.ToLower(doc.Find("div.image_140px img").First().AttrOr("alt", ""))
 		return auction, nil
 	}
 

@@ -123,6 +123,7 @@
             "MinFleetToSave": 20000000
         },
         "RandomActivity": false,
+        "CurrentlyActiveCelestialActivity": true,
         "Home": {
             "Galaxy": 1,
             "System": 1,
@@ -678,6 +679,7 @@
         "MinLootPerDefensePoint": 20,
         "KeepReportFor": 1440,
         "NotSuitableRetryMinutes": 720,
+        "DeleteExpiredReports": true,
         "MaxReportAgeMinutesForAttack": 120,
         "MaxAttackDelaySec": 600,
         "DebrisCreditPercent": 80,

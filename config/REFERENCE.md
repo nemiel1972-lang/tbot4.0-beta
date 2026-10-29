@@ -156,7 +156,8 @@ Detects incoming attacks and reacts.
 | `IgnoreWeakAttack`, `WeakAttackRatio` | Ignore attackers whose fleet points are less than your fleet points divided by the ratio. |
 | `IgnoreAttackIfIHave.*` | Ignore the attack if you have less than `MinResourcesToSave` resources and less than `MinFleetToSave` fleet points on the target (nothing worth saving). |
 | `RandomActivity` | On: each defender check opens the defences page of a random celestial; off: always of `Home`. Only generates normal-looking activity. |
-| `Home` | Home celestial: used for the activity call when `RandomActivity` is off, and as default AutoHarvest origin (the moon at these coordinates) when AutoHarvest has no `Origin`. |
+| `CurrentlyActiveCelestialActivity` | Optional, default `true`. While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the normal rule (RandomActivity / Home) applies. |
+| `Home` | Home celestial: used only for the Defender activity call when `RandomActivity` is off. No other worker uses it as a start (AutoHarvest without `Origin` uses the expedition bases and the detected main fleet location). |
 | `Autofleet.Active` | Fleetsave the attacked celestial automatically. |
 | `Autofleet.SafetyMarginSeconds` | Seconds before impact at which the fleet must be gone. |
 | `Autofleet.TelegramMessenger.Active` | Message when a fleetsave happens. |
@@ -419,6 +420,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `MaxDefensePoints` | Skip targets above this defence value. |
 | `MinLootPerDefensePoint` | Skip defended targets whose loot per defence point is too low. |
 | `KeepReportFor` | Minutes a spy report stays valid. |
+| `DeleteExpiredReports` | Optional, default `true`. Deletes espionage reports in the game that are older than `KeepReportFor` or replaced by a newer report of the same target (at most 25 per run). Reports of targets held for manual review or blacklisted for defence/unprofitable are kept. |
 | `NotSuitableRetryMinutes` | Optional, default `720`. Minutes after which a target judged unsuitable (loot too small) is probed again; the shorter of this and `KeepReportFor` counts. `0` = same as `KeepReportFor`. |
 | `MaxReportAgeMinutesForAttack` | Hard limit for the age of a spy report right before the defence check (default 120, 0 = off). Older reports are not attacked; the target is queued for a fresh probe. |
 | `MaxAttackDelaySec` | Maximum delay an attack may be postponed to fit the timing (default 600). |
@@ -536,13 +538,13 @@ New functions that are still in test. They have their own page in the WebUI (**T
 
 | Field | Meaning |
 |---|---|
-| `BotPause.Active` | Switches the pause function on or off (default on). |
-| `BotPause.DurationMinutes` | Button **Pause** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode hold their cycles for this long (default 15) and continue on their own (with `Mode` = `Stop` they are stopped and restarted). `/resume` or the button ends it earlier; pressing Pause again prolongs it. Recalls, fleetsave and the Defender keep running. |
-| `BotPause.RecallMarginMinutes` | Safety distance (default 2). A pause is refused if a recall is due within the pause time plus this margin. A pause is also refused while sleeping and during an attack lockdown. |
-| `BotPause.MaxDurationMinutes` | Longest pause you can ask for with `/pause` (default 120). |
-| `BotPause.StopDefender` | Default off. On: the Defender stops during the pause too. Fleetsave and recalls already planned still run. |
-| `BotPause.Mode` | `Gate` (default): workers are not stopped; during the pause each one skips its cycle and runs again after the pause, staggered by up to 60 seconds. `Stop`: the old hard pause (all workers stopped and restarted). |
-| `BotPause.AttackMarginMinutes` | Default 15. A pause is refused if an attack arrives within this time (with `StopDefender` on: plus the pause length). While paused, spy, attack, expedition, colonize, discovery and harvest missions are blocked (fleetsave, transports and Telegram commands stay possible). |
+| `BotPause.Active` | Switches the delay function on or off (default on). |
+| `BotPause.DurationMinutes` | Button **Delay** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode skip their cycles for this long (default 15) and continue on their own (with `Mode` = `Stop` they are stopped and restarted). `/resume` or the button ends it earlier; pressing Delay again prolongs it. Recalls, fleetsave and the Defender keep running. |
+| `BotPause.RecallMarginMinutes` | Safety distance (default 2). A delay is refused if a recall is due within the delay time plus this margin. A delay is also refused while sleeping and during an attack lockdown. |
+| `BotPause.MaxDurationMinutes` | Longest delay you can ask for with `/pause` (default 120). |
+| `BotPause.StopDefender` | Default off. On: the Defender is delayed too (the setting keeps its name). Fleetsave and recalls already planned still run. |
+| `BotPause.Mode` | `Gate` (default): workers are not stopped; during the delay each one skips its cycle and runs again afterwards, staggered by up to 60 seconds. `Stop`: the old hard pause (all workers stopped and restarted). |
+| `BotPause.AttackMarginMinutes` | Default 15. A delay is refused if an attack arrives within this time (with `StopDefender` on: plus the delay length). While delayed, spy, attack, expedition, colonize, discovery and harvest missions are blocked (fleetsave, transports and Telegram commands stay possible). |
 | `DefenderRecheck.Active` | Default off. Shortly before the fleetsave the Defender fetches the attack list once more: attack recalled -> fleetsave skipped; attack later -> fleetsave moved; question fails or times out -> fleetsave sent as planned. |
 | `DefenderRecheck.TimeoutSeconds` | How long to wait for the answer (default 4, 1-10). |
 | `CollectLogs.Active` | Default off. While on, every log line (from debug up) and all lines of the extra debug log (all topics) go into ONE file `devlogs/TBot-collect-<start>.log` (max. 300 MB). Stops by itself after `CollectLogs.Hours` (default 12), also across restarts; switch off and on to collect again. `CollectLogs.Anonymize` (default on) replaces player, universe, mail, celestial names, coordinates (x:x:position), IP and tokens. |

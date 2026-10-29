@@ -101,6 +101,7 @@ namespace TBot.Ogame.Infrastructure {
 		Task<AllianceClass> GetAllianceClass();
 		bool IsPortAvailable(string host, int port = 8080);
 		Task<bool> IsUnderAttack();
+		Task<BrowserCelestial> GetBrowserCelestial();
 		Task<bool> IsVacationMode();
 		Task<JumpGateResult> JumpGate(Celestial origin, Celestial destination, Ships ships);
 		Task<bool> SendDiscovery(Celestial origin, Coordinate coords);

@@ -211,7 +211,9 @@
     },
     ## An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = immer der Heimat-Himmelskörper. Lässt die Aktivität des Bots nur normal aussehen.
     "RandomActivity": false,
-    ## Heimat-Himmelskörper: Wird für den Aktivitätsaufruf genutzt, wenn `RandomActivity` aus ist, und als Standard-Ursprung für AutoHarvest (der Mond an diesen Koordinaten), wenn AutoHarvest keinen `Origin` hat.
+    ## Spielst du gerade im Browser (Port 8080), nimmt der Aktivitätsaufruf des Defenders den Himmelskörper deiner Browser-Sitzung statt eines anderen, damit er dir beim Flottenversand oder Bauen nicht den aktuellen Planeten wegnimmt. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde; sonst gilt die normale Regel (RandomActivity / Home).
+    "CurrentlyActiveCelestialActivity": true,
+    ## Heimat-Himmelskörper: Wird nur für den Aktivitätsaufruf des Defenders genutzt, wenn `RandomActivity` aus ist. Kein anderer Worker nimmt ihn als Start (AutoHarvest ohne `Origin` nutzt die Expeditionsbasen und den erkannten Standort der Hauptflotte).
     "Home": {
       ## Galaxienummer der Koordinaten.
       "Galaxy": 1,
@@ -1121,6 +1123,8 @@
     "KeepReportFor": 1440,
     ## Minuten, nach denen ein als ungeeignet erkanntes Ziel (Beute zu klein, lohnt nicht) erneut ausspioniert wird. Kürzer als KeepReportFor = tägliche Läufe erreichen es wieder. 0 = wie KeepReportFor.
     "NotSuitableRetryMinutes": 720,
+    ## Löscht Spionageberichte im Spiel, die älter als KeepReportFor oder durch einen neueren Bericht desselben Ziels ersetzt sind, damit sie sich nicht ansammeln. Berichte von Zielen mit manueller Prüfung oder Sperrliste wegen Verteidigung/Unrentabilität bleiben stehen.
+    "DeleteExpiredReports": true,
     ## Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus.
     "MaxReportAgeMinutesForAttack": 120,
     ## Längste Zeit in Sekunden, die ein Angriff zurückgehalten werden darf, damit die Recycler direkt dahinter ankommen.
@@ -1418,19 +1422,19 @@
   },
   ## EXPERIMENTELL: Pause, Galaxie-Cache, Debug-Log, MinePlanRanking, Schattenflotte u. a.
   "Experimental": {
-    ## Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist.
+    ## Der Verzögern-Knopf in der Browser-Kachel (oder /pause in Telegram) verzögert alle Funktionen außer dem Defender für ein paar Minuten: Sie überspringen ihren Zyklus, damit nichts Neues startet, während du von Hand spielst. Es wird nichts gestoppt; danach machen sie mit ihrer gewohnten Planung weiter. Rückrufe und der Defender laufen weiter. Eine Verzögerung wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist.
     "BotPause": {
       ## Hauptschalter dieser Funktion. Aus = der Bot macht hier nichts.
       "Active": true,
-      ## Knopf **Pause** in der Browser-Kachel und Telegram `/pause [Minuten]`: Alle Worker außer Defender und SleepMode halten ihre Durchläufe so lange an (Standard 15) und laufen von selbst weiter (bei `Mode` = `Stop` werden sie gestoppt und neu gestartet). `/resume` oder der Knopf beendet es früher; erneutes Drücken verlängert. Rückrufe, Fleetsave und der Defender laufen weiter.
+      ## Knopf **Verzögern** in der Browser-Kachel und Telegram `/pause [Minuten]`: Alle Worker außer Defender und SleepMode überspringen ihre Durchläufe so lange (Standard 15) und laufen von selbst weiter (bei `Mode` = `Stop` werden sie gestoppt und neu gestartet). `/resume` oder der Knopf beendet es früher; erneutes Drücken von Verzögern verlängert. Rückrufe, Fleetsave und der Defender laufen weiter.
       "DurationMinutes": 15,
-      ## Sicherheitsabstand (Standard 2). Eine Pause wird abgelehnt, wenn innerhalb der Pausenzeit plus dieser Reserve ein Rückruf fällig ist. Eine Pause wird auch abgelehnt, solange der Bot schläft und während einer Angriffssperre.
+      ## Sicherheitsabstand (Standard 2). Eine Verzögerung wird abgelehnt, wenn innerhalb der Verzögerungszeit plus dieser Reserve ein Rückruf fällig ist. Eine Verzögerung wird auch abgelehnt, solange der Bot schläft und während einer Angriffssperre.
       "RecallMarginMinutes": 2,
-      ## Längste Pause, die du mit `/pause` verlangen kannst (Standard 120).
+      ## Längste Verzögerung, die du mit `/pause` verlangen kannst (Standard 120).
       "MaxDurationMinutes": 120,
-      ## Standard aus. An: Der Defender hält während der Pause ebenfalls an. Bereits geplante Fleetsaves und Rückrufe laufen weiter.
+      ## Standard aus. An: Der Defender wird ebenfalls verzögert (die Einstellung behält ihren Namen). Bereits geplante Fleetsaves und Rückrufe laufen weiter.
       "StopDefender": false,
-      ## Standard 15. Eine Pause wird abgelehnt, wenn innerhalb dieser Zeit ein Angriff eintrifft (mit `StopDefender` an: plus die Pausenlänge). Während der Pause sind Spionage-, Angriffs-, Expeditions-, Kolonisier-, Entdeckungs- und Abbaumissionen gesperrt (Fleetsave, Transporte und Telegram-Befehle bleiben möglich).
+      ## Standard 15. Eine Verzögerung wird abgelehnt, wenn innerhalb dieser Zeit ein Angriff eintrifft (mit `StopDefender` an: plus die Verzögerungsdauer). Während der Verzögerung sind Spionage-, Angriffs-, Expeditions-, Kolonisier-, Entdeckungs- und Abbaumissionen gesperrt (Fleetsave, Transporte und Telegram-Befehle bleiben möglich).
       "AttackMarginMinutes": 15
     },
     ## Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Wurde der Angriff zurückgerufen, entfällt der Fleetsave; kommt er später an, wird der Fleetsave verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus.
@@ -1448,7 +1452,7 @@
       "Repatriate": true,
       ## Zusatz-Debuglog fuer dieses Thema.
       "Ledger": true,
-      ## Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist.
+      ## Der Verzögern-Knopf in der Browser-Kachel (oder /pause in Telegram) verzögert alle Funktionen außer dem Defender für ein paar Minuten: Sie überspringen ihren Zyklus, damit nichts Neues startet, während du von Hand spielst. Es wird nichts gestoppt; danach machen sie mit ihrer gewohnten Planung weiter. Rückrufe und der Defender laufen weiter. Eine Verzögerung wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist.
       "BotPause": true,
       ## Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Wurde der Angriff zurückgerufen, entfällt der Fleetsave; kommt er später an, wird der Fleetsave verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus.
       "DefenderRecheck": true,

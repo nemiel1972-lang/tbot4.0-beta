@@ -314,6 +314,22 @@ namespace Tbot.Workers {
 			Celestial randomCelestial;
 			var randomActivity = (bool) _tbotInstance.InstanceSettings.Defender.RandomActivity;
 
+			if (SettingsService.GetSetting(_tbotInstance.InstanceSettings.Defender, "CurrentlyActiveCelestialActivity", true)) {
+				try {
+					var browser = await _ogameService.GetBrowserCelestial();
+					if (browser != null && browser.Cp > 0 && browser.AgeSec >= 0 && browser.AgeSec <= 600) {
+						var current = _tbotInstance.UserData.celestials.Unique().FirstOrDefault(c => c.ID == browser.Cp);
+						if (current != null) {
+							DoLog(LogLevel.Information, $"Check from the celestial of the active browser session ({current.Coordinate.Galaxy}:{current.Coordinate.System}:{current.Coordinate.Position} {current.Coordinate.Type})");
+							await _tbotOgameBridge.UpdatePlanet(current, UpdateTypes.Defences);
+							return;
+						}
+					}
+				} catch (Exception e) {
+					DoLog(LogLevel.Debug, $"Browser celestial not available: {e.Message}");
+				}
+			}
+
 			if (randomActivity == false) {
 				celestial = _tbotInstance.UserData.celestials
 				.Unique()

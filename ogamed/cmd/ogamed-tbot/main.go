@@ -409,6 +409,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/moons", wrapper.GetMoonsHandler)
 	e.GET("/bot/i18n/:lang", TileTextsHandler)
 	e.GET("/bot/sleepstatus", SleepStatusHandler)
+	e.GET("/bot/browser-celestial", BrowserCelestialHandler)
 	e.GET("/bot/moons/:moonID", wrapper.GetMoonHandler)
 	e.GET("/bot/moons/:galaxy/:system/:position", wrapper.GetMoonByCoordHandler)
 	e.GET("/bot/celestials/:celestialID/items", wrapper.GetCelestialItemsHandler)

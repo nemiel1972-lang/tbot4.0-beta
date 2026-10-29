@@ -30,6 +30,7 @@ var browserPostMu sync.Mutex
 var (
 	browserCPMu sync.RWMutex
 	browserCP   string
+	browserCPAt time.Time
 	planetIDRe  = regexp.MustCompile(`name="ogame-planet-id"\s+content="(\d+)"`)
 )
 
@@ -65,7 +66,21 @@ func rememberBrowserCP(vals url.Values, pageHTML []byte) {
 	}
 	browserCPMu.Lock()
 	browserCP = cp
+	browserCPAt = time.Now()
 	browserCPMu.Unlock()
+}
+
+func BrowserCelestialHandler(c echo.Context) error {
+	browserCPMu.RLock()
+	cp, at := browserCP, browserCPAt
+	browserCPMu.RUnlock()
+	id, _ := strconv.ParseInt(cp, 10, 64)
+	age := -1
+	if id > 0 && !at.IsZero() {
+		age = int(time.Since(at).Seconds())
+	}
+	c.Response().Header().Set("Cache-Control", "no-store")
+	return c.JSON(http.StatusOK, wrapper.SuccessResp(map[string]any{"Cp": id, "AgeSec": age}))
 }
 
 func PostToggleManualModeHandler(c echo.Context) error {
@@ -362,7 +377,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
                 success: function(r) { tL = r || {}; tLang = l; tApply(); }, error: function() { } });
         }
 	var btn1 = document.createElement("BUTTON");
-        var t = document.createTextNode("Pause");
+        var t = document.createTextNode("Delay");
         btn1.style.height = '20px';
         btn1.style.width = '130px';
         btn1.style.display = 'block';
@@ -386,7 +401,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
                 btn1.style.background = '#8a5a1f';
                 btn1.style.color = '#fff';
             } else {
-                btn1.textContent = tr('Pause');
+                btn1.textContent = tr('Delay');
                 btn1.style.background = '';
                 btn1.style.color = '';
             }
@@ -708,6 +723,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             if (!g) {
                 div.style.left = 'auto'; div.style.right = '10px'; div.style.top = '64px';
                 divL.style.left = '8px';
+                tAvoidClock();
                 return;
             }
             if (!tLogged) { console.log('[TBot-tiles] game area:', g.sel, g.r.left, g.r.right); tLogged = true; }
@@ -721,6 +737,41 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
             }
             var leftLeft = g.r.left - T_GAP - wL;
             divL.style.left = Math.max(4, leftLeft) + 'px';
+            tAvoidClock();
+        }
+        // Serveruhr der Kopfleiste suchen (Klasse/ID, sonst das Element mit einer Uhrzeit hh:mm:ss in #bar)
+        function tClockRect() {
+            var sels = ['.OGameClock', '#OGameClock', '#ogameClock', '.ogame-clock'];
+            for (var i = 0; i < sels.length; i++) {
+                var e = document.querySelector(sels[i]);
+                if (e) { var r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0) { return r; } }
+            }
+            var bar = document.querySelector('#bar, #header, #banner_skyscraper');
+            if (bar && document.createTreeWalker) {
+                var w = document.createTreeWalker(bar, NodeFilter.SHOW_TEXT, null, false), n;
+                while ((n = w.nextNode())) {
+                    if (/\d{1,2}:\d{2}:\d{2}/.test(n.nodeValue) && n.parentElement) {
+                        var r2 = n.parentElement.getBoundingClientRect();
+                        if (r2.width > 0 && r2.height > 0) { return r2; }
+                    }
+                }
+            }
+            return null;
+        }
+        // Die Knopfspalte darf die Serveruhr nie verdecken: ragt sie hinein, rechts neben die Uhr, sonst unter die Kopfleiste
+        function tAvoidClock() {
+            var c = tClockRect();
+            if (!c) { return; }
+            var r = div.getBoundingClientRect();
+            var hitX = r.left < c.right + 4 && r.right > c.left - 4;
+            var hitY = r.top < c.bottom + 2 && r.bottom > c.top - 2;
+            if (!(hitX && hitY)) { return; }
+            var wd = div.offsetWidth || 160;
+            if (c.right + T_GAP + wd <= window.innerWidth - 4) {
+                div.style.right = 'auto'; div.style.left = Math.ceil(c.right + T_GAP) + 'px';
+            } else {
+                div.style.left = 'auto'; div.style.right = '10px'; div.style.top = Math.ceil(c.bottom + 6) + 'px';
+            }
         }
         tPlace();
         setInterval(tPlace, 2000);

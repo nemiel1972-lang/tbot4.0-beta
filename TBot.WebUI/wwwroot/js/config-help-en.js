@@ -64,6 +64,9 @@ window.CFG_HELP.en = {
   "NotSuitableRetryMinutes": {
    "t": "Minutes after which a target that was found unsuitable (loot too small, not worth it) is probed again. The shorter of this value and the report validity counts, so daily runs reach such targets again. 0 = same as the report validity."
   },
+  "DeleteExpiredReports": {
+   "t": "Deletes espionage reports in the game that are older than the report validity or replaced by a newer report of the same target, so they do not pile up in your inbox (at most 25 per run). Reports of targets held for manual review or blacklisted for defence/unprofitable are kept."
+  },
   "MaxReportAgeMinutesForAttack": {
    "t": "Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off."
   },
@@ -555,8 +558,11 @@ window.CFG_HELP.en = {
   "RandomActivity": {
    "t": "On = every attack check opens the defence page of a random celestial. Off = always the Home celestial. Only makes the bot activity look normal."
   },
+  "CurrentlyActiveCelestialActivity": {
+   "t": "While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the normal rule (RandomActivity / Home) applies."
+  },
   "Home.*": {
-   "t": "Your home celestial. Used for the activity call when random activity is off, and as default start point of AutoHarvest."
+   "t": "Your home celestial. Used only for the Defender activity call when random activity is off; no other worker uses it as a start."
   },
   "Autofleet.Active": {
    "t": "Automatically fleetsave the attacked celestial."
@@ -1199,30 +1205,30 @@ window.CFG_HELP.en = {
  },
  "Experimental": {
   "BotPause": {
-   "t": "The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. Recalls and the Defender keep running. A pause is refused if a recall is due in that time."
+   "t": "The Delay button in the browser tile (or /pause in Telegram) delays all functions except the Defender for a few minutes: they skip their cycle, so nothing new starts while you play by hand. Nothing is stopped; afterwards they go on with their usual plan. Recalls and the Defender keep running. A delay is refused if a recall is due in that time."
   },
   "BotPause.Active": {
-   "t": "Switch the pause function on or off. Off: the Pause button and /pause are refused."
+   "t": "Switch the delay function on or off. Off: the Delay button and /pause are refused."
   },
   "BotPause.DurationMinutes": {
-   "t": "How long a pause lasts if you do not give a time.",
-   "e": "15 = the bot continues 15 minutes after you pressed Pause."
+   "t": "How long a delay lasts if you do not give a time.",
+   "e": "15 = the bot continues 15 minutes after you pressed Delay."
   },
   "BotPause.RecallMarginMinutes": {
-   "t": "Safety distance to a planned recall. The pause is refused if a recall is due within the pause time plus this margin.",
-   "e": "2 = with a 15 minute pause, a recall due in 17 minutes or less blocks the pause."
+   "t": "Safety distance to a planned recall. The delay is refused if a recall is due within the delay time plus this margin.",
+   "e": "2 = with a 15 minute delay, a recall due in 17 minutes or less blocks the delay."
   },
   "BotPause.MaxDurationMinutes": {
-   "t": "Longest pause you can ask for with /pause."
+   "t": "Longest delay you can ask for with /pause."
   },
   "BotPause.StopDefender": {
-   "t": "Stop the Defender during the pause as well (default off). Then nothing watches for attacks, so a pause is refused if a known attack arrives within the limit below plus the pause length."
+   "t": "Delay the Defender as well (default off; the setting keeps its name StopDefender). Then nothing watches for attacks, so a delay is refused if a known attack arrives within the limit below plus the delay length."
   },
   "BotPause.Mode": {
-   "t": "Gate (default): during the pause the workers keep running but skip their cycle, and go on with their usual plan shortly after the pause, spread over about a minute. Stop: the old hard pause, every worker is stopped and started again afterwards."
+   "t": "Gate (default): during the delay the workers keep running but skip their cycle, and go on with their usual plan shortly after, spread over about a minute. Stop: the old hard pause, every worker is stopped and started again afterwards."
   },
   "BotPause.AttackMarginMinutes": {
-   "t": "A pause is refused if an attack arrives within this many minutes (default 15). Spy, attack and expedition missions are also blocked while the bot is paused."
+   "t": "A delay is refused if an attack arrives within this many minutes (default 15). Spy, attack and expedition missions are also blocked while the bot is delayed."
   },
   "DefenderRecheck": {
    "t": "Shortly before a fleetsave the Defender asks the game for the attack list once more. If the attack was recalled, the fleetsave is skipped; if it arrives later, the fleetsave is moved. If the question fails or takes too long, the fleetsave is sent as planned."

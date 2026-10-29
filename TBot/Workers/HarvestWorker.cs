@@ -117,6 +117,12 @@ namespace Tbot.Workers {
 						Heartbeat();
 						if (harvestOrigins.Any(o => o.Coordinate.IsSame(c.Coordinate))) {
 							Celestial updated = await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
+							if (updated.Ships == null) {
+								await Task.Delay(TimeSpan.FromSeconds(10));
+								updated = await _tbotOgameBridge.UpdatePlanet(updated, UpdateTypes.Ships);
+								if (updated.Ships == null)
+									DoLog(LogLevel.Warning, $"Harvest: could not read the ships of {updated.Coordinate} (ogamed not reachable?). This origin is treated as empty for this check.");
+							}
 							updatedCelestials.Add(updated);
 						} else {
 							updatedCelestials.Add(c);
@@ -132,12 +138,18 @@ namespace Tbot.Workers {
 								if (!harvestOrigins.Any(o => o.Coordinate.IsSame(updatedCelestials[i].Coordinate)))
 									updatedCelestials[i] = await _tbotOgameBridge.UpdatePlanet(updatedCelestials[i], UpdateTypes.Ships);
 							}
-							var best = updatedCelestials.OrderByDescending(c => (c.Ships?.Pathfinder ?? 0) + (c.Ships?.Recycler ?? 0)).FirstOrDefault();
-							if (best != null && (best.Ships?.Pathfinder ?? 0) + (best.Ships?.Recycler ?? 0) > 0) {
+							long InFlight(Celestial c) => (_tbotInstance.UserData.fleets ?? new List<Fleet>())
+								.Where(f => f.Origin != null && f.Origin.IsSame(c.Coordinate) && f.Ships != null)
+								.Sum(f => (long) f.Ships.Pathfinder + f.Ships.Recycler);
+							long Score(Celestial c) => (c.Ships?.Pathfinder ?? 0) + (c.Ships?.Recycler ?? 0) + InFlight(c);
+							var best = updatedCelestials.OrderByDescending(c => Score(c)).FirstOrDefault();
+							if (best != null && Score(best) > 0) {
 								SaveDetectedOrigin(best.Coordinate);
 								if (!harvestOrigins.Any(o => o.Coordinate.IsSame(best.Coordinate)))
 									harvestOrigins.Add(best);
-								DoLog(LogLevel.Information, $"Harvest origin detected: {best.Coordinate} holds the most ships ({best.Ships.Pathfinder} pathfinders, {best.Ships.Recycler} recyclers). It is remembered and used as an additional start (set AutoHarvest.Origin to override).");
+								DoLog(LogLevel.Information, $"Harvest origin detected: {best.Coordinate} holds the most harvest ships ({best.Ships?.Pathfinder ?? 0} pathfinders, {best.Ships?.Recycler ?? 0} recyclers at home, {InFlight(best)} in flight). It is remembered and used as an additional start (set AutoHarvest.Origin to override).");
+							} else {
+								DoLog(LogLevel.Information, "Harvest origin detection: no celestial holds pathfinders or recyclers (at home or in flight). Will look again in about an hour.");
 							}
 						}
 					}

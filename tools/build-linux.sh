@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Builds TBot + ogamed for Linux (x64) and packs a package WITHOUT config, secrets and data.
-# Run from the repo folder:  tools/build-linux.sh [--multi-file] [--framework-dependent] [--arm64]
+# Run from the repo folder:  tools/build-linux.sh [--multi-file] [--framework-dependent] [--with-auction] [--arm64]
 #   Default: a single TBot executable (single-file, self-contained) plus ogamed and the native libraries next to it
 #   --multi-file: normal folder with many DLLs instead of a single executable
 #   --framework-dependent: smaller, but needs the .NET 9 runtime on the target machine
+#   --with-auction: include the auction feature (default for the package: without, -p:NoAuction=true)
 #   --arm64: build for linux-arm64 (e.g. Raspberry Pi) instead of linux-x64
 # Result: dist/TBot-linux-<arch>/ and dist/TBot-linux-<arch>.zip
 set -euo pipefail
@@ -11,12 +12,14 @@ cd "$(dirname "$0")/.."
 
 SELF_CONTAINED=true
 SINGLE_FILE=true
+NO_AUCTION=true
 RID=linux-x64
 GOARCH=amd64
 for arg in "$@"; do
   case "$arg" in
     --framework-dependent) SELF_CONTAINED=false ;;
     --multi-file) SINGLE_FILE=false ;;
+    --with-auction) NO_AUCTION=false ;;
     --arm64) RID=linux-arm64; GOARCH=arm64 ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
@@ -30,9 +33,16 @@ mkdir -p "$AUSGABE"
 echo "== ogamed (Go, linux/$GOARCH) =="
 (cd ogamed && CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH" go build -o "../$AUSGABE/ogamed" ./cmd/ogamed-tbot)
 
-echo "== TBot (.NET, $RID, self-contained=$SELF_CONTAINED, single-file=$SINGLE_FILE) =="
+# File/assembly version from the release tag (v4.0-beta16 -> 4.0.0.16), otherwise the value in TBot.csproj stays
+VERSION_ARGS=""
+if [[ "${TBOT_VERSION:-}" =~ ^v?([0-9]+)\.([0-9]+)-beta([0-9]+)$ ]]; then
+  NUMVER="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0.${BASH_REMATCH[3]}"
+  VERSION_ARGS="-p:Version=$NUMVER -p:AssemblyVersion=$NUMVER -p:FileVersion=$NUMVER -p:InformationalVersion=$TBOT_VERSION"
+fi
+
+echo "== TBot (.NET, $RID, self-contained=$SELF_CONTAINED, single-file=$SINGLE_FILE, no-auction=$NO_AUCTION) =="
 (cd TBot && dotnet publish -c Release -r "$RID" --self-contained "$SELF_CONTAINED" \
-  -p:PublishSingleFile="$SINGLE_FILE" -p:DebugType=none -p:DebugSymbols=false \
+  -p:PublishSingleFile="$SINGLE_FILE" $VERSION_ARGS -p:NoAuction="$NO_AUCTION" -p:NoDiag=true -p:NoSlots=true -p:NoOrion=true -p:DebugType=none -p:DebugSymbols=false \
   -o "../$AUSGABE" -nologo -clp:"ErrorsOnly;Summary")
 rm -f "$AUSGABE"/*.pdb
 
@@ -45,9 +55,34 @@ for p in settings.json instance_settings.json conf.d secrets data log backups pr
 done
 find "$AUSGABE" -maxdepth 1 \( -name '*settings*.json' -o -name '*.db' -o -name '*.bak' \) -print -delete
 
-# Template
+# Template (same handling as the Windows package: without the auction block unless --with-auction)
 mkdir -p "$AUSGABE/config"
-cp config/config.vorlage.json "$AUSGABE/config/"
+if [ "$NO_AUCTION" = true ]; then
+  python3 - "config/config.vorlage.json" "$AUSGABE/config/config.vorlage.json" <<'PY'
+import json, re, sys
+src, dst = sys.argv[1], sys.argv[2]
+t = open(src, encoding='utf-8-sig', newline='').read()
+m = re.search(r'[ \t]*"AutoBidAuction"\s*:\s*\{', t)
+if m:
+    i, depth, instr = m.end(), 1, False
+    while depth:
+        c = t[i]
+        if instr:
+            if c == '\\': i += 1
+            elif c == '"': instr = False
+        elif c == '"': instr = True
+        elif c == '{': depth += 1
+        elif c == '}': depth -= 1
+        i += 1
+    rest = re.match(r'\s*,?', t[i:]).end()
+    t = t[:m.start()] + t[i + rest:].lstrip('\r\n')
+    t = re.sub(r',(\s*\})', r'\1', t)
+json.loads(t)
+open(dst, 'w', encoding='utf-8', newline='').write(t)
+PY
+else
+  cp config/config.vorlage.json "$AUSGABE/config/"
+fi
 cp config/REFERENCE.md "$AUSGABE/config/REFERENCE.md"
 # Kommentierte Referenz (alle Eintraege mit ##-Erklaerung, nicht lauffaehig), deutsch und englisch
 cp config/instance_settings_kommentiert_de.txt "$AUSGABE/config/instance_settings_kommentiert_de.txt"
@@ -202,6 +237,7 @@ Updating from an older version or from the original TBot
   them removed: it shows the list, asks, and makes a backup first. Only entries from its built-in list are removed, never your own ones.
 
 Notes about this build
+  - The auction feature is not included in this package.
   - Lifeform AutoMine needs lifeform_targets.json. If it is missing, LF building is skipped (warning in the log).
   - Update: replace TBot, ogamed and the native libraries with the new package; keep your config, data and
     lifeform_targets.json.

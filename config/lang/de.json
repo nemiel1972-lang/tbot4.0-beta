@@ -91,7 +91,7 @@
    "Origins": "Ursprünge",
    "Celestials the harvest fleets start from. Only the recyclers and pathfinders that lie on these are used; several are possible and the nearest one with enough ships is taken.": "Himmelskörper, von denen die Ernteflotten starten. Es zählen nur die Recycler und Pathfinder, die dort liegen; mehrere sind möglich, genommen wird der nächste mit genug Schiffen.",
    "Own origins": "Eigene Ursprünge",
-   "Without this the moon at the Defender Home coordinates is used": "Ohne diesen Eintrag wird der Mond an den Defender-Home-Koordinaten genutzt",
+   "Without this the expedition bases and the detected main fleet location are used": "Ohne diesen Eintrag werden die Expeditionsbasen und der erkannte Standort der Hauptflotte genutzt",
    "Limits": "Grenzen",
    "Proven need": "Nachgewiesener Bedarf",
    "Checks at the limit": "Prüfungen an der Grenze",
@@ -280,8 +280,8 @@
    "LastFleet = shortly before the last expedition lands; Random = a random returning expedition": "LastFleet = kurz bevor die letzte Expedition landet; Random = eine zufällige zurückkehrende Expedition",
    "Tolerance": "Toleranz",
    "Mission": "Mission",
-   "Pause mode": "Pausenmodus",
-   "Gate (default): the workers keep running, skip their cycle during the pause and go on staggered afterwards. Stop: the old hard pause, all workers are stopped and restarted": "Gate (Standard): Die Worker laufen weiter, überspringen ihren Durchlauf während der Pause und starten danach zeitversetzt. Stop: die alte harte Pause, alle Worker werden angehalten und neu gestartet",
+   "Delay mode": "Verzögerungsmodus",
+   "Gate (default): the workers keep running, skip their cycle during the delay and go on staggered afterwards. Stop: the old hard pause, all workers are stopped and restarted": "Gate (Standard): Die Worker laufen weiter, überspringen während der Verzögerung ihren Zyklus und machen danach gestaffelt weiter. Stop: die alte harte Pause, alle Worker werden gestoppt und neu gestartet",
    "Ranking": "Reihung",
    "Ship": "Schiff",
    "Speed": "Geschwindigkeit",
@@ -418,7 +418,7 @@
    "1.1 = take 10 % more deuterium along than the return flight needs": "1,1 = 10 % mehr Deuterium mitnehmen, als der Rückflug braucht",
    "10 = slowest and cheapest": "10 = am langsamsten und billigsten",
    "Amount (0 = all)": "Menge (0 = alle)",
-   "An attack that arrives within this time blocks the pause": "Ein Angriff, der innerhalb dieser Zeit eintrifft, verhindert die Pause",
+   "An attack that arrives within this time blocks the delay": "Ein Angriff, der innerhalb dieser Zeit eintrifft, blockiert die Verzögerung",
    "Candidates, payload after ledger, send attempts and results": "Kandidaten, Ladung nach dem Ledger, Sendeversuche und Ergebnisse",
    "Deuterium as cargo for": "Deuterium als Fracht für",
    "Deuterium reserve needed. ": "Deuterium-Reserve nötig. ",
@@ -435,11 +435,11 @@
    "Extra debug log (own file)": "Zusatz-Debuglog (eigene Datei)",
    "Extra debug log settings": "Einstellungen Zusatz-Debuglog",
    "Ignore the ledger completely": "Ledger komplett ignorieren",
-   "No pause before an attack": "Keine Pause vor einem Angriff",
+   "No delay before an attack": "Keine Verzögerung vor einem Angriff",
    "Not in your config yet - the default (30 %) applies. Add it to change that.": "Noch nicht in deiner Config – es gilt der Standard (30 %). Füge ihn hinzu, um das zu ändern.",
    "Number of flights; limited by cargo space and stock": "Anzahl der Flüge; begrenzt durch Laderaum und Bestand",
    "Off (default): no flight starts when an attack would land before the fleet is back, and a flying fleet stays in the air when an attack lands before its return. On (trap): the Defender does not send the shadow fleet away but still saves resources and all other ships; a flying shadow fleet is called home so that it is there when the attack lands. Sleep-time fleetsaves still send everything away.": "Aus (Standard): Es startet kein Flug, wenn ein Angriff vor der Rückkehr der Flotte einschlagen würde, und eine fliegende Flotte bleibt in der Luft, wenn ein Angriff vor ihrer Rückkehr einschlägt. An (Falle): Der Defender schickt die Schattenflotte nicht weg, sichert aber weiterhin Rohstoffe und alle anderen Schiffe; eine fliegende Schattenflotte wird nach Hause gerufen, damit sie beim Einschlag da ist. Schlaf-Fleetsaves schicken weiterhin alles weg.",
-   "Off (default): the Defender keeps watching. On: nothing runs; a known attack within the limit below plus the pause length blocks the pause": "Aus (Standard): Der Defender beobachtet weiter. An: Es läuft nichts; ein bekannter Angriff innerhalb der Grenze unten plus der Pausenlänge verhindert die Pause",
+   "Off (default): the Defender keeps watching. On: nothing runs; a known attack within the limit below plus the delay length blocks the delay": "Aus (Standard): Der Defender bleibt wachsam. An: nichts läuft; ein bekannter Angriff innerhalb der Grenze unten plus der Verzögerungsdauer blockiert die Verzögerung",
    "On = ignore the guard and keep farming with low deuterium": "An = Schutz ignorieren und mit wenig Deuterium weiterfarmen",
    "On: repatriate, reverse repatriate and /collect move all stock, whatever the build claims hold. Off (default): claims protect their stock as set below": "An: Repatriate, Reverse-Repatriate und /collect bewegen den gesamten Bestand, egal was die Bauansprüche halten. Aus (Standard): Ansprüche schützen ihren Bestand wie unten eingestellt",
    "One flight lasts at least": "Ein Flug dauert mindestens",
@@ -459,8 +459,7 @@
    "Shadow fleet: Defender": "Schattenflotte: Defender",
    "Shadow fleet: celestial and ships": "Schattenflotte: Himmelskörper und Schiffe",
    "Shadow fleet: time": "Schattenflotte: Zeit",
-   "Stop the Defender during the pause too": "Defender während der Pause ebenfalls stoppen",
-   "The Pause button in the browser tile (or /pause in Telegram) stops all functions (the Defender only if you switch that on below) for a few minutes, and blocks spy, attack and expedition missions, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Pause-Knopf in der Browser-Kachel (oder /pause im Telegram) stoppt alle Funktionen (den Defender nur, wenn du das unten einschaltest) für einige Minuten und blockiert Spionage-, Angriffs- und Expeditionsflüge, damit nichts Neues startet, während du von Hand spielst. Nach der Zeit läuft der Bot von selbst weiter. Sie wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
+   "Delay the Defender too": "Den Defender ebenfalls verzögern",
    "What it does: the chosen ships of ONE celestial fly in a loop on a recycle (harvest) mission at slow speed to the nearest debris field (up to 10 systems away). After half of the flight time the fleet is recalled and flies home, then after a short random pause the next flight starts. So the ships are almost never at home: a player who spies the celestial finds no fleet, and the fleet never stands still where an attack could hit it. It uses one fleet slot and the deuterium of that celestial. Safety: no flight starts when an attack would land before the fleet is back; a flying fleet is called home if it can still make it before the impact.": "So funktioniert es: Die gewählten Schiffe EINES Himmelskörpers fliegen in einer Schleife mit Abbau-Mission (Recycler) und niedriger Geschwindigkeit zum nächsten Trümmerfeld (bis zu 10 Systeme entfernt). Nach der halben Flugzeit wird die Flotte zurückgerufen und fliegt heim, nach einer kurzen Zufallspause startet der nächste Flug. So ist die Flotte fast nie zu Hause: Wer den Himmelskörper ausspioniert, findet keine Flotte, und die Flotte steht nie dort, wo ein Angriff sie treffen könnte. Sie braucht einen Flottenslot und das Deuterium dieses Himmelskörpers. Schutz: Es startet kein Flug, wenn ein Angriff vor der Rückkehr einschlagen würde; eine fliegende Flotte wird heimgerufen, wenn sie vor dem Einschlag noch ankommt.",
    "The fleet is away while the attacker looks and home when the attack lands": "Die Flotte ist weg, wenn der Angreifer schaut, und zu Hause, wenn der Angriff einschlägt",
    "Tick the ships and enter the amount. At least one Recycler (or Pathfinder) is needed.": "Schiffe ankreuzen und Menge eintragen. Mindestens ein Recycler (oder Pathfinder) wird gebraucht.",
@@ -495,7 +494,7 @@
    ": each listed celestial sends its fleet to the nearest debris field and recalls it so it is back after the duration.": ": Jeder aufgeführte Himmelskörper schickt seine Flotte zum nächsten Trümmerfeld und ruft sie zurück, sodass sie nach der Dauer wieder da ist.",
    ": superfluous - only the strongest combat ship (": ": überflüssig – nur das stärkste Kampfschiff (",
    "A random time between min and max is used": "Es wird eine Zufallszeit zwischen Min und Max genutzt",
-   "A recall due within the pause time plus this margin blocks the pause": "Ein Rückruf innerhalb der Pausenzeit plus diesem Abstand blockiert die Pause",
+   "A recall due within the delay time plus this margin blocks the delay": "Ein Rückruf, der innerhalb der Verzögerungszeit plus dieser Reserve fällig ist, blockiert die Verzögerung",
    "Abandon bad planets": "Schlechte Planeten aufgeben",
    "Abandons new planets that are too small or have the wrong temperature. The home planet is never abandoned.": "Gibt neue Planeten auf, die zu klein sind oder die falsche Temperatur haben. Der Heimatplanet wird nie aufgegeben.",
    "Absolute cap for this ship type (empty = Max escort ships)": "Absolute Obergrenze für diesen Schiffstyp (leer = Max. Begleitschiffe)",
@@ -545,8 +544,8 @@
    "Blacklist active": "Blacklist aktiv",
    "Booster tiers: use + reserve (Bronze is used first)": "Booster-Stufen: nutzen + Reserve (Bronze zuerst)",
    "Booster types to keep running": "Booster-Typen, die laufen sollen",
-   "Bot pause (Pause button and /pause)": "Bot-Pause (Pause-Knopf und /pause)",
-   "Bot pause settings": "Einstellungen der Bot-Pause",
+   "Bot delay (Delay button and /pause)": "Bot-Verzögerung (Verzögern-Knopf und /pause)",
+   "Bot delay settings": "Einstellungen der Bot-Verzögerung",
    "Bot token": "Bot-Token",
    "Both are switched on in the config - they should not run at the same time. Pick one.": "Beide sind in der Config eingeschaltet – sie sollten nicht gleichzeitig laufen. Wähle einen.",
    "Brain active": "Brain aktiv",
@@ -785,12 +784,11 @@
    "Sleep and wake-up message (Telegram)": "Schlaf- und Aufwach-Meldung (Telegram)",
    "Expedition finds (Telegram)": "Expeditionsfunde (Telegram)",
    "The overview could not be loaded.": "Die Übersicht konnte nicht geladen werden.",
-   "not in config": "nicht in der Config",
    "Log found items": "Gefundene Gegenstände loggen",
    "Login pause (protects the IP)": "Login-Pause (schützt die IP)",
    "Login pause active": "Login-Pause aktiv",
    "Login pause settings": "Einstellungen der Login-Pause",
-   "Longest pause": "Längste Pause",
+   "Longest delay": "Längste Verzögerung",
    "Longest postponement to fit the timing": "Längste Verschiebung, um den Zeitplan einzuhalten",
    "Longest production time": "Längste Produktionszeit",
    "Longest sensible payback": "Längste sinnvolle Amortisation",
@@ -891,7 +889,6 @@
    "Never collected from": "Nie von dort eingesammelt",
    "Never spy or attack members": "Mitglieder nie ausspionieren oder angreifen",
    "Never touched": "Nie angefasst",
-   "New functions that are still in testing. They are kept apart from the normal pages (General, Brain) until they have proven themselves. Switch one on, watch the log and report problems. When a function has proven itself it moves back to its normal page.": "Neue Funktionen, die noch im Test sind. Sie sind von den normalen Seiten (General, Brain) getrennt, bis sie sich bewährt haben. Schalte eine ein, beobachte das Log und melde Probleme. Hat sich eine Funktion bewährt, wandert sie zurück auf ihre normale Seite.",
    "No \"": "Kein „",
    "No changes.": "Keine Änderungen.",
    "No data yet - AutoFarm has to send and receive attacks first.": "Noch keine Daten – AutoFarm muss erst Angriffe senden und empfangen.",
@@ -910,7 +907,7 @@
    "Number of ships": "Anzahl der Schiffe",
    "Off by default": "Standardmäßig aus",
    "Off by default. Only useful while the item event runs": "Standardmäßig aus. Nur sinnvoll, solange das Item-Event läuft",
-   "Off: the Pause button and /pause are refused": "Aus: Der Pause-Knopf und /pause werden abgelehnt",
+   "Off: the Delay button and /pause are refused": "Aus: Der Verzögern-Knopf und /pause werden abgelehnt",
    "Offer / JumpGate": "Angebot / Sprungtor",
    "Older reports are not attacked": "Ältere Berichte werden nicht angegriffen",
    "Older reports are not attacked (0 = off)": "Ältere Berichte werden nicht angegriffen (0 = aus)",
@@ -941,8 +938,8 @@
    "Partner alliance IDs": "IDs der Partner-Allianzen",
    "Pathfinder: 1 is enough - more than 1 adds nothing.": "Pathfinder: 1 reicht – mehr als 1 bringt nichts.",
    "Pause after braking": "Pause nach dem Bremsen",
-   "Pause function active": "Pausenfunktion aktiv",
-   "Pause length": "Pausenlänge",
+   "Delay function active": "Verzögerungsfunktion aktiv",
+   "Delay length": "Dauer der Verzögerung",
    "Pause other workers at the end": "Andere Worker am Ende pausieren",
    "Pause other workers in the last 5 minutes": "Andere Worker in den letzten 5 Minuten pausieren",
    "Pay from": "Bezahlen von",
@@ -1116,10 +1113,9 @@
    "Test mode (nothing activated)": "Testmodus (nichts wird aktiviert)",
    "The AutoFarm page shows targets, attacks, blacklist, maintenance and the losses and profit list.": "Die AutoFarm-Seite zeigt Ziele, Angriffe, Blacklist, Wartung und die Liste von Verlusten und Gewinn.",
    "The General and Brain blocks were not found in the config, so nothing can be shown here.": "Die Blöcke General und Brain wurden in der Config nicht gefunden, hier kann also nichts angezeigt werden.",
-   "The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen (den Defender nur, wenn du das einschaltest) für ein paar Minuten und sperrt Spionage-, Angriffs- und Expeditionsflüge, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
    "The asteroid is rarely in the home system. Tried: own, +1, -1, +2 ...": "Der Asteroid ist selten im Heimatsystem. Versucht: eigenes, +1, -1, +2 ...",
    "The background scan keeps a list of inactive players; every free slot sends one probe fleet.": "Der Hintergrund-Scan führt eine Liste inaktiver Spieler; jeder freie Slot sendet eine Sondenflotte.",
-   "The celestial the defender looks at for its activity calls when \"Generate activity\" is off. AutoHarvest also uses it as the default origin (the moon at these coordinates) if it has no Origin of its own. Set it to your main planet or moon.": "Der Himmelskörper, den der Defender für seine Aktivitätsaufrufe ansieht, wenn „Aktivität erzeugen“ aus ist. AutoHarvest nutzt ihn auch als Standard-Ursprung (der Mond an diesen Koordinaten), wenn es keinen eigenen Ursprung hat. Setze ihn auf deinen Hauptplaneten oder -mond.",
+   "The celestial the defender looks at for its activity calls when \"Generate activity\" is off. Set it to your main planet or moon. Only the Defender uses it; no other worker takes it as a start.": "Der Himmelskörper, den der Defender für seine Aktivitätsaufrufe ansieht, wenn „Aktivität erzeugen“ aus ist. Setze ihn auf deinen Hauptplaneten oder -mond. Nur der Defender nutzt ihn; kein anderer Worker nimmt ihn als Start.",
    "The chat the bot talks to": "Der Chat, mit dem der Bot spricht",
    "The escort (warships) decides the fleet composition for attacks on defended targets: the bot simulates the fight and adds warships to the cargo ships until the attack is safe enough.": "Die Escort (Kriegsschiffe) legt die Flottenzusammensetzung für Angriffe auf verteidigte Ziele fest: Der Bot simuliert den Kampf und ergänzt die Transporter um Kriegsschiffe, bis der Angriff sicher genug ist.",
    "The last free fleet slot is kept for the fleetsave. All other fleets, even forced ones, are refused when only the reserved slot is left. Refusals appear in the log as SLOTCOLLISION.": "Der letzte freie Flottenslot bleibt für den Fleetsave. Alle anderen Flotten, auch erzwungene, werden abgelehnt, wenn nur noch der reservierte Slot übrig ist. Ablehnungen erscheinen im Log als SLOTCOLLISION.",
@@ -1170,7 +1166,7 @@
    "Whole alliance never outbid": "Ganze Allianz nie überbieten",
    "Will show the fleet the bot would send right now, without sending it.": "Zeigt die Flotte, die der Bot jetzt senden würde, ohne sie zu senden.",
    "With several origins the expedition slots are shared round-robin (13 slots: 7+6, with 3 origins 5+4+4).": "Bei mehreren Ursprüngen werden die Expeditionsslots reihum verteilt (13 Slots: 7+6, bei 3 Ursprüngen 5+4+4).",
-   "Without an Origin of its own the moon at the Defender \"Home\" coordinates is used as the start.": "Ohne eigenen Ursprung wird der Mond an den „Home“-Koordinaten des Defenders als Start genutzt.",
+   "Without an Origin of its own the expedition bases and the location of your main fleet (the celestial holding the most pathfinders and recyclers, detected automatically) are used as the start.": "Ohne eigenen Ursprung werden die Expeditionsbasen und der Standort deiner Hauptflotte (der Himmelskörper mit den meisten Pfadfindern und Recyclern, automatisch erkannt) als Start genutzt.",
    "Word in item name": "Wort im Gegenstandsnamen",
    "Word in the item name, then a limit per rarity": "Wort im Gegenstandsnamen, dann ein Limit pro Seltenheit",
    "Words (any language) that tell the rarity of an item": "Wörter (beliebige Sprache), die die Seltenheit eines Gegenstands verraten",
@@ -1363,6 +1359,7 @@
    "Build planning": "Bauplanung",
    "Build order": "Baureihenfolge",
    "Build calculation": "Bauberechnung",
+   "Slot check": "Slotprüfung",
    "Known": "Bekannt",
    "Show again": "Wieder anzeigen",
    "Suggestions marked as known (hidden):": "Als bekannt markierte Vorschläge (ausgeblendet):",
@@ -1878,7 +1875,7 @@
    "if a moon lacks ships or deuterium for its planned expeditions plus the backup, the shortfall is sent from your base (the first Target of AutoRepatriate) in the next repatriate cycle. Ships on expeditions and deliveries already on their way count as present.": "Fehlen einem Mond Schiffe oder Deuterium für seine geplanten Expeditionen plus die Reserve, wird der Fehlbetrag im nächsten Repatriate-Durchlauf aus deiner Basis (erstes Target von AutoRepatriate) geschickt. Schiffe auf Expedition und bereits unterwegs befindliche Lieferungen zählen als vorhanden.",
    "the jump gate drains the surplus, the supply refills the shortfall. Both need the matching worker switched on (see below); Origins must contain moons for either to do anything.": "Das Sprungtor räumt den Überschuss ab, die Versorgung füllt den Fehlbetrag auf. Beide brauchen den passenden Worker eingeschaltet (siehe unten); in den Origins müssen Monde stehen, sonst tut keine der beiden etwas.",
    "the numbers both functions use to calculate what a moon must hold: deuterium target = MinDeuteriumOnMoon, or expeditions x FuelToCarry if that is 0.": "Die Zahlen, mit denen beide Funktionen berechnen, was ein Mond halten muss: Deuterium-Ziel = MinDeuteriumOnMoon, oder Expeditionen x FuelToCarry, wenn das 0 ist.",
-   "Brain page": "Brain ein",
+   "Brain page": "Brain-Seite",
    "Jump gate: the rest, also expedition finds, jumps out. Replaces the general minimum on those moons": "Sprungtor: der Rest, auch Expeditions-Funde, springt weg. Ersetzt dort das allgemeine Minimum",
    "Repatriate: the shortfall is sent from the base in the next cycle": "Repatriate: Der Fehlbetrag wird im nächsten Durchlauf aus der Basis geschickt",
    "Backup expeditions": "Reserve-Expeditionen",
@@ -1898,7 +1895,53 @@
    "Supplying the expedition moons (ExpoSupply):": "Expeditions-Monde versorgen (ExpoSupply):",
    "Expedition moons keep only what expeditions need (ExpoOverride):": "Expeditions-Monde behalten nur, was Expeditionen brauchen (ExpoOverride):",
    "Make sure there are expedition slots (EnsureExpoSlots):": "Für Expeditions-Slots sorgen (EnsureExpoSlots):",
-   "now on the": "jetzt auf der Seite"
+   "now on the": "jetzt auf der Seite",
+   "DebrisSave (fleetsave on debris fields)": "DebrisSave (Fleetsave auf Trümmerfeldern)",
+   "Used by the Telegram command /debrissave <duration>: each listed celestial sends its fleet to the nearest debris field and recalls it so it is back after the duration. It works independently of the sleep modes above.": "Wird vom Telegram-Befehl /debrissave <Dauer> genutzt: Jeder aufgeführte Himmelskörper schickt seine Flotte zum nächsten Trümmerfeld und ruft sie zurück, sodass sie nach der Dauer wieder da ist. Das funktioniert unabhängig von den Schlafmodi oben.",
+   "DebrisSave: more settings (": "DebrisSave: weitere Einstellungen (",
+   "DebrisSave: ": "DebrisSave: ",
+   "Sleep / GhostSleep page": "Sleep-/GhostSleep-Seite",
+   " (section \"DebrisSave\"). The setting itself is unchanged.": " (Abschnitt \"DebrisSave\"). Die Einstellung selbst bleibt unverändert.",
+   "Defence while asleep": "Verteidigung im Schlaf",
+   "What watches your account while the bot sleeps depends on the mode:": "Was dein Konto im Schlaf überwacht, hängt vom Modus ab:",
+   "the Defender is off as well; nothing is sent to the game except the fleetsave when going to sleep and the recall at wake-up.": "Der Defender ist ebenfalls aus; ans Spiel geht nichts außer dem Fleetsave beim Einschlafen und dem Recall beim Aufwachen.",
+   "the Defender stays on watch in a quiet mode (it only alerts and polls rarely) and escalates to full defence if an attack wave is detected.": "Der Defender bleibt in einem leisen Modus wachsam (er meldet nur und fragt selten ab) und wechselt bei einer erkannten Angriffswelle zur vollen Verteidigung.",
+   "Awake:": "Wach:",
+   "the Defender works as set on its own page.": "Der Defender arbeitet wie auf seiner eigenen Seite eingestellt.",
+   "Defender page": "Defender",
+   "Defender is on - options on the ": "Der Defender ist an - Optionen auf der Seite ",
+   "Defender is off - options on the ": "Der Defender ist aus - Optionen auf der Seite ",
+   "Defender is not in the config - options on the ": "Der Defender steht nicht in der Config - Optionen auf der Seite ",
+   "History and boosters": "Verlauf und Booster",
+   "Won, lost and running auctions with the full bid history are on the ": "Gewonnene, verlorene und laufende Auktionen mit dem vollständigen Gebotsverlauf stehen auf der Seite ",
+   "Auctions page": "Auktionen",
+   "Boosters: ": "Booster: ",
+   "the boosters the bot keeps running (KeepBoosters) are set on the ": "Die Booster, die der Bot laufen lässt (KeepBoosters), stellst du auf der Seite ",
+   ". The auction does not react to your booster stock yet; the stock below only shows what is left in your inventory.": " ein. Die Auktion reagiert noch nicht auf deinen Booster-Bestand; die Anzeige unten zeigt nur, was im Inventar übrig ist.",
+   "Booster stock": "Booster-Bestand",
+   "From the last KeepBoosters check": "Vom letzten KeepBoosters-Durchlauf",
+   "reading stock...": "Bestand wird gelesen...",
+   "no data yet": "noch keine Daten",
+   "Boosters you use up can be won on the auction (see the ": "Verbrauchte Booster lassen sich in der Auktion gewinnen (siehe Seite ",
+   "AutoBidAuction page": "AutoBidAuction",
+   "). The auction does not react to your booster stock yet.": ") Die Auktion reagiert noch nicht auf deinen Booster-Bestand.",
+   "Auction won (Telegram)": "Auktion gewonnen (Telegram)",
+   "Bid war brake (Telegram)": "Bietkrieg-Bremse (Telegram)",
+   "Galaxy cache (Telegram)": "Galaxie-Cache (Telegram)",
+   "Global items (active on all planets)": "Globale Items (auf allen Planeten aktiv)",
+   "Delete old reports in the game": "Alte Berichte im Spiel löschen",
+   "Expired and replaced espionage reports are deleted; held and defence-blacklisted targets keep theirs": "Abgelaufene und ersetzte Spionageberichte werden gelöscht; gehaltene und wegen Verteidigung gesperrte Ziele behalten ihre",
+   "The Delay button in the browser tile (or /pause in Telegram) delays all functions (the Defender only if you switch that on below) for a few minutes: they skip their cycle, nothing new starts and spy, attack and expedition missions are blocked, so you can play by hand. Nothing is stopped; afterwards the functions go on with their usual plan, spread over about a minute. It is refused if a recall is due in that time. This block is saved as \"Experimental\" in the config.": "Der Verzögern-Knopf in der Browser-Kachel (oder /pause in Telegram) verzögert alle Funktionen (den Defender nur, wenn du das unten einschaltest) für ein paar Minuten: Sie überspringen ihren Zyklus, nichts Neues startet, und Spionage-, Angriffs- und Expeditionsmissionen sind gesperrt, damit du von Hand spielen kannst. Es wird nichts gestoppt; danach machen die Funktionen mit ihrer gewohnten Planung weiter, verteilt über etwa eine Minute. Abgelehnt wird es, wenn in dieser Zeit ein Rückruf fällig ist. Dieser Block wird in der Config als „Experimental“ gespeichert.",
+   "Use the celestial I am playing on": "Den Himmelskörper nutzen, auf dem ich spiele",
+   "While you play in the browser, the activity call uses your current celestial instead of another one, so it does not switch your planet. Needs a browser page opened in the last 10 minutes": "Spielst du im Browser, nimmt der Aktivitätsaufruf deinen aktuellen Himmelskörper statt eines anderen und wechselt so nicht deinen Planeten. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde",
+   "Only what is really still experimental stays here: the shadow fleet and the two log helpers (collect logs, extra debug log). All other new functions are on their normal pages.": "Hier bleibt nur, was wirklich noch experimentell ist: die Schattenflotte und die beiden Log-Helfer (Logs sammeln, Extra-Debug-Log). Alle anderen neuen Funktionen stehen auf ihren normalen Seiten.",
+   "Where the other test functions went": "Wohin die übrigen Testfunktionen gewandert sind",
+   "Everything that has proven itself now sits on its normal page. The keys in the config file did not change.": "Alles Bewährte steht jetzt auf seiner normalen Seite. Die Schlüssel in der Config-Datei haben sich nicht geändert.",
+   "Bot delay, login pause, reserved fleetsave slot and galaxy cache: ": "Bot-Verzögerung, Login-Pause, reservierter Fleetsave-Slot und Galaxie-Cache: ",
+   ". Defender recheck: ": ". Defender-Nachprüfung: ",
+   ". Report reading and asteroid hunter: ": ". Berichte lesen und Asteroiden-Jäger: ",
+   ". Mine plan ranking, ledger hold, energy planning, reverse repatriation, KeepBoosters and Directives: ": ". Minenplan-Rangfolge, Ledger-Schutz, Energieplanung, Rückholung, KeepBoosters und Direktiven: ",
+   "The Experimental block was not found in the config.": "Der Block Experimental wurde in der Config nicht gefunden."
   },
   "phrases": [
    [
@@ -2642,6 +2685,9 @@
    "NotSuitableRetryMinutes": {
     "t": "Minuten, nach denen ein als ungeeignet erkanntes Ziel (Beute zu klein, lohnt nicht) erneut ausspioniert wird. Es zählt der kürzere Wert aus diesem und der Berichtsgültigkeit, damit tägliche Läufe solche Ziele wieder erreichen. 0 = wie die Berichtsgültigkeit."
    },
+   "DeleteExpiredReports": {
+    "t": "Löscht Spionageberichte im Spiel, die älter als die Berichtsgültigkeit oder durch einen neueren Bericht desselben Ziels ersetzt sind, damit sie sich nicht im Posteingang ansammeln (höchstens 25 pro Durchlauf). Berichte von Zielen mit manueller Prüfung oder Sperrliste wegen Verteidigung/Unrentabilität bleiben stehen."
+   },
    "MaxReportAgeMinutesForAttack": {
     "t": "Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus."
    },
@@ -3133,8 +3179,11 @@
    "RandomActivity": {
     "t": "An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = immer der Heimat-Himmelskörper. Lässt die Aktivität des Bots nur normal aussehen."
    },
+   "CurrentlyActiveCelestialActivity": {
+    "t": "Spielst du gerade im Browser (Port 8080), nimmt der Aktivitätsaufruf des Defenders den Himmelskörper deiner Browser-Sitzung statt eines anderen, damit er dir beim Flottenversand oder Bauen nicht den aktuellen Planeten wegnimmt. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde; sonst gilt die normale Regel (RandomActivity / Home)."
+   },
    "Home.*": {
-    "t": "Dein Heimat-Himmelskörper. Wird für den Aktivitätsaufruf genutzt, wenn die zufällige Aktivität aus ist, und als Standard-Startpunkt von AutoHarvest."
+    "t": "Dein Heimat-Himmelskörper. Wird nur für den Aktivitätsaufruf des Defenders genutzt, wenn die zufällige Aktivität aus ist; kein anderer Worker nimmt ihn als Start."
    },
    "Autofleet.Active": {
     "t": "Den angegriffenen Himmelskörper automatisch per Fleetsave sichern."
@@ -3925,10 +3974,10 @@
     "t": "Alle Meldungen der Schattenflotte."
    },
    "BotPause.StopDefender": {
-    "t": "Den Defender während der Pause ebenfalls stoppen (Standard aus). Dann überwacht niemand Angriffe, deshalb wird die Pause abgelehnt, wenn ein bekannter Angriff innerhalb der Grenze unten plus der Pausenlänge eintrifft."
+    "t": "Den Defender ebenfalls verzögern (Standard aus; die Einstellung heißt weiter StopDefender). Dann wacht nichts über Angriffe, deshalb wird die Verzögerung abgelehnt, wenn ein bekannter Angriff innerhalb der Grenze unten plus der Verzögerungsdauer eintrifft."
    },
    "BotPause.AttackMarginMinutes": {
-    "t": "Die Pause wird abgelehnt, wenn ein Angriff innerhalb dieser Minuten eintrifft (Standard 15). Spionage-, Angriffs- und Expeditionsflüge sind während der Pause ebenfalls gesperrt."
+    "t": "Eine Verzögerung wird abgelehnt, wenn innerhalb dieser Minuten ein Angriff eintrifft (Standard 15). Spionage-, Angriffs- und Expeditionsmissionen sind außerdem gesperrt, solange der Bot verzögert ist."
    },
    "ExtraDebugLog": {
     "t": "Schreibt zusätzliche Diagnosezeilen in eine eigene Datei devlogs/TBot-debug-<Datum>.log (anonymisiert: Namen, Mail, IP und Token werden ersetzt; Koordinaten werden zu x:x:Position, Mengen bleiben; höchstens 50 MB pro Tag). Das normale Log bleibt klein. Schalte es ein, wenn eine Funktion nichts sendet und du den Grund sehen willst."
@@ -4003,21 +4052,21 @@
     "t": "Fallen-Modus nur für die Schattenflotte. An = der Defender schickt die Schattenflotte nicht weg, sichert aber weiterhin Rohstoffe und alle anderen Schiffe. Wird ein Angriff gemeldet, wird eine fliegende Schattenflotte nach Hause gerufen, damit sie beim Einschlag da ist. Schlaf-Fleetsaves schicken weiterhin alles weg."
    },
    "BotPause": {
-    "t": "Der Pause-Knopf in der Browser-Kachel (oder /pause in Telegram) stoppt alle Funktionen außer dem Defender für ein paar Minuten, damit nichts Neues startet, während du von Hand spielst. Danach läuft der Bot von selbst weiter. Rückrufe und der Defender laufen weiter. Eine Pause wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist."
+    "t": "Der Verzögern-Knopf in der Browser-Kachel (oder /pause in Telegram) verzögert alle Funktionen außer dem Defender für ein paar Minuten: Sie überspringen ihren Zyklus, damit nichts Neues startet, während du von Hand spielst. Es wird nichts gestoppt; danach machen sie mit ihrer gewohnten Planung weiter. Rückrufe und der Defender laufen weiter. Eine Verzögerung wird abgelehnt, wenn in dieser Zeit ein Rückruf fällig ist."
    },
    "BotPause.Active": {
-    "t": "Die Pausenfunktion an- oder ausschalten. Aus: Der Pause-Knopf und /pause werden abgelehnt."
+    "t": "Die Verzögerungsfunktion an- oder ausschalten. Aus: Der Verzögern-Knopf und /pause werden abgelehnt."
    },
    "BotPause.DurationMinutes": {
-    "t": "Wie lange eine Pause dauert, wenn du keine Zeit angibst.",
-    "e": "15 = der Bot macht 15 Minuten nach dem Druck auf Pause weiter."
+    "t": "Wie lange eine Verzögerung dauert, wenn du keine Zeit angibst.",
+    "e": "15 = der Bot macht 15 Minuten nach dem Druck auf Verzögern weiter."
    },
    "BotPause.RecallMarginMinutes": {
-    "t": "Sicherheitsabstand zu einem geplanten Rückruf. Die Pause wird abgelehnt, wenn innerhalb der Pausenzeit plus diesem Abstand ein Rückruf fällig ist.",
-    "e": "2 = bei 15 Minuten Pause blockiert ein Rückruf, der in 17 Minuten oder früher fällig ist, die Pause."
+    "t": "Sicherheitsabstand zu einem geplanten Rückruf. Die Verzögerung wird abgelehnt, wenn ein Rückruf innerhalb der Verzögerungszeit plus dieser Reserve fällig ist.",
+    "e": "2 = bei 15 Minuten Verzögerung blockiert ein Rückruf in 17 Minuten oder früher die Verzögerung."
    },
    "BotPause.MaxDurationMinutes": {
-    "t": "Längste Pause, die du mit /pause anfordern kannst."
+    "t": "Längste Verzögerung, die du mit /pause anfordern kannst."
    },
    "DefenderRecheck": {
     "t": "Kurz vor einem Fleetsave fragt der Defender das Spiel noch einmal nach der Angriffsliste. Wurde der Angriff zurückgerufen, entfällt der Fleetsave; kommt er später an, wird der Fleetsave verschoben. Schlägt die Abfrage fehl oder dauert zu lange, geht der Fleetsave wie geplant raus."
@@ -4162,12 +4211,13 @@
     "t": "Jeden Versuch und Fund nach data/asteroiden_funde_<alias>.json schreiben."
    },
    "BotPause.Mode": {
-    "t": "Gate (Standard): Während der Pause laufen die Worker weiter, überspringen aber ihren Zyklus und machen kurz nach der Pause mit ihrem üblichen Plan weiter, verteilt über etwa eine Minute. Stop: die alte harte Pause, jeder Worker wird gestoppt und danach neu gestartet."
+    "t": "Gate (Standard): Während der Verzögerung laufen die Worker weiter, überspringen aber ihren Zyklus und machen kurz danach mit ihrer gewohnten Planung weiter, verteilt über etwa eine Minute. Stop: die alte harte Pause, jeder Worker wird gestoppt und danach neu gestartet."
    }
   }
  },
  "tiles": {
   "Pause": "Pause",
+  "Delay": "Verzögern",
   "Resume": "Fortsetzen",
   "Tiles": "Kacheln",
   "on": "an",

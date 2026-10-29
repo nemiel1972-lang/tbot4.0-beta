@@ -40,7 +40,7 @@
         return '\u25C6';
     }
     function itemTile(key, img, name, value, bad, title, ghost) {
-        var t = el('div', 'st-card st-item' + (bad ? ' bad' : '') + (ghost ? ' st-ghost' : ''));
+        var t = el('div', 'st-itemrow' + (bad ? ' bad' : '') + (ghost ? ' st-ghost' : ''));
         t.dataset.key = key; t.title = title || name;
         var ic = el('div', 'st-item-ic');
         if (img && /^https?:\/\//.test(img)) { var im = el('img'); im.src = img; im.alt = ''; im.addEventListener('error', function () { this.remove(); ic.textContent = symbolFor(name); }); ic.appendChild(im); }
@@ -228,20 +228,26 @@
         var gi = s && s.globalItems, evs = d.boosterStock && d.boosterStock.events;
         var passedG = gi && gi.fetchedMs ? Math.max(0, (Date.now() - gi.fetchedMs) / 1000) : 0;
         var presentKeys = {};
+        var itemEntries = [];
         ((gi && gi.items) || []).forEach(function (it) {
             var left = Math.max(0, (it.remainingSec || 0) - passedG), key = 'item:' + (it.name || '?');
             presentKeys[key] = it.name || '?';
-            grid.appendChild(itemTile(key, it.img, it.name || '?', left > 0 ? dur(left) : 'expired', left > 0 && left < 7200, (it.name || '') + (it.totalSec ? ' (total ' + dur(it.totalSec) + ')' : '')));
+            itemEntries.push(itemTile(key, it.img, it.name || '?', left > 0 ? dur(left) : 'expired', left > 0 && left < 7200, (it.name || '') + (it.totalSec ? ' (total ' + dur(it.totalSec) + ')' : '')));
         });
         (evs || []).forEach(function (e) {
             var key = 'event:' + e.name;
             presentKeys[key] = 'Event: ' + e.name;
-            grid.appendChild(itemTile(key, null, 'Event: ' + e.name + ' x' + e.amount, e.expiresInSec === null || e.expiresInSec === undefined ? 'expiry unknown' : dur(e.expiresInSec), false, e.name));
+            itemEntries.push(itemTile(key, null, 'Event: ' + e.name + ' x' + e.amount, e.expiresInSec === null || e.expiresInSec === undefined ? 'expiry unknown' : dur(e.expiresInSec), false, e.name));
         });
         var known = readKnownItems(), changedKnown = false;
         Object.keys(presentKeys).forEach(function (k) { if (!known[k]) { known[k] = presentKeys[k]; changedKnown = true; } });
         if (changedKnown) saveKnownItems(known);
-        Object.keys(known).forEach(function (k) { if (!presentKeys[k]) grid.appendChild(itemTile(k, null, known[k], '', false, known[k] + ' (not active right now)', true)); });
+        Object.keys(known).forEach(function (k) { if (!presentKeys[k]) itemEntries.push(itemTile(k, null, known[k], '', false, known[k] + ' (not active right now)', true)); });
+        if (itemEntries.length) {
+            c = card('Global items (active on all planets)'); grid.appendChild(c.root);
+            var itemBox = el('div', 'st-items'); c.body.appendChild(itemBox);
+            itemEntries.forEach(function (t) { itemBox.appendChild(t); });
+        }
 
         c = card('Fleet stock (ships on all planets and moons)', true); grid.appendChild(c.root);
         var fst = s && s.fleetStock;
@@ -379,7 +385,7 @@
         saveOrder(grid);
         load();
     }
-    var DEFAULT_W = { 'Bot, version and workers': 3, 'Account and time': 1, 'Lifeform bonuses (expeditions)': 2, 'Resources (all planets and moons)': 2, 'Fleets (slots and running fleets)': 2, 'Fleet stock (ships on all planets and moons)': 2, 'Latest events': 4 };
+    var DEFAULT_W = { 'Bot, version and workers': 3, 'Account and time': 1, 'Lifeform bonuses (expeditions)': 2, 'Resources (all planets and moons)': 2, 'Fleets (slots and running fleets)': 2, 'Fleet stock (ships on all planets and moons)': 2, 'Latest events': 4, 'Global items (active on all planets)': 4 };
     function sizeKey() { return 'tbot.start.size.' + instance; }
     function readSizes() { try { var v = JSON.parse(localStorage.getItem(sizeKey()) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
     function setWidth(c, w) { c.className = c.className.replace(/\bw[1-4]\b/g, '').trim() + ' w' + w; c.dataset.w = String(w); }
@@ -391,7 +397,7 @@
 
         cards.forEach(function (c) {
             if (c.classList.contains('st-attack')) { setWidth(c, 4); return; }
-            var key = c.dataset.key, w = c.classList.contains('st-item') ? 1 : (Number(sizes[key]) || DEFAULT_W[key] || 1);
+            var key = c.dataset.key, w = Number(sizes[key]) || DEFAULT_W[key] || 1;
             setWidth(c, w);
             if (isLocked()) return;
             var isItem = c.classList.contains('st-item');

@@ -3819,6 +3819,32 @@ namespace Tbot.Workers {
 			}
 		}
 
+		private int _reportCleanupBudget;
+		private bool IsReportProtected(Coordinate c) {
+			if (c == null) return true;
+			if (_tbotInstance.UserData.farmTargets.Any(t => t.HasCoords(c) && t.HeldForManualReview)) return true;
+			bool blActive = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "Blacklist") &&
+				SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm.Blacklist, "Active") &&
+				(bool) _tbotInstance.InstanceSettings.AutoFarm.Blacklist.Active;
+			if (blActive && _blacklist.IsBlacklisted(c)) {
+				var bt = _blacklist.GetBlacklistedTarget(c);
+				if (bt != null && (bt.Reason == BlacklistReason.HasDefense || bt.Reason == BlacklistReason.Unprofitable)) return true;
+			}
+			return false;
+		}
+		private async Task<bool> TryDeleteStaleReport(int reportId, Coordinate c, string why) {
+			if (_reportCleanupBudget <= 0 || IsReportProtected(c)) return false;
+			try {
+				_reportCleanupBudget--;
+				await _ogameService.DeleteReport(reportId);
+				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Deleted espionage report {reportId} for {c} ({why}).");
+				return true;
+			} catch (Exception e) {
+				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Could not delete espionage report {reportId} for {c}: {e.Message}");
+				return false;
+			}
+		}
+
 		private async Task AutoFarmProcessReports() {
 			List<EspionageReportSummary> summaryReports;
 			try {
@@ -3827,6 +3853,20 @@ namespace Tbot.Workers {
 				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm,
 					$"Unable to retrieve espionage reports; keeping existing attack-pending targets: {e.Message}");
 				return;
+			}
+
+			bool deleteStaleReports = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DeleteExpiredReports", true);
+			_reportCleanupBudget = deleteStaleReports && _forcedCoord == null ? 25 : 0;
+			if (_reportCleanupBudget > 0) {
+				var newestPerTarget = summaryReports.Where(x => x != null && x.Type != EspionageReportType.Action && x.Target != null)
+					.GroupBy(x => x.Target.ToString()).Where(g => g.Count() > 1).Select(g => g.ToList()).ToList();
+				foreach (var g in newestPerTarget) {
+					int newestId = g.Max(x => x.ID);
+					foreach (var old in g.Where(x => x.ID != newestId).ToList()) {
+						if (await TryDeleteStaleReport(old.ID, old.Target, "superseded by a newer report"))
+							summaryReports.Remove(old);
+					}
+				}
 			}
 
 			int nonActionableQueryLimit = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "ReportQueryLimitForNonActionable")
@@ -3878,6 +3918,7 @@ namespace Tbot.Workers {
 						continue;
 					}
 					if (DateTime.Compare(report.Date.AddMinutes((double) _tbotInstance.InstanceSettings.AutoFarm.KeepReportFor), await _tbotOgameBridge.GetDateTime()) < 0) {
+						await TryDeleteStaleReport(report.ID, report.Coordinate, "older than KeepReportFor");
 						continue;
 					}
 

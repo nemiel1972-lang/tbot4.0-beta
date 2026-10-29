@@ -5,16 +5,19 @@
 #            and the two native DLLs (e_sqlite3.dll, aspnetcorev2_inprocess.dll) next to it
 #   --multi-file: normal folder with many DLLs instead of a single EXE
 #   --framework-dependent: smaller, but needs the .NET 9 runtime on the Windows machine
+#   --with-auction: include the auction feature (default for the Windows package: without, -p:NoAuction=true)
 # Result: dist/TBot-win-x64/ and dist/TBot-win-x64.zip (if "zip" is available)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SELF_CONTAINED=true
 SINGLE_FILE=true
+NO_AUCTION=true
 for arg in "$@"; do
   case "$arg" in
     --framework-dependent) SELF_CONTAINED=false ;;
     --multi-file) SINGLE_FILE=false ;;
+    --with-auction) NO_AUCTION=false ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
@@ -26,9 +29,16 @@ mkdir -p "$AUSGABE"
 echo "== ogamed.exe (Go, windows/amd64) =="
 (cd ogamed && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o "../$AUSGABE/ogamed.exe" ./cmd/ogamed-tbot)
 
-echo "== TBot (.NET, win-x64, self-contained=$SELF_CONTAINED, single-file=$SINGLE_FILE) =="
+# File/assembly version from the release tag (v4.0-beta16 -> 4.0.0.16), otherwise the value in TBot.csproj stays
+VERSION_ARGS=""
+if [[ "${TBOT_VERSION:-}" =~ ^v?([0-9]+)\.([0-9]+)-beta([0-9]+)$ ]]; then
+  NUMVER="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0.${BASH_REMATCH[3]}"
+  VERSION_ARGS="-p:Version=$NUMVER -p:AssemblyVersion=$NUMVER -p:FileVersion=$NUMVER -p:InformationalVersion=$TBOT_VERSION"
+fi
+
+echo "== TBot (.NET, win-x64, self-contained=$SELF_CONTAINED, single-file=$SINGLE_FILE, no-auction=$NO_AUCTION) =="
 (cd TBot && dotnet publish -c Release -r win-x64 --self-contained "$SELF_CONTAINED" \
-  -p:PublishSingleFile="$SINGLE_FILE" -p:DebugType=none -p:DebugSymbols=false \
+  -p:PublishSingleFile="$SINGLE_FILE" $VERSION_ARGS -p:NoAuction="$NO_AUCTION" -p:NoDiag=true -p:NoSlots=true -p:NoOrion=true -p:DebugType=none -p:DebugSymbols=false \
   -o "../$AUSGABE" -nologo -clp:"ErrorsOnly;Summary")
 rm -f "$AUSGABE"/*.pdb
 
@@ -43,7 +53,33 @@ find "$AUSGABE" -maxdepth 1 \( -name '*settings*.json' -o -name '*.db' -o -name 
 
 # Add template and start helpers (only anonymised files from the repo)
 mkdir -p "$AUSGABE/config"
-cp config/config.vorlage.json "$AUSGABE/config/"
+if [ "$NO_AUCTION" = true ]; then
+  # Remove the "AutoBidAuction" block from the template (count braces, validate result as JSON)
+  python3 - "config/config.vorlage.json" "$AUSGABE/config/config.vorlage.json" <<'PY'
+import json, re, sys
+src, dst = sys.argv[1], sys.argv[2]
+t = open(src, encoding='utf-8-sig', newline='').read()
+m = re.search(r'[ \t]*"AutoBidAuction"\s*:\s*\{', t)
+if m:
+    i, depth, instr = m.end(), 1, False
+    while depth:
+        c = t[i]
+        if instr:
+            if c == '\\': i += 1
+            elif c == '"': instr = False
+        elif c == '"': instr = True
+        elif c == '{': depth += 1
+        elif c == '}': depth -= 1
+        i += 1
+    rest = re.match(r'\s*,?', t[i:]).end()
+    t = t[:m.start()] + t[i + rest:].lstrip('\r\n')
+    t = re.sub(r',(\s*\})', r'\1', t)  # comma before closing brace if the block was the last one
+json.loads(t)
+open(dst, 'w', encoding='utf-8', newline='').write(t)
+PY
+else
+  cp config/config.vorlage.json "$AUSGABE/config/"
+fi
 
 # Field-by-field explanation of the config template
 cp config/REFERENCE.md "$AUSGABE/config/REFERENCE.md"
@@ -155,6 +191,7 @@ Updating from an older version or from the original TBot
   them removed: it shows the list, asks, and makes a backup first. Only entries from its built-in list are removed, never your own ones.
 
 Notes about this build
+  - The auction feature is not included in this package.
   - Lifeform AutoMine needs lifeform_targets.json. If it is missing, LF building is skipped (warning in the log).
   - Update from the WebUI: open the Config page, "Start" (first entry), card "Version". If a new release exists, click
     "Install update". The bot stops, the files are replaced (config, data, logs, logins and lifeform_targets.json stay), the config is

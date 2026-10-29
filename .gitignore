@@ -35,3 +35,6 @@ backups/
 # Windows-Paket
 /dist/
 devlog/
+devlogs/
+orionlogs/
+__pycache__/

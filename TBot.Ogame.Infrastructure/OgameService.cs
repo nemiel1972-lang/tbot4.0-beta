@@ -933,6 +933,10 @@ namespace TBot.Ogame.Infrastructure {
 			return await GetAsync<bool>("/bot/is-under-attack");
 		}
 
+		public async Task<BrowserCelestial> GetBrowserCelestial() {
+			return await GetAsyncNoRetry<BrowserCelestial>("/bot/browser-celestial");
+		}
+
 		public async Task<bool> IsVacationMode() {
 			return await GetAsync<bool>("/bot/is-vacation-mode");
 		}

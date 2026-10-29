@@ -211,7 +211,9 @@
     },
     ## On = every attack check opens the defence page of a random celestial. Off = always the Home celestial. Only makes the bot activity look normal.
     "RandomActivity": false,
-    ## Home celestial: used for the activity call when `RandomActivity` is off, and as default AutoHarvest origin (the moon at these coordinates) when AutoHarvest has no `Origin`.
+    ## While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the normal rule (RandomActivity / Home) applies.
+    "CurrentlyActiveCelestialActivity": true,
+    ## Home celestial: used only for the Defender activity call when `RandomActivity` is off. No other worker uses it as a start (AutoHarvest without `Origin` uses the expedition bases and the detected main fleet location).
     "Home": {
       ## Galaxy number of the coordinates.
       "Galaxy": 1,
@@ -1121,6 +1123,8 @@
     "KeepReportFor": 1440,
     ## Minutes after which a target that was found unsuitable (loot too small, not worth it) is probed again. Shorter than KeepReportFor = daily runs reach it again. 0 = same as KeepReportFor.
     "NotSuitableRetryMinutes": 720,
+    ## Deletes espionage reports in the game that are older than KeepReportFor or replaced by a newer report of the same target, so they do not pile up. Reports of targets held for manual review or blacklisted for defence/unprofitable are kept.
+    "DeleteExpiredReports": true,
     ## Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off.
     "MaxReportAgeMinutesForAttack": 120,
     ## Longest time in seconds an attack may be held back so that the recyclers arrive right behind it.
@@ -1418,19 +1422,19 @@
   },
   ## EXPERIMENTAL: pause, galaxy cache, debug log, MinePlanRanking, shadow fleet and more.
   "Experimental": {
-    ## The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. Recalls and the Defender keep running. A pause is refused if a recall is due in that time.
+    ## The Delay button in the browser tile (or /pause in Telegram) delays all functions except the Defender for a few minutes: they skip their cycle, so nothing new starts while you play by hand. Nothing is stopped; afterwards they go on with their usual plan. Recalls and the Defender keep running. A delay is refused if a recall is due in that time.
     "BotPause": {
       ## Master switch of this function. Off = the bot does nothing here.
       "Active": true,
-      ## Button **Pause** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode hold their cycles for this long (default 15) and continue on their own (with `Mode` = `Stop` they are stopped and restarted). `/resume` or the button ends it earlier; pressing Pause again prolongs it. Recalls, fleetsave and the Defender keep running.
+      ## Button **Delay** in the browser tile and Telegram `/pause [minutes]`: all workers except Defender and SleepMode skip their cycles for this long (default 15) and continue on their own (with `Mode` = `Stop` they are stopped and restarted). `/resume` or the button ends it earlier; pressing Delay again prolongs it. Recalls, fleetsave and the Defender keep running.
       "DurationMinutes": 15,
-      ## Safety distance (default 2). A pause is refused if a recall is due within the pause time plus this margin. A pause is also refused while sleeping and during an attack lockdown.
+      ## Safety distance (default 2). A delay is refused if a recall is due within the delay time plus this margin. A delay is also refused while sleeping and during an attack lockdown.
       "RecallMarginMinutes": 2,
-      ## Longest pause you can ask for with `/pause` (default 120).
+      ## Longest delay you can ask for with `/pause` (default 120).
       "MaxDurationMinutes": 120,
-      ## Default off. On: the Defender stops during the pause too. Fleetsave and recalls already planned still run.
+      ## Default off. On: the Defender is delayed too (the setting keeps its name). Fleetsave and recalls already planned still run.
       "StopDefender": false,
-      ## Default 15. A pause is refused if an attack arrives within this time (with `StopDefender` on: plus the pause length). While paused, spy, attack, expedition, colonize, discovery and harvest missions are blocked (fleetsave, transports and Telegram commands stay possible).
+      ## Default 15. A delay is refused if an attack arrives within this time (with `StopDefender` on: plus the delay length). While delayed, spy, attack, expedition, colonize, discovery and harvest missions are blocked (fleetsave, transports and Telegram commands stay possible).
       "AttackMarginMinutes": 15
     },
     ## Shortly before a fleetsave the Defender asks the game for the attack list once more. If the attack was recalled, the fleetsave is skipped; if it arrives later, the fleetsave is moved. If the question fails or takes too long, the fleetsave is sent as planned.
@@ -1448,7 +1452,7 @@
       "Repatriate": true,
       ## Additional debug log for this topic.
       "Ledger": true,
-      ## The Pause button in the browser tile (or /pause in Telegram) stops all functions except the Defender for a few minutes, so nothing new starts while you play by hand. After the time the bot goes on by itself. Recalls and the Defender keep running. A pause is refused if a recall is due in that time.
+      ## The Delay button in the browser tile (or /pause in Telegram) delays all functions except the Defender for a few minutes: they skip their cycle, so nothing new starts while you play by hand. Nothing is stopped; afterwards they go on with their usual plan. Recalls and the Defender keep running. A delay is refused if a recall is due in that time.
       "BotPause": true,
       ## Shortly before a fleetsave the Defender asks the game for the attack list once more. If the attack was recalled, the fleetsave is skipped; if it arrives later, the fleetsave is moved. If the question fails or takes too long, the fleetsave is sent as planned.
       "DefenderRecheck": true,
