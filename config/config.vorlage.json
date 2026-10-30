@@ -690,6 +690,7 @@
         "DeleteExpiredReports": true,
         "MaxReportAgeMinutesForAttack": 120,
         "ProcessAllReports": true,
+        "DefendedHalfSplit": true,
         "MaxAttackDelaySec": 600,
         "DebrisCreditPercent": 80,
         "MinDebrisToHarvest": 0,

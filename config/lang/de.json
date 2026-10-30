@@ -2709,6 +2709,9 @@
    "MaxReportAgeMinutesForAttack": {
     "t": "Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus."
    },
+   "DefendedHalfSplit": {
+    "t": "Verteidigte Ziele pro Zyklus nur zur Hälfte auswerten (die andere Hälfte kommt im nächsten Zyklus dran). Spart Rechenzeit der Eskorten-Simulation. false = alle verteidigten Ziele in jedem Zyklus auswerten (längere Zyklen)."
+   },
    "ProcessAllReports": {
     "t": "Berichte zu Zielen, die TBot nicht selbst ausspioniert hat (z.B. manuelle Sonden), trotzdem auswerten, wenn das Ziel inaktiv ist. false = solche Berichte ignorieren."
    },

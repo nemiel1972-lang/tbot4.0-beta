@@ -70,6 +70,9 @@ window.CFG_HELP.en = {
   "MaxReportAgeMinutesForAttack": {
    "t": "Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off."
   },
+  "DefendedHalfSplit": {
+   "t": "Evaluate only half of the defended targets per cycle (the other half follows in the next cycle). Saves escort-simulation time. false = evaluate all defended targets every cycle (longer cycles)."
+  },
   "ProcessAllReports": {
    "t": "Also evaluate reports of targets TBot did not probe itself (e.g. manual probes) when the target is inactive. false = ignore such reports."
   },

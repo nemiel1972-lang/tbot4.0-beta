@@ -30,6 +30,7 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - AutoFarm: `ProcessAllReports` (default `true`) can be switched off again; the log lines for reports of targets AutoFarm did not probe itself are clearer.
 - Expeditions: the deuterium alarm (Telegram) only comes when the expedition moon cannot cover 2 expedition fleets any more; below the target but above that, the expeditions just keep running and the repatriate round resupplies.
 - AutoFarm: two summary lines per run in the log ("AutoFarm start summary" with target states, scan cursor, cache and limits; "AutoFarm run summary" with scanned/skipped systems, skip reasons, probes sent and why the run ended), to find out why a run sends no probes.
+- AutoFarm: new `DefendedHalfSplit` (default `true` = as before). `false` evaluates all defended targets every cycle instead of half of them; the "start summary" and "run summary" log lines also show why a run ended. Warning if the start summary itself fails.
 
 ## Upgrading
 Update as usual. New switches default to off; existing settings keep their behaviour.
@@ -70,6 +71,7 @@ Update as usual. New switches default to off; existing settings keep their behav
 - AutoFarm: `ProcessAllReports` (Standard `true`) lässt sich wieder abschalten; die Logzeilen zu Berichten von Zielen, die AutoFarm nicht selbst ausspioniert hat, sind verständlicher.
 - Expeditionen: Der Deuterium-Alarm (Telegram) kommt erst, wenn der Expeditionsmond nicht mehr für 2 Expeditions-Flotten reicht; unter dem Ziel, aber darüber, laufen die Expeditionen einfach weiter und der Repatriate-Zyklus füllt auf.
 - AutoFarm: zwei Zusammenfassungszeilen pro Lauf im Log („AutoFarm start summary“ mit Zielstatus, Scan-Cursor, Cache und Grenzen; „AutoFarm run summary“ mit gescannten/übersprungenen Systemen, Überspringgründen, gesendeten Sonden und dem Grund fürs Laufende), um zu finden, warum ein Lauf keine Sonde schickt.
+- AutoFarm: neu `DefendedHalfSplit` (Standard `true` = wie bisher). `false` wertet in jedem Zyklus alle verteidigten Ziele aus statt nur der Hälfte; die Logzeilen „start summary“ und „run summary“ zeigen auch, warum ein Lauf endete. Warnung, falls die Start-Zusammenfassung selbst fehlschlägt.
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.

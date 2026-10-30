@@ -880,7 +880,7 @@ namespace Tbot.Workers {
 					$"cached systems={_stateStore.CountSystemSnapshots()} (TTL {GetSystemDataTtl().TotalDays:F0} d, empty-system cooldown {GetEmptySystemCooldown().TotalDays:F0} d); main scan completed={_mainScanCompletedSinceStart}; " +
 					$"MaxReportAgeMinutesForAttack={SettingsService.GetSetting(af, "MaxReportAgeMinutesForAttack", 120)}, KeepReportFor={SettingsService.GetSetting(af, "KeepReportFor", 0)}, ScanBlockSize={SettingsService.GetSetting(af, "ScanBlockSize", 0)}.");
 			} catch (Exception ex) {
-				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"AutoFarm start summary failed: {ex.Message}");
+				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"AutoFarm start summary failed: {ex.Message}");
 			}
 		}
 
@@ -3062,10 +3062,14 @@ stopAutoFarm = true;
 						.ThenByDescending(lootMetric)
 						.ToList();
 
-					_defendedHalfToggle = !_defendedHalfToggle;
+					bool defendedHalfSplit = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "DefendedHalfSplit", true);
+					if (defendedHalfSplit)
+						_defendedHalfToggle = !_defendedHalfToggle;
 					bool activeHalf = _defendedHalfToggle;
 					int deferredDefendedCount = 0;
 					attackTargets = attackTargets.Where(t => {
+						if (!defendedHalfSplit)
+							return true;
 						if (t.Report.IsDefenceless(isUsingProbesForHalfSplit)) {
 							return true;
 						}
