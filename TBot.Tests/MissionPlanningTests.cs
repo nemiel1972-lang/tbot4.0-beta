@@ -843,5 +843,24 @@ INSERT INTO attacks VALUES (77, 1, 139, 7, 1, 'Legacy target', '2026-08-10T12:01
 			Assert.False(AutoFarmStartupPolicy.IsCursorStale(now.AddMinutes(-5), now, 120));
 			Assert.False(AutoFarmStartupPolicy.IsCursorStale(null, now, 120));
 		}
+
+		[Fact]
+		public void AutoFarmRunStatsDescribesSkipsAndKeepsFirstStopReason() {
+			var stats = new AutoFarmRunStats { CacheSnapshotUsed = 3, SkipBusyState = 2, ProbesSent = 0 };
+			stats.SetStopReason("ScanBlockSize reached");
+			stats.SetStopReason("slot budget exhausted");
+			var text = stats.DescribeRun();
+			Assert.Contains("cache-snapshot=3", text);
+			Assert.Contains("busy-state=2", text);
+			Assert.Contains("probes sent=0", text);
+			Assert.Contains("ScanBlockSize reached", text);
+			Assert.DoesNotContain("slot budget exhausted", text);
+			var targets = new List<FarmTarget> {
+				new FarmTarget(new Planet { Coordinate = new Coordinate(1, 2, 3, Celestials.Planet) }, FarmState.AttackPending),
+				new FarmTarget(new Planet { Coordinate = new Coordinate(1, 2, 4, Celestials.Planet) }, FarmState.AttackPending)
+			};
+			Assert.Equal("AttackPending=2", AutoFarmRunStats.DescribeTargets(targets));
+			Assert.Equal("none", AutoFarmRunStats.DescribeTargets(null));
+		}
 }
 }

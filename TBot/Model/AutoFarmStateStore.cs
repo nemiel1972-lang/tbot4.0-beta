@@ -89,6 +89,20 @@ namespace TBot.Model {
 			}
 		}
 
+		public int CountSystemSnapshots() {
+			if (!_enabled)
+				return 0;
+
+			try {
+				using var connection = OpenConnection();
+				using var command = connection.CreateCommand();
+				command.CommandText = "SELECT COUNT(*) FROM systems;";
+				return Convert.ToInt32(command.ExecuteScalar());
+			} catch {
+				return 0;
+			}
+		}
+
 		public AutoFarmSystemSnapshot GetSystemSnapshot(int galaxy, int system) {
 			if (!_enabled)
 				return null;

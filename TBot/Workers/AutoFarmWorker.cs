@@ -870,7 +870,22 @@ namespace Tbot.Workers {
 			_stateLoaded = true;
 		}
 
+		private void LogRunStartSummary() {
+			try {
+				var af = _tbotInstance.InstanceSettings.AutoFarm;
+				var cursorAt = _stateStore.LoadScanCursorUpdatedAtUtc();
+				string cursorAlter = cursorAt.HasValue ? $"{(DateTime.UtcNow - cursorAt.Value).TotalMinutes:F0} min old" : "none";
+				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
+					$"AutoFarm start summary: targets [{AutoFarmRunStats.DescribeTargets(_tbotInstance.UserData.farmTargets)}]; cursor range {_tbotInstance.UserData.autoFarmLastRangeIndex} at {_tbotInstance.UserData.autoFarmLastGalaxy}:{_tbotInstance.UserData.autoFarmLastSystem} ({cursorAlter}); " +
+					$"cached systems={_stateStore.CountSystemSnapshots()} (TTL {GetSystemDataTtl().TotalDays:F0} d, empty-system cooldown {GetEmptySystemCooldown().TotalDays:F0} d); main scan completed={_mainScanCompletedSinceStart}; " +
+					$"MaxReportAgeMinutesForAttack={SettingsService.GetSetting(af, "MaxReportAgeMinutesForAttack", 120)}, KeepReportFor={SettingsService.GetSetting(af, "KeepReportFor", 0)}, ScanBlockSize={SettingsService.GetSetting(af, "ScanBlockSize", 0)}.");
+			} catch (Exception ex) {
+				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"AutoFarm start summary failed: {ex.Message}");
+			}
+		}
+
 		private bool _startupCleaned;
+		private AutoFarmRunStats _stats = new();
 		private async Task ReleaseStaleStartupStateAsync() {
 			if (_startupCleaned)
 				return;
@@ -1173,12 +1188,14 @@ namespace Tbot.Workers {
 				GetSystemDataTtl(),
 				GetEmptySystemCooldown());
 			if (cacheDecision == AutoFarmSystemCacheDecision.Skip) {
+				_stats.CacheEmptySkip++;
 				_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm,
 					$"Skipping cached empty system {galaxy}:{system} until {cachedSnapshot.ObservedAtUtc.Add(GetEmptySystemCooldown()):u}.");
 				return null;
 			}
 
 			if (cacheDecision == AutoFarmSystemCacheDecision.UseSnapshot) {
+				_stats.CacheSnapshotUsed++;
 				_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm,
 					$"Using cached galaxy data for {galaxy}:{system} ({(nowUtc - cachedSnapshot.ObservedAtUtc).TotalDays:F1} days old).");
 				return AutoFarmSystemPolicy.GetEligibleTargets(cachedSnapshot.Planets);
@@ -1241,11 +1258,13 @@ namespace Tbot.Workers {
 
 			if (galaxyInfo?.Planets == null) {
 				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Galaxy scan returned no planet data for {galaxy}:{system}; this system will not be cached as empty.");
+				_stats.NoData++;
 				return null;
 			}
 
 			var planets = galaxyInfo.Planets.Where(p => p != null).ToList();
 			bool isEmptySystem = AutoFarmSystemPolicy.IsEmptySystem(planets);
+			_stats.LiveScans++;
 			_stateStore.SaveSystemSnapshot(galaxy, system, nowUtc, isEmptySystem, planets);
 
 			if (isEmptySystem)
@@ -1485,6 +1504,7 @@ namespace Tbot.Workers {
 		if (blacklistActive && _blacklist.IsBlacklisted(planet.Coordinate)) {
 			var blacklistedTarget = _blacklist.GetBlacklistedTarget(planet.Coordinate);
 			_tbotInstance.log(LogLevel.Trace, LogSender.AutoFarm, $"Target {planet.ToString()} is blacklisted (Reason: {blacklistedTarget.Reason}). Skipping...");
+			_stats.SkipBlacklist++;
 			return null;
 		}
 
@@ -1501,11 +1521,13 @@ namespace Tbot.Workers {
 
 				if (target.State == FarmState.NotSuitable && target.Report != null) {
 					_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Target {planet.ToString()} marked as Not Suitable. Skipping...");
+					_stats.SkipNotSuitable++;
 					return null;
 				}
 
 				if (target.State == FarmState.ProbesSent || target.State == FarmState.AttackPending || target.State == FarmState.AttackSent) {
 					_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Target {planet.ToString()} marked as {target.State.ToString()}. Skipping...");
+					_stats.SkipBusyState++;
 					return null;
 				}
 			}
@@ -2476,6 +2498,8 @@ namespace Tbot.Workers {
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "Running autofarm...");
 				LoadPersistedTargets();
 				await ReleaseStaleStartupStateAsync();
+				_stats = new AutoFarmRunStats();
+				LogRunStartSummary();
 				ProcessWebCommands();
 				DeduplicateFarmTargets();
 				stopAfterFullScan = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "StopAfterFullScan")
@@ -2572,7 +2596,8 @@ namespace Tbot.Workers {
 
 						if (!orderedRanges.Any()) {
 							_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, "No scan ranges match galaxies with planets. Skipping AutoFarm.");
-							stopAutoFarm = true;
+							_stats.SetStopReason("no scan ranges match");
+stopAutoFarm = true;
 						}
 
 						if (!stopAutoFarm) {
@@ -2584,13 +2609,15 @@ namespace Tbot.Workers {
 							if (existingAttackPendingCount >= preScanSlotBudget.AvailableSlots) {
 								_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
 									$"AutoFarm attack slots full: {existingAttackPendingCount} attack-ready target(s) for {preScanSlotBudget.AvailableSlots} free of {preScanSlotBudget.MaxSlots} slot(s) ({preScanSlotBudget.OwnedSlots} already in use) - skipping further scanning this cycle so no probes are sent needlessly early (and outdated by the time of the attack).");
-								stopAutoFarm = true;
+								_stats.SetStopReason("attack slots full (pending targets >= free slots)");
+stopAutoFarm = true;
 							}
 						}
 
 						if (sequentialModeActive && !stopAutoFarm && sequentialModeProbeInFlight) {
 							_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, "Sequential mode: report of the previous espionage attack not evaluated yet - skipping the scan this cycle.");
-							stopAutoFarm = true;
+							_stats.SetStopReason("sequential mode waits for a report");
+stopAutoFarm = true;
 						}
 
 						if (_forcedCoord != null) {
@@ -2663,26 +2690,31 @@ namespace Tbot.Workers {
 									|| (sequentialModeActive && numProbed >= sequentialModeProbesPerCycle)) {
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "Maximum number of targets to probe reached, proceeding to attack.");
 									SaveScanCursor(rangeIndex, galaxy, system);
-									stopAutoFarm = true;
+									_stats.SetStopReason("probe limit per pass reached");
+stopAutoFarm = true;
 									break;
 								}
 								if (scanBlockSize > 0 && systemsScannedThisPass >= scanBlockSize) {
 									_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"AutoFarm.ScanBlockSize erreicht ({scanBlockSize} Systeme gescannt), proceeding to attack.");
 									SaveScanCursor(rangeIndex, galaxy, system);
-									stopAutoFarm = true;
+									_stats.SetStopReason("ScanBlockSize reached");
+stopAutoFarm = true;
 									break;
 								}
 								systemsScannedThisPass++;
 
 								bool excludeSystem = ShouldExcludeSystem(galaxy, system);
-								if (excludeSystem)
+								if (excludeSystem) {
+									_stats.SystemsExcluded++;
 									continue;
+								}
 
 								List<Celestial> scannedTargets;
 								try {
 									scannedTargets = await GetScannedTargetsFromGalaxy(galaxy, system);
 								} catch (Exception e) {
 									_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Skipping system {galaxy}:{system} after scan failure: {e.Message}");
+									_stats.ScanFailures++;
 									continue;
 								}
 
@@ -2706,6 +2738,7 @@ namespace Tbot.Workers {
 									if (stopAutoFarm)
 										break;
 									if (!IsTargetInMinimumRank(planet, scannedTargets)) {
+										_stats.SkipRank++;
 										continue;
 									}
 
@@ -2717,8 +2750,10 @@ namespace Tbot.Workers {
 										break;
 									}
 
-									if (ShouldExcludePlanet(planet))
+									if (ShouldExcludePlanet(planet)) {
+										_stats.SkipExcludedPlanet++;
 										continue;
+									}
 
 									var target = GetFarmTarget(planet);
 									if (target == null)
@@ -2747,7 +2782,8 @@ namespace Tbot.Workers {
 										_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
 											$"AutoFarm slot budget exhausted ({slotBudget.OwnedSlots}/{slotBudget.MaxSlots}); pausing further probes.");
 										SaveScanCursor(rangeIndex, galaxy, system);
-										stopAutoFarm = true;
+										_stats.SetStopReason("slot budget exhausted");
+stopAutoFarm = true;
 										break;
 									}
 
@@ -2823,7 +2859,8 @@ namespace Tbot.Workers {
 												} else {
 													_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"There are not enough probes or resources to build them. Skipping this AutoFarm Execution.");
 													SaveScanCursor(rangeIndex, galaxy, system);
-													stopAutoFarm = true;
+													_stats.SetStopReason("not enough probes");
+stopAutoFarm = true;
 													break;
 												}
 											}
@@ -2844,7 +2881,8 @@ namespace Tbot.Workers {
 										_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
 											$"AutoFarm slot budget exhausted ({slotBudget.OwnedSlots}/{slotBudget.MaxSlots}); no probe dispatched.");
 										SaveScanCursor(rangeIndex, galaxy, system);
-										stopAutoFarm = true;
+										_stats.SetStopReason("slot budget exhausted");
+stopAutoFarm = true;
 										break;
 									}
 
@@ -2886,6 +2924,7 @@ namespace Tbot.Workers {
 											_tbotInstance.UserData.farmTargets.Remove(target);
 											target.State = FarmState.ProbesSent;
 											_tbotInstance.UserData.farmTargets.Add(target);
+											_stats.ProbesSent++;
 
 											continue;
 										} else if (fleetId == (int) SendFleetCode.TargetInvalid) {
@@ -2898,7 +2937,8 @@ namespace Tbot.Workers {
 										} else if (fleetId == (int) SendFleetCode.NotEnoughSlots) {
 											_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, "Another worker took the last available slot; pausing AutoFarm instead of retrying repeatedly.");
 											SaveScanCursor(rangeIndex, galaxy, system);
-											stopAutoFarm = true;
+											_stats.SetStopReason("slot taken by another worker");
+stopAutoFarm = true;
 											break;
 										} else {
 											continue;
@@ -3799,6 +3839,7 @@ namespace Tbot.Workers {
 			} finally {
 				FinishForcedTarget();
 				PersistTargets();
+				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"AutoFarm run summary: {_stats.DescribeRun()}");
 				if (stopAfterFullScan && (finishedFullScan || _stopWartetAufZiele)) {
 					int offeneZiele = _tbotInstance.UserData.farmTargets.Count(x => x.State == FarmState.ProbesPending || x.State == FarmState.ProbesSent
 						|| x.State == FarmState.ProbesRequired || x.State == FarmState.FailedProbesRequired || x.State == FarmState.AttackPending);
