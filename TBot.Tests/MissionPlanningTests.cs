@@ -862,5 +862,20 @@ INSERT INTO attacks VALUES (77, 1, 139, 7, 1, 'Legacy target', '2026-08-10T12:01
 			Assert.Equal("AttackPending=2", AutoFarmRunStats.DescribeTargets(targets));
 			Assert.Equal("none", AutoFarmRunStats.DescribeTargets(null));
 		}
+
+		[Fact]
+		public void AutoFarmStartupPolicyDetectsOrphanedProbesSent() {
+			var coord = new Coordinate(1, 2, 3, Celestials.Planet);
+			var target = new FarmTarget(new Planet { Coordinate = coord }, FarmState.ProbesSent);
+			Assert.True(AutoFarmStartupPolicy.IsProbeOrphaned(target, new List<Fleet>()));
+			Assert.False(AutoFarmStartupPolicy.IsProbeOrphaned(target, null));
+			var flying = new List<Fleet> { new Fleet { Mission = Missions.Spy, Destination = new Coordinate(1, 2, 3, Celestials.Planet) } };
+			Assert.False(AutoFarmStartupPolicy.IsProbeOrphaned(target, flying));
+			target.Report = new EspionageReport();
+			Assert.False(AutoFarmStartupPolicy.IsProbeOrphaned(target, new List<Fleet>()));
+			target.Report = null;
+			target.State = FarmState.AttackPending;
+			Assert.False(AutoFarmStartupPolicy.IsProbeOrphaned(target, new List<Fleet>()));
+		}
 }
 }

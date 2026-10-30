@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using TBot.Ogame.Infrastructure.Enums;
 using TBot.Ogame.Infrastructure.Models;
 
@@ -14,6 +16,12 @@ namespace TBot.Model {
 			if (maxReportAgeMinutes <= 0)
 				return false;
 			return (nowServer - target.Report.Date).TotalMinutes > maxReportAgeMinutes;
+		}
+
+		public static bool IsProbeOrphaned(FarmTarget target, IEnumerable<Fleet> fleets) {
+			if (target == null || fleets == null || target.State != FarmState.ProbesSent || target.Report != null || target.Celestial?.Coordinate == null)
+				return false;
+			return !fleets.Any(f => f != null && f.Mission == Missions.Spy && f.Destination?.IsSame(target.Celestial.Coordinate) == true);
 		}
 
 		public static bool IsCursorStale(DateTime? updatedAtUtc, DateTime nowUtc, int maxReportAgeMinutes) {

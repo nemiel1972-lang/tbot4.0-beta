@@ -901,10 +901,21 @@ namespace Tbot.Workers {
 					t.Report = null;
 					reset++;
 				}
-				if (reset > 0) {
+				int orphaned = 0;
+				var fleetsNow = await _fleetScheduler.UpdateFleets();
+				if (fleetsNow != null) {
+					_tbotInstance.UserData.fleets = fleetsNow;
+					foreach (var t in _tbotInstance.UserData.farmTargets.ToList()) {
+						if (!AutoFarmStartupPolicy.IsProbeOrphaned(t, fleetsNow))
+							continue;
+						t.State = FarmState.ProbesPending;
+						orphaned++;
+					}
+				}
+				if (reset > 0 || orphaned > 0) {
 					PersistTargets();
 					_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
-						$"Startup: {reset} stored target(s) with outdated or missing report reset to ProbesPending.");
+						$"Startup: {reset} stored target(s) with outdated or missing report and {orphaned} orphaned ProbesSent target(s) (no probe on its way) reset to ProbesPending.");
 				}
 				if (AutoFarmStartupPolicy.IsCursorStale(_stateStore.LoadScanCursorUpdatedAtUtc(), DateTime.UtcNow, maxAge)) {
 					_tbotInstance.UserData.autoFarmLastRangeIndex = 0;

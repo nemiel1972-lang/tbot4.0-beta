@@ -26,7 +26,7 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - Lifeform research boost: the research phase no longer freezes the other buildings; only the research building waits.
 - The version number is now also set in plain builds (it was always 4.0.0.0 without a release tag).
 - AutoFarm: with `StopAfterFullScan` the worker no longer stops while targets still wait for a probe, a report or an attack.
-- AutoFarm: after a long pause, stored targets with an outdated or missing report are reset to probing and an old scan cursor is discarded (log: "Startup: ...").
+- AutoFarm: after a long pause, stored targets with an outdated or missing report are reset to probing, stored probe targets with no report and no probe on its way are released right away, and an old scan cursor is discarded (log: "Startup: ...").
 - AutoFarm: `ProcessAllReports` (default `true`) can be switched off again; the log lines for reports of targets AutoFarm did not probe itself are clearer.
 - Expeditions: the deuterium alarm (Telegram) only comes when the expedition moon cannot cover 2 expedition fleets any more; below the target but above that, the expeditions just keep running and the repatriate round resupplies.
 - AutoFarm: two summary lines per run in the log ("AutoFarm start summary" with target states, scan cursor, cache and limits; "AutoFarm run summary" with scanned/skipped systems, skip reasons, probes sent and why the run ended), to find out why a run sends no probes.
@@ -66,7 +66,7 @@ Update as usual. New switches default to off; existing settings keep their behav
 - Lebensform-Forschungsschub: Die Forschungsphase friert die anderen Gebäude nicht mehr ein; nur das Forschungsgebäude wartet.
 - Die Versionsnummer wird jetzt auch bei normalen Builds gesetzt (ohne Release-Tag war sie immer 4.0.0.0).
 - AutoFarm: Mit `StopAfterFullScan` stoppt der Worker nicht mehr, solange Ziele noch auf Sonde, Bericht oder Angriff warten.
-- AutoFarm: Nach langer Pause werden gespeicherte Ziele mit veraltetem oder fehlendem Bericht zurück auf Sondieren gesetzt und ein alter Scan-Cursor verworfen (Log: „Startup: ...“).
+- AutoFarm: Nach langer Pause werden gespeicherte Ziele mit veraltetem oder fehlendem Bericht zurück auf Sondieren gesetzt, gespeicherte Sonden-Ziele ohne Bericht und ohne unterwegs befindliche Sonde sofort freigegeben und ein alter Scan-Cursor verworfen (Log: „Startup: ...“).
 - AutoFarm: `ProcessAllReports` (Standard `true`) lässt sich wieder abschalten; die Logzeilen zu Berichten von Zielen, die AutoFarm nicht selbst ausspioniert hat, sind verständlicher.
 - Expeditionen: Der Deuterium-Alarm (Telegram) kommt erst, wenn der Expeditionsmond nicht mehr für 2 Expeditions-Flotten reicht; unter dem Ziel, aber darüber, laufen die Expeditionen einfach weiter und der Repatriate-Zyklus füllt auf.
 - AutoFarm: zwei Zusammenfassungszeilen pro Lauf im Log („AutoFarm start summary“ mit Zielstatus, Scan-Cursor, Cache und Grenzen; „AutoFarm run summary“ mit gescannten/übersprungenen Systemen, Überspringgründen, gesendeten Sonden und dem Grund fürs Laufende), um zu finden, warum ein Lauf keine Sonde schickt.
