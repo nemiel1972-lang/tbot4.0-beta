@@ -27,6 +27,7 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - The version number is now also set in plain builds (it was always 4.0.0.0 without a release tag).
 - AutoFarm: with `StopAfterFullScan` the worker no longer stops while targets still wait for a probe, a report or an attack.
 - AutoFarm: after a long pause, stored targets with an outdated or missing report are reset to probing and an old scan cursor is discarded (log: "Startup: ...").
+- AutoFarm: `ProcessAllReports` (default `true`) can be switched off again; the log lines for reports of targets AutoFarm did not probe itself are clearer.
 
 ## Upgrading
 Update as usual. New switches default to off; existing settings keep their behaviour.
@@ -64,6 +65,7 @@ Update as usual. New switches default to off; existing settings keep their behav
 - Die Versionsnummer wird jetzt auch bei normalen Builds gesetzt (ohne Release-Tag war sie immer 4.0.0.0).
 - AutoFarm: Mit `StopAfterFullScan` stoppt der Worker nicht mehr, solange Ziele noch auf Sonde, Bericht oder Angriff warten.
 - AutoFarm: Nach langer Pause werden gespeicherte Ziele mit veraltetem oder fehlendem Bericht zurück auf Sondieren gesetzt und ein alter Scan-Cursor verworfen (Log: „Startup: ...“).
+- AutoFarm: `ProcessAllReports` (Standard `true`) lässt sich wieder abschalten; die Logzeilen zu Berichten von Zielen, die AutoFarm nicht selbst ausspioniert hat, sind verständlicher.
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.

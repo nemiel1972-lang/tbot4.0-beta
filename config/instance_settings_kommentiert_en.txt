@@ -1129,6 +1129,8 @@
     "DeleteExpiredReports": true,
     ## Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off.
     "MaxReportAgeMinutesForAttack": 120,
+    ## Also evaluate reports of targets TBot did not probe itself (e.g. manual probes) when the target is inactive. false = ignore such reports.
+    "ProcessAllReports": true,
     ## Longest time in seconds an attack may be held back so that the recyclers arrive right behind it.
     "MaxAttackDelaySec": 600,
     ## How much of the expected debris field counts as profit when the bot decides whether an attack pays off (after recycler fuel).

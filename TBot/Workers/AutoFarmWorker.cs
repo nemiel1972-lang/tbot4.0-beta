@@ -4101,9 +4101,9 @@ namespace Tbot.Workers {
 						_tbotInstance.UserData.farmTargets.Remove(target);
 						_tbotInstance.UserData.farmTargets.Add(newFarmTarget);
 					} else {
-					bool processAllReports = true;
+					bool processAllReports = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "ProcessAllReports", true);
 					if (processAllReports && report.IsInactive) {
-						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Processing report for {report.Coordinate} not scanned by TBot (ProcessAllReports enabled)...");
+						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Report for {report.Coordinate} belongs to a target AutoFarm has not probed itself (e.g. manual probe) - evaluating it anyway (AutoFarm.ProcessAllReports, default on)...");
 						var galaxyInfo = await _ogameService.GetGalaxyInfo(report.Coordinate.Galaxy, report.Coordinate.System);
 						var planet = galaxyInfo.Planets.FirstOrDefault(p => p != null && p.Inactive && !p.Administrator && !p.Banned && !p.Vacation && p.HasCoords(report.Coordinate));
 						if (planet != null) {
@@ -4154,7 +4154,8 @@ namespace Tbot.Workers {
 							}
 						}
 					} else {
-						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Target {report.Coordinate} not scanned by TBot, ignoring...");
+						string ignoreReason = processAllReports ? "target is not inactive" : "AutoFarm.ProcessAllReports is off";
+						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Report for {report.Coordinate} belongs to a target AutoFarm has not probed itself - ignoring it ({ignoreReason}).");
 					}
 					}
 

@@ -1129,6 +1129,8 @@
     "DeleteExpiredReports": true,
     ## Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus.
     "MaxReportAgeMinutesForAttack": 120,
+    ## Berichte zu Zielen, die TBot nicht selbst ausspioniert hat (z.B. manuelle Sonden), trotzdem auswerten, wenn das Ziel inaktiv ist. false = solche Berichte ignorieren.
+    "ProcessAllReports": true,
     ## Längste Zeit in Sekunden, die ein Angriff zurückgehalten werden darf, damit die Recycler direkt dahinter ankommen.
     "MaxAttackDelaySec": 600,
     ## Wie viel des erwarteten Trümmerfelds als Gewinn zählt, wenn der Bot entscheidet, ob sich ein Angriff lohnt (nach dem Treibstoff der Recycler).

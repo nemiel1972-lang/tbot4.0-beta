@@ -689,6 +689,7 @@
         "NotSuitableRetryMinutes": 720,
         "DeleteExpiredReports": true,
         "MaxReportAgeMinutesForAttack": 120,
+        "ProcessAllReports": true,
         "MaxAttackDelaySec": 600,
         "DebrisCreditPercent": 80,
         "MinDebrisToHarvest": 0,

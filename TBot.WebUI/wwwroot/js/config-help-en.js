@@ -70,6 +70,9 @@ window.CFG_HELP.en = {
   "MaxReportAgeMinutesForAttack": {
    "t": "Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off."
   },
+  "ProcessAllReports": {
+   "t": "Also evaluate reports of targets TBot did not probe itself (e.g. manual probes) when the target is inactive. false = ignore such reports."
+  },
   "MaxAttackDelaySec": {
    "t": "Longest time in seconds an attack may be held back so that the recyclers arrive right behind it."
   },
