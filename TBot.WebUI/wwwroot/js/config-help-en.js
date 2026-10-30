@@ -70,6 +70,9 @@ window.CFG_HELP.en = {
   "MaxReportAgeMinutesForAttack": {
    "t": "Right before an attack, a report older than this is discarded and the target is probed again, because the defence may have changed. 0 = off."
   },
+  "PriorityReprobe": {
+   "t": "Priority for valuable targets: targets whose espionage report is too old for an attack (MaxReportAgeMinutesForAttack) but had a lot of loot are probed again before the scan (at most one per pass, in addition to the probe limit)."
+  },
   "DefendedHalfSplit": {
    "t": "Evaluate only half of the defended targets per cycle (the other half follows in the next cycle). Saves escort-simulation time. false = evaluate all defended targets every cycle (longer cycles)."
   },

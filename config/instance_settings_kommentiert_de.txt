@@ -1133,6 +1133,8 @@
     "ProcessAllReports": true,
     ## Verteidigte Ziele pro Zyklus nur zur Hälfte auswerten (die andere Hälfte kommt im nächsten Zyklus dran). Spart Rechenzeit der Eskorten-Simulation. false = alle verteidigten Ziele in jedem Zyklus auswerten (längere Zyklen).
     "DefendedHalfSplit": true,
+    ## Vorrang für wertvolle Ziele: Ziele, deren Spionagebericht zu alt für einen Angriff ist (MaxReportAgeMinutesForAttack), aber viel Beute hatte, werden vor dem Scan mit einer Sonde neu ausspioniert (höchstens eine pro Durchgang, zusätzlich zum Sondenlimit).
+    "PriorityReprobe": false,
     ## Längste Zeit in Sekunden, die ein Angriff zurückgehalten werden darf, damit die Recycler direkt dahinter ankommen.
     "MaxAttackDelaySec": 600,
     ## Wie viel des erwarteten Trümmerfelds als Gewinn zählt, wenn der Bot entscheidet, ob sich ein Angriff lohnt (nach dem Treibstoff der Recycler).

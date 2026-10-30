@@ -29,9 +29,9 @@ mkdir -p "$AUSGABE"
 echo "== ogamed.exe (Go, windows/amd64) =="
 (cd ogamed && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o "../$AUSGABE/ogamed.exe" ./cmd/ogamed-tbot)
 
-# File/assembly version from the release tag (v4.0-beta16 -> 4.0.0.16), otherwise the value in TBot.csproj stays
+# File/assembly version from the release tag (v4.0-beta16 -> 4.0.0.16, v4.0-beta16.1 -> also 4.0.0.16, the tag stays in InformationalVersion), otherwise the value in TBot.csproj stays
 VERSION_ARGS=""
-if [[ "${TBOT_VERSION:-}" =~ ^v?([0-9]+)\.([0-9]+)-beta([0-9]+)$ ]]; then
+if [[ "${TBOT_VERSION:-}" =~ ^v?([0-9]+)\.([0-9]+)-beta([0-9]+)(\.[0-9]+)?$ ]]; then
   NUMVER="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0.${BASH_REMATCH[3]}"
   VERSION_ARGS="-p:Version=$NUMVER -p:AssemblyVersion=$NUMVER -p:FileVersion=$NUMVER -p:InformationalVersion=$TBOT_VERSION"
 fi

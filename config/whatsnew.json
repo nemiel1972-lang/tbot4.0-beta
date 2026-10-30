@@ -1,9 +1,9 @@
 {
-  "version": "4.0-beta16",
-  "date": "2026-10-29",
+  "version": "4.0-beta16.1",
+  "date": "2026-10-30",
   "title": {
-    "en": "What's new in 4.0 beta16",
-    "de": "Neu in 4.0 beta16"
+    "en": "What's new in 4.0 beta16.1",
+    "de": "Neu in 4.0 beta16.1"
   },
   "lines": {
     "en": [
@@ -31,7 +31,8 @@
       "New: Lifeform targets - optional PopulationBonusLevels per race in lifeform_targets.json (fine tuning of the population building, like FoodBonusLevels); a MaxBase...Building limit of 0 now means no extra limit",
       "New: Rewards - the bot also opens the resource market, another galaxy view and the inventory for those daily tasks",
       "New: ConfigDoctor warns when the manual expedition fleet carries fewer large cargo than the Lifeform-based need",
-      "Changed: browser tiles - the button column collapses to one symbol in a narrow window, and arrow buttons move it by 2 px (Shift 20 px); the version number is also set in plain builds"
+      "Changed: browser tiles - the button column collapses to one symbol in a narrow window, and arrow buttons move it by 2 px (Shift 20 px); the version number is also set in plain builds",
+      "New: AutoFarm option PriorityReprobe (default off) - targets with a too old report but a lot of loot get a fresh probe before the scan (one per pass)"
     ],
     "de": [
       "Neu: Menüeintrag Bauplanung - Autobuilds (Bauplan) und Minenplan (Bauberechnung) sind Reiter unter einem Eintrag",
@@ -58,7 +59,8 @@
       "Neu: Lebensform-Ziele - optional PopulationBonusLevels je Rasse in lifeform_targets.json (Feintuning des Bevölkerungsgebäudes wie FoodBonusLevels); ein Limit MaxBase...Building von 0 bedeutet jetzt kein Zusatzlimit",
       "Neu: Belohnungen - der Bot öffnet für die Tagesaufgaben auch den Rohstoffmarkt, eine andere Galaxieansicht und das Inventar",
       "Neu: ConfigDoctor warnt, wenn die manuelle Expeditionsflotte weniger Große Transporter hat als der Lebensform-Bedarf",
-      "Geändert: Browser-Kacheln - die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen, Pfeiltasten verschieben sie um 2 px (Shift 20 px); die Versionsnummer wird auch bei normalen Builds gesetzt"
+      "Geändert: Browser-Kacheln - die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen, Pfeiltasten verschieben sie um 2 px (Shift 20 px); die Versionsnummer wird auch bei normalen Builds gesetzt",
+      "Neu: AutoFarm-Option PriorityReprobe (Standard aus) - Ziele mit zu altem Bericht, aber viel Beute, werden vor dem Scan neu ausspioniert (eine Sonde pro Durchgang)"
     ]
   }
 }

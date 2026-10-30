@@ -427,6 +427,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `MaxReportAgeMinutesForAttack` | Hard limit for the age of a spy report right before the defence check (default 120, 0 = off). Older reports are not attacked; the target is queued for a fresh probe. |
 | `ProcessAllReports` | Default `true`. Also evaluates spy reports of coordinates TBot has no target entry for (manual probes, probes of earlier cycles) when the target is inactive. `false` ignores such reports. |
 | `DefendedHalfSplit` | Default `true`. Only half of the defended targets (split by coordinates) are evaluated per cycle, the other half in the next one; this keeps the escort simulation from making cycles too long. `false` evaluates all defended targets every cycle (longer cycles, risk of the worker timeout). |
+| `PriorityReprobe` | Default `false`. Targets whose espionage report is older than `MaxReportAgeMinutesForAttack` but had loot above `MinimumResources` are probed again first: at most one extra probe per pass before the scan, not counted against the probe limit of the pass. Needs a free AutoFarm slot and probes at the origin. |
 | `MaxAttackDelaySec` | Maximum delay an attack may be postponed to fit the timing (default 600). |
 | `DebrisCreditPercent` | Share of the debris field that counts as profit in the profit calculation, minus recycler fuel (default 80). |
 | `MinDebrisToHarvest` | Minimum debris after recycler fuel before recyclers are sent (default 0). |

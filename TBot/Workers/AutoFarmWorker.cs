@@ -884,6 +884,73 @@ namespace Tbot.Workers {
 			}
 		}
 
+		private readonly Dictionary<string, (Coordinate coord, long loot)> _reprobeCandidates = new();
+
+		private bool PriorityReprobeEnabled() => SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "PriorityReprobe", false);
+
+		private async Task<(int sent, DateTime? arrivalUtc)> PriorityReprobeAsync(List<Celestial> farmOrigins, Dictionary<int, long> celestialProbes, int slotsToLeaveFree, int freeSlots) {
+			try {
+				if (!PriorityReprobeEnabled() || _reprobeCandidates.Count == 0)
+					return (0, null);
+
+				foreach (var key in _reprobeCandidates.Keys.ToList()) {
+					var cand = _reprobeCandidates[key];
+					var t = _tbotInstance.UserData.farmTargets.FirstOrDefault(x => x.HasCoords(cand.coord));
+					if (t == null || t.State != FarmState.ProbesPending)
+						_reprobeCandidates.Remove(key);
+				}
+				if (_reprobeCandidates.Count == 0)
+					return (0, null);
+
+				var top = _reprobeCandidates.OrderByDescending(kv => kv.Value.loot).First();
+				var target = _tbotInstance.UserData.farmTargets.FirstOrDefault(x => x.HasCoords(top.Value.coord));
+				if (target == null)
+					return (0, null);
+				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "Blacklist") && _blacklist.IsBlacklisted(target.Celestial.Coordinate)) {
+					_reprobeCandidates.Remove(top.Key);
+					return (0, null);
+				}
+
+				_tbotInstance.UserData.fleets = await _fleetScheduler.UpdateFleets();
+				_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
+				if (GetCurrentSlotBudget(GetConfiguredCargoType()).AvailableSlots <= 0)
+					return (0, null);
+				if (_calculationService.GetMissionsInProgress(target.Celestial.Coordinate, Missions.Spy, _tbotInstance.UserData.fleets).Any())
+					return (0, null);
+
+				int needed = GetNeededProbes(target);
+				var closest = farmOrigins
+					.OrderBy(o => _calculationService.CalcDistance(o.Coordinate, target.Celestial.Coordinate, _tbotInstance.UserData.serverData))
+					.ThenByDescending(o => o.Coordinate.Type == Celestials.Moon).ToList();
+				if (!closest.Any())
+					return (0, null);
+				var best = await GetBestOrigin(closest, celestialProbes, target, needed, slotsToLeaveFree, freeSlots);
+				if (!celestialProbes.TryGetValue(best.Origin.ID, out long have) || have < needed)
+					return (0, null);
+
+				var probes = new Ships();
+				probes.Add(Buildables.EspionageProbe, needed);
+				best.Origin = await _tbotOgameBridge.UpdatePlanet(best.Origin, UpdateTypes.LFBonuses);
+				var pred = _calculationService.CalcFleetPrediction(best.Origin.Coordinate, target.Celestial.Coordinate, probes, Missions.Spy, Speeds.HundredPercent, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, best.Origin.LFBonuses, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass);
+				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Priority re-probe of {target.Celestial.Coordinate} (old report loot {top.Value.loot:N0}) from {best.Origin} with {needed} probes.");
+				int spyId = await _fleetScheduler.SendFleet(best.Origin, probes, target.Celestial.Coordinate, Missions.Spy, Speeds.HundredPercent);
+				if (spyId <= (int) SendFleetCode.GenericError)
+					return (0, null);
+
+				celestialProbes[best.Origin.ID] -= needed;
+				_tbotInstance.UserData.farmTargets.Remove(target);
+				target.State = FarmState.ProbesSent;
+				_tbotInstance.UserData.farmTargets.Add(target);
+				PersistTargets();
+				_reprobeCandidates.Remove(top.Key);
+				_stats.ProbesSent++;
+				return (1, DateTime.UtcNow.AddSeconds(pred.Time));
+			} catch (Exception ex) {
+				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Priority re-probe failed: {ex.Message}");
+				return (0, null);
+			}
+		}
+
 		private bool _startupCleaned;
 		private AutoFarmRunStats _stats = new();
 		private async Task ReleaseStaleStartupStateAsync() {
@@ -2636,6 +2703,15 @@ stopAutoFarm = true;
 							stopAutoFarm = true;
 						}
 
+						if (!stopAutoFarm && _forcedCoord == null) {
+							var prio = await PriorityReprobeAsync(farmOrigins, celestialProbes, slotsToLeaveFree, freeSlots);
+							if (prio.sent > 0) {
+								freeSlots -= prio.sent;
+								if (fillSlotsActive && prio.arrivalUtc.HasValue && (!fillSlotsLastProbeArrivalUtc.HasValue || prio.arrivalUtc.Value > fillSlotsLastProbeArrivalUtc.Value))
+									fillSlotsLastProbeArrivalUtc = prio.arrivalUtc;
+							}
+						}
+
 						int startRangeIndex = _tbotInstance.UserData.autoFarmLastRangeIndex;
 						if (startRangeIndex < 0 || startRangeIndex >= orderedRanges.Count) {
 							startRangeIndex = 0;
@@ -4103,6 +4179,11 @@ stopAutoFarm = true;
 							if (target.State == FarmState.AttackPending && (target.Report == null || target.Report.ID == report.ID)) {
 								target.State = FarmState.ProbesPending;
 								target.Report = null;
+							}
+							if (PriorityReprobeEnabled() && target.State == FarmState.ProbesPending && report.Coordinate != null) {
+								long oldLoot = report.Loot(_tbotInstance.UserData.userInfo.Class).TotalResources + ReportFleetDebrisForThreshold(report);
+								if (oldLoot > Convert.ToInt64(_tbotInstance.InstanceSettings.AutoFarm.MinimumResources))
+									_reprobeCandidates[report.Coordinate.ToString()] = (report.Coordinate, oldLoot);
 							}
 							continue;
 						}

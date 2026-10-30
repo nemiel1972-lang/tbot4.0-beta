@@ -2709,6 +2709,9 @@
    "MaxReportAgeMinutesForAttack": {
     "t": "Direkt vor einem Angriff wird ein älterer Bericht verworfen und das Ziel erneut ausspioniert, weil sich die Verteidigung geändert haben kann. 0 = aus."
    },
+   "PriorityReprobe": {
+    "t": "Vorrang für wertvolle Ziele: Ziele, deren Spionagebericht zu alt für einen Angriff ist (MaxReportAgeMinutesForAttack), aber viel Beute hatte, werden vor dem Scan mit einer Sonde neu ausspioniert (höchstens eine pro Durchgang, zusätzlich zum Sondenlimit)."
+   },
    "DefendedHalfSplit": {
     "t": "Verteidigte Ziele pro Zyklus nur zur Hälfte auswerten (die andere Hälfte kommt im nächsten Zyklus dran). Spart Rechenzeit der Eskorten-Simulation. false = alle verteidigten Ziele in jedem Zyklus auswerten (längere Zyklen)."
    },

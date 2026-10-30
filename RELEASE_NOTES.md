@@ -33,6 +33,8 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - AutoFarm: new `DefendedHalfSplit` (default `true` = as before). `false` evaluates all defended targets every cycle instead of half of them; the "start summary" and "run summary" log lines also show why a run ended. Warning if the start summary itself fails.
 - AutoFarm: espionage reports older than `MaxReportAgeMinutesForAttack` no longer put a target back to attack-pending. Before, the attack was aborted ("report is N min old"), the target went back to probing, and the same report set it to attack-pending again in the next pass, so it never got a fresh probe (plus a live galaxy request per target and pass).
 
+- AutoFarm `PriorityReprobe` *(off by default)* (beta16.1): targets whose espionage report is too old for an attack (`MaxReportAgeMinutesForAttack`) but had loot above `MinimumResources` are probed again before the scan, at most one extra probe per pass, not counted against the pass probe limit.
+
 ## Upgrading
 Update as usual. New switches default to off; existing settings keep their behaviour.
 
@@ -74,6 +76,8 @@ Update as usual. New switches default to off; existing settings keep their behav
 - AutoFarm: zwei Zusammenfassungszeilen pro Lauf im Log („AutoFarm start summary“ mit Zielstatus, Scan-Cursor, Cache und Grenzen; „AutoFarm run summary“ mit gescannten/übersprungenen Systemen, Überspringgründen, gesendeten Sonden und dem Grund fürs Laufende), um zu finden, warum ein Lauf keine Sonde schickt.
 - AutoFarm: neu `DefendedHalfSplit` (Standard `true` = wie bisher). `false` wertet in jedem Zyklus alle verteidigten Ziele aus statt nur der Hälfte; die Logzeilen „start summary“ und „run summary“ zeigen auch, warum ein Lauf endete. Warnung, falls die Start-Zusammenfassung selbst fehlschlägt.
 - AutoFarm: Spionageberichte, die älter als `MaxReportAgeMinutesForAttack` sind, setzen ein Ziel nicht mehr zurück auf Angriff-bereit. Vorher brach der Angriff ab („report is N min old“), das Ziel ging zurück auf Sondieren, und derselbe Bericht setzte es im nächsten Durchgang wieder auf Angriff-bereit, sodass es nie eine frische Sonde bekam (dazu eine Live-Galaxieabfrage pro Ziel und Durchgang).
+
+- AutoFarm `PriorityReprobe` *(standardmäßig aus)* (beta16.1): Ziele, deren Spionagebericht für einen Angriff zu alt ist (`MaxReportAgeMinutesForAttack`), aber Beute über `MinimumResources` hatten, werden vor dem Scan neu ausspioniert, höchstens eine zusätzliche Sonde pro Durchgang, ohne Anrechnung auf das Sondenlimit.
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.

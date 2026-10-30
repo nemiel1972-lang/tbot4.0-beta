@@ -691,6 +691,7 @@
         "MaxReportAgeMinutesForAttack": 120,
         "ProcessAllReports": true,
         "DefendedHalfSplit": true,
+        "PriorityReprobe": false,
         "MaxAttackDelaySec": 600,
         "DebrisCreditPercent": 80,
         "MinDebrisToHarvest": 0,
