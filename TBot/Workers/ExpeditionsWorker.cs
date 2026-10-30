@@ -481,7 +481,7 @@ namespace Tbot.Workers {
 		}
 
 		private static readonly Dictionary<string, DateTime> _deutMeldung = new();
-		private async Task<bool> ExpeditionDeuteriumReicht(Celestial origin) {
+		private async Task<bool> ExpeditionDeuteriumReicht(Celestial origin, Ships fleet = null, LFBonuses lf = null) {
 			try {
 				if (origin.Coordinate.Type != Celestials.Moon)
 					return true;
@@ -495,14 +495,21 @@ namespace Tbot.Workers {
 				long vorhanden = (long) (aktuell?.Resources?.Deuterium ?? 0);
 				if (vorhanden >= min)
 					return true;
-								DoLog(LogLevel.Information, $"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} is below the target {min:N0}; expeditions continue, the repatriate round resupplies deuterium from the base.");
+				long fuelToCarry = SettingsService.IsSettingSet(exp, "FuelToCarry") ? Math.Max(0, Convert.ToInt64(exp.FuelToCarry)) : 0;
+				long flugsprit = fleet != null ? ExpoSupply.FlugspritJeExpedition(_tbotInstance, _calculationService, origin, fleet, lf) : 0;
+				long alarmGrenze = 2 * (flugsprit + fuelToCarry);
+				if (vorhanden >= alarmGrenze) {
+					DoLog(LogLevel.Debug, $"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} is below the target {min:N0} but covers 2 fleets ({alarmGrenze:N0}); no alarm, the repatriate round resupplies.");
+					return true;
+				}
+				DoLog(LogLevel.Warning, $"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} does not cover 2 expedition fleets ({alarmGrenze:N0}; target {min:N0}). Expeditions keep running, the repatriate round resupplies deuterium from the base.");
 				string schluessel = ExpeditionDiagnostics.DeutKey(_tbotInstance.InstanceAlias, _tbotInstance.UserData?.serverData?.Name, origin.Coordinate.ToString());
 				lock (_deutMeldung) {
 					if (_deutMeldung.TryGetValue(schluessel, out DateTime zuletzt) && (DateTime.UtcNow - zuletzt).TotalHours < 6)
 						return true;
 					_deutMeldung[schluessel] = DateTime.UtcNow;
 				}
-				await _tbotInstance.SendTelegramMessage($"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} is below the target {min:N0}. Expeditions keep running, the base resupplies the moon in the next repatriate round.");
+				await _tbotInstance.SendTelegramMessage($"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} does not cover 2 expedition fleets ({alarmGrenze:N0}). Expeditions keep running, the base resupplies the moon in the next repatriate round.");
 				return true;
 			} catch (Exception e) {
 				DoLog(LogLevel.Warning, $"Deuterium check for {origin.Coordinate} failed: {e.Message}");
@@ -1008,7 +1015,7 @@ namespace Tbot.Workers {
 							break;
 						}
 
-						if (!await ExpeditionDeuteriumReicht(origin)) {
+						if (!await ExpeditionDeuteriumReicht(origin, fleet, lfBonuses)) {
 							unavailableOrigins[originIndex] = true;
 							break;
 						}
