@@ -17,7 +17,7 @@ namespace Tbot.Workers {
 	internal class ShadowFleetWorker : WorkerBase {
 		private void SfLog(LogLevel level, string text) {
 			DoLog(level, text);
-			ExtraLog.Write(_tbotInstance, "ShadowFleet", $"[{level}] {text}");
+			ExtraLog.Write(_tbotInstance, "ShadowFleet", () => $"[{level}] {text}");
 		}
 
 		private readonly IOgameService _ogameService;

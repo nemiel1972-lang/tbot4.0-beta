@@ -400,6 +400,16 @@ namespace Tbot.Workers {
 				long laderaumHin = Kapazitaet(inst, calc, heimat, hin);
 				long heimatFrei = FreiesDeuterium(inst, heimat) - spritHin;
 				long zuladung = SpritZuladung(spritRueck, k.SpritFaktor, laderaumHin, heimatFrei);
+				long expoDeut = 0;
+				try {
+					long wunsch = await ExpoSupply.DeuteriumWunschAsync(inst, calc, c);
+					if (wunsch > 0)
+						expoDeut = Math.Max(0L, Math.Min(wunsch, Math.Min(laderaumHin - zuladung, heimatFrei - zuladung)));
+				} catch (Exception) {
+				}
+				if (expoDeut > 0)
+					Log(inst, LogLevel.Information, $"{c.ToString()}: expedition moon is short of deuterium - the outbound leg also carries {expoDeut:N0} deuterium for the expeditions.");
+				zuladung += expoDeut;
 				Resources fracht = new Resources(0, 0, zuladung);
 				Log(inst, LogLevel.Debug, $"{c}: outbound planning: ships=[{string.Join(", ", Zaehle(hin).Select(p => $"{p.Value} {p.Key}"))}], outboundFuel={spritHin:N0}, returnFuelEstimate={spritRueck:N0}, homeFreeDeutAfterOutboundFuel={heimatFrei:N0}, transporterCapacity={laderaumHin:N0}, deutLoaded={zuladung:N0}.");
 

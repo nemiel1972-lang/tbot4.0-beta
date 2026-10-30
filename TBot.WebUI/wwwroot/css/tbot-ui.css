@@ -132,8 +132,6 @@ html.tb-bg .navbar { background-color: rgba(31,34,40,0.92); border-bottom: 1px s
 .a-met { left: 0; top: 0; will-change: transform; }
 .a-fl { position: absolute; left: -40px; width: 30px; height: 14px; will-change: transform; animation-timing-function: linear; animation-iteration-count: infinite; }
 .a-fl .a-flin { position: relative; width: 30px; height: 14px; }
-.fl-out, .fl-att { animation-name: tb-flyR; }
-.fl-back { animation-name: tb-flyL; }
 .fl-back .a-flin { transform: scaleX(-1); }
 .fl-att .a-flin { animation: tb-blinkred 0.7s steps(2, jump-none) infinite; }
 .a-hully { position: absolute; top: 0; left: 0; width: 30px; height: 14px; clip-path: polygon(100% 50%, 55% 0, 0 20%, 15% 50%, 0 80%, 55% 100%); background: linear-gradient(90deg, #8a6a10, #ffd54a); }

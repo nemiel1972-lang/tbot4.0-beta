@@ -204,6 +204,13 @@
             "RoundResources": true,
             "SendToTheMoonIfPossible": false,
             "MaxBundledBuildings": 0,
+            "Lookahead": {
+                "Active": false,
+                "MaxItems": 10,
+                "MaxHours": 2,
+                "AutoMine": true,
+                "LifeformsAutoMine": true
+            },
             "MaxSlots": 1,
             "CheckMoonOrPlanetFirst": true,
             "DoMultipleTransportIsNotEnoughShipButSamePosition": true,
@@ -610,6 +617,7 @@
         },
         "FuelToCarry": 30000,
         "MinDeuteriumOnMoon": 0,
+        "StopBelowNeed": false,
         "BackupExpeditions": 1,
         "TelegramMessenger": {
             "Active": false,
@@ -740,6 +748,20 @@
         "MaxEscortLossPercent": 0,
         "EscortLossWeight": 3,
         "MinWinRate": 0.9,
+        "CalcSource": "ogame",
+        "ExternalCalc": {
+            "Url": "http://127.0.0.1:3000",
+            "AutoStart": false,
+            "ExecutablePath": "",
+            "Port": 3000,
+            "TimeoutSeconds": 60,
+            "FallbackToOgame": true,
+            "AuthToken": "",
+            "AttackerClassAndLifeform": false,
+            "CompareMode": false,
+            "BattleLogRetentionDays": 30,
+            "LogManualRuns": true
+        },
         "SimulationRuns": 1000,
         "CheckIntervalMin": 1,
         "CheckIntervalMax": 3
@@ -845,11 +867,12 @@
             }
         ],
         "MaxSlots": 2,
-        "StopAtArtifacts": 0,
+        "StopAtArtifacts": 3600,
         "CheckIntervalMin": 15,
         "CheckIntervalMax": 25
     },
     "Experimental": {
+        "ReduceLogs": true,
         "CollectLogs": {
             "Active": false,
             "Hours": 12,

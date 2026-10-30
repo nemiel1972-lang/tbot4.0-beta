@@ -8,6 +8,7 @@ namespace TBot.Ogame.Infrastructure.Models {
 	public class Alliance {
 		public int ID { get; set; }
 		public string Name { get; set; }
+		public string Tag { get; set; }
 		public int Rank { get; set; }
 		public int Member { get; set; }
 	}

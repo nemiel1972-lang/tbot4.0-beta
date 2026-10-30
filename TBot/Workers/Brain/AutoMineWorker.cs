@@ -44,7 +44,7 @@ namespace Tbot.Workers.Brain {
 				cel.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Position &&
 				cel.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Type);
 
-			bool colonyConfigured = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "Colony");
+			bool colonyConfigured = AutoMineOverrideHelper.IsColonyConfigured(_tbotInstance.InstanceSettings.Brain.AutoMine);
 
 			int maxMetalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxMetalMine;
 			int maxCrystalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxCrystalMine;
@@ -100,7 +100,7 @@ namespace Tbot.Workers.Brain {
 				cel.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Position &&
 				cel.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Type);
 
-			bool colonyConfigured = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "Colony");
+			bool colonyConfigured = AutoMineOverrideHelper.IsColonyConfigured(_tbotInstance.InstanceSettings.Brain.AutoMine);
 
 			int maxRoboticsFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxRoboticsFactory;
 			int maxShipyard = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxShipyard;

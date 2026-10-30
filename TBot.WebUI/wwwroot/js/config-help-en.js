@@ -651,6 +651,21 @@ window.CFG_HELP.en = {
   "Transports.MaxBundledBuildings": {
    "t": "How many ADDITIONAL buildings one delivery may bring along besides the target of the worker. 0 (default) = only the one target, which matches the resource reservation."
   },
+  "Transports.Lookahead.Active": {
+   "t": "Global switch for delivering ahead: when on, one delivery brings the resources for several following buildings, not only the next one. The per-worker switches below then decide who does it. Off = the old setting MaxBundledBuildings applies."
+  },
+  "Transports.Lookahead.MaxItems": {
+   "t": "How many following buildings one delivery may bring along (besides the worker's own target)."
+  },
+  "Transports.Lookahead.MaxHours": {
+   "t": "Stop adding following buildings once their build time adds up to this many hours. 0 = no time limit. Useful on new colonies with a high nanite factory, where buildings take seconds."
+  },
+  "Transports.Lookahead.AutoMine": {
+   "t": "Deliver ahead for AutoMine (mines, power, facilities)."
+  },
+  "Transports.Lookahead.LifeformsAutoMine": {
+   "t": "Deliver ahead for lifeform buildings."
+  },
   "Transports.MaxSlots": {
    "t": "Fleet slots Brain transports may use at the same time."
   },
@@ -967,8 +982,11 @@ window.CFG_HELP.en = {
   "FuelToCarry": {
    "t": "Deuterium taken along on each expedition."
   },
+  "StopBelowNeed": {
+   "t": "On: no expedition starts from an origin while its deuterium does not cover the planned starts (flight fuel + deuterium per expedition x number of expeditions). The repatriate round tops the origin up to that need, then the expeditions resume by themselves. Off (default): the expeditions keep flying with the deuterium that is there."
+  },
   "MinDeuteriumOnMoon": {
-   "t": "A moon needs at least this much deuterium to start expeditions (0 = no check). Below it the moon is skipped and you get a message."
+   "t": "A moon needs at least this much deuterium to start expeditions (0 = no check). Below it the expeditions keep running (the fleet starts with the deuterium that is there) and you get a message. The moon is topped up from the base by the expedition moon supply (ExpoSupply) when it is on."
   },  "BackupExpeditions": {
    "t": "How many complete expedition fleets are kept as a backup on every expedition start moon, on top of the planned expeditions (used by the JumpGate expo override and the expedition moon supply). Covers the total loss of a fleet. Default 1.",
    "e": "1 = one extra full fleet stays on the moon."
@@ -1238,6 +1256,9 @@ window.CFG_HELP.en = {
   },
   "CollectLogs": {
    "t": "Collects logs for development: while active, every log line (from debug up) and all lines of the extra debug log are written into ONE file in the folder devlogs (TBot-collect-<start>.log, max. 300 MB). The collection stops by itself after the hours set (default 12), also across restarts; switch it off and on again to collect again."
+  },
+  "ReduceLogs": {
+   "t": "Global switch: on = the extra logs (devlogs) and their diagnosis texts are not even generated. Off = they are written while a log collection runs. If the entry is missing: private builds off, public builds on."
   },
   "CollectLogs.Active": {
    "t": "Collection on or off (default off)."

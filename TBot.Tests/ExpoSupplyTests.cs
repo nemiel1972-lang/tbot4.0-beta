@@ -59,6 +59,19 @@ namespace TBot.Tests {
 		}
 
 		[Fact]
+		public void AuffuellGrenzeIstZweiDurchgaenge() {
+			Assert.Equal(560_000, ExpoSupply.DeuteriumAuffuellGrenze(1_500_000, 30_000, 10_000, 7));
+			Assert.Equal(400_000, ExpoSupply.DeuteriumAuffuellGrenze(400_000, 30_000, 10_000, 7));
+		}
+
+		[Fact]
+		public void DeuteriumTargetMitFlugNimmtDenGroesseren() {
+			Assert.Equal(300_000, ExpoSupply.DeuteriumTargetMitFlug(0, 30_000, 10_000, 7) + 20_000);
+			Assert.Equal(500_000, ExpoSupply.DeuteriumTargetMitFlug(500_000, 30_000, 10_000, 7));
+			Assert.Equal(0, ExpoSupply.DeuteriumTargetMitFlug(0, 0, 0, 5));
+		}
+
+		[Fact]
 		public void DeuteriumTargetPrefersMinOnMoon() {
 			Assert.Equal(500_000, ExpoSupply.DeuteriumTarget(500_000, 30_000, 5));
 			Assert.Equal(150_000, ExpoSupply.DeuteriumTarget(0, 30_000, 5));

@@ -11,6 +11,9 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - **Rewards**: the bot also opens the resource market, another galaxy view and the inventory for those daily tasks.
 - **ConfigDoctor** warns when the manual expedition fleet carries fewer large cargo than the Lifeform-based need.
 - **Browser tiles**: the button column collapses to one symbol in a narrow window; arrow buttons move it by 2 px (Shift 20 px).
+- **Expeditions**: below the deuterium limit the expeditions no longer stop; the supply tops the moons up and they keep running. New `Expeditions.StopBelowNeed` *(off by default)* stops them only when deuterium plus cargo for the planned expeditions is missing. Repatriate keeps the deuterium reserve (`MinDeuteriumOnMoon`) on the expedition moons, and the automatic pickup order brings missing deuterium along. `ExpoSupply` also works for planets.
+- **WebUI**: "Hide data" switch on the Fleeter page; Fleeter and Galaxy map are opaque.
+- **AutoMine**: moons other than the home moon use the lunar caps from the Colony block.
 
 ## Fixed
 - AutoFarm: the number of cargo ships uses the Lifeform cargo bonus of the sending planet, and cargo capacity is checked again right before sending.
@@ -22,6 +25,8 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - AutoFarm: targets whose espionage report never arrived stayed skipped forever; they are released after 60 minutes.
 - Lifeform research boost: the research phase no longer freezes the other buildings; only the research building waits.
 - The version number is now also set in plain builds (it was always 4.0.0.0 without a release tag).
+- AutoFarm: with `StopAfterFullScan` the worker no longer stops while targets still wait for a probe, a report or an attack.
+- AutoFarm: after a long pause, stored targets with an outdated or missing report are reset to probing and an old scan cursor is discarded (log: "Startup: ...").
 
 ## Upgrading
 Update as usual. New switches default to off; existing settings keep their behaviour.
@@ -43,6 +48,9 @@ Update as usual. New switches default to off; existing settings keep their behav
 - **Belohnungen**: Der Bot öffnet für die Tagesaufgaben auch den Rohstoffmarkt, eine andere Galaxieansicht und das Inventar.
 - **ConfigDoctor** warnt, wenn die manuelle Expeditionsflotte weniger Große Transporter hat als der Lebensform-Bedarf.
 - **Browser-Kacheln**: Die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen; Pfeiltasten verschieben sie um 2 px (Shift 20 px).
+- **Expeditionen**: Unter dem Deuterium-Limit stoppen die Expeditionen nicht mehr; die Versorgung füllt die Monde auf und sie laufen weiter. Neu `Expeditions.StopBelowNeed` *(standardmäßig aus)* stoppt sie nur, wenn Deuterium plus Ladung für die geplanten Expeditionen fehlt. Repatriate hält die Deuteriumreserve (`MinDeuteriumOnMoon`) auf den Expeditionsmonden, der automatische Abholungsauftrag bringt fehlendes Deuterium mit. `ExpoSupply` funktioniert auch für Planeten.
+- **WebUI**: Schalter „Daten ausblenden“ auf der Fleeter-Seite; Fleeter und Galaxiekarte sind nicht mehr transparent.
+- **AutoMine**: Monde außer dem Heimatmond nutzen die Mondgrenzen aus dem Colony-Block.
 
 ## Behoben
 - AutoFarm: Die Zahl der Transporter nutzt den Lebensform-Laderaumbonus des sendenden Planeten, und der Laderaum wird direkt vor dem Senden nochmals geprüft.
@@ -54,6 +62,8 @@ Update as usual. New switches default to off; existing settings keep their behav
 - AutoFarm: Ziele, deren Spionagebericht nie ankam, blieben für immer übersprungen; sie werden nach 60 Minuten wieder freigegeben.
 - Lebensform-Forschungsschub: Die Forschungsphase friert die anderen Gebäude nicht mehr ein; nur das Forschungsgebäude wartet.
 - Die Versionsnummer wird jetzt auch bei normalen Builds gesetzt (ohne Release-Tag war sie immer 4.0.0.0).
+- AutoFarm: Mit `StopAfterFullScan` stoppt der Worker nicht mehr, solange Ziele noch auf Sonde, Bericht oder Angriff warten.
+- AutoFarm: Nach langer Pause werden gespeicherte Ziele mit veraltetem oder fehlendem Bericht zurück auf Sondieren gesetzt und ein alter Scan-Cursor verworfen (Log: „Startup: ...“).
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.

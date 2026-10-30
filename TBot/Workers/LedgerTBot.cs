@@ -317,7 +317,7 @@ namespace Tbot.Workers {
 					return null;
 				string key = Key(inst);
 				int minProzent = ExternalMinPercent(inst);
-				ExtraLog.Write(inst, "Ledger", $"FreeForExternal {c}: minPercent={minProzent}, claims: {ResourceLedger.DescribeExternal(key, c.ID, minProzent)}");
+				ExtraLog.Write(inst, "Ledger", () => $"FreeForExternal {c}: minPercent={minProzent}, claims: {ResourceLedger.DescribeExternal(key, c.ID, minProzent)}");
 				if (!ResourceLedger.HasExternalHold(key, c.ID, minProzent))
 					return null;
 				LedgerAmt live = Amt(c.Resources);

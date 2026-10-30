@@ -454,6 +454,8 @@ namespace Tbot.Services {
 				InstanceSettings = await SettingsService.GetSettings(InstanceSettingsPath);
 			}
 
+			await FillTemplateCoordinatesAsync();
+
 			RunConfigDoctor(true);
 
 			ConfigureDiscordWebhook();
@@ -1543,7 +1545,7 @@ namespace Tbot.Services {
 		}
 
 		private (bool Ok, string Text) PauseRejected(string text) {
-			Tbot.Workers.ExtraLog.Write(this, "BotPause", "Pause rejected: " + text);
+			Tbot.Workers.ExtraLog.Write(this, "BotPause", () => "Pause rejected: " + text);
 			_pauseRejectText = text;
 			_pauseRejectUtc = DateTime.UtcNow;
 			log(LogLevel.Warning, LogSender.Tbot, text);
@@ -1626,7 +1628,7 @@ namespace Tbot.Services {
 					_pauseActive = true;
 					_pauseUntilUtc = DateTime.UtcNow.AddMinutes(min);
 					_pauseRejectText = null;
-					Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause started (gate): {min} min, stopDefender={cfg.StopDefender}, attackMargin={cfg.AttackMarginMinutes} min, holding [{string.Join(", ", toStop)}].");
+					Tbot.Workers.ExtraLog.Write(this, "BotPause", () => $"Pause started (gate): {min} min, stopDefender={cfg.StopDefender}, attackMargin={cfg.AttackMarginMinutes} min, holding [{string.Join(", ", toStop)}].");
 					ArmPauseTimer(min);
 					log(LogLevel.Warning, LogSender.Tbot, $"Pause started: {toStop.Count} workers hold their cycles for {min} min ({(cfg.StopDefender ? "SleepMode and recalls" : "Defender, SleepMode and recalls")} keep running; scouting, attack and expedition missions are blocked). Ends on its own or with Resume.");
 					PublishStatusSoon();
@@ -1641,7 +1643,7 @@ namespace Tbot.Services {
 				_pauseActive = true;
 				_pauseUntilUtc = DateTime.UtcNow.AddMinutes(min);
 				_pauseRejectText = null;
-				Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause started: {min} min, stopDefender={cfg.StopDefender}, attackMargin={cfg.AttackMarginMinutes} min, stopping [{string.Join(", ", toStop)}].");
+				Tbot.Workers.ExtraLog.Write(this, "BotPause", () => $"Pause started: {min} min, stopDefender={cfg.StopDefender}, attackMargin={cfg.AttackMarginMinutes} min, stopping [{string.Join(", ", toStop)}].");
 				foreach (var feat in toStop) {
 					try {
 						await StopFeature(feat);
@@ -1671,7 +1673,7 @@ namespace Tbot.Services {
 				_pauseActive = false;
 				_pauseGateMode = false;
 				_pauseStopsDefender = false;
-				Tbot.Workers.ExtraLog.Write(this, "BotPause", $"Pause ended ({reason}).");
+				Tbot.Workers.ExtraLog.Write(this, "BotPause", () => $"Pause ended ({reason}).");
 				if (warTor) {
 					log(LogLevel.Information, LogSender.Tbot, $"Pause ended ({reason}): the workers continue on their own schedule.");
 					PublishStatusSoon();
@@ -2622,6 +2624,36 @@ namespace Tbot.Services {
 			}
 		}
 
+		private async Task FillTemplateCoordinatesAsync() {
+			try {
+				var planets = (userData?.celestials ?? new List<Celestial>()).Where(c => c.Coordinate.Type == Celestials.Planet).ToList();
+				if (planets.Count == 0) return;
+				var cfg = SettingsService.ReadResolvedObject(InstanceSettingsPath);
+				var open = ConfigDoctor.FindTemplateCoordinates(cfg);
+				if (open.Count == 0) return;
+				Celestial home = planets.First();
+				try {
+					var hw = cfg["Brain"]?["AutoMine"]?["HomeWorld"];
+					if (hw != null) {
+						var match = planets.FirstOrDefault(c => (int) c.Coordinate.Galaxy == (int) hw["Galaxy"] && (int) c.Coordinate.System == (int) hw["System"] && (int) c.Coordinate.Position == (int) hw["Position"]);
+						if (match != null) home = match;
+					}
+				} catch { }
+				var changes = new List<KeyValuePair<string, object>>();
+				foreach (var (path, hasType) in open) {
+					changes.Add(new KeyValuePair<string, object>(path + ".Galaxy", (int) home.Coordinate.Galaxy));
+					changes.Add(new KeyValuePair<string, object>(path + ".System", (int) home.Coordinate.System));
+					changes.Add(new KeyValuePair<string, object>(path + ".Position", (int) home.Coordinate.Position));
+					if (hasType) changes.Add(new KeyValuePair<string, object>(path + ".Type", "Planet"));
+				}
+				await SettingsService.SetValuesAsync(InstanceSettingsPath, changes);
+				InstanceSettings = await SettingsService.GetSettings(InstanceSettingsPath);
+				log(LogLevel.Information, LogSender.Tbot, $"Config: template coordinates 1:1:1 replaced by the home planet {home.Coordinate} in: {string.Join(", ", open.Select(x => x.Path))}.");
+			} catch (Exception e) {
+				log(LogLevel.Warning, LogSender.Tbot, $"Config: could not replace template coordinates 1:1:1: {e.Message}");
+			}
+		}
+
 		private DateTime _configCheckAt = DateTime.MinValue;
 		private string _configCheckHash = "";
 		private void RunConfigDoctor(bool force) {
@@ -2991,10 +3023,21 @@ namespace Tbot.Services {
 			try {
 				var fa = userData?.fleets;
 				if (fa != null) {
-					fleetsAnim = fa.Take(40).Select(f => new {
-						m = f.Mission.ToString(),
-						b = f.ReturnFlight,
-						a = f.Mission == Missions.Attack || f.Mission == Missions.FederalAttack || f.Mission == Missions.Destroy || f.Mission == Missions.MissileAttack
+					fleetsAnim = fa.Take(40).Select(f => {
+						DateTime? endTime = f.ReturnFlight ? f.BackTime : f.ArrivalTime;
+						double legSec = (f.ArrivalTime - f.StartTime).TotalSeconds;
+						bool legOk = f.StartTime.Year > 2000 && legSec >= 5 && legSec <= 3 * 86400;
+						long endMs = endTime.HasValue && endTime.Value.Year > 2000 ? new DateTimeOffset(endTime.Value).ToUnixTimeMilliseconds() : 0L;
+						long rem = f.ReturnFlight ? (f.BackIn ?? 0) : f.ArriveIn;
+						return (object) new {
+							id = f.ID,
+							m = f.Mission.ToString(),
+							b = f.ReturnFlight,
+							a = f.Mission == Missions.Attack || f.Mission == Missions.FederalAttack || f.Mission == Missions.Destroy || f.Mission == Missions.MissileAttack,
+							end = endMs,
+							tot = legOk ? (long) Math.Round(legSec) : Math.Max(5L, rem),
+							rem = Math.Max(0L, rem)
+						};
 					}).ToList();
 				}
 			} catch { fleetsAnim = null; }

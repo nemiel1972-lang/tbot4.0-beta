@@ -9,6 +9,7 @@ using TBot.Common.Logging;
 using Tbot.Includes;
 using TBot.Ogame.Infrastructure.Enums;
 using Tbot.Services;
+using Tbot.Common.Combat;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Tbot.Helpers;
@@ -27,6 +28,7 @@ namespace Tbot.Workers {
 		protected override TimeSpan ExecuteTimeout => TimeSpan.FromMinutes(60);
 
 		private readonly IOgameService _ogameService;
+		private readonly ISimulatorClient _simulatorClient;
 		private readonly IFleetScheduler _fleetScheduler;
 		private readonly ICalculationService _calculationService;
 		private readonly ITBotOgamedBridge _tbotOgameBridge;
@@ -292,6 +294,20 @@ namespace Tbot.Workers {
 			}
 		}
 
+		private void ReportBattleOutcome(int fleetId, bool won, Resources lossValue, Resources loot) {
+			try {
+				var actual = new BattleLogActual {
+					Won = won,
+					AttackerLosses = new[] { lossValue.Metal, lossValue.Crystal, lossValue.Deuterium },
+					Loot = loot == null ? null : new[] { loot.Metal, loot.Crystal, loot.Deuterium },
+					Source = "fleetReturn"
+				};
+				BattleLogStore.TryAppendActualForFleet(fleetId, actual);
+			} catch (Exception e) {
+				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Battle log outcome for fleet {fleetId} failed ({e.Message}).");
+			}
+		}
+
 		private Resources LossValueOf(Dictionary<string, long> lost) {
 			long m = 0, c = 0, d = 0;
 			foreach (var kv in lost) {
@@ -357,6 +373,7 @@ namespace Tbot.Workers {
 							var value = LossValueOf(lost);
 							var actual = fleet.Resources ?? new Resources();
 							_stateStore.ResolveFleetLoss(rec.FleetId, "returned", returned, value, nowUtc, actual);
+							ReportBattleOutcome(rec.FleetId, true, value, actual);
 							if (lost.Count > 0)
 								_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Attack losses {rec.Target}: {FormatLostShips(lost)} (value {value.TotalResources:N0}).");
 							else
@@ -382,6 +399,7 @@ namespace Tbot.Workers {
 						var lost = LostShips(destroyed);
 						var value = LossValueOf(lost);
 						_stateStore.ResolveFleetLoss(rec.FleetId, "destroyed", null, value, nowUtc);
+						ReportBattleOutcome(rec.FleetId, false, value, null);
 						_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Attack fleet to {rec.Target} completely destroyed: {FormatLostShips(lost)} (value {value.TotalResources:N0}).");
 					} else {
 						_stateStore.ResolveFleetLoss(rec.FleetId, "unknown", null, new Resources(), nowUtc);
@@ -789,6 +807,7 @@ namespace Tbot.Workers {
 			ITBotOgamedBridge tbotOgameBridge) :
 			base(parentInstance) {
 			_ogameService = ogameService;
+			_simulatorClient = SimulatorClientProvider.GetOrCreate(parentInstance, ogameService);
 			_fleetScheduler = fleetScheduler;
 			_calculationService = calculationService;
 			_tbotOgameBridge = tbotOgameBridge;
@@ -849,6 +868,39 @@ namespace Tbot.Workers {
 				_tbotInstance.UserData.autoFarmLastSystem = cursor.System;
 			}
 			_stateLoaded = true;
+		}
+
+		private bool _startupCleaned;
+		private async Task ReleaseStaleStartupStateAsync() {
+			if (_startupCleaned)
+				return;
+			_startupCleaned = true;
+			try {
+				int maxAge = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxReportAgeMinutesForAttack", 120);
+				var now = await _tbotOgameBridge.GetDateTime();
+				int reset = 0;
+				foreach (var t in _tbotInstance.UserData.farmTargets.ToList()) {
+					if (!AutoFarmStartupPolicy.IsTargetStale(t, now, maxAge))
+						continue;
+					t.State = FarmState.ProbesPending;
+					t.Report = null;
+					reset++;
+				}
+				if (reset > 0) {
+					PersistTargets();
+					_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm,
+						$"Startup: {reset} stored target(s) with outdated or missing report reset to ProbesPending.");
+				}
+				if (AutoFarmStartupPolicy.IsCursorStale(_stateStore.LoadScanCursorUpdatedAtUtc(), DateTime.UtcNow, maxAge)) {
+					_tbotInstance.UserData.autoFarmLastRangeIndex = 0;
+					_tbotInstance.UserData.autoFarmLastGalaxy = 0;
+					_tbotInstance.UserData.autoFarmLastSystem = 0;
+					SaveScanCursor(0, 0, 0);
+					_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "Startup: stored scan cursor is outdated - scan starts from the beginning.");
+				}
+			} catch (Exception ex) {
+				_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Startup cleanup failed: {ex.Message}");
+			}
 		}
 
 		private void ProcessWebCommands() {
@@ -1674,6 +1726,8 @@ namespace Tbot.Workers {
 
 			double fleetToDebris = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "FleetToDebrisPercent", 30.0) / 100.0;
 
+			bool AttackerLifeformEnabled() { try { var v = Tbot.Services.SwitchingSimulatorClient.ResolveSettingValue(_tbotInstance.InstanceSettings.AutoFarm, "ExternalCalc.AttackerClassAndLifeform"); return v != null && Convert.ToBoolean(v); } catch { return false; } }
+
 			SimulatorFleet BuildAttackerFleet(Dictionary<Buildables, long> composition) {
 				var fleet = new SimulatorFleet {
 					Weapon = _tbotInstance.UserData.researches.WeaponsTechnology,
@@ -1683,6 +1737,9 @@ namespace Tbot.Workers {
 				typeof(SimulatorFleet).GetProperty(cargoShip.ToString())?.SetValue(fleet, numCargo);
 				foreach (var kv in composition) {
 					typeof(SimulatorFleet).GetProperty(kv.Key.ToString())?.SetValue(fleet, kv.Value);
+				}
+				if (AttackerLifeformEnabled() && origin?.LFBonuses?.LfShipBonusesInt is { Count: > 0 } lfShips) {
+					fleet.LifeformBonuses = lfShips.ToDictionary(x => x.Key, x => new SimulatorLfBonus { Weapon = x.Value.WeaponPower * 100f, Shield = x.Value.ShieldPower * 100f, Armour = x.Value.StructuralIntegrity * 100f });
 				}
 				return fleet;
 			}
@@ -1743,12 +1800,16 @@ namespace Tbot.Workers {
 				SimulatorResult confirmation;
 				try {
 					Heartbeat();
-					confirmation = await _ogameService.SimulateBattle(new SimulateBattleRequest {
+					confirmation = await _simulatorClient.SimulateBattle(new SimulateBattleRequest {
+						BattleId = Guid.NewGuid().ToString("N"),
+						Target = target.Celestial.Coordinate.ToString(),
+						TargetName = (target.Celestial as Planet)?.Player?.Name,
+						Mode = "autofarm",
 						Attacker = BuildAttackerFleet(composition),
 						Defender = defender,
 						FleetToDebris = fleetToDebris,
 						Simulations = simulations,
-					});
+					}, mirrorShadow: true);
 				} catch (Exception e) {
 					_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"Full-precision confirmation simulate-battle call failed ({e.Message}) for {target.Celestial.Coordinate}.");
 					return (false, null, true);
@@ -1773,7 +1834,7 @@ namespace Tbot.Workers {
 				try {
 					int ceilingSimulations = Math.Min(simulations, intermediateSimulations);
 					Heartbeat();
-					ceilingResult = await _ogameService.SimulateBattle(new SimulateBattleRequest {
+					ceilingResult = await _simulatorClient.SimulateBattle(new SimulateBattleRequest {
 						Attacker = ceilingAttacker,
 						Defender = defender,
 						FleetToDebris = fleetToDebris,
@@ -1800,7 +1861,7 @@ namespace Tbot.Workers {
 						SimulatorResult combinedResult;
 						try {
 							Heartbeat();
-							combinedResult = await _ogameService.SimulateBattle(new SimulateBattleRequest {
+							combinedResult = await _simulatorClient.SimulateBattle(new SimulateBattleRequest {
 								Attacker = BuildAttackerFleet(combinedComposition),
 								Defender = defender,
 						FleetToDebris = fleetToDebris,
@@ -1908,7 +1969,7 @@ namespace Tbot.Workers {
 					SimulatorResult midResult;
 					try {
 						Heartbeat();
-						midResult = await _ogameService.SimulateBattle(new SimulateBattleRequest {
+						midResult = await _simulatorClient.SimulateBattle(new SimulateBattleRequest {
 							Attacker = BuildAttackerFleet(WithFixedBase(midComposition)),
 							Defender = defender,
 						FleetToDebris = fleetToDebris,
@@ -1954,7 +2015,7 @@ namespace Tbot.Workers {
 						try {
 							Heartbeat();
 							fineTuneSims++;
-							trialResult = await _ogameService.SimulateBattle(new SimulateBattleRequest {
+							trialResult = await _simulatorClient.SimulateBattle(new SimulateBattleRequest {
 								Attacker = BuildAttackerFleet(WithFixedBase(trial)),
 								Defender = defender,
 								FleetToDebris = fleetToDebris,
@@ -2081,7 +2142,7 @@ namespace Tbot.Workers {
 					SimulatorResult result;
 					try {
 						Heartbeat();
-						result = await _ogameService.SimulateBattle(new SimulateBattleRequest {
+						result = await _simulatorClient.SimulateBattle(new SimulateBattleRequest {
 							Attacker = attacker,
 							Defender = defender,
 						FleetToDebris = fleetToDebris,
@@ -2155,12 +2216,15 @@ namespace Tbot.Workers {
 			int defArmour = report.HasResearchesInformation ? report.ArmourTechnology.GetValueOrDefault() : _tbotInstance.UserData.researches.ArmourTechnology;
 
 			int generalClassCombatResearchBonus = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "GeneralClassCombatResearchBonus", 2);
+			bool useRustGeneralClassBonus = report.CharacterClass == CharacterClass.General && generalClassCombatResearchBonus == 2;
+			int generalBonusApplied = 0;
 			if (report.CharacterClass == CharacterClass.General && generalClassCombatResearchBonus != 0) {
 				int rawWeapon = defWeapon, rawShield = defShield, rawArmour = defArmour;
 				defWeapon += generalClassCombatResearchBonus;
 				defShield += generalClassCombatResearchBonus;
 				defArmour += generalClassCombatResearchBonus;
-				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{report.Coordinate}: defender is class General - tech levels for the simulation raised from {rawWeapon}/{rawShield}/{rawArmour} to effectively {defWeapon}/{defShield}/{defArmour} (+{generalClassCombatResearchBonus} levels class bonus).");
+				generalBonusApplied = generalClassCombatResearchBonus;
+				_tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"{report.Coordinate}: defender is class General - tech levels for the Go simulation raised from {rawWeapon}/{rawShield}/{rawArmour} to effectively {defWeapon}/{defShield}/{defArmour} (+{generalClassCombatResearchBonus} levels class bonus).");
 			}
 
 			int targetCombatTechBonus = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "TargetCombatTechBonus", 0);
@@ -2172,6 +2236,9 @@ namespace Tbot.Workers {
 			}
 
 			return new SimulatorDefender {
+				CharacterClass = report.CharacterClass,
+				GeneralClassCombatResearchBonusApplied = generalBonusApplied,
+				UseRustGeneralClassBonus = useRustGeneralClassBonus,
 				Weapon = defWeapon,
 				Shield = defShield,
 				Armour = defArmour,
@@ -2383,6 +2450,9 @@ namespace Tbot.Workers {
 			return freeSlots;
 		}
 
+		private int _stopAufschubZyklen;
+		private bool _stopWartetAufZiele;
+
 		protected override async Task Execute() {
 			await RefreshAllianceWhitelistAsync();
 			await RefreshDeuteriumGuardAsync();
@@ -2405,6 +2475,7 @@ namespace Tbot.Workers {
 			try {
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, "Running autofarm...");
 				LoadPersistedTargets();
+				await ReleaseStaleStartupStateAsync();
 				ProcessWebCommands();
 				DeduplicateFarmTargets();
 				stopAfterFullScan = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoFarm, "StopAfterFullScan")
@@ -3665,6 +3736,10 @@ namespace Tbot.Workers {
 									_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm,
 										$"Attack sent to {target.Celestial.Coordinate}, but it could not be recorded in the AutoFarm database.");
 								RecordFleetForLossTracking(fleetId, fromCelestial, target.Celestial.Coordinate, attackingShips, speed, loot);
+								if (!string.IsNullOrEmpty(escortSimResult?.BattleId)) {
+									try { BattleLogStore.AppendLink(escortSimResult.BattleId, fleetId); }
+									catch (Exception e) { _tbotInstance.log(LogLevel.Debug, LogSender.AutoFarm, $"Battle log link for fleet {fleetId} failed ({e.Message})."); }
+								}
 								PersistTargets();
 
 								if (recyclerFleetToSend != null && !recyclerAlreadyHandled && recyclerGapTargetSec > 0) {
@@ -3724,8 +3799,19 @@ namespace Tbot.Workers {
 			} finally {
 				FinishForcedTarget();
 				PersistTargets();
-				if (stopAfterFullScan && finishedFullScan) {
-					stop = true;
+				if (stopAfterFullScan && (finishedFullScan || _stopWartetAufZiele)) {
+					int offeneZiele = _tbotInstance.UserData.farmTargets.Count(x => x.State == FarmState.ProbesPending || x.State == FarmState.ProbesSent
+						|| x.State == FarmState.ProbesRequired || x.State == FarmState.FailedProbesRequired || x.State == FarmState.AttackPending);
+					if (offeneZiele > 0 && ++_stopAufschubZyklen <= 30) {
+						_stopWartetAufZiele = true;
+						_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"StopAfterFullScan: full scan completed, but {offeneZiele} target(s) still wait for a probe, a report or an attack - AutoFarm keeps running (cycle {_stopAufschubZyklen} of at most 30).");
+					} else {
+						if (offeneZiele > 0)
+							_tbotInstance.log(LogLevel.Warning, LogSender.AutoFarm, $"StopAfterFullScan: stopping with {offeneZiele} target(s) still pending after 30 extra cycles.");
+						_stopAufschubZyklen = 0;
+						_stopWartetAufZiele = false;
+						stop = true;
+					}
 				}
 
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoFarm, $"Attacked targets: {_tbotInstance.UserData.farmTargets.Where(t => t.State == FarmState.AttackSent).Count()}");

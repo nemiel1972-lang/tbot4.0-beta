@@ -20,7 +20,7 @@ namespace Tbot.Workers {
 	internal class AsteroidHuntWorker : WorkerBase {
 		private void AhLog(LogLevel level, string text) {
 			DoLog(level, text);
-			ExtraLog.Write(_tbotInstance, "AsteroidHunt", $"[{level}] {text}");
+			ExtraLog.Write(_tbotInstance, "AsteroidHunt", () => $"[{level}] {text}");
 		}
 
 		private readonly IOgameService _ogameService;

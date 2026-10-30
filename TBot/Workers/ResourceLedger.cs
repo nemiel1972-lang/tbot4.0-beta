@@ -84,6 +84,7 @@ namespace Tbot.Workers {
 		public DateTime CreatedUtc { get; set; }
 		public DateTime TouchedUtc { get; set; }
 		public DateTime ProtectUntilUtc { get; set; }
+		public bool Bundled { get; set; }
 	}
 
 	public class LedgerPlan {
@@ -327,10 +328,17 @@ namespace Tbot.Workers {
 					list.Add(mine);
 					changed = true;
 					Log(log, "Claim created: " + owner + " (" + label + ") needs " + cost.ToString() + " (" + list.Count + " claim(s) on this celestial)");
+				} else if (!useExistingTarget && mine.Bundled && mine.Reserved.Covers(cost.Clamp0())) {
+					if (mine.Label != label) {
+						Log(log, "Claim " + owner + " moves on within its bundle: " + mine.Label + " -> " + label);
+						mine.Label = label;
+						changed = true;
+					}
 				} else if (!useExistingTarget && (mine.Label != label || !mine.Reserved.SameAs(cost.Clamp0()))) {
 					Log(log, "Claim " + owner + " switched: " + mine.Label + " -> " + label);
 					mine.Label = label;
 					mine.Reserved = cost.Clamp0();
+					mine.Bundled = false;
 					changed = true;
 				}
 				mine.TouchedUtc = now;
@@ -374,6 +382,13 @@ namespace Tbot.Workers {
 				mine.Flights.RemoveAll(f => f.FleetId == fleetId);
 				mine.Flights.Add(new LedgerFlight { FleetId = fleetId, Amount = amount, ArriveUtc = arriveUtc });
 				mine.TouchedUtc = now;
+				LedgerAmt gedeckt = mine.Held + SumFlights(mine);
+				if (!mine.Reserved.Covers(gedeckt)) {
+					LedgerAmt mehr = (gedeckt - mine.Reserved).Clamp0();
+					mine.Reserved = mine.Reserved + mehr;
+					mine.Bundled = true;
+					Log(log, "Claim " + owner + " (" + mine.Label + ") extended by " + mehr.ToString() + " for following builds (bundle " + mine.Reserved.ToString() + ")");
+				}
 				Log(log, "Fleet " + fleetId + " with " + amount.ToString() + " assigned to claim " + owner + " (" + mine.Label + ").");
 				Save(key, st);
 				return true;
@@ -389,7 +404,17 @@ namespace Tbot.Workers {
 				LedgerClaim mine = list.FirstOrDefault(c => c.Owner == owner);
 				if (mine == null)
 					return;
-				if (mine.Label == label) {
+				if (mine.Bundled) {
+					mine.Reserved = (mine.Reserved - cost.Clamp0()).Clamp0();
+					mine.Held = (mine.Held - LedgerAmt.Min(mine.Held, cost.Clamp0())).Clamp0();
+					mine.TouchedUtc = now;
+					if (mine.Reserved.IsZero()) {
+						list.Remove(mine);
+						Log(log, "Claim " + owner + " (" + label + ") completed.");
+					} else {
+						Log(log, "Claim " + owner + ": " + label + " built, bundle left " + mine.Reserved.ToString());
+					}
+				} else if (mine.Label == label) {
 					list.Remove(mine);
 					Log(log, "Claim " + owner + " (" + label + ") completed.");
 				} else {

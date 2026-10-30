@@ -72,7 +72,7 @@ namespace Tbot.Workers {
 
 		private void Log(LogLevel level, string text) {
 			DoLog(level, text);
-			ExtraLog.Write(_tbotInstance, "Directives", $"[{level}] {text}");
+			ExtraLog.Write(_tbotInstance, "Directives", () => $"[{level}] {text}");
 		}
 
 		private async Task<List<DirectiveChapterInfo>> ReadAll(DirectivesConfig cfg) {

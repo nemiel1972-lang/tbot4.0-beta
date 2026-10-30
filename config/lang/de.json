@@ -16,6 +16,9 @@
    "Whole-universe scan: hours per galaxy (only when ON)": "Scan ganzes Universum: Stunden pro Galaxie (nur wenn AN)",
    "Whole-universe scan: repeat after (hours) (only when ON)": "Scan ganzes Universum: wiederholen nach (Stunden) (nur wenn AN)",
    "Collect logs for development (time limited)": "Logs für die Entwicklung sammeln (zeitbegrenzt)",
+   "Reduce logs": "Logs reduzieren",
+   "On: extra logs and their diagnosis texts are not even generated (saves work and log size). Off: they are written while a log collection runs. If the entry is missing, private builds count it as off and public builds as on.": "An: Zusatz-Logs und ihre Diagnosetexte werden gar nicht erst erzeugt (spart Arbeit und Logmenge). Aus: sie werden geschrieben, solange eine Log-Sammlung läuft. Fehlt der Eintrag, gilt er in privaten Builds als aus und in öffentlichen Builds als an.",
+   "On = do not generate extra logs at all": "An = Zusatz-Logs gar nicht erst erzeugen",
    "While on, every log line (from debug up) and all lines of the extra debug log are saved into ONE file in the folder devlogs. The collection stops by itself after the hours below; switch it off and on again to collect again.": "Solange an, wird jede Logzeile (ab Debug) und alle Zeilen des Zusatz-Debuglogs in EINE Datei im Ordner devlogs geschrieben. Die Sammlung endet nach den Stunden unten von selbst; zum erneuten Sammeln aus- und wieder einschalten.",
    "Not in your config yet (off). Add it to collect the logs of the next hours into the folder devlogs.": "Noch nicht in deiner Config (aus). Füge es hinzu, um die Logs der nächsten Stunden im Ordner devlogs zu sammeln.",
    "Collect logs settings": "Einstellungen zum Log-Sammeln",
@@ -82,6 +85,17 @@
    "Show update notes": "Update-Hinweise anzeigen",
    "After a version change: one short message in the log and to Telegram/Discord (default on)": "Nach einem Versionswechsel: eine kurze Meldung im Log und an Telegram/Discord (Standard an)",
    "Extra buildings per delivery": "Zusätzliche Gebäude pro Lieferung",
+   "Extra buildings per delivery (old)": "Zusätzliche Gebäude pro Lieferung (alt)",
+   "Old setting. Ignored (greyed out) while \"Deliver ahead\" below is on. How many additional buildings one delivery may bring along (0 = only the one target of the worker)": "Alte Einstellung. Wird ignoriert (ausgegraut), solange \"Vorausliefern\" unten an ist. Wie viele weitere Gebäude eine Lieferung mitbringen darf (0 = nur das eine Ziel des Workers)",
+   "Global switch. Off = the old setting \"Extra buildings per delivery (old)\" applies": "Globaler Schalter. Aus = es gilt die alte Einstellung \"Zusätzliche Gebäude pro Lieferung (alt)\"",
+   "Deliver ahead (several buildings per delivery)": "Vorausliefern (mehrere Gebäude pro Lieferung)",
+   "Active (all workers)": "Aktiv (alle Worker)",
+   "Global switch. Off = the old setting \"Extra buildings per delivery\" applies": "Globaler Schalter. Aus = es gilt die alte Einstellung \"Zusätzliche Gebäude pro Lieferung\"",
+   "How many following buildings one delivery may bring along": "Wie viele Folgegebäude eine Lieferung mitbringen darf",
+   "Build time of the extras (hours)": "Bauzeit der Zusätze (Stunden)",
+   "Stop adding buildings once their build time reaches this (0 = no limit)": "Keine weiteren Gebäude mehr, sobald deren Bauzeit diesen Wert erreicht (0 = keine Grenze)",
+   "Mines, power and facilities": "Minen, Energie und Anlagen",
+   "Lifeform buildings": "Lebensform-Gebäude",
    "How many additional buildings one delivery may bring along (0 = only the one target of the worker)": "Wie viele weitere Gebäude eine Lieferung mitbringen darf (0 = nur das eine Ziel des Workers)",
    "Transport slots kept free for builders": "Transport-Slots für die Bauer freihalten",
    "The reverse fetch stays this many slots below Brain Max slots, so it never takes slots from the mines/lifeform/research workers (0 = off)": "Die Rückholung bleibt so viele Slots unter dem Brain-Maximum, damit sie den Minen-/Lebensform-/Forschungs-Workern keine Slots wegnimmt (0 = aus)",
@@ -3543,6 +3557,21 @@
    "ResourceLedger.PriorityByCost": {
     "t": "An (Standard): Pro Himmelskörper bekommt der günstigste Bauwunsch zuerst den Bestand, und ein noch nicht voll finanzierter Bau gibt seinen reservierten Bestand an günstigere frei, damit kleine Bauten nicht hinter einem großen verhungern. Aus: Wer zuerst kommt, mahlt zuerst."
    },
+   "Transports.Lookahead.Active": {
+    "t": "Globaler Schalter fürs Vorausliefern: An = eine Lieferung bringt die Rohstoffe für mehrere Folgegebäude mit, nicht nur für das nächste. Die Schalter je Worker darunter entscheiden, wer es nutzt. Aus = es gilt die alte Einstellung MaxBundledBuildings."
+   },
+   "Transports.Lookahead.MaxItems": {
+    "t": "Wie viele Folgegebäude eine Lieferung neben dem Ziel des Workers mitbringen darf."
+   },
+   "Transports.Lookahead.MaxHours": {
+    "t": "Keine weiteren Folgegebäude mehr, sobald deren Bauzeit zusammen so viele Stunden erreicht. 0 = keine Zeitgrenze. Sinnvoll auf neuen Kolonien mit hoher Nanitenfabrik, wo Gebäude nur Sekunden brauchen."
+   },
+   "Transports.Lookahead.AutoMine": {
+    "t": "Vorausliefern für AutoMine (Minen, Energie, Anlagen)."
+   },
+   "Transports.Lookahead.LifeformsAutoMine": {
+    "t": "Vorausliefern für Lebensform-Gebäude."
+   },
    "Transports.MaxBundledBuildings": {
     "t": "Wie viele ZUSÄTZLICHE Gebäude eine Lieferung neben dem Ziel des Workers mitbringen darf. 0 (Standard) = nur das eine Ziel, passend zur Rohstoffreservierung."
    },
@@ -3589,8 +3618,11 @@
    "ManualShips.Ships.*": {
     "t": "Anzahl dieses Schiffstyps in jeder Expedition."
    },
+   "StopBelowNeed": {
+    "t": "An: von einem Ursprung startet keine Expedition mehr, solange das Deuterium dort nicht für die noch geplanten Starts reicht (Flugsprit + Deuterium je Expedition x Anzahl). Die Repatriate-Runde füllt auf diesen Bedarf auf, danach laufen die Expeditionen von selbst weiter. Aus (Standard): es wird mit dem vorhandenen Deuterium weitergeflogen."
+   },
    "MinDeuteriumOnMoon": {
-    "t": "Ein Mond braucht mindestens so viel Deuterium, um Expeditionen zu starten (0 = keine Prüfung). Darunter wird der Mond übersprungen und du bekommst eine Meldung."
+    "t": "Ein Mond braucht mindestens so viel Deuterium, um Expeditionen zu starten (0 = keine Prüfung). Darunter laufen die Expeditionen weiter (die Flotte startet mit dem vorhandenen Deuterium) und du bekommst eine Meldung. Aufgestockt wird über die Mond-Versorgung (ExpoSupply), wenn sie an ist."
    },
    "TelegramMessenger.Active": {
     "t": "Sendet eine Telegram-Nachricht, wenn neue Expeditionsberichte eintreffen, mit den summierten Funden (Rohstoffe, Dunkle Materie, Schiffe). Mehrere gleichzeitig gefundene Berichte kommen als eine Nachricht. Das erste Lesen nach dem ersten Start lernt nur die vorhandenen Berichte und sendet nichts."
@@ -3949,6 +3981,9 @@
   "Experimental": {
    "CollectLogs": {
     "t": "Sammel-Log für die Entwicklung: Solange aktiv, schreibt der Bot jede Logzeile (ab Debug) und alle Zeilen des Zusatz-Debuglogs in EINE Datei im Ordner devlogs (TBot-collect-<Beginn>.log, höchstens 300 MB). Die Sammlung endet nach den eingestellten Stunden (Standard 12) von selbst, auch nach einem Neustart; zum erneuten Sammeln aus- und wieder einschalten."
+   },
+   "ReduceLogs": {
+    "t": "Globaler Schalter: An = Zusatz-Logs (devlogs) und ihre Diagnosetexte werden gar nicht erst erzeugt. Aus = sie werden geschrieben, solange eine Log-Sammlung läuft. Fehlt der Eintrag: private Builds aus, öffentliche Builds an."
    },
    "CollectLogs.Active": {
     "t": "Sammeln ein/aus (Standard aus)."

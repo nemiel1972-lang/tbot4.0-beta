@@ -825,5 +825,23 @@ INSERT INTO attacks VALUES (77, 1, 139, 7, 1, 'Legacy target', '2026-08-10T12:01
 			Assert.Same(largerOrigin.Celestial, plan[0].Origin);
 			Assert.Equal(7000, plan[0].ShipsToSend);
 		}
-	}
+	
+		[Fact]
+		public void AutoFarmStartupPolicyResetsStaleTargetsAndCursor() {
+			var now = new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc);
+			var old = new FarmTarget(new Planet { Coordinate = new Coordinate(1, 2, 3, Celestials.Planet) }, FarmState.AttackPending) {
+				Report = new EspionageReport() { Date = now.AddDays(-1) }
+			};
+			Assert.True(AutoFarmStartupPolicy.IsTargetStale(old, now, 120));
+			old.Report.Date = now.AddMinutes(-10);
+			Assert.False(AutoFarmStartupPolicy.IsTargetStale(old, now, 120));
+			old.Report = null;
+			Assert.True(AutoFarmStartupPolicy.IsTargetStale(old, now, 120));
+			old.State = FarmState.NotSuitable;
+			Assert.False(AutoFarmStartupPolicy.IsTargetStale(old, now, 120));
+			Assert.True(AutoFarmStartupPolicy.IsCursorStale(now.AddDays(-1), now, 120));
+			Assert.False(AutoFarmStartupPolicy.IsCursorStale(now.AddMinutes(-5), now, 120));
+			Assert.False(AutoFarmStartupPolicy.IsCursorStale(null, now, 120));
+		}
+}
 }

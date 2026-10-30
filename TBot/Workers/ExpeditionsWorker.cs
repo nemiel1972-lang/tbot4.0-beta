@@ -453,6 +453,33 @@ namespace Tbot.Workers {
 			return autoFleet;
 		}
 
+		private async Task<bool> ExpeditionBedarfReicht(Celestial origin, Ships fleet, Coordinate destination, decimal speed, int pending, LFBonuses lf) {
+			try {
+				var exp = _tbotInstance.InstanceSettings.Expeditions;
+				if (!SettingsService.IsSettingSet(exp, "StopBelowNeed") || !(bool) exp.StopBelowNeed)
+					return true;
+				long fuelToCarry = SettingsService.IsSettingSet(exp, "FuelToCarry") ? Convert.ToInt64(exp.FuelToCarry) : 0;
+				long flug = _calculationService.CalcFleetPrediction(origin.Coordinate, destination, fleet, Missions.Expedition, speed, _tbotInstance.UserData.researches, _tbotInstance.UserData.serverData, lf, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.allianceClass).Fuel;
+				long bedarf = (flug + Math.Max(0, fuelToCarry)) * Math.Max(1, pending);
+				var aktuell = await _tbotOgameBridge.UpdatePlanet(origin, UpdateTypes.Resources);
+				long vorhanden = (long) (aktuell?.Resources?.Deuterium ?? 0);
+				if (vorhanden >= bedarf)
+					return true;
+				DoLog(LogLevel.Warning, $"Expedition from {origin.Coordinate} stopped: deuterium {vorhanden:N0} is below the need {bedarf:N0} (flight fuel {flug:N0} + cargo {fuelToCarry:N0} per expedition x {Math.Max(1, pending)}); waiting for the resupply from the base.");
+				string schluessel = ExpeditionDiagnostics.DeutKey(_tbotInstance.InstanceAlias, _tbotInstance.UserData?.serverData?.Name, origin.Coordinate.ToString() + "|need");
+				lock (_deutMeldung) {
+					if (_deutMeldung.TryGetValue(schluessel, out DateTime zuletzt) && (DateTime.UtcNow - zuletzt).TotalHours < 6)
+						return false;
+					_deutMeldung[schluessel] = DateTime.UtcNow;
+				}
+				await _tbotInstance.SendTelegramMessage($"Expeditions from {origin.Coordinate} paused: deuterium {vorhanden:N0} is below the need {bedarf:N0}. They continue as soon as the base has resupplied.");
+				return false;
+			} catch (Exception e) {
+				DoLog(LogLevel.Warning, $"Deuterium need check for {origin.Coordinate} failed: {e.Message}");
+				return true;
+			}
+		}
+
 		private static readonly Dictionary<string, DateTime> _deutMeldung = new();
 		private async Task<bool> ExpeditionDeuteriumReicht(Celestial origin) {
 			try {
@@ -468,19 +495,19 @@ namespace Tbot.Workers {
 				long vorhanden = (long) (aktuell?.Resources?.Deuterium ?? 0);
 				if (vorhanden >= min)
 					return true;
-				DoLog(LogLevel.Warning, $"Expedition from {origin.Coordinate} skipped: deuterium {vorhanden:N0} is below the minimum {min:N0} on this moon.");
+								DoLog(LogLevel.Information, $"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} is below the target {min:N0}; expeditions continue, the repatriate round resupplies deuterium from the base.");
 				string schluessel = ExpeditionDiagnostics.DeutKey(_tbotInstance.InstanceAlias, _tbotInstance.UserData?.serverData?.Name, origin.Coordinate.ToString());
 				lock (_deutMeldung) {
 					if (_deutMeldung.TryGetValue(schluessel, out DateTime zuletzt) && (DateTime.UtcNow - zuletzt).TotalHours < 6)
-						return false;
+						return true;
 					_deutMeldung[schluessel] = DateTime.UtcNow;
 				}
-				await _tbotInstance.SendTelegramMessage($"Expeditions from moon {origin.Coordinate} paused: deuterium {vorhanden:N0} is below the minimum {min:N0}.");
+				await _tbotInstance.SendTelegramMessage($"Expedition moon {origin.Coordinate}: deuterium {vorhanden:N0} is below the target {min:N0}. Expeditions keep running, the base resupplies the moon in the next repatriate round.");
+				return true;
 			} catch (Exception e) {
 				DoLog(LogLevel.Warning, $"Deuterium check for {origin.Coordinate} failed: {e.Message}");
 				return true;
 			}
-			return false;
 		}
 
 		private async Task<Ships> RefreshExpeditionShips(Celestial origin) {
@@ -989,6 +1016,10 @@ namespace Tbot.Workers {
 						var wavePlan = await PlanSleepWaveExpedition(origin, fleet, remaining, usedSystems, lfBonuses);
 						var destination = wavePlan?.destination ?? BuildExpeditionDestination(origin, remaining, usedSystems, random);
 						decimal sendSpeed = wavePlan?.speed ?? CurrentExpeditionSpeed();
+						if (!await ExpeditionBedarfReicht(origin, fleet, destination, sendSpeed, pendingFromOrigin, lfBonuses)) {
+							unavailableOrigins[originIndex] = true;
+							break;
+						}
 						var payload = new Resources();
 						if ((long)_tbotInstance.InstanceSettings.Expeditions.FuelToCarry > 0)
 							payload.Deuterium = (long)_tbotInstance.InstanceSettings.Expeditions.FuelToCarry;

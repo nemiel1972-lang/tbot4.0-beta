@@ -20,6 +20,7 @@ namespace Tbot.Workers {
 		public Ships PerExpedition;
 		public Ships Need;
 		public long DeuteriumTarget;
+		public long DeuteriumTrigger;
 	}
 
 	public sealed class ExpoSupplyEntry {
@@ -85,6 +86,30 @@ namespace Tbot.Workers {
 		public static long DeuteriumTarget(long minOnMoon, long fuelToCarry, int expeditions) {
 			if (minOnMoon > 0) return minOnMoon;
 			return Math.Max(0, fuelToCarry) * Math.Max(0, expeditions);
+		}
+
+		public static long DeuteriumTargetMitFlug(long minOnMoon, long fuelToCarry, long flightFuelPerExpedition, int expeditions) {
+			long bedarf = (Math.Max(0, fuelToCarry) + Math.Max(0, flightFuelPerExpedition)) * Math.Max(0, expeditions);
+			return Math.Max(Math.Max(0, minOnMoon), bedarf);
+		}
+
+		public static long DeuteriumAuffuellGrenze(long target, long fuelToCarry, long flightFuelPerExpedition, int expeditions) {
+			long bedarf = (Math.Max(0, fuelToCarry) + Math.Max(0, flightFuelPerExpedition)) * Math.Max(0, expeditions);
+			return Math.Min(Math.Max(0, target), 2 * bedarf);
+		}
+
+		public static long FlugspritJeExpedition(ITBotMain inst, ICalculationService calc, Celestial origin, Ships per, LFBonuses lf) {
+			try {
+				if (IsEmpty(per)) return 0;
+				var exp = inst.InstanceSettings.Expeditions;
+				int range = 0;
+				try {
+					if ((bool) exp.SplitExpeditionsBetweenSystems.Active)
+						range = Math.Max(1, (int) exp.SplitExpeditionsBetweenSystems.Range);
+				} catch (Exception) { }
+				var ziel = new Coordinate { Galaxy = origin.Coordinate.Galaxy, System = Math.Min(inst.UserData.serverData.Systems, origin.Coordinate.System + range), Position = 16, Type = Celestials.DeepSpace };
+				return calc.CalcFleetPrediction(origin.Coordinate, ziel, per, Missions.Expedition, Speeds.HundredPercent, inst.UserData.researches, inst.UserData.serverData, lf, inst.UserData.userInfo.Class, inst.UserData.allianceClass).Fuel;
+			} catch (Exception) { return 0; }
 		}
 
 		public static int ExpeditionsFor(int perOrigin, int maxPerOrigin, int originCount, int originIndex, int expTotal) {
@@ -196,7 +221,7 @@ namespace Tbot.Workers {
 			return fleet;
 		}
 
-		public static async Task<List<ExpoNeed>> PlanAsync(ITBotMain inst, ICalculationService calc, IOgameService ogame, Action<LogLevel, string> log) {
+		public static async Task<List<ExpoNeed>> PlanAsync(ITBotMain inst, ICalculationService calc, IOgameService ogame, Action<LogLevel, string> log, bool withShips = true) {
 			var result = new List<ExpoNeed>();
 			try {
 				var exp = inst.InstanceSettings.Expeditions;
@@ -210,6 +235,10 @@ namespace Tbot.Workers {
 				int expTotal = inst.UserData.slots != null ? (int) inst.UserData.slots.ExpTotal : 0;
 				long fuel = SettingsService.IsSettingSet(exp, "FuelToCarry") ? Convert.ToInt64(exp.FuelToCarry) : 0;
 				long minDeut = SettingsService.IsSettingSet(exp, "MinDeuteriumOnMoon") ? Convert.ToInt64(exp.MinDeuteriumOnMoon) : 0;
+				try {
+					long lassen = Convert.ToInt64(inst.InstanceSettings.Brain.AutoRepatriate.LeaveDeut.DeutToLeave);
+					if (lassen > minDeut) minDeut = lassen;
+				} catch (Exception) { }
 				int idx = 0;
 				foreach (var o in configured) {
 					Celestials type = Enum.Parse<Celestials>((string) o.Type.ToString(), true);
@@ -218,15 +247,17 @@ namespace Tbot.Workers {
 					Celestial moon = all.FirstOrDefault(c => c?.Coordinate != null
 						&& c.Coordinate.Galaxy == og && c.Coordinate.System == os && c.Coordinate.Position == op && c.Coordinate.Type == type);
 					int index = idx++;
-					if (moon == null || moon.Coordinate.Type != Celestials.Moon) continue;
+					if (moon == null) continue;
 					int perOrigin = 0;
 					try { if (SettingsService.IsSettingSet(o, "MaxExpeditions")) perOrigin = Convert.ToInt32(o.MaxExpeditions); } catch (Exception) { }
 					int n = ExpeditionsFor(perOrigin, maxPerOrigin, configured.Length, index, expTotal);
 					if (n <= 0) continue;
+					long flugsprit = FlugspritJeExpedition(inst, calc, moon, per, lf);
 					result.Add(new ExpoNeed {
 						Origin = moon, Expeditions = n, PerExpedition = per,
-						Need = Multiply(per, n + backup),
-						DeuteriumTarget = DeuteriumTarget(minDeut, fuel, n)
+						Need = withShips ? Multiply(per, n + backup) : new Ships(),
+						DeuteriumTarget = DeuteriumTargetMitFlug(minDeut, fuel, flugsprit, n),
+						DeuteriumTrigger = DeuteriumAuffuellGrenze(DeuteriumTargetMitFlug(minDeut, fuel, flugsprit, n), fuel, flugsprit, n)
 					});
 				}
 			} catch (Exception e) {
@@ -291,11 +322,26 @@ namespace Tbot.Workers {
 			return d;
 		}
 
+		public static async Task<long> DeuteriumWunschAsync(ITBotMain inst, ICalculationService calc, Celestial mond) {
+			try {
+				if (mond?.Coordinate == null) return 0;
+				var needs = await PlanAsync(inst, calc, null, null, false);
+				var need = needs.FirstOrDefault(n => Key(n.Origin.Coordinate) == Key(mond.Coordinate));
+				if (need == null) return 0;
+				long vorhanden = (long) (mond.Resources?.Deuterium ?? 0);
+				foreach (var f in inst.UserData.fleets?.ToList() ?? new List<Fleet>()) {
+					if (f?.Mission == Missions.Deploy && !f.ReturnFlight && f.Destination != null && f.Destination.IsSame(mond.Coordinate) && f.Origin != null && !f.Origin.IsSame(mond.Coordinate))
+						vorhanden += (long) (f.Resources?.Deuterium ?? 0);
+				}
+				return vorhanden < need.DeuteriumTrigger ? Math.Max(0, need.DeuteriumTarget - vorhanden) : 0;
+			} catch (Exception) { return 0; }
+		}
+
 
 		public static async Task RunAsync(ITBotMain inst, ICalculationService calc, IOgameService ogame, ITBotOgamedBridge bridge, IFleetScheduler scheduler, Action<LogLevel, string> log) {
-			if (!SupplyActive(inst) || inst.UserData.isSleeping) return;
+			if (inst.UserData.isSleeping) return;
 			try {
-				var needs = await PlanAsync(inst, calc, ogame, log);
+				var needs = await PlanAsync(inst, calc, ogame, log, SupplyActive(inst));
 				if (needs.Count == 0) return;
 
 				List<Celestial> targets = calc.ParseCelestialsList((object) inst.InstanceSettings.Brain.AutoRepatriate.Target, (List<Celestial>) inst.UserData.celestials);
@@ -310,6 +356,7 @@ namespace Tbot.Workers {
 
 				Celestial homeFresh = null;
 				foreach (var need in needs) {
+					if (need.Origin.Coordinate.IsSame(home.Coordinate)) continue;
 					string key = Key(need.Origin.Coordinate);
 					var moon = await bridge.UpdatePlanet(need.Origin, UpdateTypes.Ships);
 					moon = await bridge.UpdatePlanet(moon, UpdateTypes.Resources);
@@ -324,7 +371,7 @@ namespace Tbot.Workers {
 						if (inbound) { present = Sum(present, f.Ships); deutPresent += (long) (f.Resources?.Deuterium ?? 0); }
 					}
 					var missing = Missing(need.Need, present);
-					long deutMissing = Math.Max(0, need.DeuteriumTarget - deutPresent);
+					long deutMissing = deutPresent < need.DeuteriumTrigger ? Math.Max(0, need.DeuteriumTarget - deutPresent) : 0;
 
 					var entry = state.FirstOrDefault(e => e.Coord == key);
 					if (entry != null && (!IsEmpty(ToShips(entry.Ships)) || entry.Deut > 0)) {
@@ -341,7 +388,7 @@ namespace Tbot.Workers {
 								var payload = new Resources { Deuterium = sendDeut };
 								int id = await scheduler.SendFleet(homeFresh, IsEmpty(sendShips) ? PickCarrier(homeFresh, sendDeut, inst) : sendShips, need.Origin.Coordinate, Missions.Deploy, Speeds.HundredPercent, payload, inst.UserData.userInfo.Class, false, false, 0, false, true, false);
 								if (id > 0) {
-									log(LogLevel.Information, $"ExpoSupply: sent {sendShips} and {sendDeut:N0} deuterium from {homeFresh.Coordinate} to expedition moon {need.Origin.Coordinate}.");
+									log(LogLevel.Information, $"ExpoSupply: sent {sendShips} and {sendDeut:N0} deuterium from {homeFresh.Coordinate} to expedition origin {need.Origin.Coordinate}.");
 									missing = Subtract(missing, sendShips);
 									deutMissing = Math.Max(0, deutMissing - sendDeut);
 									homeFresh = null;

@@ -111,9 +111,10 @@ namespace Tbot.Workers.Brain {
 							celestialsToMine.Add(cel);
 						} else {
 							DoLog(LogLevel.Debug, $"Celestial {cel.ToString()}: No Next Lifeform building to build found.");
-							string grund = Tbot.Helpers.LifeformDiagnose.Erklaere(_calculationService, cel, maxLFBuildings, preventIfMoreExpensiveThanNextMine);
-							DoLog(LogLevel.Debug, $"Celestial {cel.ToString()}: why nothing: {grund}");
-							ExtraLog.Write(_tbotInstance, "LFAutoMine", $"{cel.ToString()}: no next building - {grund}");
+							if (ExtraLog.Erzeugen(_tbotInstance)) {
+								string grund = Tbot.Helpers.LifeformDiagnose.Erklaere(_calculationService, cel, maxLFBuildings, preventIfMoreExpensiveThanNextMine);
+								ExtraLog.Write(_tbotInstance, "LFAutoMine", $"{cel.ToString()}: no next building - {grund}");
+							}
 						}
 					}
 

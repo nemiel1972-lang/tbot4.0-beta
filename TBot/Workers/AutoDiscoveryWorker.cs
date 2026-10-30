@@ -311,7 +311,7 @@ namespace Tbot.Workers {
 				DateTime now = await _tbotOgameBridge.GetDateTime();
 				CleanupExpiredBlacklistAll(now);
 
-				int stopAtArtifacts = 0;
+				int stopAtArtifacts = 3600;
 				try { stopAtArtifacts = (int)_tbotInstance.InstanceSettings.AutoDiscovery.StopAtArtifacts; } catch { }
 				{
 					var artifactPlanet = _tbotInstance.UserData.celestials?.FirstOrDefault(c => c.Coordinate.Type == Celestials.Planet);

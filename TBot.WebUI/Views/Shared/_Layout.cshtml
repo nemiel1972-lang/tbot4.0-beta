@@ -67,7 +67,7 @@
                             <a class="nav-link text-light" asp-area="" asp-controller="Belohnungen" asp-action="Index">Rewards</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-controller="Logistik" asp-action="Index">Logistics</a>
+                            <a class="nav-link text-light" asp-area="" asp-controller="Logistik" asp-action="Index" data-also="/slots,/fleeter,/galaxy">Experimental</a>
                         </li>
                     </ul>
                     @if (!string.IsNullOrEmpty(TBot.Common.BuildInfo.Display))

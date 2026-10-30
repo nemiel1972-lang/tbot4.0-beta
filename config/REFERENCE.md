@@ -191,6 +191,7 @@ Shared settings for all Brain workers that move resources.
 | `SendToTheMoonIfPossible` | Deliver to the moon instead of the planet when one exists. |
 | `MaxSlots` | Slots Brain transports may use at the same time. |
 | `MaxBundledBuildings` | Optional, default `0`. How many additional buildings one delivery may bring along besides the worker's own target. `0` = only the one target (matches the resource reservation). |
+| `Lookahead.*` | Deliver ahead: one delivery brings the resources for several following buildings. `Active` is the global switch (default `false`; off = the old `MaxBundledBuildings` applies), `MaxItems` (default 10) is how many following buildings, `MaxHours` (default 2, `0` = no limit) stops adding once their build time adds up to that, `AutoMine` and `LifeformsAutoMine` switch it per worker. The delivered extras stay reserved in the resource ledger until they are built. |
 | `CheckMoonOrPlanetFirst` | Check the moon or the planet of a location first when looking for resources. |
 | `DoMultipleTransportIsNotEnoughShipButSamePosition` | If one ship type is not enough, send several transports from the same position. |
 | `MultipleOrigins.*` | Collect from several celestials: `Active`, `OnlyFromMoons`, `MinimumResourcesToSend`, `PriorityToProximityOverQuantity`, `Exclude` list. |
@@ -214,8 +215,8 @@ Builds mines, storage, energy and facilities on all planets.
 | `Transports.Active` | Allow this worker to fetch missing resources by transport. |
 | `HomeWorld` | Your main planet (gets the `Max…` caps of the top block). |
 | `Max…` (top level) | Caps for the home world: `MaxMetalMine`, `MaxCrystalMine`, `MaxDeuteriumSynthetizer`, `MaxSolarPlant`, `MaxFusionReactor`, `MaxMetalStorage`, `MaxCrystalStorage`, `MaxDeuteriumTank`, `MaxRoboticsFactory`, `MaxShipyard`, `MaxResearchLab`, `MaxMissileSilo`, `MaxNaniteFactory`, `MaxTerraformer`, `MaxSpaceDock`, `MaxLunarBase`, `MaxLunarShipyard`, `MaxLunarRoboticsFactory`, `MaxSensorPhalanx`, `MaxJumpGate`. 0 = do not build. |
-| `Colony.*` | Same caps for all other planets. |
-| `ColonyOverrides` | List of single planets with their own caps; matched by exact coordinate, only the fields you set override `Colony`. |
+| `Colony.*` | Same caps for all other planets and moons. As long as every `Colony` value is 0 (the template placeholder) the block counts as not set: all planets and moons then use the home planet's values (`MaxMetalMine` etc. directly under `AutoMine`). The lunar caps of the block (`MaxLunarBase`, `MaxLunarRoboticsFactory`, `MaxSensorPhalanx`, `MaxJumpGate`, `MaxLunarShipyard`) apply to the moons of all other planets; the moon of the `HomeWorld` uses the global lunar values. A `ColonyOverrides` entry with `Type: Moon` and the moon's exact coordinate overrides them field by field. |
+| `ColonyOverrides` | List of single planets with their own caps; matched by exact coordinate, only the fields you set override `Colony` (or the home values if `Colony` is not set). The template entry on 1:1:1 matches no planet and is ignored. |
 | `RandomOrder` | Process planets in random order. |
 | `OptimizeForStart` | Use the early-game build order (robotics/shipyard first). |
 | `PrioritizeRobotsAndNanites` | Build robotics and nanite factories early. |
@@ -315,9 +316,9 @@ Sends resources from your planets to one target.
 | `MinimumResources` | Only send if at least this much can be sent. |
 | `LeaveDeut.OnlyOnMoons`, `DeutToLeave` | Keep this much deuterium behind (optionally only on moons). |
 | `CargoType` | Ship type used. |
-| `Reverse.*` | Reverse repatriation (fetch resources back out for a build): `Active`, `ReturnFuelFactor` (deuterium taken along = fuel of the return flight x factor, 1.1 = +10 %), `PendingTtlMinutes`. The outbound leg carries 10 % more cargo space than needed (fixed). The return flight takes exactly the ships that flew out. Advanced. |
+| `Reverse.*` | Reverse repatriation (fetch resources back out for a build): `Active`, `ReturnFuelFactor` (deuterium taken along = fuel of the return flight x factor, 1.1 = +10 %), `PendingTtlMinutes`. The outbound leg carries 10 % more cargo space than needed (fixed). The return flight takes exactly the ships that flew out. If the pickup target is an expedition moon whose deuterium is below the refill limit (see `MinDeuteriumOnMoon`), the outbound leg also carries the missing deuterium up to the reserve (limited by free cargo space and the free deuterium at home). Advanced. |
 | `ReserveTransportSlots` | Optional, default `0`. The reverse fetch stays this many slots below `Brain.Transports.MaxSlots`, so it never takes slots from the mine/lifeform/research workers. |
-| `ExpoSupply.Active` | Optional, default `false`. Supplies the expedition moons: if a moon lacks ships or deuterium for its expeditions plus the backup, the shortfall is noted and sent from the base (first `Target`) in the next repatriate cycle. Deuterium target per moon: `Expeditions.MinDeuteriumOnMoon`, or expeditions x `FuelToCarry`. |
+| `ExpoSupply.Active` | Optional, default `false`. Supplies the expedition moons with ships (the deuterium top-up always runs, independent of this switch): if a moon lacks ships or deuterium for its expeditions plus the backup, the shortfall is noted and sent from the base (first `Target`) in the next repatriate cycle. Deuterium target per moon: `Expeditions.MinDeuteriumOnMoon`, or expeditions x `FuelToCarry`. |
 | `ExcludeMoons`, `RandomOrder`, `SkipIfIncomingTransport`, `Exclude` | As above. |
 
 ### Brain.Directives
@@ -376,7 +377,8 @@ Keeps resource boosters running. When no booster of a type is running on a plane
 | `MinPrimaryToSend` | Auto mode: minimum number of primary ships per expedition. If the origin has fewer left after `PrimaryToKeep`, no expedition is sent from it (0 = no minimum). |
 | `ManualShips.Active`, `Ships` | Use a fixed fleet per expedition instead of the automatic one. |
 | `FuelToCarry` | Deuterium taken along. |
-| `MinDeuteriumOnMoon` | Moons used as expedition origin need at least this much deuterium (0 = no check). Below it the moon is skipped and a Telegram/Discord message is sent (at most every 6 h per moon). |
+| `StopBelowNeed` | Default `false`. On = no expedition starts from an origin while its deuterium is below the need for the starts still planned from it (flight fuel to the farthest target + `FuelToCarry`, per expedition, times the number). A Telegram/Discord message is sent (at most every 6 h per origin). The repatriate round tops the origin up to the same need; the expeditions then resume by themselves. Off = they keep flying with the deuterium that is there. |
+| `MinDeuteriumOnMoon` | Moons used as expedition origin need at least this much deuterium (0 = no check). Below it the expeditions from this moon keep running (the fleet starts with the deuterium that is there) and a Telegram/Discord message is sent (at most every 6 h per moon). The moon is topped up from the base by `ExpoSupply` (only when `Brain.AutoRepatriate.ExpoSupply.Active` is on); it is also the lower bound of the deuterium target of the top-up (the reserve `LeaveDeut.DeutToLeave` that repatriate leaves on the moon counts as reserve too; the larger value applies). The deuterium top-up from the base runs on every repatriate round, but only when the stock falls below two complete rounds of all set expeditions ((flight fuel + `FuelToCarry`) x number x 2); it then fills up to the reserve (the larger of `MinDeuteriumOnMoon` and one round's need). With e.g. 1.5 million as `MinDeuteriumOnMoon` the moon is only refilled when it is well below that, and then to 1.5 million. Only the ship top-up needs `ExpoSupply.Active`. |
 | `BackupExpeditions` | Optional, default `1`. Complete expedition fleets kept as backup on each expedition start moon on top of the planned expeditions (used by `AutoFleetJumpGate.ExpoOverride` and `AutoRepatriate.ExpoSupply`). |
 | `TelegramMessenger.Active` | Telegram message when new expedition reports arrive, with the summed finds (default off). The first read after the first start only learns existing reports. |
 | `TelegramMessenger.OnlyFinds` | Default on: no message when every new expedition came back empty. |
@@ -408,7 +410,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `ScanBlockSize` | Stop scanning after this many systems and attack first (0 = off). |
 | `TargetsProbedBeforeAttack` | Attack after this many probed targets (0 = off). |
 | `SequentialMode`, `SequentialModeProbesPerCycle` | Handle one target per cycle (probe, then attack) instead of scanning first; probes per cycle. |
-| `StopAfterFullScan` | Stop the worker after one full pass. |
+| `StopAfterFullScan` | Stop the worker after one full pass. The worker keeps running while targets still wait for a probe, a report or an attack (at most 30 extra cycles), so reports that were too old still get their fresh probe and attack. |
 | **Target choice** | |
 | `MinimumResources` | Minimum loot to attack a target. |
 | `MinimumResourcesDefended` | Minimum loot to attack a defended target. |
@@ -464,6 +466,17 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `EscortLossWeight` | Weight of ship losses versus fuel (1 = equal, >1 prefers a larger escort). |
 | `MinWinRate` | Minimum simulated win rate (0.9 = 90 %). |
 | `SimulationRuns` | Battles simulated per check. |
+| `CalcSource` | Combat calculator: `ogame` (default, existing Go simulator), `shadow` (Go decides; Rust compares asynchronously only for confirmed compositions), or `external` (Rust decides). |
+| `ExternalCalc.Url` | Local Rust API URL. Only loopback hosts (`127.0.0.1`, `localhost`, `::1`) are accepted. Default `http://127.0.0.1:3000`. |
+| `ExternalCalc.AutoStart` | Start and supervise the local Rust process on first use (default `false`). The executable must be present beside TBot or at `ExecutablePath`. |
+| `ExternalCalc.ExecutablePath` | Optional path for the Rust executable when process management is enabled. |
+| `ExternalCalc.Port` | Rust service port (default `3000`). |
+| `ExternalCalc.TimeoutSeconds` | Maximum wait per Rust request (default `60`). |
+| `ExternalCalc.FallbackToOgame` | Use the Go simulator after external connection, timeout, or server failures (default `true`). Invalid requests (HTTP 4xx) are not silently retried through Go. |
+| `ExternalCalc.AuthToken` | Optional bearer token; must match the Rust service's `AUTH_TOKEN` environment variable. Keep it private. |
+| `ExternalCalc.AttackerClassAndLifeform` | Opt-in: sends your own lifeform ship bonuses (weapon/shield/structure per ship type, from the lifeform bonus page) to the Rust calculator; default `false`. Only Rust uses them (the Go simulator has no lifeform support), so in `shadow` mode Go and Rust then differ by design. The defender's lifeform bonuses are unknown (espionage reports do not contain them). Missiles (502/503) are never sent to Rust. |
+| `ExternalCalc.CompareMode` | Run both engines sequentially and log comparison differences to developer logs; the selected `CalcSource` result is returned. This adds time and is intended for testing only (default `false`). Use `CalcSource: shadow` for non-blocking comparisons of confirmed compositions. |
+| `ExternalCalc.LogManualRuns` | Also write Fleeter test-panel runs to `battle/logs` (mode `manual`; hidden from the history and summary). Default `true`. |
 | **Timing** | |
 | `CheckIntervalMin/Max` | Minutes between two runs. |
 
@@ -498,7 +511,7 @@ Spies inactive players and attacks the profitable ones. See the [quick start](#n
 | `Active` | Switch. |
 | `Origin` | Celestials discovery missions start from. |
 | `MaxSlots` | Slots used. |
-| `StopAtArtifacts` | Stops sending discoveries once at least this many artifacts are collected (the "Collected artifacts: 1840 / 3600" counter on the lifeform pages). `0` = no limit. Discoveries resume when the count drops below again. If the counter cannot be read, discoveries keep running (warning in the log). |
+| `StopAtArtifacts` | Stops sending discoveries once at least this many artifacts are collected (the "Collected artifacts: 1840 / 3600" counter on the lifeform pages). `0` = no limit. Default `3600` = the game's own cap (more is only possible with event items). Discoveries resume when the count drops below again. If the counter cannot be read, discoveries keep running (warning in the log). |
 
 ## FastFarm
 
@@ -548,7 +561,8 @@ New functions that are still in test. They have their own page in the WebUI (**T
 | `DefenderRecheck.Active` | Default off. Shortly before the fleetsave the Defender fetches the attack list once more: attack recalled -> fleetsave skipped; attack later -> fleetsave moved; question fails or times out -> fleetsave sent as planned. |
 | `DefenderRecheck.TimeoutSeconds` | How long to wait for the answer (default 4, 1-10). |
 | `CollectLogs.Active` | Default off. While on, every log line (from debug up) and all lines of the extra debug log (all topics) go into ONE file `devlogs/TBot-collect-<start>.log` (max. 300 MB). Stops by itself after `CollectLogs.Hours` (default 12), also across restarts; switch off and on to collect again. `CollectLogs.Anonymize` (default on) replaces player, universe, mail, celestial names, coordinates (x:x:position), IP and tokens. |
-| `ExtraDebugLog.Active` | Only writes while `Experimental.CollectLogs` is collecting (without a running collection nothing is written outside the normal log). Default on (a missing block counts as on; `false` switches it off). Files older than 7 days are deleted automatically. Writes extra diagnosis lines to their own file `devlogs/TBot-debug-<date>.log` (anonymized: player, universe, celestial names, mail, IP, tokens; coordinates become x:x:position, amounts stay) (max. 50 MB per day), the normal log stays small. Topics (all default on, they only apply when the log is active): `Repatriate`, `Ledger`, `BotPause`, `DefenderRecheck`, `FleetsaveSlot`, `MinePlanRanking`, `AsteroidHunt`, `ShadowFleet`, `GalaxyCache`, `FleetTargets`, `Requests` (request counters every 10 minutes), `BrowserProxy` (error 100 retries of the browser proxy) - one for every experimental function. Useful when a function does not send and you need to see why. |
+| `ReduceLogs` | Global switch. On = the extra logs (devlogs) and their diagnosis texts are not generated at all (no work, no log size). Off = they are written while `CollectLogs` is collecting. If the entry is missing: private (`DIAG`) builds off, public builds on. Default in the template: on. |
+| `ExtraDebugLog.Active` | Only writes while `Experimental.CollectLogs` is collecting (without a running collection nothing is written outside the normal log). Default on (a missing block counts as on; `false` switches it off). Files older than 7 days are deleted automatically. Writes extra diagnosis lines to their own file `devlogs/TBot-debug-<date>.log` (anonymized: player, universe, celestial names, mail, IP, tokens; coordinates become x:x:position, amounts stay) (max. 50 MB per day), the normal log stays small. Topics (all default on, they only apply when the log is active): `Repatriate`, `Ledger`, `LFAutoMine`, `Harvest`, `BotPause`, `DefenderRecheck`, `FleetsaveSlot`, `MinePlanRanking`, `AsteroidHunt`, `ShadowFleet`, `GalaxyCache`, `FleetTargets`, `Requests` (request counters every 10 minutes), `BrowserProxy` (error 100 retries of the browser proxy) - one for every experimental function. Useful when a function does not send and you need to see why. |
 | `ReportReading.Expeditions` | Default on (a missing block counts as on). Off: the expedition worker no longer fetches your expedition reports (normally about every 20 minutes). The stored statistics (finds, daily averages) and the Telegram find messages then stay empty, and the mine plan runs without expedition averages. |
 | `RepatriateLedgerHold.Ignore` | Default off. On: repatriate, reverse repatriate and `/collect` ignore the resource ledger completely (all stock is free). |
 | `RepatriateLedgerHold.MinPercent` | Default 30. Repatriate and /collect leave stock alone that a waiting build claim already holds at least this share of its total need (metal+crystal+deuterium). Claims below that (far-away goals such as a metal mine to 995 M) no longer freeze the whole stock. Claims with flights or fully covered always protect. 0 = every held amount is protected (old behavior), 100 = only fully covered claims. |
@@ -592,3 +606,11 @@ New functions that are still in test. They have their own page in the WebUI (**T
 ## WebUI.FormPages (settings.json)
 
 The WebUI page **Config** shows a form view per block (each block also has a JSON tab). Blocks with credentials are never shown as a form. The former Settings page (raw JSON editor) has been removed.
+
+
+### Combat simulator battle history
+
+`AutoFarm.ExternalCalc.BattleLogRetentionDays` controls daily JSONL battle comparison log retention in `battle/logs` (default `30`, clamped to 1–3650 days). The WebUI exposes the available records at `GET /battle/logs` and on the private Fleeter page. In shadow mode, Go remains authoritative; Rust comparison failures do not affect AutoFarm.
+
+### Galaxy map (private Fleeter page)
+The Fleeter page shows a read-only galaxy map built from the GalaxyCache file `data/galaxycache_<Alias>.json`: one cell per system, switchable layers (occupied, inactive, vacation, newbie protection, moons, debris fields, age of data, own planets, own alliance members, specific alliances), a 15-position system detail and a list of the largest debris fields (collector counts use base cargo only). Moon size, debris, alliance tag and activity are stored per position from the next scan on; older cache entries show them empty until the system is scanned again. The "Specific alliances" layer takes alliance ids typed in the page (kept in the browser) or picked from the alliances seen in the cache. With Hide data enabled, names and system numbers are masked. No extra game requests are made by the map.

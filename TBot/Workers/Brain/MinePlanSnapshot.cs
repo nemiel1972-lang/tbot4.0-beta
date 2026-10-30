@@ -69,7 +69,7 @@ namespace Tbot.Workers.Brain {
 
 				RankConfig rank = ReadRankConfig(inst);
 				var best = MinePlanRanking.Rank(candidates, c => c.CostDeut, c => c.GainPerDay, c => c.IsResearch, rank, 12);
-				Tbot.Workers.ExtraLog.Write(inst, "MinePlanRanking", $"mode={rank.Mode}, horizon={rank.HorizonDays}d, maxPayback={rank.MaxPaybackDays}d, onlySensible={rank.OnlySensible}, research={rank.IncludeResearch}: {candidates.Count} candidates, top: " + string.Join(" | ", best.Take(5).Select(b => $"{b.Planet} {b.Mine} {b.Level} cost={b.CostDeut:N0} gain/d={b.GainPerDay:N0} payback={b.RoiDays:F1}d")));
+				Tbot.Workers.ExtraLog.Write(inst, "MinePlanRanking", () => $"mode={rank.Mode}, horizon={rank.HorizonDays}d, maxPayback={rank.MaxPaybackDays}d, onlySensible={rank.OnlySensible}, research={rank.IncludeResearch}: {candidates.Count} candidates, top: " + string.Join(" | ", best.Take(5).Select(b => $"{b.Planet} {b.Mine} {b.Level} cost={b.CostDeut:N0} gain/d={b.GainPerDay:N0} payback={b.RoiDays:F1}d")));
 
 				var buildPlan = BuildGlobalPlan(calc, planets, plans.Where(pl => pl.Excluded).Select(pl => pl.Name).ToHashSet(), inst.UserData.researches,
 					inst.UserData.serverData.Speed, inst.UserData.userInfo.Class, inst.UserData.staff.Geologist, inst.UserData.staff.IsFull, rank,
@@ -476,7 +476,7 @@ namespace Tbot.Workers.Brain {
 						bool home = cel.Coordinate.Galaxy == (int) am.HomeWorld.Galaxy && cel.Coordinate.System == (int) am.HomeWorld.System
 							&& cel.Coordinate.Position == (int) am.HomeWorld.Position && cel.Coordinate.Type == Enum.Parse<Celestials>((string) am.HomeWorld.Type);
 						int[] c = { (int) am.MaxMetalMine, (int) am.MaxCrystalMine, (int) am.MaxDeuteriumSynthetizer };
-						if (!home && SettingsService.IsSettingSet(am, "Colony")) {
+						if (!home && Tbot.Helpers.AutoMineOverrideHelper.IsColonyConfigured(am)) {
 							c[0] = (int) am.Colony.MaxMetalMine; c[1] = (int) am.Colony.MaxCrystalMine; c[2] = (int) am.Colony.MaxDeuteriumSynthetizer;
 						}
 						if (!home) {

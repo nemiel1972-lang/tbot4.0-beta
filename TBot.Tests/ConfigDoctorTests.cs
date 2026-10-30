@@ -129,5 +129,16 @@ namespace TBot.Tests {
 			var f = ConfigDoctor.Check(Cfg(@"{ 'AutoHarvest': { 'Active': false, 'DeepSpaceRange': 99, 'MaxSlots': 0 } }"));
 			Assert.Empty(f);
 		}
-	}
+	
+		[Fact]
+		public void Vorlagenkoordinaten_zum_Ersetzen_ohne_Exclude_und_ColonyOverrides() {
+			var cfg = Cfg(@"{ 'Defender': { 'Home': { 'Galaxy': 1, 'System': 1, 'Position': 1, 'Type': 'Planet' } },
+				'DebrisSave': { 'Celestials': [ { 'Galaxy': 1, 'System': 1, 'Position': 1, 'Type': 'Planet' } ] },
+				'Brain': { 'AutoMine': { 'Exclude': [ { 'Galaxy': 1, 'System': 1, 'Position': 1, 'Type': 'Planet' } ],
+					'ColonyOverrides': [ { 'Galaxy': 1, 'System': 1, 'Position': 1, 'Type': 'Planet', 'MaxMetalMine': 0 } ],
+					'HomeWorld': { 'Galaxy': 5, 'System': 411, 'Position': 6, 'Type': 'Planet' } } } }");
+			var offen = ConfigDoctor.FindTemplateCoordinates(cfg).Select(x => x.Path).OrderBy(x => x).ToArray();
+			Assert.Equal(new[] { "DebrisSave.Celestials[0]", "Defender.Home" }, offen);
+		}
+}
 }

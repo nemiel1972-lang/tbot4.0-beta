@@ -722,7 +722,7 @@ namespace Tbot.Workers {
 
 			if (_tbotInstance.IsBotPaused && !fleetsave && !ignoreLedger && BotPause.BlocksMission(mission)) {
 				_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Fleet not sent: the bot is paused ({mission}).");
-				ExtraLog.Write(_tbotInstance, "BotPause", $"SendFleet blocked: {mission} from {origin.Coordinate} to {destination} (ships {ships}).");
+				ExtraLog.Write(_tbotInstance, "BotPause", () => $"SendFleet blocked: {mission} from {origin.Coordinate} to {destination} (ships {ships}).");
 				return (int) SendFleetCode.GenericError;
 			}
 			if (!ships.HasMovableFleet()) {
@@ -755,7 +755,7 @@ namespace Tbot.Workers {
 			}
 
 			if (TargetRejectionMemo.IsBlocked(_tbotInstance, destination, mission)) {
-				ExtraLog.Write(_tbotInstance, "FleetTargets", $"SendFleet skipped: {destination} was refused by the game a short time ago ({mission}).");
+				ExtraLog.Write(_tbotInstance, "FleetTargets", () => $"SendFleet skipped: {destination} was refused by the game a short time ago ({mission}).");
 				return (int) SendFleetCode.TargetInvalid;
 			}
 if (!_calcService.GetValidSpeedsForClass(playerClass).Any(s => s == speed)) {
@@ -886,7 +886,7 @@ if (
 			_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();
 			int slotsToLeaveFree = (int) _tbotInstance.InstanceSettings.General.SlotsToLeaveFree;
 			SlotDecision slotDecision = SlotReserve.Decide(_tbotInstance.UserData.slots.Free, slotsToLeaveFree, ReadFleetsaveSlots(), force, fleetsave);
-			ExtraLog.Write(_tbotInstance, "FleetsaveSlot", $"{mission} from {origin.Coordinate}: free={_tbotInstance.UserData.slots.Free}, total={_tbotInstance.UserData.slots.Total}, toLeaveFree={slotsToLeaveFree}, reservedForFleetsave={ReadFleetsaveSlots()}, force={force}, fleetsave={fleetsave} -> {slotDecision}.");
+			ExtraLog.Write(_tbotInstance, "FleetsaveSlot", () => $"{mission} from {origin.Coordinate}: free={_tbotInstance.UserData.slots.Free}, total={_tbotInstance.UserData.slots.Total}, toLeaveFree={slotsToLeaveFree}, reservedForFleetsave={ReadFleetsaveSlots()}, force={force}, fleetsave={fleetsave} -> {slotDecision}.");
 			if (slotDecision != SlotDecision.Allowed) {
 				int count = System.Threading.Interlocked.Increment(ref _slotRefusals);
 				string why = slotDecision == SlotDecision.ReservedForFleetsave ? "last slot is reserved for the fleetsave" : "no slots available";
@@ -1659,10 +1659,23 @@ if (
 			}
 		}
 
-		private int LiesMaxGebuendelteBauten() {
+		private int LiesMaxGebuendelteBauten(out long maxSekunden) {
+			maxSekunden = 0;
 			try {
-				if (SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.Transports, "MaxBundledBuildings"))
-					return Math.Max(0, (int) _tbotInstance.InstanceSettings.Brain.Transports.MaxBundledBuildings);
+				var t = _tbotInstance.InstanceSettings.Brain.Transports;
+				if (SettingsService.IsSettingSet(t, "Lookahead")) {
+					var la = t.Lookahead;
+					if (SettingsService.IsSettingSet(la, "Active") && (bool) la.Active) {
+						string worker = LedgerTBot.CurrentOwner ?? "";
+						if (worker != "" && !SettingsService.GetSetting<bool>(la, worker, true))
+							return 0;
+						if (SettingsService.IsSettingSet(la, "MaxHours"))
+							maxSekunden = (long) Math.Max(0, Math.Round((double) la.MaxHours * 3600));
+						return SettingsService.IsSettingSet(la, "MaxItems") ? Math.Max(0, (int) la.MaxItems) : 10;
+					}
+				}
+				if (SettingsService.IsSettingSet(t, "MaxBundledBuildings"))
+					return Math.Max(0, (int) t.MaxBundledBuildings);
 			} catch (Exception) {
 			}
 			return 0;
@@ -1727,8 +1740,9 @@ if (
 							if (maxBuildings != null && maxFacilities != null && maxLunarFacilities != null && autoMinerSettings != null) {
 								var tempCelestial = destination;
 								int gebuendelt = 0;
-								int maxGebuendelt = LiesMaxGebuendelteBauten();
-								while (flightTime * 2 >= buildTime && idealShips <= availableShips && gebuendelt < maxGebuendelt) {
+								int maxGebuendelt = LiesMaxGebuendelteBauten(out long maxZusatzSekunden);
+								long zusatzSekunden = 0;
+								while (flightTime * 2 >= buildTime && idealShips <= availableShips && gebuendelt < maxGebuendelt && (maxZusatzSekunden <= 0 || zusatzSekunden < maxZusatzSekunden)) {
 									tempCelestial.SetLevel(buildable, level);
 									if (buildable != Buildables.SolarSatellite && buildable != Buildables.Crawler && buildable != Buildables.SpaceDock) {
 										tempCelestial.Fields.Built += 1;
@@ -1752,7 +1766,7 @@ if (
 											if (newIdealShips <= VerfuegbareTransportSchiffe(origin, preferredShip)) {
 												idealShips = newIdealShips;
 												missingResources = newMissingRes;
-												buildTime += _calcService.CalcProductionTime(nextBuildable, nextLevel, _tbotInstance.UserData.serverData, tempCelestial.Facilities);
+												{ long zeit = _calcService.CalcProductionTime(nextBuildable, nextLevel, _tbotInstance.UserData.serverData, tempCelestial.Facilities); buildTime += zeit; zusatzSekunden += zeit; }
 												_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending resources for {nextBuildable.ToString()} level {nextLevel} too");
 													gebuendelt++;
 												level = nextLevel;
@@ -1914,8 +1928,9 @@ if (
 							long buildTime = _calcService.CalcProductionTime(buildable, level, _tbotInstance.UserData.serverData, destination);
 							var tempCelestial = destination;
 								int gebuendelt = 0;
-								int maxGebuendelt = LiesMaxGebuendelteBauten();
-								while (flightTime * 2 >= buildTime && idealShips <= availableShips && gebuendelt < maxGebuendelt) {
+								int maxGebuendelt = LiesMaxGebuendelteBauten(out long maxZusatzSekunden);
+								long zusatzSekunden = 0;
+								while (flightTime * 2 >= buildTime && idealShips <= availableShips && gebuendelt < maxGebuendelt && (maxZusatzSekunden <= 0 || zusatzSekunden < maxZusatzSekunden)) {
 								tempCelestial.SetLevel(buildable, level);
 									
 								tempCelestial.ResourcesProduction.Population.LivingSpace = _calcService.CalcLivingSpace(tempCelestial as Planet);
@@ -1938,8 +1953,8 @@ if (
 										var newIdealShips = _calcService.CalcShipNumberForPayload(newMissingRes, preferredShip, _tbotInstance.UserData.researches.HyperspaceTechnology, _tbotInstance.UserData.serverData, cargoBonus, _tbotInstance.UserData.userInfo.Class, _tbotInstance.UserData.serverData.ProbeCargo);
 										if (newIdealShips <= VerfuegbareTransportSchiffe(origin, preferredShip)) {
 											idealShips = newIdealShips;
-											missingResources = newMissingRes;
-											buildTime += _calcService.CalcProductionTime(nextBuildable, nextLevel, _tbotInstance.UserData.serverData, tempCelestial);
+												missingResources = newMissingRes;
+											{ long zeit = _calcService.CalcProductionTime(nextBuildable, nextLevel, _tbotInstance.UserData.serverData, tempCelestial); buildTime += zeit; zusatzSekunden += zeit; }
 											_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, $"Sending resources for {nextBuildable.ToString()} level {nextLevel} too");
 													gebuendelt++;
 											level = nextLevel;
@@ -2320,7 +2335,7 @@ if (
 				}
 				_tbotInstance.log(LogLevel.Information, LogSender.AutoRepatriate, $"Repatriate: target = {string.Join(", ", tempCelestials.Select(c => c.ToString()))}");
 
-				ExtraLog.Write(_tbotInstance, "Repatriate", $"Repatriate diagnostics: fromTelegram={fromTelegram}, noLimit={noLimit}, typFilter={typFilter ?? "(none)"}, skipIncoming={skipIncoming}, reverseActive={ReverseRepatriate.Aktiv(_tbotInstance)}, targetsConfigured={_tbotInstance.InstanceSettings.Brain.AutoRepatriate.Target?.Length ?? 0}, resolvedTargets={tempCelestials.Count}, minResources={(long)_tbotInstance.InstanceSettings.Brain.AutoRepatriate.MinimumResources:N0}.");
+				ExtraLog.Write(_tbotInstance, "Repatriate", () => $"Repatriate diagnostics: fromTelegram={fromTelegram}, noLimit={noLimit}, typFilter={typFilter ?? "(none)"}, skipIncoming={skipIncoming}, reverseActive={ReverseRepatriate.Aktiv(_tbotInstance)}, targetsConfigured={_tbotInstance.InstanceSettings.Brain.AutoRepatriate.Target?.Length ?? 0}, resolvedTargets={tempCelestials.Count}, minResources={(long)_tbotInstance.InstanceSettings.Brain.AutoRepatriate.MinimumResources:N0}.");
 
 				if (tempCelestials.Count() > 0) {
 					long TotalMet = 0;
@@ -2428,7 +2443,7 @@ if (
 							_tbotInstance.log(LogLevel.Warning, LogSender.AutoRepatriate, $"Repatriate ledger: free share could not be determined ({ledgerEx.Message}) - live stock applies.");
 						}
 
-						ExtraLog.Write(_tbotInstance, "Repatriate", $"Repatriate candidate {tempCelestial}: stock M={tempCelestial.Resources.Metal:N0}/C={tempCelestial.Resources.Crystal:N0}/D={tempCelestial.Resources.Deuterium:N0}; payload after LeaveDeut/Ledger M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}; total={payload.TotalResources:N0}; min={(long)_tbotInstance.InstanceSettings.Brain.AutoRepatriate.MinimumResources:N0}; cargoShip={preferredShip}; availableCargoShips={tempCelestial.Ships.GetAmount(preferredShip):N0}.");
+						ExtraLog.Write(_tbotInstance, "Repatriate", () => $"Repatriate candidate {tempCelestial}: stock M={tempCelestial.Resources.Metal:N0}/C={tempCelestial.Resources.Crystal:N0}/D={tempCelestial.Resources.Deuterium:N0}; payload after LeaveDeut/Ledger M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}; total={payload.TotalResources:N0}; min={(long)_tbotInstance.InstanceSettings.Brain.AutoRepatriate.MinimumResources:N0}; cargoShip={preferredShip}; availableCargoShips={tempCelestial.Ships.GetAmount(preferredShip):N0}.");
 						if ((!noLimit && payload.TotalResources < (long) _tbotInstance.InstanceSettings.Brain.AutoRepatriate.MinimumResources) || payload.IsEmpty()) {
 							long bestandGesamt = tempCelestial.Resources.Metal + tempCelestial.Resources.Crystal + tempCelestial.Resources.Deuterium;
 							string grund = bestandGesamt <= 0 ? "celestial is empty" : (payload.TotalResources < bestandGesamt ? $"stock {bestandGesamt:N0}, of that {bestandGesamt - payload.TotalResources:N0} reserved (ledger) or left behind (LeaveDeut)" : $"stock {bestandGesamt:N0}");
@@ -2484,7 +2499,7 @@ if (
 								} catch (Exception slotEx) {
 									_tbotInstance.log(LogLevel.Warning, LogSender.AutoRepatriate, $"Repatriate: transport limit could not be checked ({slotEx.Message}) - only the slot check in SendFleet applies.");
 								}
-								ExtraLog.Write(_tbotInstance, "Repatriate", $"Repatriate send attempt: origin={tempCelestial}, destination={destinationCoordinate}, mission={Missions.Transport}, ships={ships}, cargo M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}, deutToLeave={applicableDeutToLeave:N0}.");
+								ExtraLog.Write(_tbotInstance, "Repatriate", () => $"Repatriate send attempt: origin={tempCelestial}, destination={destinationCoordinate}, mission={Missions.Transport}, ships={ships}, cargo M={payload.Metal:N0}/C={payload.Crystal:N0}/D={payload.Deuterium:N0}, deutToLeave={applicableDeutToLeave:N0}.");
 								long deutToLeaveEff = applicableDeutToLeave;
 								try {
 									if (applicableDeutToLeave > 0) {
@@ -2506,7 +2521,7 @@ if (
 									_tbotInstance.log(LogLevel.Warning, LogSender.AutoRepatriate, $"Repatriate: no free slots while sending {tempCelestial.ToString()} after {(DateTime.UtcNow - rpStart).TotalSeconds:F0} s ({rpGesendet} fleet(s) sent in this cycle) - cycle is delayed, remaining celestials are handled in the next run.");
 									return RepatriateCode.Delay;
 								}
-								ExtraLog.Write(_tbotInstance, "Repatriate", $"Repatriate SendFleet result: origin={tempCelestial}, destination={destinationCoordinate}, resultCode={fleetId}.");
+								ExtraLog.Write(_tbotInstance, "Repatriate", () => $"Repatriate SendFleet result: origin={tempCelestial}, destination={destinationCoordinate}, resultCode={fleetId}.");
 								if (fleetId > 0) {
 									TotalMet += payload.Metal;
 									TotalCri += payload.Crystal;

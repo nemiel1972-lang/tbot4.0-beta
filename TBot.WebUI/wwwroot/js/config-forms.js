@@ -270,7 +270,7 @@
         return el('section', { class: 'cfg-sec' }, [el('h3', null, [title, pill ? el('span', { class: 'cfg-pill' + (pill === 'new' ? ' new' : ''), text: pill }) : null])].concat(kids));
     }
 
-    var handled = ['Active', 'Origin', 'ManualShips', 'PrimaryShip', 'MinPrimaryToSend', 'PrimaryToKeep', 'SmartShips', 'SmartMixShip', 'SleepWave', 'TelegramMessenger', 'BackupExpeditions', 'FuelToCarry', 'MinDeuteriumOnMoon'];
+    var handled = ['Active', 'Origin', 'ManualShips', 'PrimaryShip', 'MinPrimaryToSend', 'PrimaryToKeep', 'SmartShips', 'SmartMixShip', 'SleepWave', 'TelegramMessenger', 'BackupExpeditions', 'FuelToCarry', 'MinDeuteriumOnMoon', 'StopBelowNeed'];
 
     var RETURN_EXAMPLES = [
         ['WakeUp', 'back exactly at wake-up'],
@@ -472,6 +472,7 @@
         kids.push(fld(d, 'BackupExpeditions', ['Expeditions'], 'Backup expeditions', 'Reserve of expeditions worth of ships kept on the moon in addition to the planned ones', 'num', { min: 0 }));
         kids.push(fld(d, 'FuelToCarry', ['Expeditions'], 'Deuterium per expedition', 'Sent along with every expedition; also the basis of the deuterium target on the moon', 'num', { min: 0 }));
         kids.push(fld(d, 'MinDeuteriumOnMoon', ['Expeditions'], 'Minimum deuterium on the moon', '0 = expeditions x deuterium per expedition', 'num', { min: 0 }));
+        kids.push(fld(d, 'StopBelowNeed', ['Expeditions'], 'Stop below the deuterium need', 'On: no expedition starts while the deuterium does not cover flight fuel + cargo for the planned starts', 'toggle'));
         body.appendChild(sec('Expedition moons (jump gate and supply)', kids.filter(Boolean), 'new'));
         if (A && typeof A === 'object' && has(A, 'EnsureExpoSlots')) {
             body.appendChild(sec('Expedition slots (research)', [
@@ -1110,6 +1111,10 @@
 
         if (X && typeof X === 'object') {
             var xp = ['Experimental'];
+            body.appendChild(sec('Reduce logs', [
+                el('div', { class: 'cfg-note', text: 'On: extra logs and their diagnosis texts are not even generated (saves work and log size). Off: they are written while a log collection runs. If the entry is missing, private builds count it as off and public builds as on.' }),
+                testingField(X, 'ReduceLogs', true, xp, 'Reduce logs', 'On = do not generate extra logs at all', 'toggle')
+            ].filter(Boolean)));
             if (X.CollectLogs && typeof X.CollectLogs === 'object') {
                 var cl = X.CollectLogs, clp = xp.concat('CollectLogs');
                 body.appendChild(sec('Collect logs for development (time limited)', [
@@ -1988,7 +1993,27 @@
             k.push(fld(o, 'CompactSlotPlan', p, 'Compact slot plan', 'Replan with fewer shipments if slots are short', 'toggle'));
             k.push(fld(o, 'MaxSlots', p, 'Max slots', 'Slots Brain transports may use at the same time', 'num', { min: 0 }));
             if (!has(o, 'MaxBundledBuildings')) o.MaxBundledBuildings = 0;
-            k.push(fld(o, 'MaxBundledBuildings', p, 'Extra buildings per delivery', 'How many additional buildings one delivery may bring along (0 = only the one target of the worker)', 'num', { min: 0 }));
+            var legacyRow = fld(o, 'MaxBundledBuildings', p, 'Extra buildings per delivery (old)', 'Old setting. Ignored (greyed out) while "Deliver ahead" below is on. How many additional buildings one delivery may bring along (0 = only the one target of the worker)', 'num', { min: 0 });
+            k.push(legacyRow);
+            if (!o.Lookahead || typeof o.Lookahead !== 'object') o.Lookahead = {};
+            var la = o.Lookahead, lp = p.concat('Lookahead');
+            [['Active', false], ['MaxItems', 10], ['MaxHours', 2], ['AutoMine', true], ['LifeformsAutoMine', true]].forEach(function (d) { if (!has(la, d[0])) la[d[0]] = d[1]; });
+            var laActiveRow = fld(la, 'Active', lp, 'Active (all workers)', 'Global switch. Off = the old setting "Extra buildings per delivery (old)" applies', 'toggle');
+            function syncLegacy() {
+                if (!legacyRow) return;
+                var on = !!la.Active, inp = legacyRow.querySelector('input');
+                legacyRow.style.opacity = on ? '0.4' : '';
+                if (inp) inp.disabled = on;
+            }
+            if (laActiveRow) laActiveRow.addEventListener('click', syncLegacy);
+            syncLegacy();
+            k.push(inner('brain:Transports:la', 'Deliver ahead (several buildings per delivery)', [
+                laActiveRow,
+                fld(la, 'MaxItems', lp, 'Extra buildings per delivery', 'How many following buildings one delivery may bring along', 'num', { min: 0 }),
+                fld(la, 'MaxHours', lp, 'Build time of the extras (hours)', 'Stop adding buildings once their build time reaches this (0 = no limit)', 'num', { min: 0, step: 0.5 }),
+                fld(la, 'AutoMine', lp, 'AutoMine', 'Mines, power and facilities', 'toggle'),
+                fld(la, 'LifeformsAutoMine', lp, 'Lifeform buildings', null, 'toggle')
+            ]));
             if (!has(o, 'DeutToLeaveOnPlanets')) o.DeutToLeaveOnPlanets = 0;
             k.push(fld(o, 'DeutToLeaveOnMoons', p, 'Deuterium left on moons', 'Transports out of a moon only go if payload + this reserve + the flight fuel fit', 'num', { min: 0 }));
             k.push(fld(o, 'DeutToLeaveOnPlanets', p, 'Deuterium left on planets', 'Same reserve for transports out of a planet (0 = keep nothing)', 'num', { min: 0 }));
@@ -2008,7 +2033,7 @@
                     Array.isArray(mo.Exclude) ? withHelp(row('Excluded', 'Never collected from', listTable(mo.Exclude, COORD_COLS, newCoord, '+ Add exclusion', p.concat('MultipleOrigins', 'Exclude'))), 'Brain.Transports.MultipleOrigins.Exclude') : null
                 ]));
             }
-            restRows(o, p, ['Active', 'Origin', 'CargoType', 'CargoFallback', 'MixFleet', 'UseTransportChain', 'CompactSlotPlan', 'MaxSlots', 'MaxBundledBuildings', 'DeutToLeaveOnMoons', 'DeutToLeaveOnPlanets', 'RoundResources', 'SendToTheMoonIfPossible', 'CheckMoonOrPlanetFirst', 'DoMultipleTransportIsNotEnoughShipButSamePosition', 'KeepOnOrigin', 'MultipleOrigins']).forEach(function (r) { k.push(r); });
+            restRows(o, p, ['Active', 'Origin', 'CargoType', 'CargoFallback', 'MixFleet', 'UseTransportChain', 'CompactSlotPlan', 'MaxSlots', 'MaxBundledBuildings', 'Lookahead', 'DeutToLeaveOnMoons', 'DeutToLeaveOnPlanets', 'RoundResources', 'SendToTheMoonIfPossible', 'CheckMoonOrPlanetFirst', 'DoMultipleTransportIsNotEnoughShipButSamePosition', 'KeepOnOrigin', 'MultipleOrigins']).forEach(function (r) { k.push(r); });
         });
 
         brainSub(body, 'AutoMine', 'AutoMine', function (k, o, p) {
@@ -2288,7 +2313,7 @@
 
     function renderAutoDiscovery(body) {
         var d = state, P = [];
-        if (!has(d, 'StopAtArtifacts')) d.StopAtArtifacts = 0;
+        if (!has(d, 'StopAtArtifacts')) d.StopAtArtifacts = 3600;
         body.appendChild(sec('AutoDiscovery', [
             fld(d, 'Active', P, 'AutoDiscovery active', 'Master switch', 'toggle'),
             fld(d, 'MaxSlots', P, 'Max slots', null, 'num', { min: 0 }),

@@ -1020,8 +1020,10 @@
     },
     ## Deuterium, das jede Expedition mitnimmt.
     "FuelToCarry": 30000,
-    ## Ein Mond braucht mindestens so viel Deuterium, um Expeditionen zu starten (0 = keine Prüfung). Darunter wird der Mond übersprungen und du bekommst eine Meldung.
+    ## Ein Mond braucht mindestens so viel Deuterium, um Expeditionen zu starten (0 = keine Prüfung). Darunter laufen die Expeditionen weiter (die Flotte startet mit dem vorhandenen Deuterium) und du bekommst eine Meldung. Aufgestockt wird über die Repatriate-Runde.
     "MinDeuteriumOnMoon": 0,
+    ## An: von einem Ursprung startet keine Expedition mehr, solange das Deuterium dort nicht für die noch geplanten Starts reicht (Flugsprit + Ladung je Expedition x Anzahl). Die Repatriate-Runde füllt auf, danach läuft es von selbst weiter. Aus: es wird weitergeflogen.
+    "StopBelowNeed": false,
     ## Höchstzahl an Expeditionen, die gleichzeitig von einem Ursprung fliegen.
     "MaxExpeditionsPerOrigin": 5,
     "SplitExpeditionsBetweenSystems": {
@@ -1414,7 +1416,7 @@
     ## Flottenslots, die Entdeckungen gleichzeitig nutzen dürfen.
     "MaxSlots": 2,
     ## Schickt keine Entdeckungen mehr, sobald so viele Artefakte gesammelt sind (Anzeige „Gesammelte Artefakte: 1840 / 3600“ auf den Lebensform-Seiten). 0 = keine Grenze. Fällt der Bestand wieder darunter, geht es weiter. Lässt sich die Anzeige nicht lesen, laufen die Entdeckungen weiter (Warnung im Log).
-    "StopAtArtifacts": 0,
+    "StopAtArtifacts": 3600,
     ## Kürzeste Pause in Minuten zwischen zwei Durchläufen dieser Funktion.
     "CheckIntervalMin": 15,
     ## Längste Pause in Minuten zwischen zwei Durchläufen. Der Bot wählt eine zufällige Zeit zwischen Minimum und Maximum, damit er nicht wie eine Uhr arbeitet.

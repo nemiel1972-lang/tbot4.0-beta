@@ -170,38 +170,60 @@
     }
 
     function startFleets(layer, box, main) {
-        var url = main.getAttribute('data-fleetsanim'), inst = main.getAttribute('data-instance') || '', sig = null;
+        var url = main.getAttribute('data-fleetsanim'), inst = main.getAttribute('data-instance') || '';
         if (!url) return;
         var H = box.clientHeight || 130, lanes = Math.max(1, Math.floor((H - 20) / 18));
-        function render(list) {
+        var ships = {}, reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        function frames(k) {
+            var to = 'translateX(calc(var(--w, 1000px) + 80px))', from = 'translateX(0px)';
+            return k === 'back' ? [{ transform: to }, { transform: from }] : [{ transform: from }, { transform: to }];
+        }
+        function render(list, d) {
             var kinds = list.map(function (f) { return (f.a && !f.b) ? 'att' : (f.b ? 'back' : 'out'); });
             var cnt = { out: 0, back: 0, att: 0 };
             kinds.forEach(function (k) { cnt[k]++; });
             var lab = box.querySelector('.tb-count');
             if (!lab) { lab = document.createElement('div'); lab.className = 'tb-count'; box.appendChild(lab); }
             lab.textContent = 'out ' + cnt.out + ' / back ' + cnt.back + ' / attack ' + cnt.att;
-            var s2 = kinds.join(',');
-            if (s2 === sig) return;
-            sig = s2;
-            layer.innerHTML = '';
-            kinds.forEach(function (k, i) {
-                var dur = 18 + (i * 7) % 14;
-                var d = document.createElement('div');
-                d.className = 'a-fl fl-' + k;
-                d.style.top = (8 + (i % lanes) * 18) + 'px';
-                d.style.animationDuration = dur + 's';
-                d.style.animationDelay = (-((i * 5.3) % dur)).toFixed(1) + 's';
-                var flame = k === 'att' ? 'fl-r' : (k === 'back' ? 'fl-y' : 'fl-b');
-                var hull = k === 'att' ? 'a-hullr' : (k === 'back' ? 'a-hully' : 'a-hullb');
-                d.innerHTML = '<div class="a-flin"><span class="a-flame ' + flame + '"></span><span class="' + hull + '"></span></div>';
-                layer.appendChild(d);
+            var clientNow = Date.now(), srvNow = ((d && d.nowMs) || clientNow) - clientNow;
+            var seen = {};
+            list.forEach(function (f, i) {
+                var k = kinds[i], key = (f.id != null ? f.id : 'i' + i) + k;
+                var totMs = Math.max(5000, (f.tot || 60) * 1000);
+                var endMs = f.end ? f.end : ((d && d.nowMs) || clientNow) + (f.rem || 0) * 1000;
+                var want = Math.min(1, Math.max(0, 1 - (endMs - (clientNow + srvNow)) / totMs)) * totMs;
+                seen[key] = true;
+                var sh = ships[key];
+                if (!sh) {
+                    var el = document.createElement('div');
+                    el.className = 'a-fl fl-' + k;
+                    var id = typeof f.id === 'number' ? f.id : i;
+                    el.style.top = (8 + (((id % lanes) + lanes) % lanes) * 18) + 'px';
+                    var flame = k === 'att' ? 'fl-r' : (k === 'back' ? 'fl-y' : 'fl-b');
+                    var hull = k === 'att' ? 'a-hullr' : (k === 'back' ? 'a-hully' : 'a-hullb');
+                    el.innerHTML = '<div class="a-flin"><span class="a-flame ' + flame + '"></span><span class="' + hull + '"></span></div>';
+                    layer.appendChild(el);
+                    var anim = el.animate(frames(k), { duration: totMs, easing: 'linear', fill: 'both' });
+                    anim.currentTime = want;
+                    if (reduce) anim.pause();
+                    ships[key] = sh = { el: el, anim: anim, tot: totMs };
+                } else if (Math.abs((sh.anim.currentTime || 0) - want) > 1500) {
+                    sh.anim.currentTime = want;
+                }
+            });
+            Object.keys(ships).forEach(function (key) {
+                if (seen[key]) return;
+                var sh = ships[key];
+                if (sh.el.parentNode) sh.el.parentNode.removeChild(sh.el);
+                sh.anim.cancel();
+                delete ships[key];
             });
         }
         function poll() {
             if (document.hidden || !box.isConnected) return;
             fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'instance=' + encodeURIComponent(inst), { cache: 'no-store' })
                 .then(function (r) { return r.json(); })
-                .then(function (d) { render(d && d.fleets ? d.fleets : []); alarm(d && d.attacks ? d.attacks : [], d); })
+                .then(function (d) { try { if (d && d.fleets) sessionStorage.setItem('tb-fleets-' + inst, JSON.stringify({ d: d, t: Date.now() })); } catch (e) { } render(d && d.fleets ? d.fleets : [], d); alarm(d && d.attacks ? d.attacks : [], d); })
                 .catch(function () { });
         }
         var baseTitle = document.title, aTimer = null, aList = [], aT0 = 0, aOver = null;
@@ -232,6 +254,10 @@
             alarmTick();
             if (!aTimer) aTimer = setInterval(alarmTick, 1000);
         }
+        try {
+            var c = JSON.parse(sessionStorage.getItem('tb-fleets-' + inst) || 'null');
+            if (c && c.d && c.d.fleets && Date.now() - c.t < 120000) { c.d.nowMs = (c.d.nowMs || 0) + (Date.now() - c.t); render(c.d.fleets, c.d); }
+        } catch (e) { }
         poll();
         setInterval(poll, 10000);
     }

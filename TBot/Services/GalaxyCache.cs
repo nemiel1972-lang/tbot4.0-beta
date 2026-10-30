@@ -22,6 +22,13 @@ namespace Tbot.Services {
 		public bool Administrator { get; set; }
 		public bool StrongPlayer { get; set; }
 		public bool HasMoon { get; set; }
+		public int AllianceId { get; set; }
+		public string AllianceName { get; set; }
+		public int MoonSize { get; set; }
+		public int Activity { get; set; }
+		public long DebrisMetal { get; set; }
+		public long DebrisCrystal { get; set; }
+		public long DebrisDeuterium { get; set; }
 	}
 
 	public class GalaxyCacheSystem {
@@ -87,6 +94,8 @@ namespace Tbot.Services {
 		public Dictionary<int, GalaxyPlayer> Players { get; set; } = new();
 		public DateTime HighscoreUtc { get; set; } = DateTime.MinValue;
 		public bool HighscoreHasStatus { get; set; }
+		public Dictionary<int, string> Alliances { get; set; } = new();
+		public int OwnPlayerId { get; set; }
 		public List<GalaxyEvent> Events { get; set; } = new();
 	}
 
@@ -100,7 +109,19 @@ namespace Tbot.Services {
 		private DateTime _lastSaveUtc = DateTime.MinValue;
 		private bool _dirty;
 
-		public int OwnPlayerId { get; set; }
+		public int OwnPlayerId {
+			get { return _ownPlayerId; }
+			set {
+				_ownPlayerId = value;
+				lock (_lock) {
+					if (_data.OwnPlayerId != value) {
+						_data.OwnPlayerId = value;
+						_dirty = true;
+					}
+				}
+			}
+		}
+		private int _ownPlayerId;
 
 		public GalaxyCache(string path) {
 			_path = path;
@@ -121,6 +142,7 @@ namespace Tbot.Services {
 					d.Systems ??= new();
 					d.Events ??= new();
 					d.Players ??= new();
+					d.Alliances ??= new();
 					lock (_lock)
 						_data = d;
 				}
@@ -161,7 +183,14 @@ namespace Tbot.Services {
 				Banned = p.Banned,
 				Administrator = p.Administrator,
 				StrongPlayer = p.StrongPlayer,
-				HasMoon = p.Moon != null
+				HasMoon = p.Moon != null,
+				AllianceId = p.Alliance?.ID ?? 0,
+				AllianceName = !string.IsNullOrWhiteSpace(p.Alliance?.Tag) ? p.Alliance.Tag : p.Alliance?.Name,
+				MoonSize = p.Moon?.Diameter ?? 0,
+				Activity = Math.Max(0, p.Activity),
+				DebrisMetal = p.Debris?.Metal ?? 0,
+				DebrisCrystal = p.Debris?.Crystal ?? 0,
+				DebrisDeuterium = p.Debris?.Deuterium ?? 0
 			};
 		}
 
@@ -205,6 +234,9 @@ namespace Tbot.Services {
 					events.AddRange(DetectMoves(events, nowUtc));
 				}
 				_data.Systems[key] = new GalaxyCacheSystem { SeenUtc = nowUtc, Entries = neu };
+				foreach (var e in neu)
+					if (e.AllianceId > 0 && !string.IsNullOrEmpty(e.AllianceName))
+						_data.Alliances[e.AllianceId] = e.AllianceName;
 				if (events.Count > 0) {
 					_data.Events.AddRange(events);
 					if (_data.Events.Count > MaxEvents)

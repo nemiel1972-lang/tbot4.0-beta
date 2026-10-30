@@ -96,7 +96,7 @@ namespace Tbot.Workers {
 				var cfg = GalaxyCacheConfig.Read(inst);
 				var hit = cache?.TryGet(galaxy, system, maxAge ?? cfg.MaxAge, DateTime.UtcNow);
 				if (hit != null) {
-					ExtraLog.Write(inst, "GalaxyCache", $"Cache hit {galaxy}:{system} (age < {cfg.MaxAgeHours} h), live query saved.");
+					ExtraLog.Write(inst, "GalaxyCache", () => $"Cache hit {galaxy}:{system} (age < {cfg.MaxAgeHours} h), live query saved.");
 					return hit;
 				}
 			}
@@ -112,7 +112,7 @@ namespace Tbot.Workers {
 					return false;
 				bool occupied = cache.IsOccupiedFresh(c, GalaxyCacheConfig.Read(inst).MaxAge, DateTime.UtcNow);
 				if (occupied)
-					ExtraLog.Write(inst, "GalaxyCache", $"Cache says {c.Galaxy}:{c.System}:{c.Position} is occupied, live query saved.");
+					ExtraLog.Write(inst, "GalaxyCache", () => $"Cache says {c.Galaxy}:{c.System}:{c.Position} is occupied, live query saved.");
 				return occupied;
 			} catch (Exception) {
 				return false;
@@ -133,7 +133,7 @@ namespace Tbot.Workers {
 
 		private void GcLog(LogLevel level, string text) {
 			DoLog(level, text);
-			ExtraLog.Write(_tbotInstance, "GalaxyCache", $"[{level}] {text}");
+			ExtraLog.Write(_tbotInstance, "GalaxyCache", () => $"[{level}] {text}");
 		}
 
 		private void OnScan(GalaxyInfo info) {
@@ -169,7 +169,7 @@ namespace Tbot.Workers {
 			if (string.Equals(e.PlayerName, "space", StringComparison.OrdinalIgnoreCase))
 				wichtig = false;
 			DoLog(wichtig ? LogLevel.Warning : LogLevel.Information, text);
-			ExtraLog.Write(_tbotInstance, "GalaxyCache", $"Event: {text}");
+			ExtraLog.Write(_tbotInstance, "GalaxyCache", () => $"Event: {text}");
 			if (cfg.Telegram && wichtig) {
 				try {
 					_ = _tbotInstance.SendTelegramMessage($"[GalaxyCache] {text}");
@@ -336,7 +336,7 @@ namespace Tbot.Workers {
 						}
 						if (next.HasValue) {
 							await _ogameService.GetGalaxyInfo(next.Value.Galaxy, next.Value.System);
-							ExtraLog.Write(_tbotInstance, "GalaxyCache", $"Background scan ({art}) {next.Value.Galaxy}:{next.Value.System}, cache holds {cache.SystemCount} system(s), {cache.PlayerCount} player(s).");
+							ExtraLog.Write(_tbotInstance, "GalaxyCache", () => $"Background scan ({art}) {next.Value.Galaxy}:{next.Value.System}, cache holds {cache.SystemCount} system(s), {cache.PlayerCount} player(s).");
 							if (cfg.ScanAll && cfg.HoursPerGalaxy > 0) {
 								int systems = Math.Max(1, _tbotInstance.UserData?.serverData?.Systems ?? 499);
 								double mittel = cfg.HoursPerGalaxy * 3600.0 / systems;

@@ -46,7 +46,7 @@ namespace Tbot.Workers.Brain {
 				cel.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Position &&
 				cel.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Type);
 
-			bool colonyConfigured = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "Colony");
+			bool colonyConfigured = AutoMineOverrideHelper.IsColonyConfigured(_tbotInstance.InstanceSettings.Brain.AutoMine);
 
 			int maxMetalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxMetalMine;
 			int maxCrystalMine = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxCrystalMine;
@@ -102,7 +102,7 @@ namespace Tbot.Workers.Brain {
 				cel.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Position &&
 				cel.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Brain.AutoMine.HomeWorld.Type);
 
-			bool colonyConfigured = SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.Brain.AutoMine, "Colony");
+			bool colonyConfigured = AutoMineOverrideHelper.IsColonyConfigured(_tbotInstance.InstanceSettings.Brain.AutoMine);
 
 			int maxRoboticsFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxRoboticsFactory;
 			int maxShipyard = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxShipyard;
@@ -279,13 +279,7 @@ namespace Tbot.Workers.Brain {
 			try {
 				Buildings maxBuildings = GetMaxBuildingsForCelestial(celestial);
 				Facilities maxFacilities = GetMaxFacilitiesForCelestial(celestial);
-				Facilities maxLunarFacilities = new() {
-					LunarBase = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxLunarBase,
-					RoboticsFactory = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxLunarRoboticsFactory,
-					SensorPhalanx = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxSensorPhalanx,
-					JumpGate = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxJumpGate,
-					Shipyard = (int) _tbotInstance.InstanceSettings.Brain.AutoMine.MaxLunarShipyard
-				};
+				Facilities maxLunarFacilities = AutoMineOverrideHelper.ResolveLunar(celestial, _tbotInstance.InstanceSettings.Brain.AutoMine);
 				AutoMinerSettings autoMinerSettings = new() {
 					OptimizeForStart = (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.OptimizeForStart,
 					PrioritizeRobotsAndNanites = (bool) _tbotInstance.InstanceSettings.Brain.AutoMine.PrioritizeRobotsAndNanites,

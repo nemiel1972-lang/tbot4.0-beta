@@ -410,6 +410,9 @@ func convertCelestial(b *OGame, celestial ogame.Celestial) Celestial {
 }
 
 func (b *OGame) cacheFullPageInfo(page parser.IFullPage) {
+	if st, err := page.ExtractServerTime(); err == nil {
+		b.noteServerClock(st)
+	}
 	b.cache.planets.Store(convertPlanets(b, page.ExtractPlanets()))
 	b.cache.isVacationModeEnabled = page.ExtractIsInVacation()
 	{
@@ -1510,6 +1513,9 @@ func (b *OGame) abandon(v IntoPlanet) error {
 }
 
 func (b *OGame) serverTime() (out time.Time, err error) {
+	if t, ok := cachedServerTime(10 * time.Minute); ok {
+		return t, nil
+	}
 	page, err := getPage[parser.OverviewPage](b)
 	if err != nil {
 		return
@@ -3862,42 +3868,51 @@ func (b *OGame) getPageMessages(page int64, tabid ogame.MessagesTabID) ([]byte, 
 const espionageMaxPages = 10
 
 var (
-	locRefreshMu   sync.Mutex
-	locRefreshLast time.Time
+	srvClockMu     sync.Mutex
+	srvClockServer time.Time
+	srvClockLocal  time.Time
 )
 
-func (b *OGame) refreshLocation() {
-	locRefreshMu.Lock()
-	if time.Since(locRefreshLast) < 15*time.Minute {
-		locRefreshMu.Unlock()
+func (b *OGame) noteServerClock(st time.Time) {
+	if st.IsZero() {
 		return
 	}
-	locRefreshLast = time.Now()
-	locRefreshMu.Unlock()
-	page, err := getPage[parser.OverviewPage](b, SkipCacheFullPage)
-	if err != nil {
-		return
-	}
-	st, err := page.ExtractServerTime()
-	if err != nil || st.IsZero() {
-		return
-	}
+	srvClockMu.Lock()
+	srvClockServer, srvClockLocal = st, time.Now()
+	srvClockMu.Unlock()
 	loc := st.Location()
 	_, offNew := st.Zone()
 	if old := b.cache.location; old != nil {
 		_, offOld := time.Now().In(old).Zone()
-		b.info(fmt.Sprintf("server clock offset: before %+d min, now %+d min", offOld/60, offNew/60))
-	}
-	if old := b.cache.location; old != nil && old.String() == loc.String() {
-		if _, o1 := time.Now().In(old).Zone(); true {
-			_, o2 := time.Now().In(loc).Zone()
-			if o1 == o2 {
-				return
-			}
+		if offOld == offNew {
+			return
 		}
+		b.info(fmt.Sprintf("server clock offset changed: before %+d min, now %+d min", offOld/60, offNew/60))
 	}
 	b.cache.location = loc
 	b.extractor.SetLocation(loc)
+}
+
+func cachedServerTime(maxAge time.Duration) (time.Time, bool) {
+	srvClockMu.Lock()
+	defer srvClockMu.Unlock()
+	if srvClockServer.IsZero() || time.Since(srvClockLocal) > maxAge {
+		return time.Time{}, false
+	}
+	return srvClockServer.Add(time.Since(srvClockLocal)).Truncate(time.Second), true
+}
+
+func (b *OGame) refreshLocation() {
+	if _, ok := cachedServerTime(15 * time.Minute); ok {
+		return
+	}
+	page, err := getPage[parser.OverviewPage](b, SkipCacheFullPage)
+	if err != nil {
+		return
+	}
+	if st, err := page.ExtractServerTime(); err == nil {
+		b.noteServerClock(st)
+	}
 }
 
 func (b *OGame) espionagePages(maxPage int64, visit func(page int64, items []ogame.EspionageReportSummary) bool) (int64, string, error) {

@@ -293,12 +293,12 @@ namespace Tbot.Workers {
 						DoLog(LogLevel.Information, $"Skipping harvest: AutoHarvest.MaxSlots ({configuredMaxSlots}) already fully used by in-flight harvest missions.");
 					else if (targets.Count > 0 && assignments.Count == 0) {
 						DoLog(LogLevel.Information, "Skipping harvest: no origin has enough recyclers/pathfinders for any target.");
-						try {
+						if (ExtraLog.Erzeugen(_tbotInstance)) try {
 							string herkunft = origins.Count == 0
 								? "none of the harvest origins [" + string.Join(", ", harvestOrigins.Select(h => h.Coordinate.ToString() + " R=" + (_tbotInstance.UserData.celestials.FirstOrDefault(c => c.Coordinate.IsSame(h.Coordinate))?.Ships?.Recycler ?? 0) + " P=" + (_tbotInstance.UserData.celestials.FirstOrDefault(c => c.Coordinate.IsSame(h.Coordinate))?.Ships?.Pathfinder ?? 0))) + "] has idle recyclers or pathfinders (AutoHarvest.Origin" + (Tbot.Common.Settings.SettingsService.IsSettingSet(_tbotInstance.InstanceSettings.AutoHarvest, "Origin") ? " is set" : " is not set, expedition bases and the detected main fleet location are used") + ")"
 								: "origins " + string.Join(", ", origins.Select(o => o.Celestial.Coordinate.ToString() + " R=" + o.AvailableRecyclers + " P=" + o.AvailablePathfinders));
 							string ziele = string.Join(", ", targets.Take(8).Select(tg => tg.Destination.ToString() + " needs " + (targetShipsNeeded.TryGetValue(tg.Destination, out long need) ? need : 0) + (tg.IsOwnDebris ? " recyclers" : " pathfinders")));
-							DoLog(LogLevel.Information, $"Harvest check: {herkunft}; targets: {ziele}{(targets.Count > 8 ? " ..." : "")}");
+							ExtraLog.Write(_tbotInstance, "Harvest", $"Harvest check: {herkunft}; targets: {ziele}{(targets.Count > 8 ? " ..." : "")}");
 						} catch (Exception) { }
 					}
 

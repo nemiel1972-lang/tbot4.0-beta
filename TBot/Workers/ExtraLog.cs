@@ -34,6 +34,8 @@ namespace Tbot.Workers {
 					case "Requests": return !SettingsService.IsSettingSet(x, "Requests") || (bool) x.Requests;
 					case "BrowserProxy": return !SettingsService.IsSettingSet(x, "BrowserProxy") || (bool) x.BrowserProxy;
 					case "Directives": return !SettingsService.IsSettingSet(x, "Directives") || (bool) x.Directives;
+					case "LFAutoMine": return !SettingsService.IsSettingSet(x, "LFAutoMine") || (bool) x.LFAutoMine;
+					case "Harvest": return !SettingsService.IsSettingSet(x, "Harvest") || (bool) x.Harvest;
 					case "FleetTargets": return !SettingsService.IsSettingSet(x, "FleetTargets") || (bool) x.FleetTargets;
 					default: return false;
 				}
@@ -72,7 +74,7 @@ namespace Tbot.Workers {
 
 		private static bool KnownTopic(string thema) =>
 			thema == "Repatriate" || thema == "Ledger" || thema == "BotPause" || thema == "DefenderRecheck" || thema == "FleetsaveSlot"
-			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets" || thema == "Directives";
+			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets" || thema == "Directives" || thema == "LFAutoMine" || thema == "Harvest";
 
 		private static DateTime _letzteAufraeumung = DateTime.MinValue;
 		private static void RaeumeAuf(string dir) {
@@ -83,6 +85,29 @@ namespace Tbot.Workers {
 				foreach (string f in Directory.GetFiles(dir, "TBot-debug-*.log"))
 					if (File.GetLastWriteTime(f) < DateTime.Now.AddDays(-7))
 						File.Delete(f);
+			} catch (Exception) {
+			}
+		}
+
+		public static bool Reduziert(ITBotMain inst) {
+			bool standard = true;
+			try {
+				var g = inst?.InstanceSettings;
+				if (g == null || !SettingsService.IsSettingSet(g, "Experimental") || !SettingsService.IsSettingSet(g.Experimental, "ReduceLogs"))
+					return standard;
+				return (bool) g.Experimental.ReduceLogs;
+			} catch (Exception) {
+				return standard;
+			}
+		}
+
+		public static bool Erzeugen(ITBotMain inst) => TBot.Common.Logging.CollectLogs.IsRunning && !Reduziert(inst);
+
+		public static void Write(ITBotMain inst, string thema, Func<string> text) {
+			try {
+				if (!Erzeugen(inst))
+					return;
+				Write(inst, thema, text());
 			} catch (Exception) {
 			}
 		}

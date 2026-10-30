@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using TBot.Ogame.Infrastructure.Enums;
+using Newtonsoft.Json;
 
 namespace TBot.Ogame.Infrastructure.Models {
 
@@ -23,9 +25,23 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public long Crawler { get; set; }
 		public long Reaper { get; set; }
 		public long Pathfinder { get; set; }
+		[JsonIgnore]
+		public Dictionary<int, SimulatorLfBonus> LifeformBonuses { get; set; }
+	}
+
+	public class SimulatorLfBonus {
+		public float Weapon { get; set; }
+		public float Shield { get; set; }
+		public float Armour { get; set; }
 	}
 
 	public class SimulatorDefender : SimulatorFleet {
+		[JsonIgnore]
+		public CharacterClass CharacterClass { get; set; } = TBot.Ogame.Infrastructure.Enums.CharacterClass.NoClass;
+		[JsonIgnore]
+		public int GeneralClassCombatResearchBonusApplied { get; set; }
+		[JsonIgnore]
+		public bool UseRustGeneralClassBonus { get; set; }
 		public long Metal { get; set; }
 		public long Crystal { get; set; }
 		public long Deuterium { get; set; }
@@ -42,6 +58,10 @@ namespace TBot.Ogame.Infrastructure.Models {
 	}
 
 	public class SimulateBattleRequest {
+		[JsonIgnore] public string BattleId { get; set; }
+		[JsonIgnore] public string Target { get; set; }
+		[JsonIgnore] public string Mode { get; set; }
+		[JsonIgnore] public string TargetName { get; set; }
 		public SimulatorFleet Attacker { get; set; }
 		public SimulatorDefender Defender { get; set; }
 		public int Simulations { get; set; }
@@ -70,6 +90,7 @@ namespace TBot.Ogame.Infrastructure.Models {
 		public int AttackerCargoSent { get; set; }
 		public double AttackerCargoSurvived { get; set; }
 		public string Logs { get; set; }
+		[JsonIgnore] public string BattleId { get; set; }
 
 		public double AttackerWinRate => AttackerWin / 100.0;
 

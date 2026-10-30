@@ -97,11 +97,24 @@ namespace Tbot.Common.Settings {
 					Add(f, "error", path, $"Type '{type}' is not Planet, Moon or Debris.");
 				if (outOfRange)
 					continue;
-				if (g == 1 && s == 1 && p == 1 && IsActiveContext(root, path))
+				if (g == 1 && s == 1 && p == 1 && IsActiveContext(root, path) && !path.Contains("ColonyOverrides[", StringComparison.OrdinalIgnoreCase))
 					Add(f, "warn", path, "Coordinates 1:1:1 are the template default. Enter a celestial of your own.");
 				else if (owned != null && owned.Count > 0 && IsOwnCelestialPath(path) && IsActiveContext(root, path) && !owned.Contains(CoordKey(g, s, p, NormType(type))))
 					Add(f, "error", path, $"{g}:{s}:{p} ({NormType(type)}) is not one of your celestials.");
 			}
+		}
+
+		public static List<(string Path, bool HasType)> FindTemplateCoordinates(JObject root) {
+			var result = new List<(string, bool)>();
+			string[] skip = { "Exclude", "Whitelist", "Blacklist", "ColonyOverrides" };
+			foreach (var (path, o) in FindObjects(root, "", t => t.ContainsKey("Galaxy") && t.ContainsKey("System") && t.ContainsKey("Position"))) {
+				if (!TryInt(o["Galaxy"], out int g) || !TryInt(o["System"], out int s) || !TryInt(o["Position"], out int p)) continue;
+				if (g != 1 || s != 1 || p != 1) continue;
+				bool skipped = path.Split('.').Any(seg => skip.Any(k => seg.Equals(k, StringComparison.OrdinalIgnoreCase) || seg.StartsWith(k + "[", StringComparison.OrdinalIgnoreCase)));
+				if (skipped) continue;
+				result.Add((path, o["Type"] != null));
+			}
+			return result;
 		}
 
 		private static bool IsOwnCelestialPath(string path) {

@@ -1022,6 +1022,8 @@
     "FuelToCarry": 30000,
     ## A moon needs at least this much deuterium to start expeditions (0 = no check). Below it the moon is skipped and you get a message.
     "MinDeuteriumOnMoon": 0,
+    ## On: no expedition starts from an origin while its deuterium does not cover the planned starts (flight fuel + cargo per expedition x number). The repatriate round tops it up, then expeditions resume by themselves. Off: expeditions keep flying.
+    "StopBelowNeed": false,
     ## Most expeditions that fly from one origin at the same time.
     "MaxExpeditionsPerOrigin": 5,
     "SplitExpeditionsBetweenSystems": {
@@ -1414,7 +1416,7 @@
     ## Fleet slots discovery may use at the same time.
     "MaxSlots": 2,
     ## Stops sending discoveries once this many artifacts are collected (the "Collected artifacts: 1840 / 3600" counter on the lifeform pages). 0 = no limit. Discoveries resume when the count drops below again. If the counter cannot be read, discoveries keep running (warning in the log).
-    "StopAtArtifacts": 0,
+    "StopAtArtifacts": 3600,
     ## Shortest pause in minutes between two runs of this function.
     "CheckIntervalMin": 15,
     ## Longest pause in minutes between two runs. The bot picks a random time between minimum and maximum so it does not act like a clock.

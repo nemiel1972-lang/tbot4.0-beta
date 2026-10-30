@@ -432,6 +432,21 @@ WHERE id = 1;";
 			}
 		}
 
+		public DateTime? LoadScanCursorUpdatedAtUtc() {
+			if (!_enabled)
+				return null;
+
+			try {
+				using var connection = OpenConnection();
+				using var command = connection.CreateCommand();
+				command.CommandText = "SELECT updated_at_utc FROM scan_cursor WHERE id = 1;";
+				var value = command.ExecuteScalar() as string;
+				return string.IsNullOrEmpty(value) ? null : ParseUtc(value);
+			} catch {
+				return null;
+			}
+		}
+
 		public void SaveScanCursor(int rangeIndex, int galaxy, int system, DateTime updatedAtUtc) {
 			if (!_enabled)
 				return;
