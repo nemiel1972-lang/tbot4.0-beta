@@ -4096,6 +4096,17 @@ stopAutoFarm = true;
 							continue;
 						}
 
+						int maxReportAgeForProcessing = SettingsService.GetSetting(_tbotInstance.InstanceSettings.AutoFarm, "MaxReportAgeMinutesForAttack", 120);
+						if (maxReportAgeForProcessing > 0 && (await _tbotOgameBridge.GetDateTime() - report.Date).TotalMinutes > maxReportAgeForProcessing) {
+							LogThrottled($"oldreport:{report.ID}", LogLevel.Debug,
+								$"Ignoring espionage report {report.ID} for {report.Coordinate}: older than AutoFarm.MaxReportAgeMinutesForAttack ({maxReportAgeForProcessing} min) - waiting for a fresh probe.");
+							if (target.State == FarmState.AttackPending && (target.Report == null || target.Report.ID == report.ID)) {
+								target.State = FarmState.ProbesPending;
+								target.Report = null;
+							}
+							continue;
+						}
+
 						var newFarmTarget = target;
 
 						if (target.Report != null && DateTime.Compare(report.Date, target.Report.Date) < 0) {

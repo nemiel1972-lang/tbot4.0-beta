@@ -31,6 +31,7 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - Expeditions: the deuterium alarm (Telegram) only comes when the expedition moon cannot cover 2 expedition fleets any more; below the target but above that, the expeditions just keep running and the repatriate round resupplies.
 - AutoFarm: two summary lines per run in the log ("AutoFarm start summary" with target states, scan cursor, cache and limits; "AutoFarm run summary" with scanned/skipped systems, skip reasons, probes sent and why the run ended), to find out why a run sends no probes.
 - AutoFarm: new `DefendedHalfSplit` (default `true` = as before). `false` evaluates all defended targets every cycle instead of half of them; the "start summary" and "run summary" log lines also show why a run ended. Warning if the start summary itself fails.
+- AutoFarm: espionage reports older than `MaxReportAgeMinutesForAttack` no longer put a target back to attack-pending. Before, the attack was aborted ("report is N min old"), the target went back to probing, and the same report set it to attack-pending again in the next pass, so it never got a fresh probe (plus a live galaxy request per target and pass).
 
 ## Upgrading
 Update as usual. New switches default to off; existing settings keep their behaviour.
@@ -72,6 +73,7 @@ Update as usual. New switches default to off; existing settings keep their behav
 - Expeditionen: Der Deuterium-Alarm (Telegram) kommt erst, wenn der Expeditionsmond nicht mehr für 2 Expeditions-Flotten reicht; unter dem Ziel, aber darüber, laufen die Expeditionen einfach weiter und der Repatriate-Zyklus füllt auf.
 - AutoFarm: zwei Zusammenfassungszeilen pro Lauf im Log („AutoFarm start summary“ mit Zielstatus, Scan-Cursor, Cache und Grenzen; „AutoFarm run summary“ mit gescannten/übersprungenen Systemen, Überspringgründen, gesendeten Sonden und dem Grund fürs Laufende), um zu finden, warum ein Lauf keine Sonde schickt.
 - AutoFarm: neu `DefendedHalfSplit` (Standard `true` = wie bisher). `false` wertet in jedem Zyklus alle verteidigten Ziele aus statt nur der Hälfte; die Logzeilen „start summary“ und „run summary“ zeigen auch, warum ein Lauf endete. Warnung, falls die Start-Zusammenfassung selbst fehlschlägt.
+- AutoFarm: Spionageberichte, die älter als `MaxReportAgeMinutesForAttack` sind, setzen ein Ziel nicht mehr zurück auf Angriff-bereit. Vorher brach der Angriff ab („report is N min old“), das Ziel ging zurück auf Sondieren, und derselbe Bericht setzte es im nächsten Durchgang wieder auf Angriff-bereit, sodass es nie eine frische Sonde bekam (dazu eine Live-Galaxieabfrage pro Ziel und Durchgang).
 
 ## Aktualisieren
 Wie gewohnt aktualisieren. Neue Schalter sind standardmäßig aus; bestehende Einstellungen behalten ihr Verhalten.
