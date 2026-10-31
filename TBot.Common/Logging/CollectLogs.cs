@@ -87,7 +87,7 @@ namespace TBot.Common.Logging {
 						string zip = Path.ChangeExtension(zu, ".zip");
 						if (File.Exists(zip)) File.Delete(zip);
 						using (var za = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create))
-							za.CreateEntryFromFile(zu, Path.GetFileName(zu), System.IO.Compression.CompressionLevel.Optimal);
+							System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(za, zu, Path.GetFileName(zu), System.IO.Compression.CompressionLevel.Optimal);
 						File.Delete(zu);
 					} catch (Exception) { }
 				});
