@@ -31,6 +31,7 @@ func countOut(method string, vals url.Values) {
 }
 
 func CountBrowser(method string, vals url.Values) {
+	markBrowser(method, vals)
 	k := outKey(method, vals)
 	outMu.Lock()
 	outBrowser[k]++

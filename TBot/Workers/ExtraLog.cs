@@ -36,6 +36,7 @@ namespace Tbot.Workers {
 					case "Directives": return !SettingsService.IsSettingSet(x, "Directives") || (bool) x.Directives;
 					case "LFAutoMine": return !SettingsService.IsSettingSet(x, "LFAutoMine") || (bool) x.LFAutoMine;
 					case "Harvest": return !SettingsService.IsSettingSet(x, "Harvest") || (bool) x.Harvest;
+					case "CeleSwitch": return !SettingsService.IsSettingSet(x, "CeleSwitch") || (bool) x.CeleSwitch;
 					case "FleetTargets": return !SettingsService.IsSettingSet(x, "FleetTargets") || (bool) x.FleetTargets;
 					default: return false;
 				}
@@ -74,7 +75,7 @@ namespace Tbot.Workers {
 
 		private static bool KnownTopic(string thema) =>
 			thema == "Repatriate" || thema == "Ledger" || thema == "BotPause" || thema == "DefenderRecheck" || thema == "FleetsaveSlot"
-			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets" || thema == "Directives" || thema == "LFAutoMine" || thema == "Harvest";
+			|| thema == "MinePlanRanking" || thema == "AsteroidHunt" || thema == "ShadowFleet" || thema == "GalaxyCache" || thema == "Requests" || thema == "BrowserProxy" || thema == "FleetTargets" || thema == "CeleSwitch" || thema == "Directives" || thema == "LFAutoMine" || thema == "Harvest";
 
 		private static DateTime _letzteAufraeumung = DateTime.MinValue;
 		private static void RaeumeAuf(string dir) {

@@ -972,12 +972,15 @@ func (b *OGame) postPageContent(vals, payload url.Values, opts ...Option) ([]byt
 
 func (b *OGame) pageContent(method string, vals, payload url.Values, opts ...Option) ([]byte, error) {
 	cfg := getOptions(opts...)
+	fromBrowser := vals.Get(browserSrcKey) != ""
+	vals.Del(browserSrcKey)
 
 	if err := b.preRequestChecks(); err != nil {
 		return []byte{}, err
 	}
 
 	setCPParam(b, vals, cfg)
+	noteCP(method, vals, fromBrowser)
 
 	alterPayload(method, b, vals, payload)
 

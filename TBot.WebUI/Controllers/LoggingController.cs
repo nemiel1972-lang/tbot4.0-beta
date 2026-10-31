@@ -91,6 +91,8 @@ namespace TBot.WebUI.Controllers {
 				while ((line = sr.ReadLine()) != null) {
 					if (line.Length == 0) continue;
 					var entry = new LogEntry { type = "Information", sender = "Developer", message = line, position = i++ };
+					if (line.Length > 24 && line.Substring(24).StartsWith("[CeleSwitch] ", StringComparison.Ordinal))
+						entry.sender = "CeleSwitch";
 					if (line.Length > 24 && DateTime.TryParse(line.Substring(0, 23), CultureInfo.InvariantCulture, DateTimeStyles.None, out var t)) {
 						entry.datetime = t.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
 						entry.message = line.Substring(24);
@@ -134,7 +136,7 @@ namespace TBot.WebUI.Controllers {
 			if (!string.IsNullOrEmpty(date))
 				DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out logsDate);
 
-			bool developer = string.Equals(logSender, "Developer", StringComparison.OrdinalIgnoreCase);
+			bool developer = string.Equals(logSender, "Developer", StringComparison.OrdinalIgnoreCase) || string.Equals(logSender, "CeleSwitch", StringComparison.OrdinalIgnoreCase);
 			var jsonLogs = developer ? GetLogsFromDevlog(logsDate) : await GetLogsFromCSV(logsDate);
 			var jsonLogsQuery = jsonLogs.AsQueryable();
 

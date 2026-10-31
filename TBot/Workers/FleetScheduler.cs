@@ -914,6 +914,7 @@ if (
 					}
 					_tbotInstance.UserData.fleets = _tbotInstance.UserData.fleets.Append(newFleet).ToList();
 					_tbotInstance.log(LogLevel.Information, LogSender.FleetScheduler, "Fleet sent successfully!");
+					FleetCounter.Count(_tbotInstance.InstanceAlias, TBot.Ogame.Infrastructure.RequestStats.Current.Value, mission);
 					if (mission == Missions.Transport)
 						LedgerTBot.OnTransportSent(_tbotInstance, destination, newFleet.ID, payload, fleetPrediction.Time);
 					_tbotInstance.UserData.slots = await _tbotOgameBridge.UpdateSlots();

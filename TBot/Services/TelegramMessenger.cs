@@ -1116,6 +1116,7 @@ namespace Tbot.Services {
 								await SendMessage(botClient, message.Chat, "Defender started!");
 								return;
 
+
 							case "/stopautofarm":
 								if (message.Text.Split(' ').Length != 1) {
 									await SendMessage(botClient, message.Chat, "No argument accepted with this command!");

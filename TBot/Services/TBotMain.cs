@@ -2289,6 +2289,7 @@ namespace Tbot.Services {
 				timers.Remove("StartDataTimer");
 			}
 			StartDataFreshness.Load(StartCachePath());
+			FleetCounter.Load(InstanceAlias, FleetCountsPath());
 			timers.Add("StartDataTimer", new Timer(HandleStartDataRefresh, null, 12000, 5 * 1000));
 
 			if (timers.TryGetValue("SlotCmdTimer", out Timer oldCmd)) {
@@ -2702,6 +2703,7 @@ namespace Tbot.Services {
 			}
 		}
 
+		private string FleetCountsPath() => Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"fleet_counts_{InstanceAlias}.json"));
 		private string StartCachePath() => Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"start_cache_{InstanceAlias}.json"));
 		private volatile bool _startRefreshRunning;
 		private long _startRefreshDoneMs;
@@ -2718,6 +2720,7 @@ namespace Tbot.Services {
 					await WriteSleepStatusAsync();
 					return;
 				}
+				TBot.Ogame.Infrastructure.RequestStats.Current.Value = "StartPage";
 				_startRefreshNote = null;
 				_startRefreshRunning = true;
 				await WriteSleepStatusAsync();
@@ -3113,6 +3116,7 @@ namespace Tbot.Services {
 				modeOverride,
 				account,
 				fleetStock,
+				fleetCounts = FleetCounter.Snapshot(InstanceAlias),
 				fleetsRunning,
 				fleetsAnim,
 				lang = UiLanguage.Read(),
@@ -3128,6 +3132,7 @@ namespace Tbot.Services {
 				string perInstance = Path.Combine(dataDir, Path.GetFileName($"status_{InstanceAlias}.json"));
 				File.Copy(target, perInstance, true);
 			} catch {  }
+			FleetCounter.SaveIfDue(InstanceAlias, FleetCountsPath());
 			StartDataFreshness.SaveIfDue(StartCachePath());
 		}
 

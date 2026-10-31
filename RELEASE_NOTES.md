@@ -14,6 +14,9 @@ Changes since beta15. Everything marked *(off by default)* has to be switched on
 - **Expeditions**: below the deuterium limit the expeditions no longer stop; the supply tops the moons up and they keep running. New `Expeditions.StopBelowNeed` *(off by default)* stops them only when deuterium plus cargo for the planned expeditions is missing. Repatriate keeps the deuterium reserve (`MinDeuteriumOnMoon`) on the expedition moons, and the automatic pickup order brings missing deuterium along. `ExpoSupply` also works for planets.
 - **WebUI**: "Hide data" switch on the Fleeter page; Fleeter and Galaxy map are opaque.
 - **AutoMine**: moons other than the home moon use the lunar caps from the Colony block.
+- Start page tile **Fleets sent** (beta16.3): successfully sent fleets per worker and mission, today / 7 days / 30 days.
+- Developer log tab **CeleSwitch** (beta16.3): lists every celestial switch of the bot with the worker that caused it (only while log collection runs).
+- The version number now follows `4.0.<beta>.<patch>` (beta16.3 = 4.0.16.3).
 
 ## Fixed
 - AutoFarm: the number of cargo ships uses the Lifeform cargo bonus of the sending planet, and cargo capacity is checked again right before sending.
@@ -57,6 +60,9 @@ Update as usual. New switches default to off; existing settings keep their behav
 - **Expeditionen**: Unter dem Deuterium-Limit stoppen die Expeditionen nicht mehr; die Versorgung füllt die Monde auf und sie laufen weiter. Neu `Expeditions.StopBelowNeed` *(standardmäßig aus)* stoppt sie nur, wenn Deuterium plus Ladung für die geplanten Expeditionen fehlt. Repatriate hält die Deuteriumreserve (`MinDeuteriumOnMoon`) auf den Expeditionsmonden, der automatische Abholungsauftrag bringt fehlendes Deuterium mit. `ExpoSupply` funktioniert auch für Planeten.
 - **WebUI**: Schalter „Daten ausblenden“ auf der Fleeter-Seite; Fleeter und Galaxiekarte sind nicht mehr transparent.
 - **AutoMine**: Monde außer dem Heimatmond nutzen die Mondgrenzen aus dem Colony-Block.
+- Start-Seite: Kachel **Gestartete Flotten** (beta16.3): erfolgreich gestartete Flotten je Worker und Mission, heute / 7 Tage / 30 Tage.
+- Developer-Log: Reiter **CeleSwitch** (beta16.3) zeigt jeden Himmelskörper-Wechsel des Bots samt Worker, der ihn ausgelöst hat (nur während die Log-Sammlung läuft).
+- Die Versionsnummer folgt jetzt dem Schema `4.0.<beta>.<patch>` (beta16.3 = 4.0.16.3).
 
 ## Behoben
 - AutoFarm: Die Zahl der Transporter nutzt den Lebensform-Laderaumbonus des sendenden Planeten, und der Laderaum wird direkt vor dem Senden nochmals geprüft.

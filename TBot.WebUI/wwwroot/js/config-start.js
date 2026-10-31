@@ -283,6 +283,25 @@
             c.body.appendChild(row('Celestials with ship data', fst.celestials + ' / ' + fst.of + (fst.celestials < fst.of ? ' (loading in the background…)' : '')));
         } else c.body.appendChild(el('div', 'st-mut', 'No ship data yet.'));
 
+        c = card('Fleets sent'); grid.appendChild(c.root);
+        var fcs = (s && s.fleetCounts) || [];
+        if (fcs.length) {
+            var ft = el('table', 'st-restab');
+            var fh = el('tr'); ['', 'Today', '7 days', '30 days'].forEach(function (h) { fh.appendChild(el('th', null, h)); }); ft.appendChild(fh);
+            var tot = [0, 0, 0];
+            fcs.forEach(function (x) {
+                var tr = el('tr'); tr.appendChild(el('td', 'st-mut', x.worker + (x.mission ? ' - ' + x.mission : '')));
+                tr.firstChild.style.textAlign = 'left';
+                [x.today, x.week, x.month].forEach(function (v, i) { tot[i] += v; tr.appendChild(el('td', null, num(v))); });
+                ft.appendChild(tr);
+            });
+            var tt = el('tr'); tt.appendChild(el('td', 'st-mut', 'Total')); tt.firstChild.style.textAlign = 'left';
+            tot.forEach(function (v) { var td = el('td', 'st-now', num(v)); tt.appendChild(td); });
+            ft.appendChild(tt);
+            c.body.appendChild(ft);
+            c.body.appendChild(el('div', 'st-mut', 'Counted when a fleet was sent successfully (per worker and mission). Fleetsave and recall are counted under the worker that triggered them.'));
+        } else c.body.appendChild(el('div', 'st-mut', 'No fleets sent yet since the counter started.'));
+
         c = card('Lifeform bonuses (expeditions)'); grid.appendChild(c.root);
         var lf = lfSnap && lfSnap.success ? lfSnap.data : null;
         if (lf) {

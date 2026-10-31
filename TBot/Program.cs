@@ -37,6 +37,7 @@ namespace Tbot {
 		private static IInstanceManager _instanceManager;
 		static DateTime startTime = DateTime.UtcNow;
 		private static System.Threading.Timer _statsTimer;
+		private static System.Threading.Timer _cpTimer;
 
 		static void Main(string[] args) {
 			MainAsync(args).Wait();
@@ -102,9 +103,20 @@ namespace Tbot {
 					long total = snap.Sum(kv => kv.Value);
 					string top = string.Join(", ", snap.Take(12).Select(kv => $"{kv.Key} {kv.Value}"));
 					TBot.Ogame.Infrastructure.RequestStats.DevLog?.Invoke("Requests", $"[Requests/10min] total {total} ({total / 600.0:F1}/s): {top}");
+					foreach (var w in TBot.Ogame.Infrastructure.RequestStats.SnapshotDetail().Take(3))
+						TBot.Ogame.Infrastructure.RequestStats.DevLog?.Invoke("Requests", $"[Requests/10min] detail {w.Key}: " + string.Join(", ", w.Value.Take(10).Select(kv => $"{kv.Key} {kv.Value}")));
 				} catch {  }
 			}, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
 
+			_cpTimer = new System.Threading.Timer(_ => {
+				try {
+					var snap = TBot.Ogame.Infrastructure.RequestStats.SnapshotCelestialSwitches();
+					if (snap.Count == 0) return;
+					long total = snap.Sum(kv => kv.Value);
+					string top = string.Join(", ", snap.Take(15).Select(kv => $"{kv.Key} {kv.Value}"));
+					TBot.Ogame.Infrastructure.RequestStats.DevLog?.Invoke("BrowserProxy", $"[CP] celestial changes per worker 30min: total {total}: {top}");
+				} catch {  }
+			}, null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
 
 
 			var tcs = new TaskCompletionSource();

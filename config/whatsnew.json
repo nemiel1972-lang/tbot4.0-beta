@@ -1,66 +1,20 @@
 {
-  "version": "4.0-beta16.2",
-  "date": "2026-10-30",
+  "version": "4.0-beta16.3",
+  "date": "2026-10-31",
   "title": {
-    "en": "What's new in 4.0 beta16.2",
-    "de": "Neu in 4.0 beta16.2"
+    "en": "What's new in 4.0 beta16.3",
+    "de": "Neu in 4.0 beta16.3"
   },
   "lines": {
     "en": [
-      "New: Build planning menu entry - Autobuilds (Build order) and Mine plan (Build calculation) are tabs under one entry",
-      "New: expedition moon supply (off by default): AutoRepatriate.ExpoSupply sends missing ships and deuterium from the base to the expedition moons in the next repatriate cycle; AutoFleetJumpGate.ExpoOverride keeps only the planned expeditions plus backup on the expedition moons",
-      "New: the Expeditions config page also shows the expedition moon options (jump gate, supply, slots research) in one place",
-      "New: ConfigDoctor suggestions have a \"Known\" checkbox that hides a suggestion for good (\"Show again\" resets it)",
-      "New: Rewards page - switch for the Telegram messages",
-      "Fixed: AutoFarm - the number of cargo ships uses the Lifeform cargo bonus of the sending planet, and cargo capacity is checked again right before sending",
-      "Fixed: AutoFarm - a target was treated as defended when a ship or defence entry with 0 was in the report",
-      "Fixed: Defender - WeakAttackRatio of 0 no longer causes a division by zero",
-      "Fixed: captcha solver reads the picture width instead of a fixed size; two wrong entries in its table",
-      "Fixed: the Expeditions page did not load in German; missing German translations added",
-      "Fixed: sleep - the sleep status tile and the GhostSleep schedule loaded a game page every 30-60 s while the bot slept (the active celestial changed in the game); now no game request is made for the clock while asleep",
-      "Fixed: no rewards capture and no defender fake activity while the bot sleeps",
-      "Fixed: AutoFarm - targets whose espionage report never arrived stayed skipped forever; they are released after 60 minutes",
-      "New: AutoFarm option NotSuitableRetryMinutes (default 720) - targets found unsuitable are probed again earlier than the report validity, so daily runs reach them again",
-      "Fixed: AutoHarvest - when the game connector was unreachable, a failed ship query counted as 0 ships and the origin detection picked the wrong celestial; the query is now retried",
-      "Changed: AutoFarm deletes expired and superseded espionage reports in the game (option AutoFarm.DeleteExpiredReports, default on)",
-      "Changed: the browser tile button \"Pause\" is now called \"Delay\" (the config block BotPause and /pause stay)",
-      "Changed: the tiles no longer cover the server clock in the browser; the version number now comes from the release tag",
-      "New: Defender.CurrentlyActiveCelestialActivity (default on) - the Defender fake activity uses the celestial you are currently playing on in the browser",
-      "Changed: config pages tidied - the test functions now sit on their normal pages (General, Defender, Expeditions, Brain); only shadow fleet and the log helpers stay on Testing",
-      "Fixed: Lifeform research boost - the research phase no longer freezes the other buildings; only the research building waits",
-      "New: Lifeform targets - optional PopulationBonusLevels per race in lifeform_targets.json (fine tuning of the population building, like FoodBonusLevels); a MaxBase...Building limit of 0 now means no extra limit",
-      "New: Rewards - the bot also opens the resource market, another galaxy view and the inventory for those daily tasks",
-      "New: ConfigDoctor warns when the manual expedition fleet carries fewer large cargo than the Lifeform-based need",
-      "Changed: browser tiles - the button column collapses to one symbol in a narrow window, and arrow buttons move it by 2 px (Shift 20 px); the version number is also set in plain builds",
-      "New: AutoFarm option PriorityReprobe (default off) - targets with a too old report but a lot of loot get a fresh probe before the scan (one per pass)"
+      "New: start page tile \"Fleets sent\" (per worker and mission: today, 7 days, 30 days)",
+      "New: developer log tab \"CeleSwitch\" lists every celestial switch of the bot with the worker that caused it (only while log collection runs)",
+      "The version number now follows 4.0.<beta>.<patch> (beta16.3 = 4.0.16.3)"
     ],
     "de": [
-      "Neu: Menüeintrag Bauplanung - Autobuilds (Bauplan) und Minenplan (Bauberechnung) sind Reiter unter einem Eintrag",
-      "Neu: Versorgung der Expeditionsmonde (standardmäßig aus): AutoRepatriate.ExpoSupply schickt fehlende Schiffe und Deuterium von der Basis zu den Expeditionsmonden im nächsten Repatriate-Zyklus; AutoFleetJumpGate.ExpoOverride lässt auf den Expeditionsmonden nur die geplanten Expeditionen plus Backup stehen",
-      "Neu: Die Config-Seite Expeditionen zeigt auch die Expeditionsmond-Optionen (Sprungtor, Versorgung, Slot-Forschung) an einer Stelle",
-      "Neu: ConfigDoctor-Hinweise haben ein Häkchen \"Bekannt\", das einen Hinweis dauerhaft ausblendet (\"Wieder anzeigen\" setzt es zurück)",
-      "Neu: Belohnungen-Seite - Schalter für die Telegram-Meldungen",
-      "Behoben: AutoFarm - die Zahl der Transporter nutzt den Lebensform-Laderaumbonus des sendenden Planeten, und der Laderaum wird direkt vor dem Senden nochmals geprüft",
-      "Behoben: AutoFarm - ein Ziel galt als verteidigt, wenn im Bericht ein Schiff oder eine Verteidigung mit 0 stand",
-      "Behoben: Defender - WeakAttackRatio von 0 verursacht keine Division durch 0 mehr",
-      "Behoben: Captcha-Löser liest die Bildbreite statt einer festen Größe; zwei falsche Einträge in seiner Tabelle",
-      "Behoben: Die Seite Expeditionen lud auf Deutsch nicht; fehlende deutsche Übersetzungen ergänzt",
-      "Behoben: Schlaf - die Statuskachel und der GhostSleep-Zeitplan luden alle 30-60 s eine Spielseite, während der Bot schlief (der aktive Himmelskörper wechselte im Spiel); im Schlaf wird für die Uhrzeit jetzt keine Spielanfrage mehr gemacht",
-      "Behoben: keine Rewards-Erfassung und keine Schein-Aktivität des Defenders, solange der Bot schläft",
-      "Behoben: AutoFarm - Ziele, deren Spionagebericht nie ankam, blieben für immer übersprungen; sie werden nach 60 Minuten wieder freigegeben",
-      "Neu: AutoFarm-Option NotSuitableRetryMinutes (Standard 720) - als ungeeignet erkannte Ziele werden früher erneut ausspioniert als die Berichtsgültigkeit, damit tägliche Läufe sie wieder erreichen",
-      "Behoben: AutoHarvest - war der Spiel-Connector nicht erreichbar, zählte eine fehlgeschlagene Schiffsabfrage als 0 Schiffe und die Ursprungserkennung wählte den falschen Himmelskörper; die Abfrage wird jetzt wiederholt",
-      "Geändert: AutoFarm löscht abgelaufene und überholte Spionageberichte im Spiel (Option AutoFarm.DeleteExpiredReports, Standard an)",
-      "Geändert: Der Knopf „Pause“ in der Browser-Kachel heißt jetzt „Verzögern“ (Config-Block BotPause und /pause bleiben)",
-      "Geändert: Die Kacheln verdecken im Browser nicht mehr die Serveruhr; die Versionsnummer kommt jetzt aus dem Release-Tag",
-      "Neu: Defender.CurrentlyActiveCelestialActivity (Standard an) - die Defender-Scheinaktivität nutzt den Himmelskörper, auf dem du gerade im Browser spielst",
-      "Geändert: Config-Seiten aufgeräumt - die Testfunktionen stehen jetzt auf ihren normalen Seiten (General, Defender, Expeditions, Brain); nur Schattenflotte und Log-Helfer bleiben auf Testing",
-      "Behoben: Lebensform-Forschungsschub - die Forschungsphase friert die anderen Gebäude nicht mehr ein; nur das Forschungsgebäude wartet",
-      "Neu: Lebensform-Ziele - optional PopulationBonusLevels je Rasse in lifeform_targets.json (Feintuning des Bevölkerungsgebäudes wie FoodBonusLevels); ein Limit MaxBase...Building von 0 bedeutet jetzt kein Zusatzlimit",
-      "Neu: Belohnungen - der Bot öffnet für die Tagesaufgaben auch den Rohstoffmarkt, eine andere Galaxieansicht und das Inventar",
-      "Neu: ConfigDoctor warnt, wenn die manuelle Expeditionsflotte weniger Große Transporter hat als der Lebensform-Bedarf",
-      "Geändert: Browser-Kacheln - die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen, Pfeiltasten verschieben sie um 2 px (Shift 20 px); die Versionsnummer wird auch bei normalen Builds gesetzt",
-      "Neu: AutoFarm-Option PriorityReprobe (Standard aus) - Ziele mit zu altem Bericht, aber viel Beute, werden vor dem Scan neu ausspioniert (eine Sonde pro Durchgang)"
+      "Neu: Kachel \"Gestartete Flotten\" auf der Start-Seite (je Worker und Mission: heute, 7 Tage, 30 Tage)",
+      "Neu: Developer-Log-Reiter \"CeleSwitch\" zeigt jeden Himmelskörper-Wechsel des Bots samt Worker, der ihn ausgelöst hat (nur während die Log-Sammlung läuft)",
+      "Die Versionsnummer folgt jetzt dem Schema 4.0.<beta>.<patch> (beta16.3 = 4.0.16.3)"
     ]
   }
 }

@@ -4315,5 +4315,12 @@
    "Refresh now": "Jetzt aktualisieren",
    "Refreshing…": "Aktualisiere…",
    "Read resources, ships and production of all planets and moons once. Only press it while you are not playing in the browser.": "Liest Ressourcen, Schiffe und Produktion aller Planeten und Monde einmal. Nur drücken, wenn du nicht im Browser spielst.",
-   "Not refreshed: bot is sleeping, paused or not ready yet.": "Nicht aktualisiert: Bot schläft, ist pausiert oder noch nicht bereit."
+   "Not refreshed: bot is sleeping, paused or not ready yet.": "Nicht aktualisiert: Bot schläft, ist pausiert oder noch nicht bereit.",
+   "Fleets sent": "Gestartete Flotten",
+   "Today": "Heute",
+   "7 days": "7 Tage",
+   "30 days": "30 Tage",
+   "Total": "Gesamt",
+   "Counted when a fleet was sent successfully (per worker and mission). Fleetsave and recall are counted under the worker that triggered them.": "Gezählt wird, wenn eine Flotte erfolgreich gestartet wurde (je Worker und Mission). Fleetsave und Rückruf zählen beim auslösenden Worker.",
+   "No fleets sent yet since the counter started.": "Seit dem Start des Zählers wurde noch keine Flotte gesendet."
 }
