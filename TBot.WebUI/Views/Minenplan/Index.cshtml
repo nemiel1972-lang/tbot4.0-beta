@@ -290,7 +290,7 @@
             if (prefix) what = what.replace(prefix, '');
             return '<span class="mp-st">' + (liveNo && liveNo[s.No] ? '<span style="color:#2ea36b">&#9654;</span> ' : '') + '<b>' + esc(what) + ' ' + s.Level + '</b> <span class="mp-muted">' + n(s.CostDeut) + '</span></span>';
         }
-        function stepRow(label, list, liveNo, prefix) {
+        function queueRow(label, list, liveNo, prefix) {
             var h = '<div class="mp-qr"><span class="mp-ql">' + label + '</span><span class="mp-steps">';
             if (!list.length) h += '<span class="mp-muted">Max level reached</span>';
             list.slice(0, 4).forEach(function (s) { h += stepHtml(s, liveNo, prefix); });
@@ -310,9 +310,9 @@
                 var lfb = steps.filter(function (s) { return s.IsLfBuilding && s.Planet === pl.Name; });
                 var lfr = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && /^LF:/.test(s.What) && s.Planet === pl.Name; });
                 h += '<div class="mp-pl"><h4>' + mask(pl.Name) + '</h4>'
-                    + stepRow('AutoMine', mine, liveNo, null)
-                    + stepRow('LF mine', lfb, null, 'LF building: ')
-                    + stepRow('LF research', lfr, null, 'LF: ');
+                    + queueRow('AutoMine', mine, liveNo, null)
+                    + queueRow('LF mine', lfb, null, 'LF building: ')
+                    + queueRow('LF research', lfr, null, 'LF: ');
                 if (pl.MoonBuilding && pl.MoonUntilUtc) {
                     var left = Math.round((new Date(pl.MoonUntilUtc).getTime() - Date.now()) / 60000);
                     if (left > 0)
