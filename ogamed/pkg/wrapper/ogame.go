@@ -3887,7 +3887,6 @@ func (b *OGame) noteServerClock(st time.Time) {
 		if offOld == offNew {
 			return
 		}
-		b.info(fmt.Sprintf("server clock offset changed: before %+d min, now %+d min", offOld/60, offNew/60))
 	}
 	b.cache.location = loc
 	b.extractor.SetLocation(loc)

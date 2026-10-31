@@ -319,7 +319,6 @@ func start(ctx context.Context, c *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	bot.StartDailyLogin(ctx)
 
 	e := echo.New()
 	if corsEnabled {
