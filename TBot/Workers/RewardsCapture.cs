@@ -15,21 +15,20 @@ using TBot.Ogame.Infrastructure.Models;
 
 namespace Tbot.Workers {
 	internal static class RewardsCapture {
-		public static string MarkerPath => Path.Combine(AppContext.BaseDirectory, "belohnungen.on");
-
 		private static readonly string[] Kandidaten = { "rewarding" };
+
+		private static bool _keinEventGemeldet;
+		private static bool _fertigGemeldet;
 
 		public static async Task Loop(ITBotMain inst, IOgameService ogame, List<Celestial> celestials, CancellationToken ct) {
 			try {
-				if (!File.Exists(MarkerPath))
-					return;
 				while (!ct.IsCancellationRequested) {
 					try {
 						while (inst.IsAsleep || inst.IsBotPaused)
 							await Task.Delay(TimeSpan.FromMinutes(1), ct);
-						if (await Einmal(inst, ogame, celestials)) {
+						if (await Einmal(inst, ogame, celestials) && !_fertigGemeldet) {
 							AbschaltenNachLetzterBelohnung(inst);
-							return;
+							_fertigGemeldet = true;
 						}
 					} catch (Exception e) {
 						inst.log(LogLevel.Warning, LogSender.Tbot, $"Rewards capture failed: {e.Message}");
@@ -66,6 +65,18 @@ namespace Tbot.Workers {
 			}
 			inst.log(LogLevel.Information, LogSender.Tbot, "Rewards: the last rank reward has been collected - the Rewards worker is switched off (claiming and tasks set to off).");
 			if (TelegramOn(inst)) { try { _ = inst.SendTelegramMessage("Universe rewards: the last rank reward has been collected, the rewards worker is switched off."); } catch { } }
+		}
+
+		private static void SchreibeEventStatus(ITBotMain inst, bool aktiv) {
+			try {
+				string dir = Path.Combine(AppContext.BaseDirectory, "data");
+				Directory.CreateDirectory(dir);
+				string f = Path.Combine(dir, $"belohnungen_event_{SafeAlias(inst)}.txt");
+				string neu = aktiv ? "on" : "off";
+				if (File.Exists(f) && File.ReadAllText(f).Trim() == neu)
+					return;
+				AtomicFile.WriteAllText(f, neu);
+			} catch (Exception) {  }
 		}
 
 		private static bool TelegramOn(ITBotMain inst) {
@@ -107,6 +118,22 @@ namespace Tbot.Workers {
 				links.Add($"{m.Groups[2].Value}\t{text}");
 			}
 			File.WriteAllLines(Path.Combine(dir, "menue_links.txt"), links.Distinct());
+			bool hatEintrag = links.Any(l => l.StartsWith("rewarding\t"));
+			if (links.Count > 0)
+				SchreibeEventStatus(inst, hatEintrag);
+			if (links.Count > 0 && !hatEintrag) {
+				if (!_keinEventGemeldet)
+					inst.log(LogLevel.Information, LogSender.Tbot, "Rewards capture: no reward event active, ignoring.");
+				_keinEventGemeldet = true;
+				_fertigGemeldet = false;
+				return false;
+			}
+			if (hatEintrag && _keinEventGemeldet) {
+				_keinEventGemeldet = false;
+				inst.log(LogLevel.Information, LogSender.Tbot, "Rewards capture: reward event detected.");
+			}
+			if (_fertigGemeldet)
+				return false;
 
 			var versuche = new List<string>();
 			if (comp != null) versuche.Add(comp);

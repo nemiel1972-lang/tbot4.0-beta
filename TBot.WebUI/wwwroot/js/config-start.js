@@ -29,6 +29,27 @@
         var v = el('b', cls || '', value); r.appendChild(v);
         return r;
     }
+    function ageText(r) {
+        if (!r) return 'no data';
+        return r.newest === r.oldest ? dur(r.newest) + ' old' : dur(r.newest) + ' to ' + dur(r.oldest) + ' old';
+    }
+    function refreshBar(a) {
+        var w = el('div', 'st-mut');
+        w.style.marginTop = '6px';
+        if (a) {
+            w.appendChild(el('div', null, 'Data age: resources ' + ageText(a.res) + ', ships ' + ageText(a.ships) + ', production ' + ageText(a.prod)));
+            if (a.note) w.appendChild(el('div', null, a.note));
+        }
+        var running = !!(a && a.running);
+        var b = el('button', 'cfg-btn sm', running ? 'Refreshing…' : 'Refresh now'); b.type = 'button'; b.disabled = running;
+        b.title = 'Read resources, ships and production of all planets and moons once. Only press it while you are not playing in the browser.';
+        b.addEventListener('click', function () {
+            b.disabled = true; b.textContent = 'Refreshing…';
+            fetch(box.dataset.refresh + '?instance=' + encodeURIComponent(instance), { method: 'POST' }).then(function () { setTimeout(function () { if (typeof load === 'function') load(); }, 4000); });
+        });
+        w.appendChild(b);
+        return w;
+    }
     function symbolFor(name) {
         var n = String(name || '').toLowerCase();
         if (/expedition.*slot|slot.*expedition/.test(n)) return '\uD83E\uDDED';
@@ -186,10 +207,10 @@
             c.body.appendChild(row('Rank', num(acc.rank) + (acc.total ? ' / ' + num(acc.total) : '')));
             c.body.appendChild(row('Points', compact(acc.points)));
             c.body.appendChild(row('Planets / moons', acc.planets + ' / ' + acc.moons));
-            c.body.appendChild(row('Dark matter', (acc.darkmatter === null || acc.darkmatter === undefined) ? 'Calculating…' : num(acc.darkmatter)));
+            c.body.appendChild(row('Dark matter', (acc.darkmatter === null || acc.darkmatter === undefined) ? 'No data yet' : num(acc.darkmatter)));
             var discoveryOn = (d.workers || []).some(function (w) { return w.name === 'AutoDiscovery' && w.active; });
             if (acc.artifacts !== null && acc.artifacts !== undefined) c.body.appendChild(row('Artifacts', num(acc.artifacts) + (acc.artifactsLimit ? ' / ' + num(acc.artifactsLimit) : '')));
-            else if (discoveryOn) c.body.appendChild(row('Artifacts', 'Calculating…'));
+            else if (discoveryOn) c.body.appendChild(row('Artifacts', 'No data yet'));
         } else c.body.appendChild(el('div', 'st-mut', 'No account data yet.'));
 
         if (s && s.clock) {
@@ -222,7 +243,8 @@
                 tb.appendChild(tr);
             });
             c.body.appendChild(tb);
-            c.body.appendChild(el('div', 'st-mut', ph ? 'Yield = current hourly mine production of ' + ph.planets + ' planets x hours (before storage limits and raids).' : 'Production data is being collected in the background…'));
+            c.body.appendChild(el('div', 'st-mut', ph ? 'Yield = current hourly mine production of ' + ph.planets + ' planets x hours (before storage limits and raids).' : 'No production data yet. Press "Refresh now" or wait until the workers have read it.'));
+            c.body.appendChild(refreshBar(acc.dataAge));
         } else c.body.appendChild(el('div', 'st-mut', 'No resource data yet.'));
 
         var gi = s && s.globalItems, evs = d.boosterStock && d.boosterStock.events;

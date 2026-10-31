@@ -240,6 +240,10 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 		}
 		player := pos.Player
 		planetInfos := new(ogame.PlanetInfos)
+		planetInfos.Coordinate.Galaxy = pos.Galaxy.Int64()
+		planetInfos.Coordinate.System = pos.System.Int64()
+		planetInfos.Coordinate.Position = pos.Position.Int64()
+		planetInfos.Coordinate.Type = ogame.PlanetType
 
 		for _, planet := range pos.Planets {
 

@@ -436,7 +436,7 @@ namespace Tbot.Workers.Brain {
 					&& Tbot.Workers.Brain.MinePlanSnapshot.TryPlanPick(_tbotInstance, celestial.ToString(), out Buildables pickMine, out int pickLevel, out float pickRoi)
 					&& pickMine != buildable) {
 					int pickCap = GetCapForBuildable(pickMine, maxBuildings, maxFacilities);
-					if (pickLevel == celestial.GetLevel(pickMine) + 1 && pickLevel <= pickCap && pickRoi <= autoMinerSettings.MaxDaysOfInvestmentReturn) {
+					if (pickLevel == celestial.GetLevel(pickMine) + 1 && pickLevel <= pickCap && (pickRoi <= autoMinerSettings.MaxDaysOfInvestmentReturn || Tbot.Workers.Brain.MinePlanSnapshot.IgnoresPaybackLimit(_tbotInstance))) {
 						DoLog(LogLevel.Information, $"Plan mode: {celestial.ToString()} builds {pickMine.ToString()} {pickLevel} from the plan instead of {buildable.ToString()}.");
 						buildable = pickMine;
 						level = pickLevel;

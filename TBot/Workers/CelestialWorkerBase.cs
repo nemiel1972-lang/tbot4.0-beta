@@ -78,9 +78,11 @@ namespace Tbot.Workers {
 			_tbotInstance.log(level, GetLogSender(), format);
 		}
 
+		private bool LogLifecycle { get { try { return IsWorkerEnabledBySettings(); } catch (Exception) { return true; } } }
+
 		public async Task StartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
 
-			DoLog(LogLevel.Information, $"Starting Worker \"{GetWorkerName()}\"..");
+			if (LogLifecycle) DoLog(LogLevel.Information, $"Starting Worker \"{GetWorkerName()}\"..");
 
 			await StopWorker();
 			_firstExecutionCompletion = CreateCompletionSource();
@@ -97,9 +99,10 @@ namespace Tbot.Workers {
 		public async Task StopWorker() {
 			RemoveAllTimers();
 			if (_timer != null) {
-				DoLog(LogLevel.Information, $"Closing Worker \"{GetWorkerName()}\"..");
+				bool meldung = LogLifecycle;
+				if (meldung) DoLog(LogLevel.Information, $"Closing Worker \"{GetWorkerName()}\"..");
 				await _timer.DisposeAsync();
-				DoLog(LogLevel.Information, $"Worker \"{GetWorkerName()}\" closed!");
+				if (meldung) DoLog(LogLevel.Information, $"Worker \"{GetWorkerName()}\" closed!");
 				_timer = null;
 			}
 		}
@@ -121,7 +124,7 @@ namespace Tbot.Workers {
 				_timer.ChangeDueTime(TimeSpan.FromMilliseconds(dueTimeMs));
 		}
 		public async void RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) { try {
-			DoLog(LogLevel.Information, $"Restarting Worker \"{GetWorkerName()}\"...");
+			if (LogLifecycle) DoLog(LogLevel.Information, $"Restarting Worker \"{GetWorkerName()}\"...");
 			await StartWorker(ct, period, dueTime);
 		} catch (Exception asyncVoidEx) { DoLog(LogLevel.Error, $"Unhandled error in RestartWorker: {asyncVoidEx}"); }
 		}
@@ -174,7 +177,6 @@ namespace Tbot.Workers {
 				firstExecutionCompletion.TrySetResult(true);
 				return;
 			} else if (IsWorkerEnabledBySettings() == false) {
-				DoLog(LogLevel.Information, $"{GetWorkerName()} not enabled by settings. Ending...");
 				await EndExecution();
 				firstExecutionCompletion.TrySetResult(true);
 				return;

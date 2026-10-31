@@ -1754,6 +1754,11 @@ func extractGalaxyInfos(pageHTML []byte, botPlayerName string, botPlayerID, botP
 			planetInfos.Player.IsBandit = tdPlayername.HasClass("rank_bandit1") || tdPlayername.HasClass("rank_bandit2") || tdPlayername.HasClass("rank_bandit3")
 			planetInfos.Player.IsStarlord = tdPlayername.HasClass("rank_starlord1") || tdPlayername.HasClass("rank_starlord2") || tdPlayername.HasClass("rank_starlord3")
 			planetInfos.Coordinate = ExtractCoord(coordsRaw)
+			if planetInfos.Coordinate.Position == 0 {
+				if pos := utils.DoParseI64(strings.TrimSpace(position)); pos > 0 {
+					planetInfos.Coordinate = ogame.Coordinate{Galaxy: res.Galaxy(), System: res.System(), Position: pos}
+				}
+			}
 			planetInfos.Coordinate.Type = ogame.PlanetType
 
 			var playerID int64

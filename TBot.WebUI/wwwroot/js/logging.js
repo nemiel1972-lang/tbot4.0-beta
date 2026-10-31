@@ -395,3 +395,106 @@ async function catchUp() {
 		_catchingUp = false;
 	}
 }
+
+
+const COPY_MAX_LINES = 20000;
+
+function copyLine(e, hide) {
+	let d = new Date(e.datetime);
+	let pad = n => String(n).padStart(2, "0");
+	let ts = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+	let msg = hide ? maskText(e.message) : e.message;
+	return `${ts} [${e.sender}] ${e.type} ${msg}`;
+}
+
+function copyStatus(text, isError) {
+	let el = document.getElementById("logcopystatus");
+	if (!el) return;
+	el.textContent = text;
+	el.style.color = isError ? "#e55" : "";
+	clearTimeout(copyStatus._t);
+	if (text) copyStatus._t = setTimeout(() => { el.textContent = ""; }, 8000);
+}
+
+function dateParam(day) {
+	let pad = n => String(n).padStart(2, "0");
+	return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+}
+
+async function fetchLogsSince(cutoff) {
+	let out = [];
+	let day = new Date();
+	day.setHours(0, 0, 0, 0);
+	let cutDay = new Date(cutoff);
+	cutDay.setHours(0, 0, 0, 0);
+	let truncated = false;
+	while (day >= cutDay && !truncated) {
+		let base = _getLogsUrl.replace(/date=[^&]*/, "date=" + dateParam(day));
+		let lastTime = null;
+		let more = true;
+		while (more && !truncated) {
+			let url = base + (lastTime ? "&lastTime=" + encodeURIComponent(lastTime) : "") + getFilterParameters();
+			let data = await $.get(url);
+			let content = data.content || [];
+			let reachedCutoff = false;
+			for (const e of content) {
+				if (new Date(e.datetime) < cutoff) { reachedCutoff = true; continue; }
+				out.push(e);
+			}
+			if (out.length >= COPY_MAX_LINES) { truncated = true; break; }
+			if (content.length == 0 || reachedCutoff) break;
+			lastTime = content[content.length - 1].datetime;
+			more = data.hasMoreData;
+		}
+		day.setDate(day.getDate() - 1);
+	}
+	return { entries: out, truncated: truncated };
+}
+
+async function copyLogs() {
+	let btn = document.getElementById("logcopybtn");
+	let hours = parseInt(document.getElementById("logcopyrange").value, 10) || 0;
+	let hide = isHideData();
+	btn.disabled = true;
+	try {
+		let entries, truncated = false;
+		if (hours <= 0) {
+			entries = logData.map(x => ({ datetime: x.originalTimestamp, type: x.level, message: x.message, sender: x.sender }));
+		} else {
+			copyStatus("Loading ...");
+			let r = await fetchLogsSince(new Date(Date.now() - hours * 3600 * 1000));
+			entries = r.entries;
+			truncated = r.truncated;
+		}
+		if (entries.length == 0) { copyStatus("Nothing to copy.", true); return; }
+		let text = entries.slice().reverse().map(e => copyLine(e, hide)).join("\n");
+		let ok = await writeClipboard(text);
+		let note = `${entries.length} lines` + (truncated ? ` (cut at ${COPY_MAX_LINES}, shorter range recommended)` : "");
+		if (ok) copyStatus("Copied: " + note);
+		else copyStatus("Clipboard blocked, select the text below: " + note, true);
+	} catch (err) {
+		copyStatus("Copy failed.", true);
+	} finally {
+		btn.disabled = false;
+	}
+}
+
+async function writeClipboard(text) {
+	let box = document.getElementById("logcopyfallbackbox");
+	let area = document.getElementById("logcopyfallback");
+	try {
+		if (navigator.clipboard && window.isSecureContext) {
+			await navigator.clipboard.writeText(text);
+			box.style.display = "none";
+			return true;
+		}
+	} catch (e) {  }
+	area.value = text;
+	box.style.display = "block";
+	area.focus();
+	area.select();
+	try {
+		if (document.execCommand("copy")) { box.style.display = "none"; return true; }
+	} catch (e) {  }
+	return false;
+}

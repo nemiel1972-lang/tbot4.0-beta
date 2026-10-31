@@ -48,6 +48,7 @@ namespace Tbot.Workers.Brain {
 					var plan = BuildPlanet(inst, calc, p, excluded != null && excluded.Any(e => e.ID == p.ID));
 					if (plan != null) {
 						AttachItems(plan, p.ID);
+						AttachMoonConstruction(inst, plan, p);
 						plans.Add(plan);
 					}
 				}
@@ -71,9 +72,17 @@ namespace Tbot.Workers.Brain {
 				var best = MinePlanRanking.Rank(candidates, c => c.CostDeut, c => c.GainPerDay, c => c.IsResearch, rank, 12);
 				Tbot.Workers.ExtraLog.Write(inst, "MinePlanRanking", () => $"mode={rank.Mode}, horizon={rank.HorizonDays}d, maxPayback={rank.MaxPaybackDays}d, onlySensible={rank.OnlySensible}, research={rank.IncludeResearch}: {candidates.Count} candidates, top: " + string.Join(" | ", best.Take(5).Select(b => $"{b.Planet} {b.Mine} {b.Level} cost={b.CostDeut:N0} gain/d={b.GainPerDay:N0} payback={b.RoiDays:F1}d")));
 
-				var buildPlan = BuildGlobalPlan(calc, planets, plans.Where(pl => pl.Excluded).Select(pl => pl.Name).ToHashSet(), inst.UserData.researches,
+				LfbDiagText = "";
+				var excludedPlanets = plans.Where(pl => pl.Excluded).Select(pl => pl.Name).ToHashSet();
+				var lfStoreForPlan = new LfEffectsStore(LfEffectsStore.PathFor(alias));
+				var mineCaps = MineCapsOf(inst, planets);
+				var lfCapFn = LfCapOf(inst);
+				var lfPrioList = LfPrioOf(inst);
+				var lfbCapFn = LfbCapOf(inst);
+				Func<PlanQueue, List<PlanStep>> planOf = q => BuildGlobalPlan(calc, planets, excludedPlanets, inst.UserData.researches,
 					inst.UserData.serverData.Speed, inst.UserData.userInfo.Class, inst.UserData.staff.Geologist, inst.UserData.staff.IsFull, rank,
-					new LfEffectsStore(LfEffectsStore.PathFor(alias)), MineCapsOf(inst, planets), LfCapOf(inst), LfPrioOf(inst), LfbCapOf(inst), researchCfg);
+					lfStoreForPlan, mineCaps, lfCapFn, lfPrioList, lfbCapFn, researchCfg, q);
+				var buildPlan = MergeQueues(rank, planOf(PlanQueue.Mine), planOf(PlanQueue.LfBuilding), planOf(PlanQueue.LfResearch), planOf(PlanQueue.Research));
 
 				string diag = "";
 				try {
@@ -156,14 +165,21 @@ namespace Tbot.Workers.Brain {
 				if (steps == null || steps.Count == 0 || DateTime.UtcNow - at > TimeSpan.FromHours(6))
 					return false;
 				var first = steps.Where(x => !x.IsResearch).Take(lookahead).ToList();
-				if (first.Any(s => !s.IsResearch && s.Planet == planetName))
+				if (first.Count == 0)
 					return false;
-				var top = first.FirstOrDefault(s => !s.IsResearch);
-				reason = top == null ? "no planet step in the plan" : $"the plan builds first: {top.Planet} {top.What} {top.Level}";
+				if (first.Any(s => s.Planet == planetName))
+					return false;
+				var top = first[0];
+				reason = $"the plan builds first: {top.Planet} {top.What} {top.Level}";
 				return true;
 			} catch {
 				return false;
 			}
+		}
+
+		public static bool IgnoresPaybackLimit(ITBotMain inst) {
+			var c = ReadRankConfig(inst);
+			return c.Mode == RankMode.Cheapest && !c.OnlySensible;
 		}
 
 		public static bool TryPlanPick(ITBotMain inst, string planetName, out Buildables mine, out int level, out float roiDays) {
@@ -262,8 +278,48 @@ namespace Tbot.Workers.Brain {
 			return 0;
 		}
 
+		[Flags]
+		internal enum PlanQueue { None = 0, Mine = 1, LfBuilding = 2, LfResearch = 4, Research = 8, All = 15 }
+
+		private static List<PlanStep> MergeQueues(RankConfig rank, params List<PlanStep>[] queues) {
+			var merged = new List<PlanStep>();
+			var idx = new int[queues.Length];
+			bool cheap = rank.Mode == RankMode.Cheapest;
+			while (true) {
+				int pick = -1;
+				for (int q = 0; q < queues.Length; q++) {
+					if (idx[q] >= queues[q].Count) continue;
+					if (pick < 0) { pick = q; continue; }
+					var a = queues[q][idx[q]]; var b = queues[pick][idx[pick]];
+					bool aForced = a.IsResearch && a.GainPerDay <= 0 && a.RoiDays <= 0, bForced = b.IsResearch && b.GainPerDay <= 0 && b.RoiDays <= 0;
+					bool before = aForced != bForced ? aForced
+						: cheap ? (a.CostDeut < b.CostDeut || (a.CostDeut == b.CostDeut && a.RoiDays < b.RoiDays))
+						: (a.RoiDays < b.RoiDays || (a.RoiDays == b.RoiDays && a.CostDeut < b.CostDeut));
+					if (before) pick = q;
+				}
+				if (pick < 0) break;
+				merged.Add(queues[pick][idx[pick]++]);
+			}
+			for (int i = 0; i < merged.Count; i++)
+				merged[i].No = i + 1;
+			return merged;
+		}
+
+		private static void AttachMoonConstruction(ITBotMain inst, PlanetPlan plan, Planet p) {
+			try {
+				var moon = inst.UserData.celestials.OfType<Moon>().FirstOrDefault(m => m.Coordinate.Galaxy == p.Coordinate.Galaxy
+					&& m.Coordinate.System == p.Coordinate.System && m.Coordinate.Position == p.Coordinate.Position);
+				var c = moon?.Constructions;
+				if (c == null || c.BuildingID == 0 || c.BuildingCountdown <= 0)
+					return;
+				plan.MoonBuilding = ((Buildables) c.BuildingID).ToString();
+				plan.MoonUntilUtc = DateTime.UtcNow.AddSeconds(c.BuildingCountdown).ToString("o");
+			} catch {
+			}
+		}
+
 		private static List<PlanStep> BuildGlobalPlan(ICalculationService calc, List<Planet> planets, HashSet<string> excludedNames, Researches r, int speed,
-			CharacterClass cls, bool geo, bool staff, RankConfig rank, LfEffectsStore lfStore = null, Dictionary<int, int[]> caps = null, Func<string, int> lfCap = null, List<int> lfPrio = null, Func<Planet, LFBuildables, int> lfbCap = null, ResearchPlanCfg rc = null) {
+			CharacterClass cls, bool geo, bool staff, RankConfig rank, LfEffectsStore lfStore = null, Dictionary<int, int[]> caps = null, Func<string, int> lfCap = null, List<int> lfPrio = null, Func<Planet, LFBuildables, int> lfbCap = null, ResearchPlanCfg rc = null, PlanQueue queue = PlanQueue.All) {
 			var result = new List<PlanStep>();
 			try {
 				var ps = planets.Where(p => p.Buildings != null && p.Coordinate != null && p.Temperature != null && !excludedNames.Contains(p.ToString())).ToList();
@@ -330,7 +386,7 @@ namespace Tbot.Workers.Brain {
 				try {
 					for (int no = 1; no <= MaxPlanSteps; no++) {
 						_plasmaSim = plasma;
-						if (rank.IncludeResearch && rc != null) {
+						if (rank.IncludeResearch && rc != null && (queue & PlanQueue.Research) != 0) {
 							PlanStep forced = null;
 							if (ForcedResearch(rc, plasma, astro) == 1) {
 								var pn = plasmaNext();
@@ -350,7 +406,7 @@ namespace Tbot.Workers.Brain {
 						PlanStep best = null;
 						int bi = -1, bk = -1;
 						StepInfo bs = null;
-						for (int i = 0; i < n; i++) {
+						for (int i = 0; i < n && (queue & PlanQueue.Mine) != 0; i++) {
 							for (int k = 0; k < 3; k++) {
 								if (caps != null && caps.TryGetValue(ps[i].ID, out var cp) && lv[i][k] + 1 > cp[k])
 									continue;
@@ -363,7 +419,7 @@ namespace Tbot.Workers.Brain {
 								}
 							}
 						}
-						if (rank.IncludeResearch && PlasmaAllowed(rc, plasma)) {
+						if (rank.IncludeResearch && (queue & PlanQueue.Research) != 0 && PlasmaAllowed(rc, plasma)) {
 							var pnx = plasmaNext();
 							long cost = pnx.cost; float gain = pnx.gain, roi = pnx.roi;
 							if (no == 1) lfbDg.Add($"Plasma technology L{plasma + 1}: cost {cost:N0}, gain/day {gain:N0}, payback {roi:F0} d");
@@ -373,7 +429,7 @@ namespace Tbot.Workers.Brain {
 							}
 						}
 						int lfi = -1, lft = 0;
-						for (int i = 0; i < n && rank.IncludeResearch; i++) {
+						for (int i = 0; i < n && rank.IncludeResearch && (queue & PlanQueue.LfResearch) != 0; i++) {
 							HashSet<string> erlaubt = null;
 							if (lfPrio != null && lfPrio.Count > 0 && lfCap != null) {
 								foreach (int slot in lfPrio) {
@@ -409,7 +465,7 @@ namespace Tbot.Workers.Brain {
 						}
 						int lfbI = -1, lfbDeltaE = 0;
 						LFBuildables lfbB = LFBuildables.None;
-						for (int i = 0; i < n; i++) {
+						for (int i = 0; i < n && (queue & PlanQueue.LfBuilding) != 0; i++) {
 							foreach (var b in lfbOpts[i]) {
 								int cur = lfbLevel[(i, b)], nxt = cur + 1;
 								if (nxt > lfbCap(ps[i], b))
@@ -460,7 +516,8 @@ namespace Tbot.Workers.Brain {
 					}
 				} finally {
 					_plasmaSim = 0;
-					LfbDiagText = string.Join(" | ", lfbDg.Take(10));
+					if (lfbDg.Count > 0)
+						LfbDiagText = (string.IsNullOrEmpty(LfbDiagText) ? "" : LfbDiagText + " | ") + string.Join(" | ", lfbDg.Take(10));
 				}
 			} catch {
 			}
@@ -965,6 +1022,8 @@ namespace Tbot.Workers.Brain {
 			public List<StepInfo> Next = new();
 			public List<StepInfo> Sequence = new();
 			public List<AltPlan> Alternatives = new();
+			public string MoonBuilding;
+			public string MoonUntilUtc;
 		}
 		public sealed class ItemInfo {
 			public string Name, Ref;

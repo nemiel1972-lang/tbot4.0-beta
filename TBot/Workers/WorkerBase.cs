@@ -78,11 +78,12 @@ namespace Tbot.Workers {
 		private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _workerAus = new();
 		private string WorkerSchluessel => $"{_tbotInstance.InstanceAlias}|{GetWorkerName()}";
 		private bool WorkerIstAus => _workerAus.TryGetValue(WorkerSchluessel, out var aus) && aus;
+		private bool LogLifecycle { get { try { return IsWorkerEnabledBySettings(); } catch (Exception) { return true; } } }
 		private bool MeldeAus() { bool war = WorkerIstAus; _workerAus[WorkerSchluessel] = true; return !war; }
 
 		public async Task StartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) {
 
-			DoLog(WorkerIstAus ? LogLevel.Debug : LogLevel.Information, $"Starting Worker \"{GetWorkerName()}\"..");
+			if (LogLifecycle) DoLog(LogLevel.Information, $"Starting Worker \"{GetWorkerName()}\"..");
 			try { OnWorkerStarting(); } catch (Exception) {  }
 
 			await StopWorker();
@@ -99,10 +100,10 @@ namespace Tbot.Workers {
 		public async Task StopWorker() {
 			RemoveAllTimers();
 			if (_timer != null) {
-				var schliessenLevel = WorkerIstAus ? LogLevel.Debug : LogLevel.Information;
-				DoLog(schliessenLevel, $"Closing Worker \"{GetWorkerName()}\"..");
+				bool meldung = LogLifecycle;
+				if (meldung) DoLog(LogLevel.Information, $"Closing Worker \"{GetWorkerName()}\"..");
 				await _timer.DisposeAsync();
-				DoLog(schliessenLevel, $"Worker \"{GetWorkerName()}\" closed!");
+				if (meldung) DoLog(LogLevel.Information, $"Worker \"{GetWorkerName()}\" closed!");
 				_timer = null;
 			}
 			await Task.WhenAll(_celestialWorkers.Values.ToList().Select(w => w.StopWorker()));
@@ -125,7 +126,7 @@ namespace Tbot.Workers {
 				_timer.ChangeDueTime(TimeSpan.FromMilliseconds(dueTimeMs));
 		}
 		public async void RestartWorker(CancellationToken ct, TimeSpan period, TimeSpan dueTime) { try {
-			DoLog(LogLevel.Information, $"Restarting Worker \"{GetWorkerName()}\"...");
+			if (LogLifecycle) DoLog(LogLevel.Information, $"Restarting Worker \"{GetWorkerName()}\"...");
 			await Task.WhenAll(_celestialWorkers.Values.ToList().Select(w => w.StopWorker()));
 			await StartWorker(ct, period, dueTime);
 		} catch (Exception asyncVoidEx) { DoLog(LogLevel.Error, $"Unhandled error in RestartWorker: {asyncVoidEx}"); }
@@ -249,7 +250,6 @@ namespace Tbot.Workers {
 				await EndExecution();
 				return;
 			} else if (IsWorkerEnabledBySettings() == false && !ignoreSwitches) {
-				DoLog(MeldeAus() ? LogLevel.Information : LogLevel.Debug, $"{GetWorkerName()} not enabled by settings. Ending...");
 				await EndExecution();
 				return;
 #if FASTFARM

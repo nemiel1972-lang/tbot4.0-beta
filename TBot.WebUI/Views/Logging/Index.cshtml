@@ -13,7 +13,20 @@
                 <input class="mb-2 mb-md-0" type="text" id="logsearch" name="logsearch" placeholder="Search...">
             </div>
             <div class="col-12 col-md-12" style="text-align:right">
+                <span id="logcopystatus" style="font-size:.85rem;margin-right:8px"></span>
+                <select id="logcopyrange" style="width:auto;display:inline-block" title="Which entries to copy (current filter: sender, level, search)">
+                    <option value="0">Visible rows</option>
+                    <option value="1">Last 1 h</option>
+                    <option value="3">Last 3 h</option>
+                    <option value="6">Last 6 h</option>
+                    <option value="12">Last 12 h</option>
+                    <option value="24">Last 24 h</option>
+                </select>
+                <button type="button" id="logcopybtn" class="btn log-more" style="margin:0 12px 0 4px;padding:2px 10px" onclick="copyLogs()">Copy</button>
                 <label style="font-size:.9rem"><input type="checkbox" id="loghide" /> Hide data</label>
+            </div>
+            <div class="col-12" id="logcopyfallbackbox" style="display:none">
+                <textarea id="logcopyfallback" rows="6" style="width:100%" readonly></textarea>
             </div>
             <div id="logsendercol" class="col-4 col-md-3">
                 <select id="logsenderfilter" name="logsenderfilter" onchange="applyFilter()" ">

@@ -1475,9 +1475,6 @@ func DoAuctionHandler(c echo.Context) error {
 	if err := c.Request().ParseForm(); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
 	}
-	for k, v := range c.Request().PostForm {
-		bot.debug(fmt.Sprintf("DoAuctionHandler received field %q = %q", k, v))
-	}
 	for key, values := range c.Request().PostForm {
 		if key == "token" || key == "allCelestialIds" {
 			continue

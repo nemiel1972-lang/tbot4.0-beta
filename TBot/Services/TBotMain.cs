@@ -2288,7 +2288,8 @@ namespace Tbot.Services {
 				oldSd.Dispose();
 				timers.Remove("StartDataTimer");
 			}
-			timers.Add("StartDataTimer", new Timer(HandleStartDataRefresh, null, 12000, 60 * 1000));
+			StartDataFreshness.Load(StartCachePath());
+			timers.Add("StartDataTimer", new Timer(HandleStartDataRefresh, null, 12000, 5 * 1000));
 
 			if (timers.TryGetValue("SlotCmdTimer", out Timer oldCmd)) {
 				oldCmd.Dispose();
@@ -2701,44 +2702,48 @@ namespace Tbot.Services {
 			}
 		}
 
+		private string StartCachePath() => Path.Combine(AppContext.BaseDirectory, "data", Path.GetFileName($"start_cache_{InstanceAlias}.json"));
+		private volatile bool _startRefreshRunning;
+		private long _startRefreshDoneMs;
+		private string _startRefreshNote;
+
 		private async void HandleStartDataRefresh(object state) { try {
-			if (Interlocked.Exchange(ref _startDataBusy, 1) == 1)
+			if (Interlocked.CompareExchange(ref _startDataBusy, 1, 0) != 0)
 				return;
 			try {
-				if (_ghostSleeping || _pauseActive || userData == null || userData.isSleeping || userData.celestials == null)
+				if (!Tbot.Common.Settings.StartRefreshRequest.Consume(InstanceAlias))
 					return;
+				if (_ghostSleeping || _pauseActive || userData == null || userData.isSleeping || userData.celestials == null) {
+					_startRefreshNote = "Not refreshed: bot is sleeping, paused or not ready yet.";
+					await WriteSleepStatusAsync();
+					return;
+				}
+				_startRefreshNote = null;
+				_startRefreshRunning = true;
+				await WriteSleepStatusAsync();
 				var list = userData.celestials.Unique().ToList();
-				bool Stale(Celestial c, string kind, bool hasData) => !hasData || StartDataFreshness.AgeMinutes(c, kind) >= 10;
-				var todo = list
-					.Select(c => new {
-						c,
-						res = Stale(c, StartDataFreshness.Resources, c.Resources != null),
-						ships = Stale(c, StartDataFreshness.Ships, c.Ships != null),
-						prod = c is Planet && Stale(c, StartDataFreshness.Production, c.ResourcesProduction != null),
-						age = Math.Max(StartDataFreshness.AgeMinutes(c, StartDataFreshness.Resources), StartDataFreshness.AgeMinutes(c, StartDataFreshness.Ships))
-					})
-					.Where(x => x.res || x.ships || x.prod)
-					.OrderByDescending(x => x.age)
-					.ToList();
 				int done = 0;
-				foreach (var x in todo) {
-					var c = x.c;
+				foreach (var c in list) {
 					string key = c.Coordinate.ToString();
 					try {
-						if (x.res) await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Resources);
-						if (x.ships) await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
-						if (x.prod) await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.ResourcesProduction);
+						await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Resources);
+						await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.Ships);
+						if (c is Planet)
+							await _tbotOgameBridge.UpdatePlanet(c, UpdateTypes.ResourcesProduction);
 					} catch (Exception e) {
 						log(LogLevel.Debug, LogSender.Tbot, $"Start page data for {key} not loaded: {e.Message}");
 					}
-					if (++done % 4 == 0 && done < todo.Count)
+					if (++done % 4 == 0 && done < list.Count)
 						await WriteSleepStatusAsync();
 					await Task.Delay(1500);
 				}
 				RunConfigDoctor(false);
 				await RefreshGlobalItems(list);
+				_startRefreshDoneMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+				_startRefreshRunning = false;
 				await WriteSleepStatusAsync();
 			} finally {
+				_startRefreshRunning = false;
 				Interlocked.Exchange(ref _startDataBusy, 0);
 			}
 		} catch (Exception ex) { log(LogLevel.Debug, LogSender.Tbot, $"Start page refresh: {ex.Message}"); }
@@ -2951,16 +2956,18 @@ namespace Tbot.Services {
 					if (cel != null) {
 						foreach (var c in cel) {
 							if (c?.Coordinate?.Type == Celestials.Moon) moons++; else planets++;
-							if (c?.ResourcesProduction != null) {
+							var cProd = StartDataFreshness.GetProduction(c);
+							if (cProd != null) {
 								withProd++;
-								pm += c.ResourcesProduction.Metal?.CurrentProduction ?? 0;
-								pk += c.ResourcesProduction.Crystal?.CurrentProduction ?? 0;
-								pd += c.ResourcesProduction.Deuterium?.CurrentProduction ?? 0;
+								pm += cProd.Metal?.CurrentProduction ?? 0;
+								pk += cProd.Crystal?.CurrentProduction ?? 0;
+								pd += cProd.Deuterium?.CurrentProduction ?? 0;
 							}
-							if (c?.Resources != null) {
+							var cRes = StartDataFreshness.GetResources(c);
+							if (cRes != null) {
 								withResources++;
-								m += c.Resources.Metal; k += c.Resources.Crystal; d += c.Resources.Deuterium;
-								dm = Math.Max(dm, c.Resources.Darkmatter);
+								m += cRes.Metal; k += cRes.Crystal; d += cRes.Deuterium;
+								dm = Math.Max(dm, cRes.Darkmatter);
 							}
 						}
 					}
@@ -2974,7 +2981,13 @@ namespace Tbot.Services {
 						metal = withResources > 0 ? (long?) m : null, crystal = withResources > 0 ? (long?) k : null,
 						deuterium = withResources > 0 ? (long?) d : null, darkmatter = withResources > 0 ? (long?) dm : null,
 						artifacts = userData.artifactsCollected >= 0 ? (long?) userData.artifactsCollected : null,
-						artifactsLimit = userData.artifactsCollected >= 0 ? (long?) userData.artifactsLimit : null
+						artifactsLimit = userData.artifactsCollected >= 0 ? (long?) userData.artifactsLimit : null,
+						dataAge = cel == null ? null : new {
+							res = StartDataFreshness.AgeRange(cel, StartDataFreshness.Resources),
+							ships = StartDataFreshness.AgeRange(cel, StartDataFreshness.Ships),
+							prod = StartDataFreshness.AgeRange(cel, StartDataFreshness.Production),
+							running = _startRefreshRunning, doneMs = _startRefreshDoneMs, note = _startRefreshNote
+						}
 					};
 				}
 			} catch { account = null; }
@@ -2987,12 +3000,13 @@ namespace Tbot.Services {
 					int known = 0;
 					long points = 0;
 					foreach (var c in celestials) {
-						if (c?.Ships == null) continue;
+						var cShips = StartDataFreshness.GetShips(c);
+						if (cShips == null) continue;
 						known++;
-						points += c.Ships.GetFleetPoints();
+						points += cShips.GetFleetPoints();
 						foreach (var prop in typeof(Ships).GetProperties()) {
 							if (prop.PropertyType != typeof(long) || prop.Name == "SolarSatellite" || prop.Name == "Crawler") continue;
-							long n = (long) prop.GetValue(c.Ships);
+							long n = (long) prop.GetValue(cShips);
 							if (n > 0) totals[prop.Name] = (totals.TryGetValue(prop.Name, out long old) ? old : 0) + n;
 						}
 					}
@@ -3114,6 +3128,7 @@ namespace Tbot.Services {
 				string perInstance = Path.Combine(dataDir, Path.GetFileName($"status_{InstanceAlias}.json"));
 				File.Copy(target, perInstance, true);
 			} catch {  }
+			StartDataFreshness.SaveIfDue(StartCachePath());
 		}
 
 		private async void HandleSleepMode(object state) { try {

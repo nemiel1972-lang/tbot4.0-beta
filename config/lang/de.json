@@ -280,7 +280,7 @@
    "Small fleet from the home world": "Kleine Flotte von der Heimatwelt",
    "Open the resource market page": "Rohstoffmarkt-Seite öffnen",
    "not recognised": "nicht erkannt",
-   "Tasks of the universe rewards (Tritium) as the bot reads them, with its classification and where it would build. This page only shows data and never changes anything. The data comes from the rewards capture (file belohnungen.on in the program folder).": "Aufgaben der Universums-Belohnungen (Tritium), wie der Bot sie liest, mit seiner Einordnung und dem Ort, an dem er bauen würde. Diese Seite zeigt nur Daten und ändert nichts. Die Daten stammen aus dem Belohnungen-Mitschnitt (Datei belohnungen.on im Programmordner).",
+   "Tasks of the universe rewards (Tritium) as the bot reads them, with its classification and where it would build. This page only shows data and never changes anything.": "Aufgaben der Universums-Belohnungen (Tritium), wie der Bot sie liest, mit seiner Einordnung und dem Ort, an dem er bauen würde. Diese Seite zeigt nur Daten und ändert nichts.",
    "Defences and ships are always built on the home world. Buildings are built on the planet where the next level is cheapest. Dark Matter, item and purchase tasks always stay manual. Rank rewards are never claimed automatically.": "Verteidigung und Schiffe werden immer auf der Heimatwelt gebaut. Gebäude entstehen auf dem Planeten, auf dem die nächste Stufe am günstigsten ist. Aufgaben mit Dunkler Materie, Items oder Kauf bleiben immer manuell. Rangbelohnungen werden nie automatisch abgeholt.",
    "Period": "Zeitraum",
    "Ships lost": "Verlorene Schiffe",
@@ -1603,6 +1603,12 @@
    "Next mine step": "Nächster Minen-Schritt",
    "Next LF step": "Nächster LF-Schritt",
    "Next research": "Nächste Forschung",
+   "Research (account):": "Forschung (Konto):",
+   "Max level reached": "Maximalstufe erreicht",
+   "LF mine": "LF-Mine",
+   "Moon:": "Mond:",
+   "in construction": "im Bau",
+   "min left": "Min. verbleibend",
    "Following mine step": "Folgender Minen-Schritt",
    "▶ built live": "▶ wird live gebaut",
    "waits": "wartet",
@@ -4303,5 +4309,11 @@
   "Defended target": "Verteidigtes Ziel",
   "Met / Kris / Deut": "Met / Kris / Deut",
   "Queued": "Eingereiht"
- }
+ },
+   "No data yet": "Noch keine Daten",
+   "No production data yet. Press \"Refresh now\" or wait until the workers have read it.": "Noch keine Produktionsdaten. \"Jetzt aktualisieren\" drücken oder warten, bis die Worker sie gelesen haben.",
+   "Refresh now": "Jetzt aktualisieren",
+   "Refreshing…": "Aktualisiere…",
+   "Read resources, ships and production of all planets and moons once. Only press it while you are not playing in the browser.": "Liest Ressourcen, Schiffe und Produktion aller Planeten und Monde einmal. Nur drücken, wenn du nicht im Browser spielst.",
+   "Not refreshed: bot is sleeping, paused or not ready yet.": "Nicht aktualisiert: Bot schläft, ist pausiert oder noch nicht bereit."
 }

@@ -15,6 +15,15 @@
         .mp-table th:first-child, .mp-table td:first-child, .mp-table th:nth-child(2), .mp-table td:nth-child(2) { text-align: left; }
         .mp-warn { color: #e0a030; font-weight: 600; }
         .mp-muted { opacity: .7; font-size: .85rem; }
+        .mp-live { margin-top: 8px; }
+        .mp-acc, .mp-pl { background: rgba(255,255,255,.05); border: 1px solid rgba(128,128,128,.35); border-radius: 6px; padding: 6px 12px; margin-bottom: 8px; }
+        .mp-pl h4 { margin: 0 0 4px; font-size: 1rem; border-bottom: 1px solid rgba(128,128,128,.35); padding-bottom: 3px; }
+        .mp-qr, .mp-acc { display: flex; gap: 10px; align-items: flex-start; }
+        .mp-ql { flex: 0 0 120px; opacity: .75; }
+        .mp-steps { flex: 1 1 auto; display: flex; flex-wrap: wrap; height: 1.5em; overflow: hidden; }
+        .mp-st { white-space: nowrap; margin-right: 8px; }
+        .mp-st + .mp-st::before { content: "\2192\00a0"; color: #2ea36b; }
+        .mp-moon { margin-top: 4px; padding: 3px 8px; border-radius: 4px; background: rgba(240,180,60,.15); border-left: 3px solid #e0a63c; font-size: .9rem; }
         .mp-scroll { overflow-x: auto; }
         details.mp-alt summary { cursor: pointer; margin: 4px 0; }
     </style>
@@ -276,27 +285,42 @@
             });
             return picks;
         }
+        function stepHtml(s, liveNo, prefix) {
+            var what = String(s.What || '');
+            if (prefix) what = what.replace(prefix, '');
+            return '<span class="mp-st">' + (liveNo && liveNo[s.No] ? '<span style="color:#2ea36b">&#9654;</span> ' : '') + '<b>' + esc(what) + ' ' + s.Level + '</b> <span class="mp-muted">' + n(s.CostDeut) + '</span></span>';
+        }
+        function stepRow(label, list, liveNo, prefix) {
+            var h = '<div class="mp-qr"><span class="mp-ql">' + label + '</span><span class="mp-steps">';
+            if (!list.length) h += '<span class="mp-muted">Max level reached</span>';
+            list.slice(0, 4).forEach(function (s) { h += stepHtml(s, liveNo, prefix); });
+            return h + '</span></div>';
+        }
         function nextUp(data) {
             var steps = data.BuildPlan || [];
             if (!steps.length) return '';
-            var mines = steps.filter(function (s) { return !s.IsResearch; });
-            var lf = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && /^LF:/.test(s.What); })[0];
-            var lfb = steps.filter(function (s) { return s.IsLfBuilding; })[0];
-            var rs = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && !/^LF:/.test(s.What); })[0];
             var picks = livePicks(data), liveNo = {};
             picks.forEach(function (p) { liveNo[p.No] = true; });
-            var row = function (label, s, live) {
-                if (!s) return '<tr><td>' + label + '</td><td colspan="5" class="mp-muted">- <span title="' + esc(data.Diag || '') + '">' + (/LF|research/i.test(label) && data.Diag ? '(' + esc(data.Diag) + ')' : '') + '</span></td></tr>';
-                return '<tr><td>' + label + '</td><td>' + (s.IsResearch && s.Planet === 'Account' ? 'Account' : mask(s.Planet)) + '</td><td>' + esc(s.What) + '</td><td>' + s.Level + '</td><td>' + n(s.CostDeut) + '</td><td>' + d1(s.RoiDays) + '</td><td>' + (live || '') + '</td></tr>';
-            };
-            var liveTxt = function (s) { return s && liveNo[s.No] ? '<span style="color:#2ea36b">&#9654; built live</span>' : '<span class="mp-muted">waits</span>'; };
-            var h = '<div class="mp-scroll"><table class="mp-table" style="margin-top:8px"><tr><th>Next up</th><th>Planet</th><th>Step</th><th>To level</th><th>Cost (D-eq)</th><th>Payback (days)</th><th>Status</th></tr>';
-            h += row('Next mine step', mines[0], data.Live && data.Live.Active ? liveTxt(mines[0]) : '');
-            h += row('Next LF building', lfb, '<span class="mp-muted">LifeformAutoMine</span>');
-            h += row('Next LF research', lf, '<span class="mp-muted">LF research</span>');
-            h += row('Next research', rs, '<span class="mp-muted">AutoResearch</span>');
-            h += row('Following mine step', mines[1], data.Live && data.Live.Active ? liveTxt(mines[1]) : '');
-            return h + '</table></div>';
+            var rs = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && !/^LF:/.test(s.What); });
+            var h = '<div class="mp-live">';
+            h += '<div class="mp-acc"><span class="mp-ql">Research (account):</span><span class="mp-steps">' + (rs.length ? rs.slice(0, 4).map(function (s) { return stepHtml(s, null, null); }).join('') : '<span class="mp-muted">Max level reached</span>') + '</span></div>';
+            (data.Planets || []).forEach(function (pl) {
+                if (pl.Excluded) return;
+                var mine = steps.filter(function (s) { return !s.IsResearch && s.Planet === pl.Name; });
+                var lfb = steps.filter(function (s) { return s.IsLfBuilding && s.Planet === pl.Name; });
+                var lfr = steps.filter(function (s) { return s.IsResearch && !s.IsLfBuilding && /^LF:/.test(s.What) && s.Planet === pl.Name; });
+                h += '<div class="mp-pl"><h4>' + mask(pl.Name) + '</h4>'
+                    + stepRow('AutoMine', mine, liveNo, null)
+                    + stepRow('LF mine', lfb, null, 'LF building: ')
+                    + stepRow('LF research', lfr, null, 'LF: ');
+                if (pl.MoonBuilding && pl.MoonUntilUtc) {
+                    var left = Math.round((new Date(pl.MoonUntilUtc).getTime() - Date.now()) / 60000);
+                    if (left > 0)
+                        h += '<div class="mp-moon"><span>Moon:</span> <b>' + esc(pl.MoonBuilding) + '</b> <span>in construction</span> <span class="mp-muted">(~' + left + ' <span>min left</span>)</span></div>';
+                }
+                h += '</div>';
+            });
+            return h + '</div>';
         }
         function liveBanner(data) {
             var lv = data.Live;
@@ -305,16 +329,10 @@
             if (!lv.Active)
                 return '<div class="mp-card" style="' + st + 'rgba(128,128,128,.5)"><strong>Plan mode OFF</strong> - every planet builds on its own by the AutoMine rules. This page is a preview. Switch it on in the Config: Experimental, Mine plan ranking, "AutoMine follows the build plan".' + nextUp(data) + '</div>';
             var names = (lv.Planets || []).map(function (p) { return mask(p); }).join(', ') || '-';
-            var picks = livePicks(data);
-            var h = '<div class="mp-card" style="' + st + '#2ea36b"><strong style="color:#2ea36b">LIVE: AutoMine builds by this plan</strong>'
+            return '<div class="mp-card" style="' + st + '#2ea36b"><strong style="color:#2ea36b">LIVE: AutoMine builds by this plan</strong>'
                 + '<div>Only planets among the first ' + lv.Lookahead + ' steps may build mines now: ' + names + '. All other planets wait (research, power plants and facilities are not held back).</div>'
-                + nextUp(data);
-            if (picks.length) {
-                h += '<div style="margin-top:6px">Built live now (one step per planet, marked &#9654; in the build plan):</div><ul style="margin:4px 0 4px 18px">';
-                picks.forEach(function (s) { h += '<li>' + mask(s.Planet) + ': ' + esc(s.What) + ' to level ' + s.Level + ' (payback ' + d1(s.RoiDays) + ' days)</li>'; });
-                h += '</ul>';
-            }
-            return h + '<div class="mp-muted">If the plan is older than 6 hours or empty, AutoMine falls back to its own rules.</div></div>';
+                + nextUp(data)
+                + '<div class="mp-muted">If the plan is older than 6 hours or empty, AutoMine falls back to its own rules.</div></div>';
         }
 
         function render(res) {

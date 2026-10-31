@@ -18,6 +18,7 @@ namespace TBot.Ogame.Infrastructure {
 			_counts.AddOrUpdate(name, 1, (_, v) => v + 1);
 		}
 
+
 		public static List<KeyValuePair<string, long>> Snapshot() {
 			var list = new List<KeyValuePair<string, long>>();
 			foreach (var key in _counts.Keys.ToList()) {

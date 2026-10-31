@@ -800,6 +800,20 @@ namespace TBot.WebUI.Controllers {
 		}
 
 		[HttpPost]
+		public IActionResult RefreshStart(string? instance) {
+			try {
+				var instances = GetInstances();
+				var chosen = instances.FirstOrDefault(i => string.Equals(i.Alias, instance, StringComparison.OrdinalIgnoreCase));
+				if (chosen.Alias == null)
+					chosen = instances[0];
+				Tbot.Common.Settings.StartRefreshRequest.Request(chosen.Alias);
+				return Json(new { success = true });
+			} catch (Exception e) {
+				return Json(new { success = false, error = e.Message });
+			}
+		}
+
+		[HttpPost]
 		public IActionResult MarkDoctorKnown(string? instance, string? key, bool known = true) {
 			try {
 				var instances = GetInstances();
