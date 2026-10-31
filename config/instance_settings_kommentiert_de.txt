@@ -209,11 +209,11 @@
       ## Angriff ignorieren, wenn so viele Ressourcen/Flottenpunkte nicht rettenswert sind.
       "MinFleetToSave": 20000000
     },
-    ## An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = immer der Heimat-Himmelskörper. Lässt die Aktivität des Bots nur normal aussehen.
+    ## An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = kein Aktivitätsaufruf, der aktive Himmelskörper wird nie gewechselt. Lässt die Aktivität des Bots nur normal aussehen.
     "RandomActivity": false,
-    ## Spielst du gerade im Browser (Port 8080), nimmt der Aktivitätsaufruf des Defenders den Himmelskörper deiner Browser-Sitzung statt eines anderen, damit er dir beim Flottenversand oder Bauen nicht den aktuellen Planeten wegnimmt. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde; sonst gilt die normale Regel (RandomActivity / Home).
+    ## Spielst du gerade im Browser (Port 8080), nimmt der Aktivitätsaufruf des Defenders den Himmelskörper deiner Browser-Sitzung statt eines anderen, damit er dir beim Flottenversand oder Bauen nicht den aktuellen Planeten wegnimmt. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde; sonst gilt die RandomActivity-Regel (aus = kein Aktivitätsaufruf, kein Wechsel).
     "CurrentlyActiveCelestialActivity": true,
-    ## Heimat-Himmelskörper: Wird nur für den Aktivitätsaufruf des Defenders genutzt, wenn `RandomActivity` aus ist. Kein anderer Worker nimmt ihn als Start (AutoHarvest ohne `Origin` nutzt die Expeditionsbasen und den erkannten Standort der Hauptflotte).
+    ## Heimat-Himmelskörper: Wird vom Defender nicht mehr benutzt (der Aktivitätsaufruf wechselt bei `RandomActivity` aus nicht mehr dorthin). Der Eintrag bleibt aus Kompatibilitätsgründen in der Datei.
     "Home": {
       ## Galaxienummer der Koordinaten.
       "Galaxy": 1,

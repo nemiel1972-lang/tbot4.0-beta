@@ -1,9 +1,9 @@
 {
-  "version": "4.0-beta16.1",
+  "version": "4.0-beta16.2",
   "date": "2026-10-30",
   "title": {
-    "en": "What's new in 4.0 beta16.1",
-    "de": "Neu in 4.0 beta16.1"
+    "en": "What's new in 4.0 beta16.2",
+    "de": "Neu in 4.0 beta16.2"
   },
   "lines": {
     "en": [
@@ -34,7 +34,8 @@
       "Changed: browser tiles - the button column collapses to one symbol in a narrow window, and arrow buttons move it by 2 px (Shift 20 px); the version number is also set in plain builds",
       "New: AutoFarm option PriorityReprobe (default off) - targets with a too old report but a lot of loot get a fresh probe before the scan (one per pass)",
       "Changed: less logging - the server clock offset line (daylight saving time) is gone, the correction stays",
-      "Changed: ogamed no longer forces a daily login; the nightly Gameforge disconnect and re-login count for the rewards task. If that disconnect does not happen, trigger the login event by hand"
+      "Changed: ogamed no longer forces a daily login; the nightly Gameforge disconnect and re-login count for the rewards task. If that disconnect does not happen, trigger the login event by hand",
+      "Changed: Defender - with RandomActivity off there is no activity call and no switch to Home any more"
     ],
     "de": [
       "Neu: Menüeintrag Bauplanung - Autobuilds (Bauplan) und Minenplan (Bauberechnung) sind Reiter unter einem Eintrag",
@@ -64,7 +65,8 @@
       "Geändert: Browser-Kacheln - die Knopfspalte klappt in einem schmalen Fenster zu einem Symbol zusammen, Pfeiltasten verschieben sie um 2 px (Shift 20 px); die Versionsnummer wird auch bei normalen Builds gesetzt",
       "Neu: AutoFarm-Option PriorityReprobe (Standard aus) - Ziele mit zu altem Bericht, aber viel Beute, werden vor dem Scan neu ausspioniert (eine Sonde pro Durchgang)",
       "Geändert: weniger Log - die Zeile zum Serveruhr-Versatz (Zeitumstellung) entfällt, die Korrektur bleibt",
-      "Geändert: ogamed erzwingt keinen täglichen Login mehr; die nächtliche Trennung durch Gameforge und der Relogin zählen für die Belohnungsaufgabe. Greift sie nicht, das Login-Event von Hand auslösen"
+      "Geändert: ogamed erzwingt keinen täglichen Login mehr; die nächtliche Trennung durch Gameforge und der Relogin zählen für die Belohnungsaufgabe. Greift sie nicht, das Login-Event von Hand auslösen",
+      "Geändert: Defender - mit RandomActivity aus gibt es keinen Aktivitätsaufruf und keinen Wechsel auf Home mehr"
     ]
   }
 }

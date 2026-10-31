@@ -611,7 +611,7 @@
             fld(d, 'Active', P, 'Defender active', 'Master switch', 'toggle'),
             fld(d, 'IgnoreProbes', P, 'Ignore spy probes', null, 'toggle'),
             fld(d, 'DefendFromMissiles', P, 'React to missile attacks', null, 'toggle'),
-            fld(d, 'RandomActivity', P, 'Generate activity for defender calls', 'On: each defender check opens the defences page of a random celestial. Off: it always opens the one from "Home celestial". Either way it only creates normal-looking activity (the check itself is already a page visit) and does not change how attacks are handled.', 'toggle'),
+            fld(d, 'RandomActivity', P, 'Generate activity for defender calls', 'On: each defender check opens the defences page of a random celestial. Off: no activity call and no celestial switch. Either way it only creates normal-looking activity (the check itself is already a page visit) and does not change how attacks are handled.', 'toggle'),
             fld(d, 'CurrentlyActiveCelestialActivity', P, 'Use the celestial I am playing on', 'While you play in the browser, the activity call uses your current celestial instead of another one, so it does not switch your planet. Needs a browser page opened in the last 10 minutes', 'toggle')
         ].filter(Boolean)));
 
@@ -629,7 +629,7 @@
 
         var home = sub('Home'), hp = ['Home'];
         if (home) foldTo(body, 'Home celestial', [
-            el('div', { class: 'cfg-note', text: 'The celestial the defender looks at for its activity calls when "Generate activity" is off. Set it to your main planet or moon. Only the Defender uses it; no other worker takes it as a start.' }),
+            el('div', { class: 'cfg-note', text: 'No longer used: with "Generate activity" off the Defender makes no activity call and does not switch the celestial. The entry stays for compatibility.' }),
             fld(home, 'Galaxy', hp, 'Galaxy', null, 'num', { min: 1, sens: true }),
             fld(home, 'System', hp, 'System', null, 'num', { min: 1, sens: true }),
             fld(home, 'Position', hp, 'Position', null, 'num', { min: 1, sens: true }),

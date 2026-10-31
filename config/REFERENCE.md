@@ -155,9 +155,9 @@ Detects incoming attacks and reacts.
 | `DefendFromMissiles` | React to missile attacks too. |
 | `IgnoreWeakAttack`, `WeakAttackRatio` | Ignore attackers whose fleet points are less than your fleet points divided by the ratio. |
 | `IgnoreAttackIfIHave.*` | Ignore the attack if you have less than `MinResourcesToSave` resources and less than `MinFleetToSave` fleet points on the target (nothing worth saving). |
-| `RandomActivity` | On: each defender check opens the defences page of a random celestial; off: always of `Home`. Only generates normal-looking activity. |
-| `CurrentlyActiveCelestialActivity` | Optional, default `true`. While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the normal rule (RandomActivity / Home) applies. |
-| `Home` | Home celestial: used only for the Defender activity call when `RandomActivity` is off. No other worker uses it as a start (AutoHarvest without `Origin` uses the expedition bases and the detected main fleet location). |
+| `RandomActivity` | On: each defender check opens the defences page of a random celestial; off: no activity call (no celestial switch). Only generates normal-looking activity. |
+| `CurrentlyActiveCelestialActivity` | Optional, default `true`. While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the RandomActivity rule applies (off = no activity call, no switch). |
+| `Home` | Home celestial: no longer used by the Defender (with `RandomActivity` off there is no activity call and no switch). Kept for compatibility. |
 | `Autofleet.Active` | Fleetsave the attacked celestial automatically. |
 | `Autofleet.SafetyMarginSeconds` | Seconds before impact at which the fleet must be gone. |
 | `Autofleet.TelegramMessenger.Active` | Message when a fleetsave happens. |

@@ -310,7 +310,6 @@ namespace Tbot.Workers {
 
 		private async Task FakeActivity() {
 
-			Celestial celestial;
 			Celestial randomCelestial;
 			var randomActivity = (bool) _tbotInstance.InstanceSettings.Defender.RandomActivity;
 
@@ -330,20 +329,7 @@ namespace Tbot.Workers {
 				}
 			}
 
-			if (randomActivity == false) {
-				celestial = _tbotInstance.UserData.celestials
-				.Unique()
-				.Where(c => c.Coordinate.Galaxy == (int) _tbotInstance.InstanceSettings.Defender.Home.Galaxy)
-				.Where(c => c.Coordinate.System == (int) _tbotInstance.InstanceSettings.Defender.Home.System)
-				.Where(c => c.Coordinate.Position == (int) _tbotInstance.InstanceSettings.Defender.Home.Position)
-				.Where(c => c.Coordinate.Type == Enum.Parse<Celestials>((string) _tbotInstance.InstanceSettings.Defender.Home.Type))
-				.SingleOrDefault() ?? new() { ID = 0 };
-
-				if (celestial.ID != 0) {
-					DoLog(LogLevel.Information, $"Check from Home ({celestial.Coordinate.Galaxy}:{celestial.Coordinate.System}:{celestial.Coordinate.Position} {celestial.Coordinate.Type})");
-					celestial = await _tbotOgameBridge.UpdatePlanet(celestial, UpdateTypes.Defences);
-				}
-			} else {
+			if (randomActivity) {
 				randomCelestial = _tbotInstance.UserData.celestials.Shuffle().FirstOrDefault() ?? new() { ID = 0 };
 
 				if (randomCelestial.ID != 0) {

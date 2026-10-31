@@ -565,10 +565,10 @@ window.CFG_HELP.en = {
    "t": "... and fewer fleet points than this."
   },
   "RandomActivity": {
-   "t": "On = every attack check opens the defence page of a random celestial. Off = always the Home celestial. Only makes the bot activity look normal."
+   "t": "On = every attack check opens the defence page of a random celestial. Off = no activity call, so the active celestial is never switched. Only makes the bot activity look normal."
   },
   "CurrentlyActiveCelestialActivity": {
-   "t": "While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the normal rule (RandomActivity / Home) applies."
+   "t": "While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the RandomActivity rule applies (off = no activity call, no switch)."
   },
   "Home.*": {
    "t": "Your home celestial. Used only for the Defender activity call when random activity is off; no other worker uses it as a start."

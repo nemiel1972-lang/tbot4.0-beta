@@ -932,7 +932,7 @@
    "On by default": "Standardmäßig an",
    "On going to sleep and waking up": "Beim Schlafengehen und Aufwachen",
    "On top of the calculated amount": "Zusätzlich zur berechneten Menge",
-   "On: each defender check opens the defences page of a random celestial. Off: it always opens the one from \"Home celestial\". Either way it only creates normal-looking activity (the check itself is already a page visit) and does not change how attacks are handled.": "An: Jede Defender-Prüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus: Es wird immer der unter „Heimat-Himmelskörper“ geöffnet. In beiden Fällen entsteht nur normal aussehende Aktivität (die Prüfung ist selbst schon ein Seitenaufruf); die Behandlung von Angriffen ändert sich nicht.",
+   "On: each defender check opens the defences page of a random celestial. Off: no activity call and no celestial switch. Either way it only creates normal-looking activity (the check itself is already a page visit) and does not change how attacks are handled.": "An: Jede Defender-Prüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus: kein Aktivitätsaufruf und kein Wechsel des Himmelskörpers. In beiden Fällen entsteht nur normal aussehende Aktivität (die Prüfung ist selbst schon ein Seitenaufruf); die Behandlung von Angriffen ändert sich nicht.",
    "On: game requests do not go through the proxy": "An: Spielanfragen laufen nicht über den Proxy",
    "Once per game day one ship attacks the asteroid on position 17 of your own system. After arrival the bot checks whether the inventory grew. One short log line per attempt, no messenger message.": "Einmal pro Spieltag greift ein Schiff den Asteroiden auf Position 17 deines eigenen Systems an. Nach der Ankunft prüft der Bot, ob das Inventar gewachsen ist. Eine kurze Logzeile pro Versuch, keine Messenger-Nachricht.",
    "One extra wave right before the bot falls asleep, timed to return around wake-up.": "Eine zusätzliche Welle kurz vor dem Schlafengehen, so getaktet, dass sie etwa beim Aufwachen zurück ist.",
@@ -3204,10 +3204,10 @@
     "t": "... und weniger Flottenpunkte als dieser Wert."
    },
    "RandomActivity": {
-    "t": "An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = immer der Heimat-Himmelskörper. Lässt die Aktivität des Bots nur normal aussehen."
+    "t": "An = jede Angriffsprüfung öffnet die Verteidigungsseite eines zufälligen Himmelskörpers. Aus = kein Aktivitätsaufruf, der aktive Himmelskörper wird nie gewechselt. Lässt die Aktivität des Bots nur normal aussehen."
    },
    "CurrentlyActiveCelestialActivity": {
-    "t": "Spielst du gerade im Browser (Port 8080), nimmt der Aktivitätsaufruf des Defenders den Himmelskörper deiner Browser-Sitzung statt eines anderen, damit er dir beim Flottenversand oder Bauen nicht den aktuellen Planeten wegnimmt. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde; sonst gilt die normale Regel (RandomActivity / Home)."
+    "t": "Spielst du gerade im Browser (Port 8080), nimmt der Aktivitätsaufruf des Defenders den Himmelskörper deiner Browser-Sitzung statt eines anderen, damit er dir beim Flottenversand oder Bauen nicht den aktuellen Planeten wegnimmt. Braucht eine Browser-Seite, die in den letzten 10 Minuten geöffnet wurde; sonst gilt die RandomActivity-Regel (aus = kein Aktivitätsaufruf, kein Wechsel)."
    },
    "Home.*": {
     "t": "Dein Heimat-Himmelskörper. Wird nur für den Aktivitätsaufruf des Defenders genutzt, wenn die zufällige Aktivität aus ist; kein anderer Worker nimmt ihn als Start."

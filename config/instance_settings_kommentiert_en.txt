@@ -209,11 +209,11 @@
       ## Ignore the attack if the resources/fleet points at stake are below these values.
       "MinFleetToSave": 20000000
     },
-    ## On = every attack check opens the defence page of a random celestial. Off = always the Home celestial. Only makes the bot activity look normal.
+    ## On = every attack check opens the defence page of a random celestial. Off = no activity call, so the active celestial is never switched. Only makes the bot activity look normal.
     "RandomActivity": false,
-    ## While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the normal rule (RandomActivity / Home) applies.
+    ## While you play in the browser (port 8080), the Defender activity call uses the celestial of your browser session instead of another one, so it does not take your current planet away while you send fleets or build. Needs a browser page opened in the last 10 minutes; otherwise the RandomActivity rule applies (off = no activity call, no switch).
     "CurrentlyActiveCelestialActivity": true,
-    ## Home celestial: used only for the Defender activity call when `RandomActivity` is off. No other worker uses it as a start (AutoHarvest without `Origin` uses the expedition bases and the detected main fleet location).
+    ## Home celestial: no longer used by the Defender (with `RandomActivity` off the activity call no longer switches to it). The entry stays in the file for compatibility.
     "Home": {
       ## Galaxy number of the coordinates.
       "Galaxy": 1,
